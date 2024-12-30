@@ -1,0 +1,46 @@
+/****** Utils ******/
+@use "utils/globals";
+
+/******* Base *******/
+@use "base/base";
+@use "base/background";
+
+// /******* Components ******/
+@use "components/avatar";
+@use "components/boostrap";
+@use "components/button";
+@use "components/badge";
+@use "components/border";
+@use "components/calendar";
+@use "components/chart";
+@use "components/dropdown";
+@use "components/icons";
+@use "components/progress";
+@use "components/pagination";
+@use "components/font";
+@use "components/typography";
+@use "components/alerts";
+@use "components/popovers";
+@use "components/forms";
+// @use "components/tables";
+@use "components/accordion";
+@use "components/breadcrumb";
+@use "components/cards";
+@use "components/tooltips";
+@use "components/navs-tabs";
+@use "components/ribbon";
+@use "components/popup";
+@use "components/grid";
+
+/****** Layout ******/
+@use "layout/content";
+@use "layout/common";
+@use "layout/darktheme";
+@use "layout/theme-settings";
+@use "layout/header";
+@use "layout/_header-one";
+@use "layout/_sidebar-settings";
+@use "layout/_sidebar";
+
+/****** Pages ******/
+@use "pages/login";
