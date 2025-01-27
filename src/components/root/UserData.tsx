@@ -103,7 +103,7 @@ const UserData = ({
         throw new Error("Logout failed");
       }
       dispatch(clearUser());
-      router.push("/login");
+      router.push("/jw/login");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
