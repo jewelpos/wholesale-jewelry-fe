@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { GetStoreCategoryData, Store, StoreCategory } from "@/types/store";
 import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import Select from "react-select";
@@ -31,6 +32,7 @@ type CreateStoreResponse = {
 };
 
 const CreateStoreForm = (props: Props) => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const [createStore, { data, loading }] = useMutation<
     CreateStoreResponse,
@@ -55,6 +57,7 @@ const CreateStoreForm = (props: Props) => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
+        router.push("/jw/admin_dashboard");
       }
     } catch (error: any) {
       dispatch(

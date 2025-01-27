@@ -46,7 +46,7 @@ export const LoginForm = () => {
           email: formData.username,
         };
         const queryString = new URLSearchParams(details).toString();
-        router.push(`/verify?${queryString}`);
+        router.push(`/jw/verify?${queryString}`);
       }
       setLoginLoading(false);
     } else {

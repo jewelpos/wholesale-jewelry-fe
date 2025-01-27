@@ -12,6 +12,40 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import Header from "../ui/Header";
 import Sidebar from "../ui/Sidebar";
 import FullPageLoader from "../ui/FullPageLoader";
+import { Menus } from "@/types/permissions";
+
+const sidebarMenuCreateStore: Menus = [
+  {
+    menuId: "1",
+    iconUrl: "",
+    menuUrl: "/jw/create/store/",
+    children: [
+      {
+        name: "Admin",
+        action: [],
+        menuid: 2,
+        roleid: "1",
+        iconurl: "",
+        menuurl: "/jw/create/store/",
+        menuname: "Admin",
+        parentid: 1,
+        slugname: "create_store",
+        menuorder: 0,
+        storetypeid: 0,
+        permissionid: 0,
+        permissionname: "",
+        permissionorder: 0,
+        permissionparentid: 0,
+        permissiondescription: "",
+        permissiondisplayname: "Create store",
+      },
+    ],
+    menuName: "Store",
+    slugName: "store",
+    menuOrder: 0,
+    storeTypeId: 0,
+  },
+];
 
 const UserData = ({
   children,
@@ -23,6 +57,9 @@ const UserData = ({
   const [getActiveUserInfo] = useLazyQuery(GET_ACTIVE_USER);
   const user = useAppSelector((state) => state.user.data);
   const [loading, setLoading] = useState<boolean>(false);
+  const menus = user?.shouldcreatestore
+    ? sidebarMenuCreateStore
+    : user?.permissions[0]?.menus;
 
   useEffect(() => {
     if (!user) {
@@ -79,7 +116,7 @@ const UserData = ({
       {!loading && user && (
         <>
           <Header onLogout={onLogout} />
-          <Sidebar />
+          <Sidebar menus={menus} />
           {children}
         </>
       )}
