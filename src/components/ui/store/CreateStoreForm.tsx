@@ -259,7 +259,7 @@ const CreateStoreForm = (props: Props) => {
       </div>
       <div className="text-end">
         <button type="submit" disabled={loading} className="btn btn-primary">
-          Submit
+          Create
         </button>
       </div>
     </form>
