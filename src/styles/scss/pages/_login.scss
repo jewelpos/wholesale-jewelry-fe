@@ -50,7 +50,7 @@
         }
       }
       form .otp-box {
-        margin-bottom: 34px;
+        // margin-bottom: 34px;
         input {
           width: 74px;
           height: 74px;
@@ -407,7 +407,7 @@
   .login-content.user-login {
     .login-userset {
       form .otp-box {
-        margin-bottom: 34px;
+        // margin-bottom: 34px;
         input {
           width: 74px;
           height: 74px;
@@ -421,8 +421,8 @@
           color: $black;
           outline: none;
           @include respond-below(custom575) {
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
           }
         }
       }

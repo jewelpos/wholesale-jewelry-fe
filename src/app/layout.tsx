@@ -6,7 +6,7 @@ import "../styles/icons/fontawesome/css/all.min.css";
 import "../styles/css/feather.css";
 import BootstrapJS from "@/components/root/BootstrapJS";
 import StoreProvider from "./StoreProvider";
-import AppolloClientProvider from "./AppolloClientProvider";
+import Notification from "@/components/ui/Notification";
 
 export const metadata: Metadata = {
   title: "POS",
@@ -22,10 +22,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <StoreProvider>
-          <AppolloClientProvider>
-            <BootstrapJS />
-            {children}
-          </AppolloClientProvider>
+          <BootstrapJS />
+          {children}
+          <Notification />
         </StoreProvider>
       </body>
     </html>
