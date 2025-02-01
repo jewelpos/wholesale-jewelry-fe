@@ -7,7 +7,7 @@ type MenuAction = {
   actiondisplayname: string;
 };
 
-type MenuChild = {
+export type MenuChild = {
   name: string;
   action: MenuAction[];
   menuid: number;

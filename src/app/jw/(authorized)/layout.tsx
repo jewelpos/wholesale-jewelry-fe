@@ -1,8 +1,7 @@
 import { ErrorBoundary } from "@/components/root/ErrorBoundary";
 import ApolloClientProviderAuthorized from "./ApolloClientProviderAuthorized";
 import UserData from "@/components/root/UserData";
-import { Suspense } from "react";
-import FullPageLoader from "@/components/ui/FullPageLoader";
+import { PermissionGuard } from "@/components/root/PermissionGuard";
 
 export default function AuthorizedLayout({
   children,
@@ -12,15 +11,19 @@ export default function AuthorizedLayout({
   return (
     <div className={`main-wrapper `}>
       <ApolloClientProviderAuthorized>
-        {/* <ErrorBoundary
+        <ErrorBoundary
           fallback={
             <div className="p-4 bg-red-50 text-red-700 rounded-lg">
               Something went wrong while loading posts.
             </div>
           }
-        > */}
-        <UserData>{children}</UserData>
-        {/* </ErrorBoundary> */}
+        >
+          <UserData>
+            {/* <PermissionGuard> */}
+            {children}
+            {/* </PermissionGuard> */}
+          </UserData>
+        </ErrorBoundary>
       </ApolloClientProviderAuthorized>
     </div>
   );

@@ -1,58 +1,38 @@
-// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getEnvironmentConfig } from "./lib/config/environment";
-
-const envConfig = getEnvironmentConfig();
-const basePath = envConfig.basePath;
-
-// Define protected routes that require authentication
-const protectedRoutes = ["/jw/admin_dashboard", "/jw/create/store"];
-// Define public routes that don't need authentication
-const publicRoutes = ["/jw/login", "/register", "/forgot-password"];
 
 export function middleware(request: NextRequest) {
+  const token = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
-  const authToken = request.cookies.get("accessToken")?.value;
 
-  // If root path ('/'), redirect based on auth status
-  if (pathname === "/" || pathname === "/jw") {
-    return authToken
-      ? NextResponse.redirect(new URL("/jw/admin_dashboard", request.url))
-      : NextResponse.redirect(new URL("/jw/login", request.url));
+  // Public routes that don't need authentication
+  const publicRoutes = ["/jw/login", "/jw/register", "/jw/forgot-password"];
+
+  // Skip middleware for static files and images
+  if (
+    pathname.startsWith("/_next") || // Next.js internal routes
+    pathname.startsWith("/api") || // API routes
+    pathname.includes(".") || // Files with extensions (images, etc)
+    pathname.startsWith("/public") || // Public directory
+    pathname.startsWith("/images") || // Image directory if you have one
+    pathname.startsWith("/assets") // Assets directory if you have one
+  ) {
+    return NextResponse.next();
   }
 
-  // For auth pages (login, register, etc)
-  if (publicRoutes.includes(pathname)) {
-    // If user is logged in, redirect to dashboard
-    return authToken
-      ? NextResponse.redirect(new URL("/jw/admin_dashboard", request.url))
-      : NextResponse.next();
+  // If accessing a public route while authenticated, redirect to dashboard
+  if (token && publicRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL("/jw/admin_dashboard", request.url));
   }
 
-  // For protected routes
-  if (protectedRoutes.some((route) => pathname.startsWith(route))) {
-    // If user is not logged in, redirect to login
-    return !authToken
-      ? NextResponse.redirect(new URL("/jw/login", request.url))
-      : NextResponse.next();
+  // If accessing a protected route without authentication, redirect to login
+  if (!token && !publicRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL("/jw/login", request.url));
   }
 
-  // For all other routes, proceed normally
   return NextResponse.next();
 }
 
-// Configure middleware to run on specific paths
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

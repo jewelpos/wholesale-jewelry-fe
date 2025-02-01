@@ -13,6 +13,7 @@ import Header from "../ui/Header";
 import Sidebar from "../ui/Sidebar";
 import FullPageLoader from "../ui/FullPageLoader";
 import { Menus } from "@/types/permissions";
+import useAuth from "@/hooks/useAuth";
 
 const sidebarMenuCreateStore: Menus = [
   {
@@ -60,6 +61,7 @@ const UserData = ({
   const menus = user?.shouldcreatestore
     ? sidebarMenuCreateStore
     : user?.permissions[0]?.menus;
+  const { loading: authLoading, onLogout } = useAuth();
 
   useEffect(() => {
     if (!user) {
@@ -91,36 +93,16 @@ const UserData = ({
     }
   }, []);
 
-  const onLogout = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await response.json();
-      if (!data.ok) {
-        throw new Error("Logout failed");
-      }
-      dispatch(clearUser());
-      router.push("/jw/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <>
-      {!loading && user && (
+      {!loading && !authLoading && user && (
         <>
           <Header onLogout={onLogout} />
           <Sidebar menus={menus} />
           {children}
         </>
       )}
-      {loading && <FullPageLoader />}
+      {(loading || authLoading) && <FullPageLoader />}
     </>
   );
 };

@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
         refreshToken: token,
       },
     });
+    console.log("dsfdsdfsdfsdf2342342", data.refreshToken);
+
     const { accessToken, refreshToken } = data.refreshToken.data;
     const response = NextResponse.json(data.refreshToken, {
       status: 201,
@@ -35,9 +37,9 @@ export async function POST(request: NextRequest) {
     }
     return response;
   } catch (error) {
-    // return NextResponse.json(
-    //   { error: "Token refresh failed" },
-    //   { status: 401 }
-    // );
+    return NextResponse.json(
+      { error: "Token refresh failed" },
+      { status: 401 }
+    );
   }
 }

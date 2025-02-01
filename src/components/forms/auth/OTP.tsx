@@ -1,31 +1,32 @@
 "use client";
 
 import { OtpForm } from "@/types/auth";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Control,
   Controller,
+  SubmitHandler,
   UseFormHandleSubmit,
   UseFormSetValue,
 } from "react-hook-form";
 
 type Props = {
   control: Control<OtpForm>;
-  otpRefs: any;
   setValue: UseFormSetValue<OtpForm>;
   otpValue: string[];
   handleSubmit: UseFormHandleSubmit<OtpForm>;
-  onSubmit: any;
+  onSubmit: SubmitHandler<OtpForm>;
 };
 
 const OTP = ({
   control,
-  otpRefs,
   setValue,
   otpValue,
   handleSubmit,
   onSubmit,
 }: Props) => {
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -68,7 +69,9 @@ const OTP = ({
                 render={({ field }) => (
                   <input
                     {...field}
-                    ref={(el: any) => (otpRefs.current[index] = el)}
+                    ref={(el: HTMLInputElement | null) => {
+                      otpRefs.current[index] = el; // Assign the element to the ref
+                    }}
                     maxLength={1}
                     id={`digit-${index}`}
                     onChange={(e) => handleInputChange(e, index)}

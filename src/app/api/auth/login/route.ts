@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       });
     }
     return response;
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(error, {});
   }
 }

@@ -10,7 +10,7 @@ export async function POST() {
     deleteCookieResponse(response, "accessToken");
     deleteCookieResponse(response, "refreshToken");
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to logout", ok: false },
       { status: 500 }

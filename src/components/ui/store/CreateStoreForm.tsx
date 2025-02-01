@@ -57,8 +57,7 @@ const CreateStoreForm = (props: Props) => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        window.location.href="/jw/admin_dashboard";
-        // router.push("/jw/admin_dashboard");
+        window.location.href = "/jw/admin_dashboard";
       }
     } catch (error: any) {
       dispatch(

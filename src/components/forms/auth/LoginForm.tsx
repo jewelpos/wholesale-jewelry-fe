@@ -40,7 +40,7 @@ export const LoginForm = () => {
     const data = await response.json();
     if (data.data) {
       if (data.success) {
-        router.push("/jw/dashboard");
+        router.push("/jw/admin_dashboard");
       } else {
         const details = {
           email: formData.username,

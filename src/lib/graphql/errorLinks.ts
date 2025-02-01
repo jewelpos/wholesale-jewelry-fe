@@ -1,15 +1,38 @@
 import { onError } from "@apollo/client/link/error";
 import { Observable } from "@apollo/client";
 import { makeStore } from "../store/store";
+import { clearUser } from "../store/slice/userDataSlice";
 
 async function refreshToken(): Promise<boolean> {
   try {
     const response = await fetch("/api/auth/refresh", {
       method: "POST",
     });
-    return response.ok;
-  } catch {
-    return false;
+    if (response.ok) {
+      return response.ok;
+    }
+    throw new Error("");
+  } catch (error: any) {
+    throw new Error(error);
+  }
+}
+
+async function onLogout(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      throw new Error("Logout failed");
+    }
+    const store = makeStore();
+    store.dispatch(clearUser());
+    window.location.href = "/jw/login";
+    return true;
+  } catch (error: any) {
+    throw new Error(error);
   }
 }
 
@@ -20,7 +43,6 @@ export const errorLink = onError(
     operation,
     forward,
   }): Observable<any> | void => {
-    const store = makeStore();
     if (graphQLErrors) {
       for (const err of graphQLErrors) {
         switch (err.extensions?.code) {
@@ -38,12 +60,11 @@ export const errorLink = onError(
                     };
                     forward(operation).subscribe(subscriber);
                   } else {
-                    // Redirect to login if refresh fails
-                    window.location.href = "/login";
+                    onLogout();
                   }
                 })
                 .catch(() => {
-                  window.location.href = "/login";
+                  onLogout();
                 });
             });
           }
