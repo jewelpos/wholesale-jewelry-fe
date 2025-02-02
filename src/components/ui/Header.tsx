@@ -3,7 +3,6 @@
 import { useAppSelector } from "@/lib/store/hook";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Search,
@@ -19,7 +18,7 @@ import {
 } from "react-feather";
 
 type Props = {
-  onLogout: any;
+  onLogout: () => Promise<boolean | void>;
 };
 
 const Header = ({ onLogout }: Props) => {
@@ -27,10 +26,10 @@ const Header = ({ onLogout }: Props) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
 
-  const isElementVisible = (element: any) => {
+  const isElementVisible = (element: HTMLElement | null): boolean => {
+    if (!element) return false;
     return element.offsetWidth > 0 || element.offsetHeight > 0;
   };
-
   useEffect(() => {
     const handleMouseover = (e: MouseEvent) => {
       e.stopPropagation();
@@ -54,12 +53,15 @@ const Header = ({ onLogout }: Props) => {
   }, []);
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(
+      const fullscreenElement =
         document.fullscreenElement ||
-          (document as any).mozFullScreenElement ||
-          (document as any).webkitFullscreenElement ||
-          (document as any).msFullscreenElement
-      );
+        (document as Document & { mozFullScreenElement?: Element })
+          .mozFullScreenElement ||
+        (document as Document & { webkitFullscreenElement?: Element })
+          .webkitFullscreenElement ||
+        (document as Document & { msFullscreenElement?: Element })
+          .msFullscreenElement;
+      setIsFullscreen(!!fullscreenElement);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -99,37 +101,7 @@ const Header = ({ onLogout }: Props) => {
     document?.querySelector("html")?.classList?.toggle("menu-opened");
   };
 
-  let pathname = location.pathname;
-
-  const toggleFullscreen = (elem: any) => {
-    elem = elem || document.documentElement;
-    if (
-      !document.fullscreenElement &&
-      !(document as any).mozFullScreenElement &&
-      !(document as any).webkitFullscreenElement &&
-      !(document as any).msFullscreenElement
-    ) {
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-      } else if (elem.msRequestFullscreen) {
-        elem.msRequestFullscreen();
-      } else if (elem.mozRequestFullScreen) {
-        elem.mozRequestFullScreen();
-      } else if (elem.webkitRequestFullscreen) {
-        elem.webkitRequestFullscreen((Element as any).ALLOW_KEYBOARD_INPUT);
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).msExitFullscreen) {
-        (document as any).msExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        (document as any).mozCancelFullScreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      }
-    }
-  };
+  const pathname = location.pathname;
 
   if (!user) {
     return;

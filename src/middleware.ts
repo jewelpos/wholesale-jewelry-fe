@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
 
   // If accessing a public route while authenticated, redirect to dashboard
   if (token && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/jw/admin_dashboard", request.url));
+    return NextResponse.redirect(new URL("/jw/dashboard/admin", request.url));
   }
 
   // If accessing a protected route without authentication, redirect to login

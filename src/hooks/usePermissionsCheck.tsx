@@ -1,20 +1,27 @@
 import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
 import { useEffect } from "react";
 import { useAppSelector } from "@/lib/store/hook";
+import { MenuChild, Menus } from "@/types/permissions";
 
-function findRoutePermission(currentPath: string, routes: any): boolean {
+function findRoutePermission(
+  currentPath: string,
+  routes: Menus | MenuChild[],
+  parentUrl: string
+): boolean {
+  if (!routes) {
+    return false;
+  }
   for (const route of routes) {
-    // Check if current path starts with the route path
-    if (currentPath.startsWith(route.menuUrl)) {
-      // If it's an exact match
-      if (currentPath === route.menuUrl) {
+    let menuUrl: string = route.menuurl;
+    if (parentUrl) {
+      menuUrl = `${parentUrl}${route.menuurl}`;
+    }
+    if (currentPath.startsWith(menuUrl)) {
+      if (currentPath === menuUrl) {
         return true;
       }
-
-      // If it has children and the path is longer, check children
-      if (route.children && currentPath.length > route.menuUrl.length) {
-        return findRoutePermission(currentPath, route?.children);
+      if (route.children && currentPath.length > menuUrl.length) {
+        return findRoutePermission(currentPath, route?.children, menuUrl);
       }
     }
   }
@@ -24,12 +31,12 @@ function findRoutePermission(currentPath: string, routes: any): boolean {
 export function usePermissionCheck() {
   const router = useRouter();
   const availableRoutes = useAppSelector(
-    (state) => state.user.data?.permissions[0]?.menus
+    (state) => state.user.data?.permissions?.menus
   );
 
   useEffect(() => {
     const currentPath = window.location.pathname;
-    const hasPermission = findRoutePermission(currentPath, availableRoutes);
+    const hasPermission = findRoutePermission(currentPath, availableRoutes, "");
 
     if (!hasPermission) {
       router.push("/404");

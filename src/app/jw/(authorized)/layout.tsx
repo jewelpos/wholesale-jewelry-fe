@@ -19,9 +19,7 @@ export default function AuthorizedLayout({
           }
         >
           <UserData>
-            {/* <PermissionGuard> */}
-            {children}
-            {/* </PermissionGuard> */}
+            <PermissionGuard>{children}</PermissionGuard>
           </UserData>
         </ErrorBoundary>
       </ApolloClientProviderAuthorized>

@@ -9,6 +9,7 @@ import { emailOrUsernameValidation } from "@/lib/utils/validations/authValidatio
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import Image from "next/image";
 
 export const LoginForm = () => {
   const router = useRouter();
@@ -40,7 +41,7 @@ export const LoginForm = () => {
     const data = await response.json();
     if (data.data) {
       if (data.success) {
-        router.push("/jw/admin_dashboard");
+        router.push("/jw/dashboard/admin");
       } else {
         const details = {
           email: formData.username,
@@ -83,7 +84,12 @@ export const LoginForm = () => {
               })}
             />
             {!errors.username && (
-              <img src="/assets/img/icons/mail.svg" alt="img" />
+              <Image
+                src="/assets/img/icons/mail.svg"
+                alt="form mail icon"
+                width={13}
+                height={10}
+              />
             )}
             {errors.username && (
               <div className="invalid-feedback">{errors.username.message}</div>

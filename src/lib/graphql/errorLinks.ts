@@ -12,8 +12,8 @@ async function refreshToken(): Promise<boolean> {
       return response.ok;
     }
     throw new Error("");
-  } catch (error: any) {
-    throw new Error(error);
+  } catch {
+    throw new Error("");
   }
 }
 
@@ -31,8 +31,8 @@ async function onLogout(): Promise<boolean> {
     store.dispatch(clearUser());
     window.location.href = "/jw/login";
     return true;
-  } catch (error: any) {
-    throw new Error(error);
+  } catch {
+    throw new Error("");
   }
 }
 
@@ -42,6 +42,7 @@ export const errorLink = onError(
     networkError,
     operation,
     forward,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }): Observable<any> | void => {
     if (graphQLErrors) {
       for (const err of graphQLErrors) {

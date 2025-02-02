@@ -1,21 +1,18 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
-import { GetStoreCategoryData, Store, StoreCategory } from "@/types/store";
-import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
+import { GetStoreCategoryData, Store } from "@/types/store";
+import { useMutation, useQuery } from "@apollo/client";
 import Select from "react-select";
 import { CREATE_STORE_MUTATION } from "@/lib/graphql/mutations/store";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
 import { emailValidation } from "@/lib/utils/validations/authValidations";
-import { errorMessage } from "@/lib/utils/errorFormatter";
+import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { useAppDispatch } from "@/lib/store/hook";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_STORE_CATEGORY_QUERY } from "@/lib/graphql/query/store";
-
-type Props = {};
 
 interface SelectOption {
   value: number;
@@ -27,19 +24,19 @@ type CreateStoreResponse = {
     success: boolean;
     message: string;
     error: string | null;
-    data: any;
+    data: JSON;
   };
 };
 
-const CreateStoreForm = (props: Props) => {
-  const router = useRouter();
+const CreateStoreForm = () => {
   const dispatch = useAppDispatch();
-  const [createStore, { data, loading }] = useMutation<
+  const [createStore, { loading }] = useMutation<
     CreateStoreResponse,
     { input: Store }
   >(CREATE_STORE_MUTATION);
-  const { data: storeCategoryData, loading: storeCategoryLoading } =
-    useQuery<GetStoreCategoryData>(GET_STORE_CATEGORY_QUERY);
+  const { data: storeCategoryData } = useQuery<GetStoreCategoryData>(
+    GET_STORE_CATEGORY_QUERY
+  );
   const {
     register,
     handleSubmit,
@@ -48,7 +45,7 @@ const CreateStoreForm = (props: Props) => {
   } = useForm<Store>();
 
   const onSubmit: SubmitHandler<Store> = async (formData) => {
-    try {
+    const result = await handleTryCatch(async () => {
       const { data } = await createStore({ variables: { input: formData } });
       if (data?.createStore) {
         dispatch(
@@ -57,12 +54,14 @@ const CreateStoreForm = (props: Props) => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        window.location.href = "/jw/admin_dashboard";
+        window.location.href = "/jw/dashboard/admin";
       }
-    } catch (error: any) {
+      return true;
+    });
+    if (result.error) {
       dispatch(
         showNotification({
-          message: errorMessage(error),
+          message: result.error,
           type: NOTIFICATION_TYPES.ERROR,
         })
       );

@@ -1,15 +1,15 @@
 import { permissions } from "./permissions";
 
 export interface activeUser {
-  name: String;
-  email: String;
-  phone: String;
-  username: String;
-  role: String;
-  roleid: any;
-  otpverified: Boolean;
-  emailverified: Boolean;
-  isenabled: Boolean;
-  shouldcreatestore: Boolean;
+  name: string;
+  email: string;
+  phone: string;
+  username: string;
+  role: string;
+  roleid: number;
+  otpverified: boolean;
+  emailverified: boolean;
+  isenabled: boolean;
+  shouldcreatestore: boolean;
   permissions: permissions;
 }

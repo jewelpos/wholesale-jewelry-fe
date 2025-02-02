@@ -1,7 +1,7 @@
 "use client";
 
 import { OtpForm } from "@/types/auth";
-import React, { useRef } from "react";
+import React from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import OTP from "./OTP";
 

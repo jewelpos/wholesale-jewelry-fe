@@ -1,7 +1,7 @@
 import { useAppDispatch } from "@/lib/store/hook";
 import { clearUser } from "@/lib/store/slice/userDataSlice";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -21,6 +21,7 @@ const useAuth = () => {
       }
       dispatch(clearUser());
       router.push("/jw/login");
+      return true;
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

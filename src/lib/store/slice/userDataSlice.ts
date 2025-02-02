@@ -1,19 +1,19 @@
 import { activeUser } from "@/types/user";
 import { createSlice } from "@reduxjs/toolkit";
 
-type userData = {
-  data: {
-    user: activeUser;
-  };
-};
+interface UserState {
+  data: activeUser | null;
+  loading: boolean;
+  error: string | null;
+}
 
 const userDataSlice = createSlice({
   name: "user",
   initialState: {
-    data: null as any,
-    loading: false as boolean,
-    error: null as string | null,
-  },
+    data: null,
+    loading: false,
+    error: null,
+  } as UserState,
   reducers: {
     clearUser: (state) => {
       state.data = null;

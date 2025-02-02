@@ -29,17 +29,17 @@ export type MenuChild = {
 };
 
 type Menu = {
-  menuId: string;
-  iconUrl: string;
-  menuUrl: string;
+  menuid: string;
+  iconurl: string;
+  menuurl: string;
   children?: MenuChild[];
-  menuName: string;
-  slugName: string;
-  menuOrder: number;
-  storeTypeId: number;
+  menuname: string;
+  slugname: string;
+  menuorder: number;
+  storetypeid: number;
 };
 
-export type Menus = Menu[];
+export type Menus = Menu[] | undefined;
 
 export type permissions = {
   menus: Menus;

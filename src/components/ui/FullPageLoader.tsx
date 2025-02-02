@@ -1,9 +1,7 @@
 import React from "react";
 import "../../styles/scss/components/_loader.scss";
 
-type Props = {};
-
-const FullPageLoader = (props: Props) => {
+const FullPageLoader = () => {
   return (
     <div className="full-page-container">
       <div className="spinner-grow text-primary me-1" role="status">

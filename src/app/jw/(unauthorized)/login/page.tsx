@@ -1,4 +1,6 @@
 import { LoginForm } from "@/components/forms/auth/LoginForm";
+import Logo from "@/components/ui/Logo";
+import LogoWhite from "@/components/ui/LogoWhite";
 import Link from "next/link";
 
 const LoginPage = () => {
@@ -9,9 +11,9 @@ const LoginPage = () => {
           <div className="container">
             <div className="login-content user-login">
               <div className="login-logo">
-                <img src="/assets/img/logo.png" alt="img" />
+                <Logo />
                 <Link href="#" className="login-logo logo-white">
-                  <img src="assets/img/logo-white.png" alt="sd" />
+                  <LogoWhite />
                 </Link>
               </div>
               <LoginForm />

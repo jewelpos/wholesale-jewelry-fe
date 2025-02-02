@@ -13,7 +13,7 @@ const Notification = () => {
   );
 
   useEffect(() => {
-    let timer: any;
+    let timer: ReturnType<typeof setTimeout>;
     if (show) {
       timer = setTimeout(() => {
         dispatch(hideNotification());

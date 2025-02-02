@@ -1,4 +1,3 @@
-import { useAppSelector } from "@/lib/store/hook";
 import { Menus } from "@/types/permissions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,12 +10,11 @@ type Props = {
 };
 
 const Sidebar = ({ menus }: Props) => {
-  let pathname = usePathname();
+  const pathname = usePathname();
   const [subOpen, setSubopen] = useState("");
   const [subsidebar, setSubsidebar] = useState("");
 
-  pathname += "/";
-  const toggleSidebar = (title: any) => {
+  const toggleSidebar = (title: string) => {
     if (title == subOpen) {
       setSubopen("");
     } else {
@@ -24,7 +22,7 @@ const Sidebar = ({ menus }: Props) => {
     }
   };
 
-  const toggleSubsidebar = (subitem: any) => {
+  const toggleSubsidebar = (subitem: string) => {
     if (subitem == subsidebar) {
       setSubsidebar("");
     } else {
@@ -41,120 +39,114 @@ const Sidebar = ({ menus }: Props) => {
               <ul>
                 <li className="submenu-open">
                   <ul>
-                    {menus.map((mainMenu, i: number) => {
-                      let menu = { ...mainMenu };
-                      let link_array: any = [];
+                    {menus?.map((menu, i: number) => {
+                      const link_array: string[] = [];
                       menu?.children?.map((subMenu) => {
-                        link_array.push(subMenu?.menuurl);
-                        if (subMenu?.children) {
-                          subMenu?.children?.map((item) => {
-                            link_array.push(item?.menuurl);
+                        link_array.push(`${menu.menuurl}${subMenu.menuurl}`);
+                        if (subMenu.children) {
+                          subMenu.children.map((item) => {
+                            link_array.push(
+                              `${menu.menuurl}${subMenu.menuurl}${item.menuurl}`
+                            );
                           });
                         }
                         return link_array;
                       });
-                      menu.menuUrl = link_array;
                       return (
                         <React.Fragment key={i}>
-                          {/* {" "} */}
                           <li
                             className={`submenu ${
-                              !menu?.children && pathname === menu?.menuUrl
+                              !menu.children && pathname === menu.menuurl
                                 ? "custom-active-hassubroute-false"
                                 : ""
                             }`}
                           >
                             <Link
-                              href={menu?.menuUrl}
-                              onClick={() => toggleSidebar(menu?.menuName)}
+                              href={`${link_array[0]}`}
+                              onClick={() => toggleSidebar(menu.menuname)}
                               className={`${
-                                subOpen === menu?.menuName ? "subdrop " : ""
+                                subOpen === menu.menuname ? "subdrop " : ""
                               } ${
-                                menu?.menuUrl?.includes(pathname)
-                                  ? " active"
-                                  : ""
+                                link_array.includes(pathname) ? " active" : ""
                               }`}
                             >
                               <Icon.Grid />
                               <span className="custom-active-span">
-                                {menu?.menuName}
+                                {menu.menuname}
                               </span>
-                              {menu?.children && (
-                                <span className="menu-arrow" />
-                              )}
+                              {menu.children && <span className="menu-arrow" />}
                             </Link>
                             <ul
                               style={{
                                 display:
-                                  subOpen === menu?.menuName ? "block" : "none",
+                                  subOpen === menu.menuname ? "block" : "none",
                               }}
                             >
-                              {menu?.children?.map((item, titleIndex: any) => (
-                                <li
-                                  className="submenu submenu-two"
-                                  key={titleIndex}
-                                >
-                                  <Link
-                                    href={item.menuurl}
-                                    className={`${
-                                      item?.children
-                                        ?.map((link) => link.menuurl)
-                                        .includes(pathname) ||
-                                      item?.menuurl === pathname
-                                        ? "active"
-                                        : ""
-                                    } ${
-                                      subsidebar === item?.permissiondisplayname
-                                        ? "subdrop"
-                                        : ""
-                                    }`}
-                                    onClick={() =>
-                                      toggleSubsidebar(
-                                        item?.permissiondisplayname
-                                      )
-                                    }
+                              {menu.children?.map(
+                                (item, titleIndex: number) => (
+                                  <li
+                                    className="submenu submenu-two"
+                                    key={titleIndex}
                                   >
-                                    {item?.permissiondisplayname}
-                                    {item?.children && (
-                                      <span className="menu-arrow inside-submenu" />
-                                    )}
-                                  </Link>
-                                  <ul
-                                    style={{
-                                      display:
-                                        subsidebar ===
-                                        item?.permissiondisplayname
-                                          ? "block"
-                                          : "none",
-                                    }}
-                                  >
-                                    {item?.children?.map(
-                                      (items, subIndex: any) => (
-                                        <li key={subIndex}>
-                                          <Link
-                                            href={items.menuurl}
-                                            className={`${
-                                              subsidebar ===
-                                              items?.permissiondisplayname
-                                                ? "submenu-two subdrop"
-                                                : "submenu-two"
-                                            } ${
-                                              items?.children
-                                                ?.map((link) => link.menuurl)
-                                                .includes(pathname) ||
-                                              items?.menuurl === pathname
-                                                ? "active"
-                                                : ""
-                                            }`}
-                                          >
-                                            {items?.permissiondisplayname}
-                                          </Link>
-                                        </li>
-                                      )
-                                    )}
-                                  </ul>
-                                </li>
-                              ))}
+                                    <Link
+                                      href={`${menu.menuurl}${item.menuurl}`}
+                                      className={`${
+                                        item.children
+                                          ?.map((link) => link.menuurl)
+                                          .includes(pathname) ||
+                                        `${menu.menuurl}${item.menuurl}` ===
+                                          pathname
+                                          ? "active"
+                                          : ""
+                                      } ${
+                                        subsidebar === item.menuname
+                                          ? "subdrop"
+                                          : ""
+                                      }`}
+                                      onClick={() =>
+                                        toggleSubsidebar(item.menuname)
+                                      }
+                                    >
+                                      {item.menuname}
+                                      {item.children && (
+                                        <span className="menu-arrow inside-submenu" />
+                                      )}
+                                    </Link>
+                                    <ul
+                                      style={{
+                                        display:
+                                          subsidebar === item.menuname
+                                            ? "block"
+                                            : "none",
+                                      }}
+                                    >
+                                      {item.children?.map(
+                                        (items, subIndex: number) => (
+                                          <li key={subIndex}>
+                                            <Link
+                                              href={`${menu.menuurl}${item.menuurl}${items.menuurl}`}
+                                              className={`${
+                                                subsidebar === items.menuname
+                                                  ? "submenu-two subdrop"
+                                                  : "submenu-two"
+                                              } ${
+                                                items.children
+                                                  ?.map((link) => link.menuurl)
+                                                  .includes(pathname) ||
+                                                items.menuurl === pathname
+                                                  ? "active"
+                                                  : ""
+                                              }`}
+                                            >
+                                              {items.menuname}
+                                            </Link>
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </li>
                         </React.Fragment>

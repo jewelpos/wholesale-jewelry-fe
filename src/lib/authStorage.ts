@@ -1,11 +1,11 @@
 // utils/cookies.ts
+import { CookieOptions } from "@/types/cookies";
 import { NextResponse } from "next/server";
 
-export const COOKIE_OPTIONS: any = {
+export const COOKIE_OPTIONS: CookieOptions = {
   secure: process.env.NODE_ENV === "production",
   httpOnly: true,
   sameSite: "strict",
-  // maxAge: 30 * 24 * 60 * 60,
 };
 
 export async function getAccessToken(): Promise<string | null> {
@@ -24,7 +24,7 @@ export const setCookieResponse = (
   response: NextResponse,
   name: string,
   value: string,
-  options?: Partial<any>
+  options?: Partial<CookieOptions>
 ) => {
   response.cookies.set(name, value, {
     ...COOKIE_OPTIONS,

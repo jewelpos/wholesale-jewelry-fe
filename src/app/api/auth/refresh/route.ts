@@ -15,28 +15,24 @@ export async function POST(request: NextRequest) {
         refreshToken: token,
       },
     });
-    console.log("dsfdsdfsdfsdf2342342", data.refreshToken);
-
     const { accessToken, refreshToken } = data.refreshToken.data;
     const response = NextResponse.json(data.refreshToken, {
       status: 201,
     });
     if (data.refreshToken.success) {
       setCookieResponse(response, "accessToken", accessToken, {
-        maxAge: 15 * 60, // 15 minutes
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       });
       setCookieResponse(response, "refreshToken", refreshToken, {
-        maxAge: 7 * 24 * 60 * 60, // 7 days
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       });
     }
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Token refresh failed" },
       { status: 401 }
