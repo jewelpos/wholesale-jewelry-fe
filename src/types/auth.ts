@@ -17,3 +17,7 @@ export interface RefreshTokenResponse {
 export interface OtpForm {
   otp: string[];
 }
+
+export interface ForgotPasswordFormInput {
+  email: string;
+}

@@ -9,7 +9,7 @@ function findRoutePermission(
   parentUrl: string
 ): boolean {
   if (!routes) {
-    return false;
+    return true;
   }
   for (const route of routes) {
     let menuUrl: string = route.menuurl;
@@ -25,7 +25,7 @@ function findRoutePermission(
       }
     }
   }
-  return false;
+  return true;
 }
 
 export function usePermissionCheck() {

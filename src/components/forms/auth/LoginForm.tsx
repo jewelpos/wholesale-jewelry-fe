@@ -126,7 +126,7 @@ export const LoginForm = () => {
               </div>
             </div>
             <div className="col-6 text-end">
-              <Link className="forgot-link" href="">
+              <Link className="forgot-link" href="/jw/forgot_password">
                 Forgot Password?
               </Link>
             </div>

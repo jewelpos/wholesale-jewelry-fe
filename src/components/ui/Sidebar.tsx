@@ -62,7 +62,8 @@ const Sidebar = ({ menus }: Props) => {
                             }`}
                           >
                             <Link
-                              href={`${link_array[0]}`}
+                              href={"#"}
+                              // href={`${link_array[0]}`}
                               onClick={() => toggleSidebar(menu.menuname)}
                               className={`${
                                 subOpen === menu.menuname ? "subdrop " : ""

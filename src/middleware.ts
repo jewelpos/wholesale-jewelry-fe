@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't need authentication
-  const publicRoutes = ["/jw/login", "/jw/register", "/jw/forgot-password"];
+  const publicRoutes = ["/jw/login", "/jw/register", "/jw/forgot_password"];
 
   // Skip middleware for static files and images
   if (
