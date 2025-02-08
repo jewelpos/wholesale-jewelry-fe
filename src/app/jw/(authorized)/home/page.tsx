@@ -1,9 +1,10 @@
+import HomeComponent from "@/components/ui/home/HomeComponent";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
 import { Tool } from "react-feather";
 
-const Home = () => {
+const Home = async () => {
+  // const posts = await g();
   const tiles = [
     {
       icon: "/assets/img/gif/store.gif",
@@ -71,55 +72,7 @@ const Home = () => {
     },
   ];
 
-  return (
-    <div>
-      <div className="page-wrapper cardhead">
-        <div className="content container-fluid">
-          <div className="row">
-            {tiles.map((tile) => (
-              <div className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 d-flex">
-                <div className="connected-app-card d-flex w-100">
-                  <ul className="w-100">
-                    <li className="flex-column align-items-start">
-                      <div className="d-flex align-items-center justify-content-between w-100">
-                        <div className="security-type d-flex align-items-center">
-                          <span className="system-app-icon">
-                            <img src={tile.icon} />
-                          </span>
-                          <div className="security-title">
-                            <h5>{tile.title}</h5>
-                          </div>
-                        </div>
-                      </div>
-                      <br></br>
-                      <p>{tile.sub}</p>
-                      <Link className="btn-link" href="#">
-                        {tile.link}
-                      </Link>
-                    </li>
-                    <li>
-                      <div className="integration-btn">
-                        {tile.btn && (
-                          <Link
-                            href="#"
-                            data-bs-toggle="modal"
-                            data-bs-target="#google-captcha"
-                          >
-                            <Tool className="me-2" />
-                            {tile.btn}
-                          </Link>
-                        )}
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <HomeComponent />;
 };
 
 export default Home;

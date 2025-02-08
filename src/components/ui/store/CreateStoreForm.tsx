@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { GetStoreCategoryData, Store } from "@/types/store";
+import { GetStoreCategoryData, CreateStore } from "@/types/store";
 import { useMutation, useQuery } from "@apollo/client";
 import Select from "react-select";
 import { CREATE_STORE_MUTATION } from "@/lib/graphql/mutations/store";
@@ -32,7 +32,7 @@ const CreateStoreForm = () => {
   const dispatch = useAppDispatch();
   const [createStore, { loading }] = useMutation<
     CreateStoreResponse,
-    { input: Store }
+    { input: CreateStore }
   >(CREATE_STORE_MUTATION);
   const { data: storeCategoryData } = useQuery<GetStoreCategoryData>(
     GET_STORE_CATEGORY_QUERY
@@ -42,9 +42,9 @@ const CreateStoreForm = () => {
     handleSubmit,
     formState: { errors },
     control,
-  } = useForm<Store>();
+  } = useForm<CreateStore>();
 
-  const onSubmit: SubmitHandler<Store> = async (formData) => {
+  const onSubmit: SubmitHandler<CreateStore> = async (formData) => {
     const result = await handleTryCatch(async () => {
       const { data } = await createStore({ variables: { input: formData } });
       if (data?.createStore) {
@@ -54,7 +54,7 @@ const CreateStoreForm = () => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        window.location.href = "/jw/dashboard/admin";
+        window.location.href = "/jw/home";
       }
       return true;
     });
@@ -73,7 +73,7 @@ const CreateStoreForm = () => {
       <div className="row">
         <div className="col-md-6">
           <div className="mb-3">
-            <label className="form-label">Outlet name</label>
+            <label className="form-label">Store name</label>
             <input
               type="text"
               className={`${errors.outletname && "is-invalid"}  form-control`}

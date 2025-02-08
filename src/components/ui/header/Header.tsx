@@ -16,6 +16,7 @@ import {
   Bell,
   LogOut,
 } from "react-feather";
+import StoreDropdown from "./StoreDropdown";
 
 type Props = {
   onLogout: () => Promise<boolean | void>;
@@ -116,7 +117,7 @@ const Header = ({ onLogout }: Props) => {
           onMouseLeave={expandMenu}
           onMouseOver={expandMenuOpen}
         >
-          <Link href="/dashboard" className="logo logo-normal">
+          <Link href="/jw/home" className="logo logo-normal">
             <Image
               src="/assets/img/logo.png"
               alt="img"
@@ -124,7 +125,7 @@ const Header = ({ onLogout }: Props) => {
               height={30}
             />
           </Link>
-          <Link href="/dashboard" className="logo logo-white">
+          <Link href="/jw/home" className="logo logo-white">
             <Image
               src="/assets/img/logo-white.png"
               alt="img"
@@ -132,7 +133,7 @@ const Header = ({ onLogout }: Props) => {
               height={30}
             />
           </Link>
-          <Link href="/dashboard" className="logo-small">
+          <Link href="/jw/home" className="logo-small">
             <Image
               src="/assets/img/logo-small.png"
               alt="img"
@@ -274,60 +275,7 @@ const Header = ({ onLogout }: Props) => {
           {/* /Search */}
 
           {/* Select Store */}
-          <li className="nav-item dropdown has-arrow main-drop select-store-dropdown">
-            <Link
-              href="#"
-              className="dropdown-toggle nav-link select-store"
-              data-bs-toggle="dropdown"
-            >
-              <span className="user-info">
-                <span className="user-letter">
-                  {/* <img
-                    src="assets/img/store/store-01.png"
-                    alt="Store Logo"
-                    className="img-fluid"
-                  /> */}
-                </span>
-                <span className="user-detail">
-                  <span className="user-name">Select Store</span>
-                </span>
-              </span>
-            </Link>
-            <div className="dropdown-menu dropdown-menu-right">
-              <Link href="#" className="dropdown-item">
-                {/* <img
-                  src="assets/img/store/store-01.png"
-                  alt="Store Logo"
-                  className="img-fluid"
-                />{" "} */}
-                Grocery Alpha
-              </Link>
-              <Link href="#" className="dropdown-item">
-                {/* <img
-                  src="assets/img/store/store-02.png"
-                  alt="Store Logo"
-                  className="img-fluid"
-                />{" "} */}
-                Grocery Apex
-              </Link>
-              <Link href="#" className="dropdown-item">
-                {/* <img
-                  src="assets/img/store/store-03.png"
-                  alt="Store Logo"
-                  className="img-fluid"
-                />{" "} */}
-                Grocery Bevy
-              </Link>
-              <Link href="#" className="dropdown-item">
-                {/* <img
-                  src="assets/img/store/store-04.png"
-                  alt="Store Logo"
-                  className="img-fluid"
-                />{" "} */}
-                Grocery Eden
-              </Link>
-            </div>
-          </li>
+          <StoreDropdown />
           {/* /Select Store */}
 
           {/* Flag */}

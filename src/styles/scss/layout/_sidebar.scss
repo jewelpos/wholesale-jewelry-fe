@@ -42,7 +42,7 @@
             color: $white;
           }
           svg {
-            color: #fe9f43;
+            color: $primary;
           }
         }
         svg {
@@ -69,23 +69,23 @@
             color: #637381;
           }
           &:hover {
-            background: rgba(254, 159, 67, 0.08);
-            color: #fe9f43;
+            background: $primary-100;
+            color: $primary;
             border-radius: 5px;
             img {
               filter: invert(72%) sepia(76%) saturate(1430%) hue-rotate(327deg)
                 brightness(103%) contrast(101%);
             }
             span {
-              color: #fe9f43;
+              color: $primary;
             }
             svg {
-              color: #fe9f43;
+              color: $primary;
             }
           }
           &.active {
-            background: rgba(254, 159, 67, 0.08);
-            color: #fe9f43;
+            background: $primary-100;
+            color: $primary;
             border-radius: 5px;
             svg {
               color: $white;
@@ -95,12 +95,12 @@
                 brightness(103%) contrast(101%);
             }
             span {
-              color: #fe9f43;
+              color: $primary;
             }
             .menu-arrow {
-              background: #ffeddc;
+              background: $primary-300;
               &::before {
-                border-color: #fe9f43;
+                border-color: $primary;
               }
             }
           }
@@ -112,14 +112,14 @@
         }
         &.active {
           a {
-            background: rgba(254, 159, 67, 0.08);
+            background: $primary-100;
             border-radius: 5px;
             img {
               filter: invert(72%) sepia(76%) saturate(1430%) hue-rotate(327deg)
                 brightness(103%) contrast(101%);
             }
             span {
-              color: #fe9f43;
+              color: $primary;
             }
           }
         }
@@ -139,7 +139,7 @@
                 &.active {
                   color: $secondary;
                   &:after {
-                    background: #fe9f43;
+                    background: $primary;
                     border: 2px solid #fdb;
                   }
                 }
@@ -155,7 +155,7 @@
                 &:hover {
                   color: $primary;
                   &:after {
-                    background: #fe9f43;
+                    background: $primary;
                     border: 2px solid #fdb;
                   }
                 }
@@ -195,14 +195,14 @@
                     }
                   }
                   &:after {
-                    background: #fe9f43;
+                    background: $primary;
                     border: 2px solid #fdb;
                   }
                 }
                 &:hover {
                   color: $primary;
                   &:after {
-                    background: #fe9f43;
+                    background: $primary;
                     border: 2px solid #fdb;
                   }
                   span {
@@ -213,9 +213,9 @@
             }
             > li {
               &.active a {
-                background: rgba(254, 159, 67, 0.08);
+                background: $primary-100;
                 border-radius: 5px;
-                color: #fe9f43;
+                color: $primary;
                 span {
                   color: $primary;
                 }
@@ -245,25 +245,25 @@
       li {
         &.active {
           a {
-            color: #fe9f43;
+            color: $primary;
           }
           svg {
-            color: #fe9f43;
+            color: $primary;
           }
         }
         .submenu > {
           a {
             &.active {
-              background: rgba(254, 159, 67, 0.08);
-              color: #fe9f43;
+              background: $primary-100;
+              color: $primary;
               border-radius: 5px;
               span {
-                color: #fe9f43;
+                color: $primary;
               }
               .menu-arrow {
-                background: #ffeddc;
+                background: $primary-300;
                 &::before {
-                  border-color: #fe9f43;
+                  border-color: $primary;
                 }
               }
             }
@@ -324,7 +324,7 @@
               &:hover {
                 color: $primary;
                 &:after {
-                  background: #fe9f43;
+                  background: $primary;
                   border: 2px solid #fdb;
                 }
               }
@@ -377,7 +377,7 @@
     &.subdrop {
       .menu-arrow {
         @include transform(rotate(90deg));
-        background: #ffeddc;
+        background: $primary-300;
       }
     }
   }

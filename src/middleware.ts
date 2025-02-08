@@ -6,7 +6,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't need authentication
-  const publicRoutes = ["/jw/login", "/jw/register", "/jw/forgot_password"];
+  const publicRoutes = [
+    "/",
+    "/jw",
+    "/jw/login",
+    "/jw/register",
+    "/jw/forgot_password",
+  ];
 
   // Skip middleware for static files and images
   if (
@@ -22,7 +28,7 @@ export function middleware(request: NextRequest) {
 
   // If accessing a public route while authenticated, redirect to dashboard
   if (token && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/jw/dashboard/admin", request.url));
+    return NextResponse.redirect(new URL("/jw/home", request.url));
   }
 
   // If accessing a protected route without authentication, redirect to login

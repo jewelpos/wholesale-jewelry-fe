@@ -2,6 +2,7 @@ import { onError } from "@apollo/client/link/error";
 import { Observable } from "@apollo/client";
 import { makeStore } from "../store/store";
 import { clearUser } from "../store/slice/userDataSlice";
+import { clearStores } from "../store/slice/storesSlice";
 
 async function refreshToken(): Promise<boolean> {
   try {
@@ -29,6 +30,7 @@ async function onLogout(): Promise<boolean> {
     }
     const store = makeStore();
     store.dispatch(clearUser());
+    store.dispatch(clearStores());
     window.location.href = "/jw/login";
     return true;
   } catch {

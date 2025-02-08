@@ -8,3 +8,22 @@ export const GET_STORE_CATEGORY_QUERY = gql`
     }
   }
 `;
+
+export const GET_STORES = gql`
+  query {
+    getStores {
+      storeid
+      creationdatetime
+      isenabled
+      storecategoryid
+      storename
+      institutionid
+      hassetupoutlet
+      hassetupusers
+      hassetupsalestax
+      hassetupinventory
+      hassetupproduct
+      hassetupreceipt
+    }
+  }
+`;

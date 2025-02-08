@@ -7,46 +7,14 @@ import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { GET_ACTIVE_USER } from "@/lib/graphql/query/user";
 import { addUser } from "@/lib/store/slice/userDataSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import Header from "../ui/Header";
+import Header from "../ui/header/Header";
 import Sidebar from "../ui/Sidebar";
 import FullPageLoader from "../ui/FullPageLoader";
-import { Menus } from "@/types/permissions";
 import useAuth from "@/hooks/useAuth";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-
-const sidebarMenuCreateStore: Menus = [
-  {
-    menuid: "1",
-    iconurl: "",
-    menuurl: "/jw/create/store/",
-    children: [
-      {
-        name: "Admin",
-        action: [],
-        menuid: 2,
-        roleid: "1",
-        iconurl: "",
-        menuurl: "/jw/create/store/",
-        menuname: "Admin",
-        parentid: 1,
-        slugname: "create_store",
-        menuorder: 0,
-        storetypeid: 0,
-        permissionid: 0,
-        permissionname: "",
-        permissionorder: 0,
-        permissionparentid: 0,
-        permissiondescription: "",
-        permissiondisplayname: "Create store",
-      },
-    ],
-    menuname: "Store",
-    slugname: "store",
-    menuorder: 0,
-    storetypeid: 0,
-  },
-];
+import { GET_STORES } from "@/lib/graphql/query/store";
+import { addStores } from "@/lib/store/slice/storesSlice";
 
 const UserData = ({
   children,
@@ -56,12 +24,35 @@ const UserData = ({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [getActiveUserInfo] = useLazyQuery(GET_ACTIVE_USER);
+  const [getStores] = useLazyQuery(GET_STORES);
   const user = useAppSelector((state) => state.user.data);
   const [loading, setLoading] = useState<boolean>(false);
-  const menus = user?.shouldcreatestore
-    ? sidebarMenuCreateStore
-    : user?.permissions?.menus;
+  const menus = user?.shouldcreatestore ? [] : user?.permissions?.menus;
   const { loading: authLoading, onLogout } = useAuth();
+
+  const fetchStoreData = async () => {
+    const result = await handleTryCatch(
+      async () => {
+        setLoading(true);
+        const { data } = await getStores();
+        if (data.getStores) {
+          dispatch(addStores(data.getStores));
+        }
+        return true;
+      },
+      () => {
+        setLoading(false);
+      }
+    );
+    if (result.error) {
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -71,15 +62,18 @@ const UserData = ({
             setLoading(true);
             const { data } = await getActiveUserInfo();
             if (data.getActiveUserInfo) {
-              const userData = {
-                ...data.getActiveUserInfo.data.user,
-                permissions: {
-                  ...data.getActiveUserInfo.data.user.permissions[0],
-                },
-              };
+              let userData = { ...data.getActiveUserInfo.data.user };
+              if (data.getActiveUserInfo.data.user.permissions) {
+                userData = {
+                  ...userData,
+                  permissions: {
+                    ...data.getActiveUserInfo.data.user.permissions[0],
+                  },
+                };
+              }
               dispatch(addUser(userData));
-              if (data.getActiveUserInfo.data.user.shouldcreatestore) {
-                router.push("/jw/create/store");
+              if (!data.getActiveUserInfo.data.user.shouldcreatestore) {
+                fetchStoreData();
               }
             }
             return true;
@@ -97,10 +91,6 @@ const UserData = ({
           );
         }
       })();
-    } else {
-      if (user.shouldcreatestore) {
-        router.push("/jw/create/store");
-      }
     }
   }, [dispatch, getActiveUserInfo, router, user]);
 
@@ -109,7 +99,7 @@ const UserData = ({
       {!loading && !authLoading && user && (
         <>
           <Header onLogout={onLogout} />
-          <Sidebar menus={menus} />
+          {menus?.length && <Sidebar menus={menus} />}
           {children}
         </>
       )}

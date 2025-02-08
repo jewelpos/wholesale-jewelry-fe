@@ -3,7 +3,7 @@ import CreateStoreForm from "@/components/ui/store/CreateStoreForm";
 const CreateStore = () => {
   return (
     <div>
-      <div className="page-wrapper cardhead">
+      <div className="page-wrapper  cardhead">
         <div className="content container-fluid">
           <div className="row">
             <div className="col-md-12">
