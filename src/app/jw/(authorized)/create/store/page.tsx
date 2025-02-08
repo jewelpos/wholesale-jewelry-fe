@@ -12,6 +12,7 @@ const CreateStore = () => {
                   <h5 className="card-title">Create Store</h5>
                   <p>You need to create the store first</p>
                 </div>
+
                 <div className="card-body">
                   <CreateStoreForm />
                 </div>
