@@ -10,3 +10,14 @@ export const CREATE_STORE_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_SINGLE_STORE_MUTATION = gql`
+  mutation CreateSingleStore($storename: String!, $categoryid: Int!) {
+    createSingleStore(storename: $storename, categoryid: $categoryid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

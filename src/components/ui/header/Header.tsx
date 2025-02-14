@@ -17,12 +17,16 @@ import {
   LogOut,
 } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
+import { Store, Stores } from "@/types/store";
 
 type Props = {
   onLogout: () => Promise<boolean | void>;
+  stores: Stores;
+  store: Store;
+  storeLoading: boolean;
 };
 
-const Header = ({ onLogout }: Props) => {
+const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
   const [toggle, SetToggle] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
@@ -272,11 +276,11 @@ const Header = ({ onLogout }: Props) => {
               </form>
             </div>
           </li>
-          {/* /Search */}
-
-          {/* Select Store */}
-          <StoreDropdown />
-          {/* /Select Store */}
+          <StoreDropdown
+            stores={stores}
+            store={store}
+            storeLoading={storeLoading}
+          />
 
           {/* Flag */}
           <li className="nav-item dropdown has-arrow flag-nav nav-item-box">

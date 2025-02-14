@@ -32,10 +32,9 @@ export function middleware(request: NextRequest) {
   }
 
   // If accessing a protected route without authentication, redirect to login
-  if (!token && !publicRoutes.includes(pathname)) {
+  if (!token && (!publicRoutes.includes(pathname) || pathname === "/")) {
     return NextResponse.redirect(new URL("/jw/login", request.url));
   }
-
   return NextResponse.next();
 }
 

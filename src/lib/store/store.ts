@@ -2,7 +2,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import notificationSlice from "./slice/notificationSlice";
 import userDataSlice from "./slice/userDataSlice";
 import themeSlice from "./slice/themeSlice";
-import storesSlice from "./slice/storesSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -10,7 +9,6 @@ export const makeStore = () => {
       notification: notificationSlice,
       user: userDataSlice,
       layoutstyledata: themeSlice,
-      stores: storesSlice,
     },
   });
 };

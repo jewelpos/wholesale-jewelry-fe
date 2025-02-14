@@ -3,7 +3,7 @@ import HomeComponent from "@/components/ui/home/HomeComponent";
 const Home = async () => {
   return (
     <div>
-      <div className="main-wrapper m-header cardhead">
+      <div className="page-wrapper cardhead">
         <HomeComponent />
       </div>
     </div>

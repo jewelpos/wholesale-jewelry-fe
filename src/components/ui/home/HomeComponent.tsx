@@ -1,15 +1,16 @@
 "use client";
 
-import { useAppSelector } from "@/lib/store/hook";
 import Image from "next/image";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import React from "react";
 import { Tool } from "react-feather";
+import InfoHeader from "../InfoHeader";
+import { useAppSelector } from "@/lib/store/hook";
 
 const HomeComponent = () => {
-  const stores = useAppSelector((state) => state.stores.data);
-  const storeNotAvailable = !stores.length;
-  const menus = useAppSelector((state) => state.user.data?.permissions);
+  const { storeId } = useParams();
+  const user = useAppSelector((state) => state.user.data);
 
   const tiles = [
     {
@@ -20,7 +21,7 @@ const HomeComponent = () => {
       btn: "Add a store",
       btnActive: true,
       disabled: false,
-      btnUrl: "/jw/create/store",
+      btnUrl: !storeId ? "/jw/store/create" : `/jw/${storeId}/store/create`,
     },
     {
       icon: "/assets/img/gif/outlet.gif",
@@ -29,7 +30,8 @@ const HomeComponent = () => {
       link: "Learn more about setting up outlets",
       btn: "Add an outlet",
       btnActive: true,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
+      btnUrl: `/jw/${storeId}/outlet/create`,
     },
     {
       icon: "/assets/img/gif/user.gif",
@@ -38,7 +40,7 @@ const HomeComponent = () => {
       link: "Learn more about setting up users",
       btn: "Add users",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
     {
       icon: "/assets/img/gif/tax.gif",
@@ -47,7 +49,7 @@ const HomeComponent = () => {
       link: "Learn more about sales taxes",
       btn: "Add sales taxes",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
     {
       icon: "/assets/img/gif/payment.gif",
@@ -56,7 +58,7 @@ const HomeComponent = () => {
       link: "Learn more about payment types",
       btn: "Add payment types",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
     {
       icon: "/assets/img/gif/products.gif",
@@ -65,7 +67,7 @@ const HomeComponent = () => {
       link: "Learn more about adding products",
       btn: "Add products",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
     {
       icon: "/assets/img/gif/inventory.gif",
@@ -74,7 +76,7 @@ const HomeComponent = () => {
       link: "Learn more about inventory in Lightspeed Retail",
       btn: "",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
     // {
     //   icon: "/assets/img/gif/receipt.gif",
@@ -91,70 +93,75 @@ const HomeComponent = () => {
       link: "",
       btn: "I'm ready to sell",
       btnActive: false,
-      disabled: storeNotAvailable,
+      disabled: !storeId,
     },
   ];
 
   return (
-    <div>
-      <div
-        className={`${
-          menus ? "page-wrapper " : "main-wrapper m-header"
-        } cardhead  `}
-      >
-        <div className="content container-fluid">
-          <div className="row">
-            {tiles.map((tile) => (
-              <div
-                className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 d-flex "
-                key={tile.title}
-              >
-                <div className={`connected-app-card d-flex w-100 `}>
-                  <ul className={`w-100 ${tile.disabled && "disabled-card"}`}>
-                    <li className="flex-column align-items-start">
-                      <div className="d-flex align-items-center justify-content-between w-100">
-                        <div className="security-type d-flex align-items-center">
-                          <span className="system-app-icon">
-                            <Image
-                              src={tile.icon}
-                              height={40}
-                              width={40}
-                              alt={`${tile.title} gif`}
-                            />
-                          </span>
-                          <div className="security-title">
-                            <h5>{tile.title}</h5>
-                          </div>
+    <>
+      <InfoHeader
+        title={storeId ? `Hi ${user?.name},` : `Welcome ${user?.name},`}
+        para={
+          storeId
+            ? "Manage your business efficiently with quick access to key modules."
+            : "Create your first store and details. Store name will be considered as your outlet name by default."
+        }
+      />
+      <div className="content container-fluid">
+        <div className="row">
+          {tiles.map((tile) => (
+            <div
+              className="col-xxl-3 col-xl-6 col-lg-6 col-md-6 d-flex "
+              key={tile.title}
+            >
+              <div className={`connected-app-card d-flex w-100 `}>
+                <ul className={`w-100 ${tile.disabled && "disabled-card"}`}>
+                  <li className="flex-column align-items-start">
+                    <div className="d-flex align-items-center justify-content-between w-100">
+                      <div className="security-type d-flex align-items-center">
+                        <span className="system-app-icon">
+                          <Image
+                            src={tile.icon}
+                            height={40}
+                            width={40}
+                            alt={`${tile.title} gif`}
+                            unoptimized
+                          />
+                        </span>
+                        <div className="security-title">
+                          <h6 className="lead">
+                            <b>{tile.title}</b>
+                          </h6>
                         </div>
                       </div>
-                      <br></br>
-                      <p>{tile.sub}</p>
-                      <Link className="btn-link" href="#">
-                        {tile.link}
-                      </Link>
-                    </li>
-                    <li>
-                      <div className="integration-btn">
-                        {tile.btn && (
-                          <Link
-                            href={tile.btnUrl || "#"}
-                            type="button"
-                            className="btn btn-outline-primary rounded-pill"
-                          >
-                            <Tool className="me-2" />
-                            {tile.btn}
-                          </Link>
-                        )}
-                      </div>
-                    </li>
-                  </ul>
-                </div>
+                    </div>
+                    <br></br>
+                    <p className="lead">{tile.sub}</p>
+                    <Link className="btn-link " href="#">
+                      {tile.link}
+                    </Link>
+                  </li>
+                  <li>
+                    <div className="integration-btn">
+                      {tile.btn && (
+                        <Link
+                          href={tile.btnUrl || "#"}
+                          type="button"
+                          className="btn btn-outline-primary rounded-pill "
+                        >
+                          <Tool className="me-2" />
+                          {tile.btn}
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                </ul>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

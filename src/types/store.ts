@@ -1,5 +1,5 @@
 export type CreateStore = {
-  storetypeid: number;
+  storetypeid?: number;
   outletname: string;
   address: string;
   city: string;
@@ -21,7 +21,7 @@ export type GetStoreCategoryData = {
 };
 
 export type Store = {
-  storeid: number;
+  storeid: number | string;
   creationdatetime: string;
   isenabled: number;
   storecategoryid: number;
@@ -36,3 +36,8 @@ export type Store = {
 };
 
 export type Stores = Store[];
+
+export type CreateSingleStore = {
+  storename: string;
+  categoryid: number;
+};

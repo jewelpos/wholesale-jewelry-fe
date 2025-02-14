@@ -1,16 +1,12 @@
 "use client";
 
-import { useAppDispatch } from "@/lib/store/hook";
 import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { ForgotPasswordFormInput } from "@/types/auth";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 const ForgotPasswordForm = () => {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
   const {
     register,
     handleSubmit,
@@ -22,7 +18,7 @@ const ForgotPasswordForm = () => {
     mode: "all",
   });
 
-  const onSubmit = async (formData: ForgotPasswordFormInput) => {};
+  const onSubmit = async () => {};
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>

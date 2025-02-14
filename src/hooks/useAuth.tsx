@@ -1,5 +1,4 @@
 import { useAppDispatch } from "@/lib/store/hook";
-import { clearStores } from "@/lib/store/slice/storesSlice";
 import { clearUser } from "@/lib/store/slice/userDataSlice";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,7 +20,6 @@ const useAuth = () => {
         throw new Error("Logout failed");
       }
       dispatch(clearUser());
-      dispatch(clearStores());
       router.push("/jw/login");
       return true;
     } catch (error) {

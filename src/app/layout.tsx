@@ -26,7 +26,7 @@ export default function RootLayout({
           <BootstrapJS />
           {children}
           <Notification />
-          <ThemeSettings />
+          {/* <ThemeSettings /> */}
         </StoreProvider>
       </body>
     </html>

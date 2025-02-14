@@ -5,22 +5,24 @@ import { setLayoutChange } from "@/lib/store/slice/themeSlice";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Settings } from "react-feather";
-import { useDispatch } from "react-redux";
 
 const ThemeSettings = () => {
   const dispatch = useAppDispatch();
 
   const [show, setShow] = useState(false);
   const [layoutColor, setlayoutColor] = useState<string>(
-    localStorage.getItem("colorschema") || ""
+    // localStorage.getItem("colorschema") ||
+    ""
   );
 
   const [layoutView, setLayoutView] = useState(
-    localStorage.getItem("layoutStyling") || ""
+    // localStorage.getItem("layoutStyling") ||
+    ""
   );
 
   const [layoutTheme, setLayoutTheme] = useState(
-    localStorage.getItem("layoutThemeColors") || ""
+    // localStorage.getItem("layoutThemeColors") ||
+    ""
   );
 
   const showSettings = () => {

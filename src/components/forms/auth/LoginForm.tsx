@@ -10,6 +10,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import Image from "next/image";
+import ButtonLoader from "@/components/ui/ButtonLoader";
 
 export const LoginForm = () => {
   const router = useRouter();
@@ -41,7 +42,7 @@ export const LoginForm = () => {
     const data = await response.json();
     if (data.data) {
       if (data.success) {
-        router.push("/jw/dashboard/admin");
+        router.push("/jw/home");
       } else {
         const details = {
           email: formData.username,
@@ -133,19 +134,12 @@ export const LoginForm = () => {
           </div>
         </div>
         <div className="form-login">
-          <button
-            type="submit"
-            disabled={loginLoading}
+          <ButtonLoader
+            loading={loginLoading}
+            btnText="Sign In"
+            loadingText="Signing in..."
             className="btn btn-login"
-          >
-            {loginLoading ? (
-              <>
-                <i className="fas fa-spinner fa-spin me-2" /> Signing in...
-              </>
-            ) : (
-              "Sign in"
-            )}
-          </button>
+          />
         </div>
       </div>
     </form>

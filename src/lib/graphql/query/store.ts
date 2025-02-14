@@ -27,3 +27,22 @@ export const GET_STORES = gql`
     }
   }
 `;
+
+export const GET_STORE = gql`
+  query GetStore($storeid: Int!) {
+    getStore(storeid: $storeid) {
+      storeid
+      creationdatetime
+      isenabled
+      storecategoryid
+      storename
+      institutionid
+      hassetupoutlet
+      hassetupusers
+      hassetupsalestax
+      hassetupinventory
+      hassetupproduct
+      hassetupreceipt
+    }
+  }
+`;
