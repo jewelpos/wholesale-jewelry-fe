@@ -14,6 +14,8 @@ import OutletInputs from "../outlet/OutletInputs";
 import OutletContactInputs from "../outlet/OutletContactInputs";
 import ButtonLoader from "../ButtonLoader";
 import { useRouter } from "next/navigation";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
+import useUserData from "@/hooks/useUserData";
 
 type CreateStoreResponse = {
   createStore: {
@@ -39,6 +41,8 @@ const CreateStoreOutletForm = () => {
     getValues,
     trigger,
   } = useForm<CreateStore>();
+  const { homePagePath } = useDefaultRoute();
+  const { fetchUserData } = useUserData();
 
   const onSubmit: SubmitHandler<CreateStore> = async (formData) => {
     const result = await handleTryCatch(async () => {
@@ -50,7 +54,8 @@ const CreateStoreOutletForm = () => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        router.push("/jw/home");
+        fetchUserData();
+        router.push(homePagePath);
       }
       return true;
     });
@@ -116,16 +121,6 @@ const CreateStoreOutletForm = () => {
             />
           </div>
         </div>
-      </div>
-      <div className="p-3 d-flex justify-content-end">
-        <button type="button" className="btn btn-light me-2">
-          Cancel
-        </button>
-        <ButtonLoader
-          loading={loading}
-          btnText="Create store"
-          loadingText="Creating ..."
-        />
       </div>
     </form>
   );

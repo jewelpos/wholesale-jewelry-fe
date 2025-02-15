@@ -7,7 +7,6 @@ import "../styles/css/feather.css";
 import BootstrapJS from "@/components/root/BootstrapJS";
 import StoreProvider from "./StoreProvider";
 import Notification from "@/components/ui/Notification";
-import ThemeSettings from "@/components/ui/ThemeSettings";
 
 export const metadata: Metadata = {
   title: "POS",
@@ -26,7 +25,6 @@ export default function RootLayout({
           <BootstrapJS />
           {children}
           <Notification />
-          {/* <ThemeSettings /> */}
         </StoreProvider>
       </body>
     </html>

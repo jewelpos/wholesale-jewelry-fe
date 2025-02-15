@@ -1,18 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useMutation } from "@apollo/client";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { useAppDispatch } from "@/lib/store/hook";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import OutletInputs from "./OutletInputs";
-import OutletContactInputs from "./OutletContactInputs";
 import { CREATE_OUTLET_MUTATION } from "@/lib/graphql/mutations/outlet";
 import { CreateOutlet } from "@/types/outlet";
 import { useParams, useRouter } from "next/navigation";
 import ButtonLoader from "../ButtonLoader";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
+import useStores from "@/hooks/useStores";
+import OutletContactInputsMain from "./OutletContactInputsMain";
+import OutletInputsMain from "./OutletInputsMain";
 
 type CreateOutletResponse = {
   createOutlet: {
@@ -43,6 +45,9 @@ const CreateOutletForm = () => {
     defaultValues: { storeid: parsedStoreId },
   });
 
+  const { homePagePath } = useDefaultRoute();
+  const { fetchStoresData, loading: storesLoading } = useStores();
+
   const onSubmit: SubmitHandler<CreateOutlet> = async (formData) => {
     const result = await handleTryCatch(async () => {
       const { data } = await createOutlet({ variables: { input: formData } });
@@ -53,7 +58,7 @@ const CreateOutletForm = () => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        router.push("/jw/home");
+        router.push(homePagePath);
       }
       return true;
     });
@@ -67,6 +72,10 @@ const CreateOutletForm = () => {
     }
   };
 
+  useEffect(() => {
+    fetchStoresData();
+  }, [fetchStoresData]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="row">
@@ -75,7 +84,12 @@ const CreateOutletForm = () => {
             <div className="card-header">
               <h5 className="card-title">Outlet info</h5>
             </div>
-            <OutletContactInputs register={register} errors={errors} />
+            <OutletContactInputsMain
+              register={register}
+              errors={errors}
+              control={control}
+              storesLoading={storesLoading}
+            />
           </div>
         </div>
         <div className="col-md-12">
@@ -84,7 +98,7 @@ const CreateOutletForm = () => {
               <h5 className="card-title">Outlet location</h5>
             </div>
             <div className="card-body">
-              <OutletInputs
+              <OutletInputsMain
                 register={register}
                 errors={errors}
                 control={control}

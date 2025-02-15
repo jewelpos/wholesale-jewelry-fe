@@ -1,5 +1,5 @@
 export type CreateOutlet = {
-  storeid?: number;
+  storeid: number;
   outletname: string;
   address: string;
   city: string;

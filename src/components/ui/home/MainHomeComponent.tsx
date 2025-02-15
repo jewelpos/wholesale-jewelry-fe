@@ -7,17 +7,17 @@ import HomeCatalogTiles from "./HomeCatalogTiles";
 import homeCatalog from "@/lib/utils/homeCatalog.json";
 import { catalogType } from "@/types/home";
 
-const HomeComponent = () => {
+const MainHomeComponent = () => {
   const user = useAppSelector((state) => state.user.data);
   const catalogues: catalogType[] = homeCatalog;
 
   return (
     <>
-      <InfoHeader
-        title={`Welcome ${user?.name},`}
-        para="Create your first store and details."
-      />
       <div className="content container">
+        <InfoHeader
+          title={`Hi ${user?.name},`}
+          para="Manage your business efficiently with quick access to key modules."
+        />
         <div className="row">
           {catalogues.map((catalog, index: number) => (
             <HomeCatalogTiles
@@ -32,4 +32,4 @@ const HomeComponent = () => {
   );
 };
 
-export default HomeComponent;
+export default MainHomeComponent;

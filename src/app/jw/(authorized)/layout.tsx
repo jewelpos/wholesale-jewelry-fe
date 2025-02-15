@@ -1,6 +1,6 @@
 import { ErrorBoundary } from "@/components/root/ErrorBoundary";
 import ApolloClientProviderAuthorized from "./ApolloClientProviderAuthorized";
-import UserData from "@/components/root/UserData";
+import InitialDataLoader from "@/components/root/InitialDataLoader";
 import { PermissionGuard } from "@/components/root/PermissionGuard";
 
 export default function AuthorizedLayout({
@@ -18,9 +18,9 @@ export default function AuthorizedLayout({
             </div>
           }
         >
-          <UserData>
+          <InitialDataLoader>
             <PermissionGuard>{children}</PermissionGuard>
-          </UserData>
+          </InitialDataLoader>
         </ErrorBoundary>
       </ApolloClientProviderAuthorized>
     </div>

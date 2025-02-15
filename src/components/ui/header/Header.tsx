@@ -17,19 +17,19 @@ import {
   LogOut,
 } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
-import { Store, Stores } from "@/types/store";
+import { useParams } from "next/navigation";
 
 type Props = {
   onLogout: () => Promise<boolean | void>;
-  stores: Stores;
-  store: Store;
   storeLoading: boolean;
 };
 
-const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
+const Header = ({ onLogout, storeLoading }: Props) => {
+  const { storeId } = useParams();
   const [toggle, SetToggle] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
+  const defaultPage = storeId ? `/jw/${storeId}/home` : `/jw/home`;
 
   const isElementVisible = (element: HTMLElement | null): boolean => {
     if (!element) return false;
@@ -121,7 +121,7 @@ const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
           onMouseLeave={expandMenu}
           onMouseOver={expandMenuOpen}
         >
-          <Link href="/jw/home" className="logo logo-normal">
+          <Link href={defaultPage} className="logo logo-normal">
             <Image
               src="/assets/img/logo.png"
               alt="img"
@@ -129,7 +129,7 @@ const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
               height={30}
             />
           </Link>
-          <Link href="/jw/home" className="logo logo-white">
+          <Link href={defaultPage} className="logo logo-white">
             <Image
               src="/assets/img/logo-white.png"
               alt="img"
@@ -137,7 +137,7 @@ const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
               height={30}
             />
           </Link>
-          <Link href="/jw/home" className="logo-small">
+          <Link href={defaultPage} className="logo-small">
             <Image
               src="/assets/img/logo-small.png"
               alt="img"
@@ -276,11 +276,7 @@ const Header = ({ onLogout, stores, store, storeLoading }: Props) => {
               </form>
             </div>
           </li>
-          <StoreDropdown
-            stores={stores}
-            store={store}
-            storeLoading={storeLoading}
-          />
+          <StoreDropdown storeLoading={storeLoading} />
 
           {/* Flag */}
           <li className="nav-item dropdown has-arrow flag-nav nav-item-box">

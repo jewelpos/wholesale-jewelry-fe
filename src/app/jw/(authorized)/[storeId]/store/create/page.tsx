@@ -1,4 +1,4 @@
-import Breadcrumb from "@/components/ui/Breadcrumb";
+import BackButton from "@/components/ui/BackButton";
 import InfoHeader from "@/components/ui/InfoHeader";
 import AddStore from "@/components/ui/store/AddStore";
 
@@ -6,6 +6,9 @@ const CreateStore = () => {
   return (
     <div>
       <div className="page-wrapper cardhead">
+        <div className="container mt-4">
+          <BackButton />
+        </div>
         <InfoHeader
           title="Create a store."
           para="Create your store, and  details."

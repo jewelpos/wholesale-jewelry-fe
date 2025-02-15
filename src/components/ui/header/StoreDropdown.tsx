@@ -1,19 +1,17 @@
 "use client";
 
-import { Store, Stores } from "@/types/store";
+import { useAppSelector } from "@/lib/store/hook";
 import Link from "next/link";
 import React from "react";
 
 type Props = {
-  stores: Stores;
-  store: Store;
   storeLoading: boolean;
 };
 
-const StoreDropdown = ({ stores, store, storeLoading }: Props) => {
-  if (storeLoading) {
-    return <i className="fas fa-spinner fa-spin me-2" />;
-  }
+const StoreDropdown = ({ storeLoading }: Props) => {
+  const stores = useAppSelector((state) => state.stores.data);
+  const store = useAppSelector((state) => state.store.data);
+
   return (
     <li className="nav-item dropdown has-arrow main-drop select-store-dropdown">
       <Link
@@ -26,6 +24,17 @@ const StoreDropdown = ({ stores, store, storeLoading }: Props) => {
           <span className="user-detail">
             <span className="user-name">
               {store?.storename ?? "Select Store"}{" "}
+              {storeLoading && (
+                <>
+                  &nbsp;
+                  <div
+                    className="spinner-border spinner-border-sm me-1"
+                    role="status"
+                  >
+                    <span className="sr-only">Loading...</span>
+                  </div>
+                </>
+              )}
             </span>
           </span>
         </span>

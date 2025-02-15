@@ -6,7 +6,6 @@ import { FieldErrors, UseFormRegister } from "react-hook-form";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
 import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { CreateOutlet } from "@/types/outlet";
-import { useParams } from "next/navigation";
 
 interface Props {
   register: UseFormRegister<CreateStore | CreateOutlet>;
@@ -14,30 +13,9 @@ interface Props {
 }
 
 const OutletContactInputs = ({ register, errors }: Props) => {
-  const { storeId } = useParams();
-
   return (
     <div className="card-body">
       <div className="row">
-        {storeId && (
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Outlet name</label>
-              <input
-                type="text"
-                className={`${errors.outletname && "is-invalid"}  form-control`}
-                {...register("outletname", {
-                  required: "Outlet name is required",
-                })}
-              />
-              {errors.outletname && (
-                <div className="invalid-feedback">
-                  {errors.outletname.message}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         <div className="col-md-6">
           <div className="mb-3">
             <label className="form-label">Store person</label>

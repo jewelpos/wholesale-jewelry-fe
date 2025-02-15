@@ -1,0 +1,101 @@
+[
+  {
+    "icon": "/assets/img/gif/store.gif",
+    "title": "Set up your stores",
+    "para": "Accurately report on sales performance and manage your inventory",
+    "linkText": "Learn more about setting up stores",
+    "linkUrl": "#",
+    "btnText": "Add a store",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": false
+  },
+  {
+    "icon": "/assets/img/gif/outlet.gif",
+    "title": "Set up your outlets and registers",
+    "para": "Accurately report on sales performance and manage your inventory",
+    "linkText": "Learn more about setting up outlets",
+    "linkUrl": "#",
+    "btnText": "Add an outlet",
+    "btnUrl": "/outlet/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/user.gif",
+    "title": "Set up your users and their roles",
+    "para": "Create user accounts and manage what your users are allowed to see and do in Lightspeed Retail.",
+    "linkText": "Learn more about setting up users",
+    "linkUrl": "#",
+    "btnText": "Add users",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/tax.gif",
+    "title": "Organize your sales taxes",
+    "para": "To make sure your products, reports and accounting systems all work in sync.",
+    "linkText": "Learn more about sales taxes",
+    "linkUrl": "#",
+    "btnText": "Add sales taxes",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/payment.gif",
+    "title": "Create different payment types",
+    "para": "Start accepting multiple types of payments in your outlets.",
+    "linkText": "Learn more about payment types",
+    "linkUrl": "#",
+    "btnText": "Add payment types",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/products.gif",
+    "title": "Add your product catalog to Lightspeed Retail",
+    "para": "Build your product catalog so you can start selling products in-store and online.",
+    "linkText": "Learn more about adding products",
+    "linkUrl": "#",
+    "btnText": "Add products",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/inventory.gif",
+    "title": "Inventory added to your products",
+    "para": "Continue using stock control to ensure your inventory levels and costs stay accurate.",
+    "linkText": "Learn more about inventory in Lightspeed Retail",
+    "linkUrl": "#",
+    "btnText": "",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/receipt.gif",
+    "title": "Customize your receipt templates",
+    "para": "Choose what information you want to show on your receipts and how it should be displayed.",
+    "linkText": "Learn more about receipt templates",
+    "linkUrl": "#",
+    "btnText": "Add recipient templates",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  },
+  {
+    "icon": "/assets/img/gif/ready.gif",
+    "title": "Ready to get selling?",
+    "para": "Once you're done setting up, this dashboard will show you how your business is doing at a glance.",
+    "linkText": "",
+    "linkUrl": "#",
+    "btnText": "I'm ready to sell",
+    "btnUrl": "/store/create",
+    "isLinkBtn": true,
+    "disabled": true
+  }
+]
