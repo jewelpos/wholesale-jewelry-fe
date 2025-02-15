@@ -7,7 +7,7 @@ import { addStores } from "@/lib/store/slice/storesSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useLazyQuery, useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const useStores = () => {
   const dispatch = useAppDispatch();
@@ -28,7 +28,7 @@ const useStores = () => {
     },
   });
 
-  const fetchStoresData = async () => {
+  const fetchStoresData = useCallback(async () => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
@@ -50,7 +50,7 @@ const useStores = () => {
         })
       );
     }
-  };
+  }, []);
 
   return {
     fetchStoresData,

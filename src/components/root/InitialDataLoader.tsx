@@ -31,13 +31,14 @@ const InitialDataLoader = ({
   }, [storeId, stores, router]);
 
   useEffect(() => {
-    if (!user) {
-      fetchUserData();
-    }
+    fetchUserData();
+  }, [fetchUserData]);
+
+  useEffect(() => {
     if (user && user.permissions) {
       fetchStoresData();
     }
-  }, [user, fetchStoresData, fetchUserData]);
+  }, [user, fetchStoresData]);
 
   return (
     <>

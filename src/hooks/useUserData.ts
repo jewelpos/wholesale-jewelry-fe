@@ -5,14 +5,14 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { addUser } from "@/lib/store/slice/userDataSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useLazyQuery } from "@apollo/client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const useUserData = () => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState<boolean>(false);
   const [getActiveUserInfo] = useLazyQuery(GET_ACTIVE_USER);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
@@ -43,7 +43,7 @@ const useUserData = () => {
         })
       );
     }
-  };
+  }, []);
 
   return {
     fetchUserData,

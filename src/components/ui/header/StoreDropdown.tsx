@@ -12,6 +12,10 @@ const StoreDropdown = ({ storeLoading }: Props) => {
   const stores = useAppSelector((state) => state.stores.data);
   const store = useAppSelector((state) => state.store.data);
 
+  if (!stores.length) {
+    return <></>;
+  }
+
   return (
     <li className="nav-item dropdown has-arrow main-drop select-store-dropdown">
       <Link

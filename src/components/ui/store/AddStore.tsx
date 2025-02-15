@@ -16,6 +16,8 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { useRouter } from "next/navigation";
 import ButtonLoader from "../ButtonLoader";
+import useStores from "@/hooks/useStores";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 type CreateStoreResponse = {
   createSingleStore: {
@@ -38,6 +40,8 @@ const AddStore = () => {
     CreateStoreResponse,
     CreateSingleStore
   >(CREATE_SINGLE_STORE_MUTATION);
+  const { fetchStoresData } = useStores();
+  const { homePagePath } = useDefaultRoute();
 
   const {
     register,
@@ -61,7 +65,8 @@ const AddStore = () => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        router.push("/jw/home");
+        fetchStoresData();
+        router.push(homePagePath);
       }
       return true;
     });
