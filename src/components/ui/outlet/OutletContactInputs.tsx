@@ -52,7 +52,7 @@ const OutletContactInputs = ({ register, errors }: Props) => {
         </div>
         <div className="col-md-6">
           <div className="mb-3">
-            <label className="form-label">Email</label>
+            <label className="form-label">Email address</label>
             <input
               type="text"
               className={`${errors.storeemail && "is-invalid"}  form-control`}

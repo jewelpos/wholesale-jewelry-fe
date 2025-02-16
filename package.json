@@ -19,6 +19,7 @@
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@hookform/resolvers": "^3.10.0",
     "@reduxjs/toolkit": "^2.5.0",
+    "antd": "^5.24.0",
     "bootstrap": "^5.3.3",
     "cookies-next": "^5.0.2",
     "country-state-city": "^3.2.1",

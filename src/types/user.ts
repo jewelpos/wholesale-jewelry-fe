@@ -1,4 +1,4 @@
-import { permissions } from "./permissions";
+import { AddUserPermissionType, permissions } from "./permissions";
 
 export interface activeUser {
   name: string;
@@ -13,3 +13,26 @@ export interface activeUser {
   shouldcreatestore: boolean;
   permissions: permissions;
 }
+
+export type AddUserType = {
+  emailaddress: string;
+  password: string;
+  userphone: string;
+  userfullname: string;
+  storeid: number;
+  outletid: number;
+  roleid: number;
+  permissions: AddUserPermissionType;
+};
+
+export type AddUserFormType = {
+  emailaddress: string;
+  password: string;
+  confirmpassword: string;
+  userphone: string;
+  userfullname: string;
+  storeid: number;
+  outletid: number;
+  roleid: number;
+  permissions: AddUserPermissionType;
+};

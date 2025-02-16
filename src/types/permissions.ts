@@ -44,3 +44,22 @@ export type Menus = Menu[] | undefined;
 export type permissions = {
   menus: Menus;
 };
+
+type AddUserMenuChildType = {
+  action: MenuAction[];
+  menuid: number;
+  parentid: number;
+  storetypeid: number;
+  permissionparentid: number;
+};
+
+type AddUserMenuType = {
+  menuid: string;
+  children?: AddUserMenuChildType[];
+  storetypeid: number;
+};
+
+export type AddUserPermissionType = {
+  roleid: number;
+  menus: AddUserMenuType[];
+};

@@ -13,7 +13,7 @@ const MainHomeComponent = () => {
 
   return (
     <>
-      <div className="content container">
+      <div className="content">
         <InfoHeader
           title={`Hi ${user?.name},`}
           para="Manage your business efficiently with quick access to key modules."

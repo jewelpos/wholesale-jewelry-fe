@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { LoginFormInputs } from "@/types/auth";
-import { emailOrUsernameValidation } from "@/lib/utils/validations/authValidations";
+import {
+  emailOrUsernameValidation,
+  passwordValidation,
+} from "@/lib/utils/validations/authValidations";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
@@ -105,7 +108,7 @@ export const LoginForm = () => {
               className={`${
                 errors.password && "is-invalid"
               }  pass-input form-control`}
-              {...register("password")}
+              {...register("password", passwordValidation)}
             />
             {errors.password && (
               <div className="invalid-feedback">{errors.password.message}</div>

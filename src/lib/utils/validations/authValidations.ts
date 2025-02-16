@@ -19,7 +19,7 @@ export const passwordValidation = {
   required: "Password is required",
   validate: {
     length: (value: string) =>
-      value.length >= 6 || "Password must be at least 6 characters long",
+      value.length >= 8 || "Password must be at least 6 characters long",
 
     uppercase: (value: string) =>
       /[A-Z]/.test(value) ||

@@ -28,7 +28,7 @@
     "linkText": "Learn more about setting up users",
     "linkUrl": "#",
     "btnText": "Add users",
-    "btnUrl": "/store/create",
+    "btnUrl": "/users",
     "isLinkBtn": true,
     "disabled": true
   },

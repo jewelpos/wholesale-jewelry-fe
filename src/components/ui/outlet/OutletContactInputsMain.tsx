@@ -34,7 +34,7 @@ const OutletContactInputsMain = ({
       <div className="row">
         <div className="col-md-6">
           <div className="mb-3">
-            <label className="form-label">Store category</label>
+            <label className="form-label">Stores</label>
             <Controller
               name="storeid"
               control={control}

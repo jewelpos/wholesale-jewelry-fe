@@ -8,10 +8,12 @@ import { ArrowLeft } from "react-feather";
 const BackButton = () => {
   const router = useRouter();
   return (
-    <Link href={"#"} onClick={() => router.back()}>
-      <ArrowLeft size={20} />
-      &nbsp;Back
-    </Link>
+    <div className="mb-4">
+      <Link href={"#"} onClick={() => router.back()}>
+        <ArrowLeft size={20} />
+        &nbsp;Back
+      </Link>
+    </div>
   );
 };
 
