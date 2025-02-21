@@ -25,6 +25,11 @@ export type AddUserType = {
   permissions: AddUserPermissionType;
 };
 
+type Menu = {
+  permissionid: number;
+  parentid: number;
+};
+
 export type AddUserFormType = {
   emailaddress: string;
   password: string;
@@ -34,5 +39,5 @@ export type AddUserFormType = {
   storeid: number;
   outletid: number;
   roleid: number;
-  permissions: AddUserPermissionType;
+  menus: Menu[];
 };

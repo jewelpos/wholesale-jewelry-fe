@@ -2,7 +2,12 @@
 
 import { AddUserFormType } from "@/types/user";
 import React from "react";
-import { Control, Controller, FieldErrors } from "react-hook-form";
+import {
+  Control,
+  Controller,
+  FieldErrors,
+  UseFormTrigger,
+} from "react-hook-form";
 import { SelectOption } from "@/types/form";
 import Select from "react-select";
 import { useAppSelector } from "@/lib/store/hook";
@@ -12,6 +17,7 @@ interface Props {
   control: Control<AddUserFormType>;
   storesLoading: boolean;
   fetchOutletsList: (storeId: number) => Promise<void>;
+  trigger: UseFormTrigger<AddUserFormType>;
 }
 
 const UserStoreInputs = ({
@@ -19,21 +25,21 @@ const UserStoreInputs = ({
   control,
   storesLoading,
   fetchOutletsList,
+  trigger,
 }: Props) => {
   const stores = useAppSelector((state) => state.stores.data);
   return (
     <div className="card table-list-card">
       <div className="card-body mb-4 mb-4 mt-4">
         <div className="row">
-          <div className="col-md-3 mb-3">
+          <div className="col-md-5 mb-3">
             <h4 className="mb-2">Stores</h4>
             <p>
               Store for selecting the outlet, assigned to this user that they
               can work at.
             </p>
           </div>
-          <div className="col-md-1"></div>
-          <div className="col-md-6">
+          <div className="col-md-7">
             <div className="mb-3">
               <label className="form-label">Stores</label>
               <Controller
@@ -69,6 +75,7 @@ const UserStoreInputs = ({
                         option?.value as string,
                         10
                       );
+                      trigger("storeid");
                       fetchOutletsList(parsedStoreId);
                     }}
                   />

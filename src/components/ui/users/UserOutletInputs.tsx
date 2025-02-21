@@ -24,12 +24,11 @@ const UserOutletInputs = ({
     <div className="card table-list-card">
       <div className="card-body mb-4 mb-4 mt-4">
         <div className="row">
-          <div className="col-md-3 mb-3">
+          <div className="col-md-5 mb-3">
             <h4 className="mb-2">Outlets</h4>
             <p>Outlet assigned to this user that they can work at.</p>
           </div>
-          <div className="col-md-1"></div>
-          <div className="col-md-6">
+          <div className="col-md-7">
             <div className="mb-3">
               <label className="form-label">Outlets</label>
               <Controller
@@ -41,8 +40,8 @@ const UserOutletInputs = ({
                     {...field}
                     isLoading={outletsLoading}
                     options={outlets.map((outlet) => ({
-                      value: outlet.outletId,
-                      label: outlet.outletName,
+                      value: outlet.outletid,
+                      label: outlet.outletname,
                     }))}
                     placeholder="Select an outlet"
                     isClearable={outlets?.length > 1}
@@ -55,8 +54,8 @@ const UserOutletInputs = ({
                             value: field.value,
                             label:
                               outlets.find(
-                                (outlt) => outlt.outletId === field.value
-                              )?.outletName || "",
+                                (outlt) => outlt.outletid === field.value
+                              )?.outletname || "",
                           }
                         : null
                     }

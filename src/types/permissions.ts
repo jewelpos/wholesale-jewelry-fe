@@ -1,4 +1,4 @@
-type MenuAction = {
+export type MenuAction = {
   actionid: number;
   actionname: string;
   actionorder: number;
@@ -28,8 +28,9 @@ export type MenuChild = {
   children?: MenuChild[];
 };
 
-type Menu = {
-  menuid: string;
+export type Menu = {
+  action: any;
+  menuid: number;
   iconurl: string;
   menuurl: string;
   children?: MenuChild[];
@@ -39,27 +40,48 @@ type Menu = {
   storetypeid: number;
 };
 
-export type Menus = Menu[] | undefined;
+export type Menus = Menu[];
 
 export type permissions = {
+  map(arg0: (menu: Menu) => import("react").JSX.Element): unknown;
   menus: Menus;
 };
 
-type AddUserMenuChildType = {
-  action: MenuAction[];
-  menuid: number;
+export type AddUserMenuAction = {
+  actionid: number;
+  actionname: string;
+  actiondisplayname: string;
+  actiondescription: string;
+  actionorder: number;
+  actionparentid: number;
+};
+
+export type AddUserMenuChildType = {
+  permissionid: number;
+  permissionname: number;
+  permissiondisplayname: string;
+  permissiondescription: string;
   parentid: number;
+  storemenuid: number;
+  permissionorder: number;
   storetypeid: number;
+  packageid: number;
   permissionparentid: number;
+  rolesnotallowed: number;
+  action: AddUserMenuAction[];
+  status?: "SELECTED" | "SELECTABLE" | "NOT_ALLOWED";
 };
 
 type AddUserMenuType = {
-  menuid: string;
-  children?: AddUserMenuChildType[];
+  permissiondisplayname: string;
+  permissionid: number;
   storetypeid: number;
+  children: AddUserMenuChildType[];
 };
+
+export type AddUserMenusType = AddUserMenuType[];
 
 export type AddUserPermissionType = {
   roleid: number;
-  menus: AddUserMenuType[];
+  menus: AddUserMenusType;
 };

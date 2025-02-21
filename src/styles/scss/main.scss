@@ -6,6 +6,7 @@
 @use "base/background";
 
 // /******* Components ******/
+// @use "components/tables";
 @use "components/avatar";
 @use "components/boostrap";
 @use "components/button";
@@ -22,7 +23,7 @@
 @use "components/alerts";
 @use "components/popovers";
 @use "components/forms";
-// @use "components/tables";
+
 @use "components/accordion";
 @use "components/breadcrumb";
 @use "components/cards";

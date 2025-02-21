@@ -377,6 +377,19 @@ ul.tabs.owl-carousel.pos-category {
   border-bottom: 1px solid #141432;
 }
 
+[data-layout-mode="dark_mode"] .custom-theme {
+  --ag-background-color: #1d1d42;
+  --ag-header-background-color: #141432;
+  --ag-header-text-color: #97a2d2;
+  --ag-row-hover-color: #fafafa;
+  --ag-foreground-color: #97a2d2;
+  --ag-borders: 1px solid #141432;
+  --ag-font-size: 14px;
+  --ag-header-border-color: #f0f0f0;
+  --ag-header-border-width: 2px; /* Border thickness */
+  --ag-header-border-style: solid;
+}
+
 [data-layout-mode="dark_mode"]
   .ant-table-content
   table

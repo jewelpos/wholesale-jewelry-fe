@@ -1,5 +1,6 @@
 import BackButton from "@/components/ui/BackButton";
 import InfoHeader from "@/components/ui/InfoHeader";
+import AddUserButton from "@/components/ui/user/AddUserButton";
 import AddUserForm from "@/components/ui/users/AddUserForm";
 
 const AddUser = () => {
@@ -7,11 +8,10 @@ const AddUser = () => {
     <div>
       <div className="page-wrapper  cardhead">
         <div className="content">
-          <div className="container-fluid p-lg-5 p-md-2">
+          <div className="container-fluid ">
             <div className="container-md">
               <div className="row">
                 <div className="col-md-12">
-                  <BackButton />
                   <div className="page-header">
                     <div className="add-item d-flex">
                       <div className="page-title">

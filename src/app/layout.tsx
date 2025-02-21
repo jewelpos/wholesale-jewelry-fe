@@ -7,6 +7,9 @@ import "../styles/css/feather.css";
 import BootstrapJS from "@/components/root/BootstrapJS";
 import StoreProvider from "./StoreProvider";
 import Notification from "@/components/ui/Notification";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
+// import ThemeSettings from "@/components/ui/ThemeSettings";
 
 export const metadata: Metadata = {
   title: "POS",
@@ -24,6 +27,7 @@ export default function RootLayout({
         <StoreProvider>
           <BootstrapJS />
           {children}
+          {/* <ThemeSettings /> */}
           <Notification />
         </StoreProvider>
       </body>

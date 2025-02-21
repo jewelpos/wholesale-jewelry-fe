@@ -1,5 +1,6 @@
 import InfoHeader from "@/components/ui/InfoHeader";
 import AddUserButton from "@/components/ui/user/AddUserButton";
+import UserComponent from "@/components/ui/user/UserComponent";
 import Link from "next/link";
 import { Filter, PlusCircle, Sliders } from "react-feather";
 import Select from "react-select";
@@ -52,6 +53,7 @@ const Users = () => {
                     </div>
                   </div>
                 </div>
+                <UserComponent />
               </div>
             </div>
           </div>

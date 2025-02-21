@@ -16,12 +16,11 @@ const UserProfileInputs = ({ register, errors }: Props) => {
     <div className="card table-list-card">
       <div className="card-body mb-4 mt-4">
         <div className="row">
-          <div className="col-md-3 mb-3">
+          <div className="col-md-5 mb-3">
             <h4 className="mb-2">Profile</h4>
             <p>Personal and contact information for this user.</p>
           </div>
-          <div className="col-md-1"></div>
-          <div className="col-md-6">
+          <div className="col-md-7">
             <div className="mb-3">
               <label className="form-label">Display name</label>
               <input

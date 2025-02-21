@@ -12,27 +12,27 @@ export type CreateOutlet = {
 };
 
 export type OutletType = {
-  outletId: number;
-  storeId: number;
-  outletName: string;
+  outletid: number;
+  storeid: number;
+  outletname: string;
   address: string;
   city: string;
   state: string;
   zipcode: string;
   country: string;
-  storePhone: string;
-  storeEmail: string;
-  storeWebsite: string;
-  contactPerson: string;
-  storeLogo: string;
-  createdDate: string;
-  isEnabled: boolean;
-  setupInventory: boolean;
-  setupOutlet: boolean;
-  setupProduct: boolean;
-  setupReceipt: boolean;
-  setupSalesTax: boolean;
-  setupUsers: boolean;
+  storephone: string;
+  storeemail: string;
+  storewebsite: string;
+  contactperson: string;
+  storelogo: string;
+  createddate: string;
+  isenabled: boolean;
+  setupinventory: boolean;
+  setupoutlet: boolean;
+  setupproduct: boolean;
+  setupreceipt: boolean;
+  setupsalestax: boolean;
+  setupusers: boolean;
 };
 
 export type OutletsType = OutletType[];
