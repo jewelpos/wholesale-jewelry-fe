@@ -1,33 +1,71 @@
 "use client";
 
 import { AddUserFormType } from "@/types/user";
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Control,
   Controller,
   FieldErrors,
-  UseFormTrigger,
+  Path,
+  PathValue,
 } from "react-hook-form";
-import { SelectOption } from "@/types/form";
-import Select from "react-select";
+import Select, { MultiValue } from "react-select";
 import { useAppSelector } from "@/lib/store/hook";
+import { SelectOption } from "@/types/form";
+import { useParams } from "next/navigation";
+
+type UseFormSetValue<TFieldValues> = (
+  name: Path<TFieldValues>,
+  value: PathValue<TFieldValues, Path<TFieldValues>>,
+  options?: {
+    shouldValidate?: boolean;
+    shouldDirty?: boolean;
+    shouldTouch?: boolean;
+  }
+) => void;
 
 interface Props {
   errors: FieldErrors<AddUserFormType>;
   control: Control<AddUserFormType>;
   storesLoading: boolean;
-  fetchOutletsList: (storeId: number) => Promise<void>;
-  trigger: UseFormTrigger<AddUserFormType>;
+  setValue: UseFormSetValue<AddUserFormType>;
+  storeId: number;
 }
 
 const UserStoreInputs = ({
   errors,
   control,
   storesLoading,
-  fetchOutletsList,
-  trigger,
+  setValue,
+  storeId,
 }: Props) => {
-  const stores = useAppSelector((state) => state.stores.data);
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const allStores = useAppSelector((state) => state.stores.data);
+
+  const storeOptions: SelectOption[] = useMemo(
+    () =>
+      allStores.map((stores) => ({
+        value: stores.storeid,
+        label: stores.storename,
+      })),
+    [allStores]
+  );
+
+  useEffect(() => {
+    if (!storeId && storeOptions.length) {
+      const storeOption: SelectOption | undefined = storeOptions.find(
+        (store) => store.value === parsedStoreId
+      );
+      if (storeOption) {
+        setValue("storeid", storeOption.value, {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+      }
+    }
+  }, [storeOptions, parsedStoreId, storeId, setValue]);
+
   return (
     <div className="card table-list-card">
       <div className="card-body mb-4 mb-4 mt-4">
@@ -46,37 +84,27 @@ const UserStoreInputs = ({
                 name="storeid"
                 control={control}
                 rules={{ required: "Store is required" }}
-                render={({ field }) => (
+                render={({ field: { value, onChange } }) => (
                   <Select<SelectOption>
-                    {...field}
                     isLoading={storesLoading}
-                    options={stores.map((stores) => ({
-                      value: stores.storeid,
-                      label: stores.storename,
-                    }))}
+                    options={storeOptions}
                     placeholder="Select a store"
-                    isClearable={stores?.length > 1}
                     className={`${
                       errors.storeid && "is-invalid"
                     }  form-control p-0`}
                     value={
-                      field.value
+                      value
                         ? {
-                            value: field.value,
+                            value: value,
                             label:
-                              stores.find((str) => str.storeid === field.value)
-                                ?.storename || "",
+                              storeOptions.find(
+                                (store) => store.value === value
+                              )?.label || "",
                           }
                         : null
                     }
                     onChange={(option) => {
-                      field.onChange(option?.value);
-                      const parsedStoreId = parseInt(
-                        option?.value as string,
-                        10
-                      );
-                      trigger("storeid");
-                      fetchOutletsList(parsedStoreId);
+                      onChange(option?.value);
                     }}
                   />
                 )}

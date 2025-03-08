@@ -1,0 +1,72 @@
+import { gql } from "@apollo/client";
+
+export const GET_ITEM_CATEGORY_LIST_QUERY = gql`
+  query GetItemCategoryList($outletid: Int!, $page: Int!, $perpage: Int!) {
+    getItemCategoryList(outletid: $outletid, page: $page, perpage: $perpage) {
+      total
+      data {
+        categoryid
+        categoryname
+        categorydescription
+        categorycode
+        categorycodenextid
+        warehousename
+        warehouseid
+        outletid
+        createdby
+        createddate
+        lastmodifieddate
+      }
+    }
+  }
+`;
+
+export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
+  query GetItemSubCategoryList($outletid: Int!, $page: Int!, $perpage: Int!) {
+    getItemSubCategoryList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+    ) {
+      total
+      data {
+        subcategoryid
+        subcategoryname
+        subcategorydescription
+        categoryid
+        warehousename
+        createdby
+        warehouseid
+        outletid
+        createddate
+        lastmodifieddate
+      }
+    }
+  }
+`;
+
+export const GET_PRODUCT_LIST_QUERY = gql`
+  query GetProductList($outletid: Int!, $page: Int!, $perpage: Int!) {
+    getProductList(outletid: $outletid, page: $page, perpage: $perpage) {
+      total
+      data {
+        itemcode
+        itemdescription
+        itembarcodeid
+        itemsellprice
+        categoryname
+        subcategoryname
+        companyname
+        itemquantityinhand
+        overall_qty
+        lastsaledate
+        itemlocation
+        itemstatus
+        itemimagepath
+        warehousename
+        itemwarehouseid
+        outletid
+      }
+    }
+  }
+`;

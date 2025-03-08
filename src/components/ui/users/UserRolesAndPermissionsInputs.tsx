@@ -1,7 +1,7 @@
 "use client";
 
-import { AddUserFormType } from "@/types/user";
-import React, { Dispatch } from "react";
+import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
+import React, { Dispatch, SetStateAction } from "react";
 import {
   Control,
   Controller,
@@ -26,6 +26,8 @@ interface Props {
   rolesLoading: boolean;
   register: UseFormRegister<AddUserFormType>;
   permissionLoading: boolean;
+  permittedMenus: AddUserPermittedMenu[];
+  setPermittedMenus: Dispatch<SetStateAction<AddUserPermittedMenu[]>>;
 }
 
 const UserRolesAndPermissionsInputs = ({
@@ -36,6 +38,8 @@ const UserRolesAndPermissionsInputs = ({
   menus,
   rolesLoading,
   permissionLoading,
+  permittedMenus,
+  setPermittedMenus,
 }: Props) => {
   return (
     <div className="card table-list-card">
@@ -99,8 +103,12 @@ const UserRolesAndPermissionsInputs = ({
           </>
         )}
 
-        {!permissionLoading && menus && (
-          <UserPermissionInputs menus={menus} control={control} />
+        {!permissionLoading && menus && permittedMenus && (
+          <UserPermissionInputs
+            menus={menus}
+            permittedMenus={permittedMenus}
+            setPermittedMenus={setPermittedMenus}
+          />
         )}
       </div>
     </div>

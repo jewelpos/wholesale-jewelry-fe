@@ -2,14 +2,20 @@ import React from "react";
 
 const ActionFooter = ({
   children,
+  handleCancel,
 }: Readonly<{
   children: React.ReactNode;
+  handleCancel: () => void;
 }>) => {
   return (
     <div className="card sticky-footer">
       <div className="card-body">
         <div className="text-end">
-          <button type="button" className="btn btn-light me-3">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="btn btn-light me-3"
+          >
             Cancel
           </button>
           {children}

@@ -35,3 +35,5 @@ export const MENU_STATUS_TYPES = {
   SELECTABLE: "SELECTABLE",
   NOT_ALLOWED: "NOT_ALLOWED",
 };
+
+export const TIME_FORMAT = "DD.MM.YYYY [at] HH:mm";

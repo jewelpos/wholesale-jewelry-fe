@@ -85,3 +85,41 @@ export type AddUserPermissionType = {
   roleid: number;
   menus: AddUserMenusType;
 };
+
+type UsersListChildMenuType = {
+  name: string;
+  action: MenuAction[];
+  menuid: number;
+  roleid: number;
+  iconurl: string;
+  menuurl: string;
+  menuname: string;
+  parentid: number;
+  slugname: string;
+  menuorder: number;
+  packageid: string;
+  storetypeid: number;
+  permissionid: number;
+  permissionname: string;
+  permissionorder: number;
+  permissionparentid: number;
+  permissiondescription: string;
+  permissiondisplayname: string;
+};
+
+type UsersListMenuType = {
+  menuid: number;
+  iconurl: string;
+  menuurl: string;
+  menuname: string;
+  slugname: string;
+  menuorder: number;
+  storetypeid: number;
+  children: UsersListChildMenuType[];
+};
+
+export type UsersListPermissionType = {
+  roleid: number;
+  rolename: string;
+  menus: UsersListMenuType[];
+};

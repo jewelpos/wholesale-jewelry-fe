@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 export const GET_OUTLETS_QUERY = gql`
-  query GetOutlets($storeid: Int!) {
+  query GetOutlets($storeid: [Int]!) {
     getOutlets(storeid: $storeid) {
       outletid
       storeid

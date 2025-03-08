@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import ButtonLoader from "../ButtonLoader";
 import useStores from "@/hooks/useStores";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import ActionFooter from "../ActionFooter";
 
 type CreateStoreResponse = {
   createSingleStore: {
@@ -81,85 +82,107 @@ const AddStore = () => {
   };
 
   return (
-    <div className="card-body">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="row">
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Store name</label>
-              <input
-                type="text"
-                className={`${errors.storename && "is-invalid"}  form-control`}
-                {...register("storename", {
-                  required: "Store name is required",
-                })}
-              />
-              {errors.storename && (
-                <div className="invalid-feedback">
-                  {errors.storename.message}
-                </div>
-              )}
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="card table-list-card">
+        <div className="card-body mb-4 mt-4">
+          <div className="row">
+            <div className="col-md-5 mb-3">
+              <h4 className="mb-2">Name</h4>
+              <p>Choose a unique and recognizable name for your store.</p>
             </div>
-          </div>
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Store category</label>
-              <Controller
-                name="categoryid"
-                control={control}
-                rules={{ required: "Store category is required" }}
-                render={({ field }) => (
-                  <Select<SelectOption>
-                    {...field}
-                    isLoading={storeCategoryLoading}
-                    options={storeCategoryData?.getStoreCategory.map(
-                      (category) => ({
-                        value: category.id,
-                        label: category.name,
-                      })
-                    )}
-                    placeholder="Select store category"
-                    isClearable
-                    className={`${
-                      errors.categoryid && "is-invalid"
-                    }  form-control p-0`}
-                    value={
-                      field.value
-                        ? {
-                            value: field.value,
-                            label:
-                              storeCategoryData?.getStoreCategory.find(
-                                (cat) => cat.id === field.value
-                              )?.name || "",
-                          }
-                        : null
-                    }
-                    onChange={(option) => field.onChange(option?.value)}
-                  />
+            <div className="col-md-7">
+              <div className="mb-3">
+                <label className="form-label">Store name</label>
+                <input
+                  type="text"
+                  placeholder="Enter store name"
+                  className={`${
+                    errors.storename && "is-invalid"
+                  }  form-control`}
+                  {...register("storename", {
+                    required: "Store name is required",
+                  })}
+                />
+                {errors.storename && (
+                  <div className="invalid-feedback">
+                    {errors.storename.message}
+                  </div>
                 )}
-              />
-              {errors.categoryid && (
-                <div className="invalid-feedback">
-                  {errors.categoryid.message}
-                </div>
-              )}
-              {storeCategoryError && (
-                <div className="invalid-feedback">
-                  Store categories are not available
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
-        <div className="text-end">
-          <ButtonLoader
-            loading={loading}
-            btnText="Create store"
-            loadingText="Creating ..."
-          />
+      </div>
+      <div className="card table-list-card">
+        <div className="card-body mb-4 mt-4">
+          <div className="row">
+            <div className="col-md-5 mb-3">
+              <h4 className="mb-2">Category</h4>
+              <p>
+                Select the appropriate category that best describes your store’s
+                products or services.
+              </p>
+            </div>
+            <div className="col-md-7">
+              <div className="mb-3">
+                <label className="form-label">Store category</label>
+                <Controller
+                  name="categoryid"
+                  control={control}
+                  rules={{ required: "Store category is required" }}
+                  render={({ field }) => (
+                    <Select<SelectOption>
+                      {...field}
+                      isLoading={storeCategoryLoading}
+                      options={storeCategoryData?.getStoreCategory.map(
+                        (category) => ({
+                          value: category.id,
+                          label: category.name,
+                        })
+                      )}
+                      placeholder="Select store category"
+                      isClearable
+                      className={`${
+                        errors.categoryid && "is-invalid"
+                      }  form-control p-0`}
+                      value={
+                        field.value
+                          ? {
+                              value: field.value,
+                              label:
+                                storeCategoryData?.getStoreCategory.find(
+                                  (cat) => cat.id === field.value
+                                )?.name || "",
+                            }
+                          : null
+                      }
+                      onChange={(option) => field.onChange(option?.value)}
+                    />
+                  )}
+                />
+                {errors.categoryid && (
+                  <div className="invalid-feedback">
+                    {errors.categoryid.message}
+                  </div>
+                )}
+                {storeCategoryError && (
+                  <div className="invalid-feedback">
+                    Store categories are not available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
-    </div>
+      </div>
+      <ActionFooter handleCancel={() => router.back()}>
+        <ButtonLoader
+          loading={loading}
+          btnText="Create store"
+          loadingText="Creating ..."
+        />
+      </ActionFooter>
+    </form>
   );
 };
 

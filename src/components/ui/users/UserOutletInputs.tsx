@@ -1,7 +1,7 @@
 "use client";
 
 import { AddUserFormType } from "@/types/user";
-import React from "react";
+import React, { useMemo } from "react";
 import { Control, Controller, FieldErrors } from "react-hook-form";
 import { SelectOption } from "@/types/form";
 import Select from "react-select";
@@ -14,12 +14,24 @@ interface Props {
   outlets: OutletsType;
 }
 
+type OutletSelectOption = SelectOption;
+
 const UserOutletInputs = ({
   errors,
   control,
   outletsLoading,
   outlets,
 }: Props) => {
+  const outletsOptions: OutletSelectOption[] = useMemo(
+    () =>
+      outlets.map((outlet) => ({
+        value: outlet.outletid,
+        label: outlet.outletname,
+      })),
+
+    [outlets]
+  );
+
   return (
     <div className="card table-list-card">
       <div className="card-body mb-4 mb-4 mt-4">
@@ -32,41 +44,24 @@ const UserOutletInputs = ({
             <div className="mb-3">
               <label className="form-label">Outlets</label>
               <Controller
-                name="outletid"
+                name="outlets"
                 control={control}
-                rules={{ required: "Outlet is required" }}
+                rules={{ required: "Outlets is required" }}
                 render={({ field }) => (
-                  <Select<SelectOption>
+                  <Select<SelectOption, true>
                     {...field}
+                    isMulti
                     isLoading={outletsLoading}
-                    options={outlets.map((outlet) => ({
-                      value: outlet.outletid,
-                      label: outlet.outletname,
-                    }))}
+                    options={outletsOptions}
                     placeholder="Select an outlet"
-                    isClearable={outlets?.length > 1}
                     className={`${
-                      errors.outletid && "is-invalid"
+                      errors.outlets && "is-invalid"
                     }  form-control p-0`}
-                    value={
-                      field.value
-                        ? {
-                            value: field.value,
-                            label:
-                              outlets.find(
-                                (outlt) => outlt.outletid === field.value
-                              )?.outletname || "",
-                          }
-                        : null
-                    }
-                    onChange={(option) => field.onChange(option?.value)}
                   />
                 )}
               />
-              {errors.outletid && (
-                <div className="invalid-feedback">
-                  {errors.outletid.message}
-                </div>
+              {errors.outlets && (
+                <div className="invalid-feedback">{errors.outlets.message}</div>
               )}
             </div>
           </div>

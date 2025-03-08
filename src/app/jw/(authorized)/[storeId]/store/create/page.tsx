@@ -1,28 +1,19 @@
-import BackButton from "@/components/ui/BackButton";
-import InfoHeader from "@/components/ui/InfoHeader";
+import PageHeader from "@/components/ui/PageHeader";
 import AddStore from "@/components/ui/store/AddStore";
 
 const CreateStore = () => {
   return (
     <div>
-      <div className="page-wrapper cardhead">
-        <div className="container mt-4">
-          <BackButton />
-        </div>
-        <InfoHeader
-          title="Create a store."
-          para="Create your store, and  details."
-        />
-        <div className="container">
-          {/* <Breadcrumb /> */}
+      <div className="page-wrapper  ">
+        <div className="content">
+          <PageHeader
+            title="Create your store"
+            para="Set up your store effortlessly and start managing your products, services, and users seamlessly."
+            showBreadcrumb
+          />
           <div className="row">
             <div className="col-md-12">
-              <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title">Store info</h5>
-                </div>
-                <AddStore />
-              </div>
+              <AddStore />
             </div>
           </div>
         </div>

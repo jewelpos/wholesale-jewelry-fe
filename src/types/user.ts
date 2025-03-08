@@ -1,4 +1,10 @@
-import { AddUserPermissionType, permissions } from "./permissions";
+import { MultiValue } from "react-select";
+import {
+  AddUserPermissionType,
+  permissions,
+  UsersListPermissionType,
+} from "./permissions";
+import { SelectOption } from "./form";
 
 export interface activeUser {
   name: string;
@@ -25,7 +31,7 @@ export type AddUserType = {
   permissions: AddUserPermissionType;
 };
 
-type Menu = {
+export type AddUserPermittedMenu = {
   permissionid: number;
   parentid: number;
 };
@@ -37,7 +43,21 @@ export type AddUserFormType = {
   userphone: string;
   userfullname: string;
   storeid: number;
-  outletid: number;
+  outlets: MultiValue<SelectOption>;
   roleid: number;
-  menus: Menu[];
+  permissions: AddUserPermissionType;
+};
+
+export type UsersListType = {
+  userid: number;
+  userfullname: string;
+  emailaddress: string;
+  userphone: string;
+  login: string;
+  isenabled: number;
+  userpermissions: UsersListPermissionType;
+  roleid: number;
+  rolename: string;
+  outletid: number;
+  outletname: string;
 };

@@ -13,8 +13,11 @@ import { useParams, useRouter } from "next/navigation";
 import ButtonLoader from "../ButtonLoader";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import useStores from "@/hooks/useStores";
-import OutletContactInputsMain from "./OutletContactInputsMain";
-import OutletInputsMain from "./OutletInputsMain";
+import OutletFormTypeA from "./OutletFormTypeA";
+import OutletFormTypeB from "./OutletFormTypeB";
+import OutletFormTypeC from "./OutletFormTypeC";
+import OutletFormTypeD from "./OutletFormTypeD";
+import ActionFooter from "../ActionFooter";
 
 type CreateOutletResponse = {
   createOutlet: {
@@ -78,44 +81,27 @@ const CreateOutletForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="row">
-        <div className="col-md-12">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="card-title">Outlet info</h5>
-            </div>
-            <OutletContactInputsMain
-              register={register}
-              errors={errors}
-              control={control}
-              storesLoading={storesLoading}
-            />
-          </div>
-        </div>
-        <div className="col-md-12">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="card-title">Outlet location</h5>
-            </div>
-            <div className="card-body">
-              <OutletInputsMain
-                register={register}
-                errors={errors}
-                control={control}
-                selectedCountry={getValues("country")}
-                trigger={trigger}
-              />
-            </div>
-          </div>
-          <div className="text-end">
-            <ButtonLoader
-              loading={loading}
-              btnText="Create outlet"
-              loadingText="Creating ..."
-            />
-          </div>
-        </div>
-      </div>
+      <OutletFormTypeA
+        errors={errors}
+        control={control}
+        storesLoading={storesLoading}
+      />
+      <OutletFormTypeB register={register} errors={errors} />
+      <OutletFormTypeC register={register} errors={errors} />
+      <OutletFormTypeD
+        register={register}
+        errors={errors}
+        control={control}
+        selectedCountry={getValues("country")}
+        trigger={trigger}
+      />
+      <ActionFooter handleCancel={() => router.back()}>
+        <ButtonLoader
+          loading={loading}
+          btnText="Create outlet"
+          loadingText="Creating ..."
+        />
+      </ActionFooter>
     </form>
   );
 };

@@ -17,7 +17,7 @@ const HomeComponent = () => {
         title={`Welcome ${user?.name},`}
         para="Create your first store and details."
       />
-      <div className="content container">
+      <div className="content ">
         <div className="row">
           {catalogues.map((catalog, index: number) => (
             <HomeCatalogTiles

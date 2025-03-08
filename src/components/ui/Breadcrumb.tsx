@@ -1,18 +1,65 @@
 "use client";
 
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import Link from "next/link";
-import React from "react";
+import { usePathname } from "next/navigation";
+import React, { Fragment } from "react";
 
-const Breadcrumb = () => {
+interface BreadcrumbProps {
+  containerClasses?: string;
+  listClasses?: string;
+  activeItemClasses?: string;
+  inactiveItemClasses?: string;
+  capitalizeItems?: boolean;
+}
+
+const Breadcrumb: React.FC<BreadcrumbProps> = ({ capitalizeItems = true }) => {
+  const pathname = usePathname();
+  const { homePagePath } = useDefaultRoute();
+
+  const pathSegments = pathname
+    .split("/")
+    .filter((segment) => segment !== "" && !homePagePath.includes(segment));
+
+  const breadcrumbItems = pathSegments.map((segment, index) => {
+    const href = `/${pathSegments.slice(0, index + 1).join("/")}`;
+    let label = segment.replace(/-/g, " ");
+    if (capitalizeItems) {
+      label = label
+        .replace("_", " ")
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+
+    const isLastItem = index === pathSegments.length - 1;
+
+    return {
+      href,
+      label,
+      isLastItem,
+    };
+  });
+
   return (
     <nav aria-label="breadcrumb" className="mb-3">
       <ol className="breadcrumb breadcrumb-arrow mb-0">
         <li className="breadcrumb-item">
-          <Link href="/jw/home">Home</Link>
+          <Link href={homePagePath}>Home</Link>
         </li>
-        <li className="breadcrumb-item active" aria-current="page">
-          Create store
-        </li>
+        {breadcrumbItems.map((item, index) => (
+          <Fragment key={`${item.label}-${index}`}>
+            {item.isLastItem ? (
+              <li className="breadcrumb-item active" aria-current="page">
+                {item.label}
+              </li>
+            ) : (
+              <li className="breadcrumb-item">
+                <Link href={`${homePagePath}${item.href}`}>{item.label}</Link>
+              </li>
+            )}
+          </Fragment>
+        ))}
       </ol>
     </nav>
   );

@@ -12,12 +12,12 @@ const useOutlets = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [getOutlets] = useLazyQuery(GET_OUTLETS_QUERY);
 
-  const fetchOutletsList = useCallback(async (storeId: number) => {
+  const fetchOutletsList = useCallback(async (storeIds: number[]) => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
         const { data } = await getOutlets({
-          variables: { storeid: storeId },
+          variables: { storeid: storeIds },
         });
         if (data.getOutlets) {
           setOutlets(data.getOutlets);

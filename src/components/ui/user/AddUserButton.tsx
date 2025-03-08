@@ -8,7 +8,7 @@ import { PlusCircle } from "react-feather";
 const AddUserButton = () => {
   const { basePath } = useDefaultRoute();
   return (
-    <Link href={`${basePath}/users/add`} className="btn btn-added">
+    <Link href={`${basePath}/users/add`} className="btn  btn-primary">
       <PlusCircle className="me-2 text-white" />
       Add user
     </Link>

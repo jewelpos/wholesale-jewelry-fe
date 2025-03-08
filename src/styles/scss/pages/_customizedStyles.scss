@@ -390,6 +390,10 @@ ul.tabs.owl-carousel.pos-category {
   --ag-header-border-style: solid;
 }
 
+.custom-theme {
+  --ag-border-radius: 0 !important;
+}
+
 [data-layout-mode="dark_mode"]
   .ant-table-content
   table

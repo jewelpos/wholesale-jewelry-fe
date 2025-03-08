@@ -1,3 +1,4 @@
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { Menus } from "@/types/permissions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,6 +14,7 @@ const Sidebar = ({ menus }: Props) => {
   const pathname = usePathname();
   const [subOpen, setSubopen] = useState("");
   const [subsidebar, setSubsidebar] = useState("");
+  const { basePath } = useDefaultRoute();
 
   const toggleSidebar = (title: string) => {
     if (title == subOpen) {
@@ -90,7 +92,7 @@ const Sidebar = ({ menus }: Props) => {
                                     key={titleIndex}
                                   >
                                     <Link
-                                      href={`${menu.menuurl}${item.menuurl}`}
+                                      href={`${basePath}${menu.menuurl}${item.menuurl}`}
                                       className={`${
                                         item.children
                                           ?.map((link) => link.menuurl)
