@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
@@ -29,6 +28,7 @@ const CategoryComponent = () => {
     { headerName: "Category", field: "categoryname" },
     { headerName: "Description", field: "categorydescription" },
     { headerName: "Code", field: "categorycode" },
+    { headerName: "Outlet", field: "outletid" },
     { headerName: "Warehouse name", field: "warehousename" },
   ];
 

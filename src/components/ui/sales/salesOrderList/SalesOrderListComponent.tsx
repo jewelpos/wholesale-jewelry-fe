@@ -14,36 +14,34 @@ import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
-import { GET_SALES_INVOICE_LIST_QUERY } from "@/lib/graphql/query/sales";
-import { SalesInvoiceListType } from "@/types/sales";
+import { GET_SALES_ORDER_LIST_QUERY } from "@/lib/graphql/query/sales";
+import { SalesOrderListType } from "@/types/sales";
 
-const SalesListComponent = () => {
-  const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
-  const [rowData, setRowData] = useState<SalesInvoiceListType[]>([]);
+const SalesOrderListComponent = () => {
+  const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
+  const [rowData, setRowData] = useState<SalesOrderListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const columnDefs: ColDef<SalesInvoiceListType>[] = [
-    { headerName: "Invoice number", field: "invoicenumber" },
-    { headerName: "Customer", field: "customerid" },
-    { headerName: "Company", field: "companyname" },
-    { headerName: "Mode", field: "salemodename" },
-    { headerName: "Total items", field: "numberofitems" },
-    { headerName: "Total amount", field: "totalamount" },
-    { headerName: "Discount amount", field: "discountamount" },
-    { headerName: "Sub total", field: "subtotal" },
-    { headerName: "Tax", field: "salestax" },
-    { headerName: "Shipping", field: "shipping" },
+  const columnDefs: ColDef<SalesOrderListType>[] = [
+    { headerName: "Sales order number", field: "salesorderno" },
+    { headerName: "Items", field: "numberofitems" },
     { headerName: "Net amount", field: "netamount" },
-    { headerName: "Received amount", field: "amountreceived" },
-    { headerName: "Due balance", field: "balancedue" },
+    { headerName: "Shipping method", field: "invshippingmethod" },
+    { headerName: "Status", field: "statusname" },
     { headerName: "Terms", field: "termsname" },
     { headerName: "Warehouse name", field: "warehousename" },
+    { headerName: "outletid", field: "outletid" },
     {
-      headerName: "Date",
-      field: "saledate",
+      headerName: "Order date",
+      field: "orderdate",
+      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    },
+    {
+      headerName: "Order processed date",
+      field: "orderprocesseddate",
       cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     },
   ];
@@ -51,11 +49,11 @@ const SalesListComponent = () => {
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
       async () => {
-        const { data } = await getInvoiceList({
+        const { data } = await getSalesOrderList({
           variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
         });
-        if (data.getInvoiceList) {
-          setRowData(data.getInvoiceList.data);
+        if (data.getSalesOrderList) {
+          setRowData(data.getSalesOrderList.data);
         }
         return true;
       },
@@ -96,7 +94,7 @@ const SalesListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<SalesInvoiceListType>
+          <AgGridReact<SalesOrderListType>
             loading={loading}
             rowData={rowData}
             columnDefs={columnDefs}
@@ -120,4 +118,4 @@ const SalesListComponent = () => {
   );
 };
 
-export default SalesListComponent;
+export default SalesOrderListComponent;

@@ -36,16 +36,22 @@ export type ProductSubItemCategoryResponseType = {
 };
 
 export type ProductListType = {
-  subcategoryid: number;
+  itemcode: string;
+  itemdescription: string;
+  itembarcodeid: string;
+  itemsellprice: number;
+  categoryname: string;
   subcategoryname: string;
-  subcategorydescription: string;
-  categoryid: number;
+  companyname: string;
+  itemquantityinhand: number;
+  overall_qty: number;
+  lastsaledate: string;
+  itemlocation: string;
+  itemstatus: string;
+  itemimagepath: string;
   warehousename: string;
-  createdby: string;
-  warehouseid: number;
+  itemwarehouseid: number;
   outletid: number;
-  createddate: string;
-  lastmodifieddate: string;
 };
 
 export type ProductListTypeResponseType = {

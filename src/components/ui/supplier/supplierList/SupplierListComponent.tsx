@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
@@ -14,48 +13,35 @@ import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
-import { GET_SALES_INVOICE_LIST_QUERY } from "@/lib/graphql/query/sales";
-import { SalesInvoiceListType } from "@/types/sales";
+import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
+import { SupplierListType } from "@/types/supplier";
 
-const SalesListComponent = () => {
-  const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
-  const [rowData, setRowData] = useState<SalesInvoiceListType[]>([]);
+const SupplierListComponent = () => {
+  const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
+  const [rowData, setRowData] = useState<SupplierListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const columnDefs: ColDef<SalesInvoiceListType>[] = [
-    { headerName: "Invoice number", field: "invoicenumber" },
-    { headerName: "Customer", field: "customerid" },
+  const columnDefs: ColDef<SupplierListType>[] = [
     { headerName: "Company", field: "companyname" },
-    { headerName: "Mode", field: "salemodename" },
-    { headerName: "Total items", field: "numberofitems" },
-    { headerName: "Total amount", field: "totalamount" },
-    { headerName: "Discount amount", field: "discountamount" },
-    { headerName: "Sub total", field: "subtotal" },
-    { headerName: "Tax", field: "salestax" },
-    { headerName: "Shipping", field: "shipping" },
-    { headerName: "Net amount", field: "netamount" },
-    { headerName: "Received amount", field: "amountreceived" },
-    { headerName: "Due balance", field: "balancedue" },
-    { headerName: "Terms", field: "termsname" },
+    { headerName: "Name", field: "contactname" },
+    { headerName: "Account number", field: "accountno" },
+    { headerName: "Phone number", field: "phone" },
+    { headerName: "Email ID", field: "emailaddress" },
+    { headerName: "Web", field: "webaddress" },
     { headerName: "Warehouse name", field: "warehousename" },
-    {
-      headerName: "Date",
-      field: "saledate",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
   ];
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
       async () => {
-        const { data } = await getInvoiceList({
+        const { data } = await getSupplierList({
           variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
         });
-        if (data.getInvoiceList) {
-          setRowData(data.getInvoiceList.data);
+        if (data.getSupplierList) {
+          setRowData(data.getSupplierList.data);
         }
         return true;
       },
@@ -96,7 +82,7 @@ const SalesListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<SalesInvoiceListType>
+          <AgGridReact<SupplierListType>
             loading={loading}
             rowData={rowData}
             columnDefs={columnDefs}
@@ -120,4 +106,4 @@ const SalesListComponent = () => {
   );
 };
 
-export default SalesListComponent;
+export default SupplierListComponent;
