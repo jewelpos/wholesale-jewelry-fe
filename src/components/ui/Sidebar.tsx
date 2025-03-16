@@ -11,11 +11,11 @@ type Props = {
 };
 
 const Sidebar = ({ menus }: Props) => {
-  const pathname = usePathname();
+  const path = usePathname();
   const [subOpen, setSubopen] = useState("");
   const [subsidebar, setSubsidebar] = useState("");
   const { basePath } = useDefaultRoute();
-
+  const pathname = path.replace(basePath, "");
   const toggleSidebar = (title: string) => {
     if (title == subOpen) {
       setSubopen("");
