@@ -93,6 +93,7 @@ const Sidebar = ({ menus }: Props) => {
                                   >
                                     <Link
                                       href={`${basePath}${menu.menuurl}${item.menuurl}`}
+                                      style={{ color: "#495057" }} // TODO:temp
                                       className={`${
                                         item.children
                                           ?.map((link) => link.menuurl)

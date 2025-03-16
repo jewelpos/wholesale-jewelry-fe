@@ -3,11 +3,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import { _InfiniteRowModelGridApi, GridReadyEvent } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
 import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
@@ -15,27 +15,24 @@ import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { HEIGHT_BUFFER_SIZE, productListColumnDefs } from "./columnDef";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
+  const { autoSizeStrategy } = useAutoSizeAggrid();
   const [rowData, setRowData] = useState<ProductListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [gridHeight, setGridHeight] = useState<number>(
+    window.innerHeight - HEIGHT_BUFFER_SIZE
+  );
 
-  const columnDefs: ColDef<ProductListType>[] = [
-    { headerName: "Product", field: "itemcode" },
-    { headerName: "Description", field: "itemdescription" },
-    { headerName: "Price", field: "itemsellprice" },
-    { headerName: "Category", field: "categoryname" },
-    { headerName: "Company", field: "companyname" },
-    { headerName: "Quantity instock", field: "itemquantityinhand" },
-    { headerName: "Total quantity", field: "overall_qty" },
-    { headerName: "Status", field: "itemstatus" },
-    { headerName: "Outlet", field: "outletid" },
-    { headerName: "Warehouse name", field: "warehousename" },
-  ];
+  const handleOnGridReady = (params: GridReadyEvent<ProductListType>) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -68,6 +65,17 @@ const ProductsListComponent = () => {
     }
   }, [selectedOutlet, fetchReport]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setGridHeight(window.innerHeight - HEIGHT_BUFFER_SIZE);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <div className="card-body">
       <div className="table-top">
@@ -85,24 +93,28 @@ const ProductsListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<ProductListType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <div style={{ height: `${gridHeight}px` }}>
+            <AgGridReact<ProductListType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={productListColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </div>
         )}
       </div>
     </div>

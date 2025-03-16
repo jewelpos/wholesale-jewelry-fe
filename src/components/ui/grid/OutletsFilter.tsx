@@ -5,6 +5,7 @@ import { SelectOption } from "@/types/form";
 import Select from "react-select";
 import { useParams } from "next/navigation";
 import { OutletType } from "@/types/outlet";
+import { Col, Row } from "react-bootstrap";
 
 type PropsType = {
   fetchOutletsList: (parsedStoreId: number[]) => void;
@@ -42,26 +43,36 @@ const OutletsFilter = ({
   }, [outlets]);
 
   return (
-    <Select<SelectOption>
-      className="img-select"
-      classNamePrefix="react-select"
-      options={outletList}
-      value={
-        selectedOutlet
-          ? {
-              value: selectedOutlet,
-              label:
-                outletList.find((outlet) => outlet.value === selectedOutlet)
-                  ?.label || "",
-            }
-          : null
-      }
-      onChange={(option) => {
-        const parsedId = parseInt(option?.value as string, 10);
-        setSelectedOutlet(parsedId);
-      }}
-      isLoading={loading}
-    />
+    <Row className="d-flex align-items-center justify-content-center">
+      <Col xs={6} className="mr-0 ">
+        <h6 className="p-0 m-0">Select Outlet</h6>
+      </Col>
+      <Col xs={6} className="p-0 m-0">
+        <Select<SelectOption>
+          className="img-select"
+          classNamePrefix="react-select"
+          options={outletList}
+          value={
+            selectedOutlet
+              ? {
+                  value: selectedOutlet,
+                  label:
+                    outletList.find((outlet) => outlet.value === selectedOutlet)
+                      ?.label || "",
+                }
+              : null
+          }
+          onChange={(option) => {
+            const parsedId = parseInt(option?.value as string, 10);
+            setSelectedOutlet(parsedId);
+          }}
+          isLoading={loading}
+          styles={{
+            container: (provided) => ({ ...provided, width: "10rem" }),
+          }}
+        />
+      </Col>
+    </Row>
   );
 };
 
