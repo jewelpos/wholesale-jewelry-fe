@@ -4,7 +4,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -16,36 +20,25 @@ import { CustomerChequeListType } from "@/types/customer";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
+import { GridWrapper } from "../../grid/GridWrapper";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { onHandsColumnDefs } from "./ColumnDef";
 
 const OnHandChecksComponent = () => {
   const [getCustomerChequeList] = useLazyQuery(GET_CUSTOMER_CHEQUE_LIST_QUERY);
+  const { autoSizeStrategy } = useAutoSizeAggrid();
+
   const [rowData, setRowData] = useState<CustomerChequeListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const columnDefs: ColDef<CustomerChequeListType>[] = [
-    {
-      headerName: "Customer",
-      field: "customerid",
-    },
-    { headerName: "Check number", field: "checkno" },
-    { headerName: "Check amount", field: "checkamount" },
-    { headerName: "Status", field: "checkstatus" },
-    { headerName: "Warehouse name", field: "warehousename" },
-    { headerName: "Remarks", field: "chkremarks" },
-    {
-      headerName: "Posting date",
-      field: "checkpostingdate",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
-    {
-      headerName: "Entry date",
-      field: "checkentrydate",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
-  ];
+  const handleOnGridReady = (
+    params: GridReadyEvent<CustomerChequeListType>
+  ) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -95,24 +88,28 @@ const OnHandChecksComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<CustomerChequeListType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<CustomerChequeListType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={onHandsColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

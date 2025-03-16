@@ -4,7 +4,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -16,37 +20,22 @@ import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SALES_INVOICE_LIST_QUERY } from "@/lib/graphql/query/sales";
 import { SalesInvoiceListType } from "@/types/sales";
+import { GridWrapper } from "../../grid/GridWrapper";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { salesInvoiceColumnDefs } from "./ColumnDef";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
+  const { autoSizeStrategy } = useAutoSizeAggrid();
   const [rowData, setRowData] = useState<SalesInvoiceListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const columnDefs: ColDef<SalesInvoiceListType>[] = [
-    { headerName: "Invoice number", field: "invoicenumber" },
-    { headerName: "Customer", field: "customerid" },
-    { headerName: "Company", field: "companyname" },
-    { headerName: "Mode", field: "salemodename" },
-    { headerName: "Total items", field: "numberofitems" },
-    { headerName: "Total amount", field: "totalamount" },
-    { headerName: "Discount amount", field: "discountamount" },
-    { headerName: "Sub total", field: "subtotal" },
-    { headerName: "Tax", field: "salestax" },
-    { headerName: "Shipping", field: "shipping" },
-    { headerName: "Net amount", field: "netamount" },
-    { headerName: "Received amount", field: "amountreceived" },
-    { headerName: "Due balance", field: "balancedue" },
-    { headerName: "Terms", field: "termsname" },
-    { headerName: "Warehouse name", field: "warehousename" },
-    {
-      headerName: "Date",
-      field: "saledate",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
-  ];
+  const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -96,24 +85,28 @@ const SalesListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<SalesInvoiceListType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<SalesInvoiceListType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={salesInvoiceColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

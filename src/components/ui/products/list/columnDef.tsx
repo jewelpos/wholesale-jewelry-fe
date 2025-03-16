@@ -2,13 +2,21 @@ import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { ProductListType } from "@/types/product";
 import { ColDef } from "ag-grid-community";
 
-const currencyFormattedCellRenderer = (params: any) => {
-  return params.value ? `${detectUserCurrency().format(params.value)}` : "";
+export const currencyFormattedCellRenderer = (params: any) => {
+  return params.value !== null
+    ? `${detectUserCurrency().format(params.value)}`
+    : params.value;
 };
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
   { headerName: "Product", field: "itemcode" },
-  { headerName: "Description", field: "itemdescription", maxWidth: 200 },
+  {
+    headerName: "Description",
+    field: "itemdescription",
+    maxWidth: 200,
+    resizable: true,
+    tooltipField: "itemdescription",
+  },
   {
     headerName: "Price",
     field: "itemsellprice",
@@ -23,5 +31,3 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
   { headerName: "Outlet", field: "outletid" },
   { headerName: "Warehouse name", field: "warehousename" },
 ];
-
-export const HEIGHT_BUFFER_SIZE = 300;

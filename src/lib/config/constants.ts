@@ -37,3 +37,4 @@ export const MENU_STATUS_TYPES = {
 };
 
 export const TIME_FORMAT = "DD.MM.YYYY [at] HH:mm";
+export const HEIGHT_BUFFER_SIZE = 300;
