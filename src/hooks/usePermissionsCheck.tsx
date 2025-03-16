@@ -32,7 +32,7 @@ export function usePermissionCheck() {
   const router = useRouter();
   const availableRoutes = useAppSelector(
     (state) => state.user.data?.permissions?.menus
-  );
+  ) as Menus | MenuChild[]; //TODO: temp added for building
 
   useEffect(() => {
     const currentPath = window.location.pathname;
