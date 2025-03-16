@@ -4,7 +4,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -16,33 +20,27 @@ import { CustomerBalanceReportType } from "@/types/customer";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
+import { GridWrapper } from "../../grid/GridWrapper";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { balanceReportColumnDefs } from "./ColumnDef";
 
 const BalanceComponent = () => {
   const [getCustomerBalanceReport] = useLazyQuery(
     GET_CUSTOMER_BALANCE_REPORT_QUERY
   );
+  const { autoSizeStrategy } = useAutoSizeAggrid();
+
   const [rowData, setRowData] = useState<CustomerBalanceReportType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const columnDefs: ColDef<CustomerBalanceReportType>[] = [
-    {
-      headerName: "Customer",
-      field: "customername",
-    },
-    { headerName: "Company name", field: "companyname" },
-    { headerName: "Number of sale", field: "number_of_sale" },
-    { headerName: "Total sale", field: "total_sale" },
-    { headerName: "Received amount", field: "amount_received" },
-    { headerName: "Total due", field: "total_due" },
-    {
-      headerName: "Last sale date",
-      field: "last_sale_date",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
-  ];
+  const handleOnGridReady = (
+    params: GridReadyEvent<CustomerBalanceReportType>
+  ) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -92,24 +90,28 @@ const BalanceComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<CustomerBalanceReportType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<CustomerBalanceReportType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={balanceReportColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

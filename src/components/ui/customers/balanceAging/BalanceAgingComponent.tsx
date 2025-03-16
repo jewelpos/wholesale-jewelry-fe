@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -17,9 +21,13 @@ import useOutlets from "@/hooks/useOutlets";
 import { useParams } from "next/navigation";
 import Select from "react-select";
 import OutletsFilter from "../../grid/OutletsFilter";
+import { GridWrapper } from "../../grid/GridWrapper";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { balanceAgingColumnDefs } from "./ColumnDef";
 
 const BalanceAgingComponent = () => {
   const [getInvoiceAgingReport] = useLazyQuery(GET_INVOICE_AGING_REPORT_QUERY);
+  const { autoSizeStrategy } = useAutoSizeAggrid();
   const [rowData, setRowData] = useState<CustomerBalanceAgingType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
@@ -27,21 +35,11 @@ const BalanceAgingComponent = () => {
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   // const gridRef = useRef<AgGridReact>(null);
 
-  const columnDefs: ColDef<CustomerBalanceAgingType>[] = [
-    {
-      headerName: "Customer name",
-      field: "customername",
-      filter: true,
-    },
-    { headerName: "Customer name", field: "companyname" },
-    { headerName: "Total sale", field: "total_sale" },
-    { headerName: "Due", field: "due_0_30" },
-    { headerName: "Due", field: "due_31_60" },
-    { headerName: "Due", field: "due_61_90" },
-    { headerName: "Due", field: "due_91_120" },
-    { headerName: "Due", field: "due_120_plus" },
-    { headerName: "Total due", field: "total_due" },
-  ];
+  const handleOnGridReady = (
+    params: GridReadyEvent<CustomerBalanceAgingType>
+  ) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -152,24 +150,28 @@ const BalanceAgingComponent = () => {
       /> */}
 
         {!outletsLoading && (
-          <AgGridReact<CustomerBalanceAgingType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<CustomerBalanceAgingType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={balanceAgingColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

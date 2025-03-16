@@ -16,7 +16,8 @@ import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
 import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
-import { HEIGHT_BUFFER_SIZE, productListColumnDefs } from "./columnDef";
+import { productListColumnDefs } from "./columnDef";
+import { GridWrapper } from "../../grid/GridWrapper";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -26,9 +27,6 @@ const ProductsListComponent = () => {
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
-  const [gridHeight, setGridHeight] = useState<number>(
-    window.innerHeight - HEIGHT_BUFFER_SIZE
-  );
 
   const handleOnGridReady = (params: GridReadyEvent<ProductListType>) => {
     params?.api?.autoSizeAllColumns?.();
@@ -65,17 +63,6 @@ const ProductsListComponent = () => {
     }
   }, [selectedOutlet, fetchReport]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setGridHeight(window.innerHeight - HEIGHT_BUFFER_SIZE);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
   return (
     <div className="card-body">
       <div className="table-top">
@@ -93,7 +80,7 @@ const ProductsListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <div style={{ height: `${gridHeight}px` }}>
+          <GridWrapper>
             <AgGridReact<ProductListType>
               loading={loading}
               rowData={rowData}
@@ -114,7 +101,7 @@ const ProductsListComponent = () => {
               loadingOverlayComponent={CustomLoadingOverlay}
               noRowsOverlayComponent={CustomNoRowsOverlay}
             />
-          </div>
+          </GridWrapper>
         )}
       </div>
     </div>

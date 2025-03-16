@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -15,9 +19,12 @@ import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { SupplierListType } from "@/types/supplier";
+import { GridWrapper } from "../../grid/GridWrapper";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
+  const { autoSizeStrategy } = useAutoSizeAggrid();
   const [rowData, setRowData] = useState<SupplierListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
@@ -33,6 +40,10 @@ const SupplierListComponent = () => {
     { headerName: "Web", field: "webaddress" },
     { headerName: "Warehouse name", field: "warehousename" },
   ];
+
+  const handleOnGridReady = (params: GridReadyEvent<SupplierListType>) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -82,24 +93,28 @@ const SupplierListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<SupplierListType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<SupplierListType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

@@ -3,11 +3,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import {
+  _InfiniteRowModelGridApi,
+  ColDef,
+  GridReadyEvent,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
 import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
@@ -15,6 +19,7 @@ import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_ITEM_CATEGORY_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductItemCategoryType } from "@/types/product";
+import { GridWrapper } from "../../grid/GridWrapper";
 
 const CategoryComponent = () => {
   const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
@@ -23,6 +28,12 @@ const CategoryComponent = () => {
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+
+  const handleOnGridReady = (
+    params: GridReadyEvent<ProductItemCategoryType>
+  ) => {
+    params?.api?.autoSizeAllColumns?.();
+  };
 
   const columnDefs: ColDef<ProductItemCategoryType>[] = [
     { headerName: "Category", field: "categoryname" },
@@ -80,24 +91,28 @@ const CategoryComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<ProductItemCategoryType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<ProductItemCategoryType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              onGridReady={handleOnGridReady}
+              // autoSizeStrategy={autoSizeStrategy}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>

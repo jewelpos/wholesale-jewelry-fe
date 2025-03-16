@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, ColDef } from "ag-grid-community";
+import { _InfiniteRowModelGridApi } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
 import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
@@ -16,6 +15,8 @@ import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_EXPENSE_LIST_QUERY } from "@/lib/graphql/query/accounts";
 import { AccountsExpenseListType } from "@/types/accounts";
+import { GridWrapper } from "../../grid/GridWrapper";
+import { expenseListColumnDefs } from "./ColumnDef";
 
 const ExpenseListComponent = () => {
   const [getExpenseList] = useLazyQuery(GET_EXPENSE_LIST_QUERY);
@@ -24,20 +25,6 @@ const ExpenseListComponent = () => {
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
-
-  const columnDefs: ColDef<AccountsExpenseListType>[] = [
-    { headerName: "Amount", field: "expenseamount" },
-    { headerName: "Expense detail", field: "expensedetail" },
-    { headerName: "Description", field: "accountdescription" },
-    { headerName: "Mode", field: "expensemode" },
-    { headerName: "Notes", field: "expensenotes" },
-    { headerName: "Warehouse name", field: "warehousename" },
-    {
-      headerName: "Date",
-      field: "expensedate",
-      cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
-  ];
 
   const fetchReport = useCallback(async (selectedOutlet: number) => {
     const result = await handleTryCatch(
@@ -87,24 +74,26 @@ const ExpenseListComponent = () => {
       </div>
       <div className="ag-theme-quartz custom-theme">
         {!outletsLoading && (
-          <AgGridReact<AccountsExpenseListType>
-            loading={loading}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              filter: true,
-              flex: 1,
-            }}
-            gridOptions={{
-              rowHeight: 50,
-              headerHeight: 50,
-            }}
-            pagination
-            paginationPageSize={20}
-            domLayout="autoHeight"
-            loadingOverlayComponent={CustomLoadingOverlay}
-            noRowsOverlayComponent={CustomNoRowsOverlay}
-          />
+          <GridWrapper>
+            <AgGridReact<AccountsExpenseListType>
+              loading={loading}
+              rowData={rowData}
+              columnDefs={expenseListColumnDefs}
+              defaultColDef={{
+                filter: true,
+                flex: 1,
+              }}
+              gridOptions={{
+                rowHeight: 50,
+                headerHeight: 50,
+              }}
+              pagination
+              paginationPageSize={20}
+              domLayout="normal"
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+            />
+          </GridWrapper>
         )}
       </div>
     </div>
