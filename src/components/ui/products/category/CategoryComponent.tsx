@@ -101,7 +101,7 @@ const CategoryComponent = () => {
                 flex: 1,
               }}
               gridOptions={{
-                rowHeight: 50,
+                rowHeight: 37,
                 headerHeight: 50,
               }}
               pagination
