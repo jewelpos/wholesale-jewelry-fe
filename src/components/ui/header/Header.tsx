@@ -178,7 +178,7 @@ const Header = ({ onLogout, storeLoading }: Props) => {
         <ul className="nav user-menu">
           {/* Search */}
           <li className="nav-item nav-searchinputs">
-            <div className="top-nav-search">
+            {/* <div className="top-nav-search">
               <Link href="#" className="responsive-search">
                 <Search />
               </Link>
@@ -243,99 +243,99 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                       <li>
                         <Link href="#">
                           Aron Varu
-                          {/* <img
+                          <img
                             src="assets/img/profiles/avator1.jpg"
                             alt=""
                             className="img-fluid"
-                          /> */}
+                          />
                         </Link>
                       </li>
                       <li>
                         <Link href="#">
                           Jonita
-                          {/* <img
+                          <img
                             src="assets/img/profiles/avatar-01.jpg"
                             alt=""
                             className="img-fluid"
-                          /> */}
+                          />
                         </Link>
                       </li>
                       <li>
                         <Link href="#">
                           Aaron
-                          {/* <img
+                          <img
                             src="assets/img/profiles/avatar-10.jpg"
                             alt=""
                             className="img-fluid"
-                          /> */}
+                          />
                         </Link>
                       </li>
                     </ul>
                   </div>
                 </div>
               </form>
-            </div>
+            </div> */}
           </li>
           <StoreDropdown storeLoading={storeLoading} />
 
           {/* Flag */}
-          <li className="nav-item dropdown has-arrow flag-nav nav-item-box">
+          {/* <li className="nav-item dropdown has-arrow flag-nav nav-item-box">
             <Link
               className="nav-link dropdown-toggle"
               data-bs-toggle="dropdown"
               href="#"
               role="button"
             >
-              {/* <i data-feather="globe" /> */}
+              <i data-feather="globe" />
               <Globe />
-              {/* <img src="assets/img/flags/us.png" alt="img" height={16} /> */}
+              <img src="assets/img/flags/us.png" alt="img" height={16} />
             </Link>
             <div className="dropdown-menu dropdown-menu-right">
               <Link href="#" className="dropdown-item active">
-                {/* <img src="assets/img/flags/us.png" alt="img" height={16} /> */}
+                <img src="assets/img/flags/us.png" alt="img" height={16} />
                 English
               </Link>
               <Link href="#" className="dropdown-item">
-                {/* <img src="assets/img/flags/fr.png" alt="img" height={16} />{" "} */}
+                <img src="assets/img/flags/fr.png" alt="img" height={16} />{" "}
                 French
               </Link>
               <Link href="#" className="dropdown-item">
-                {/* <img src="assets/img/flags/es.png" alt="img" height={16} />{" "} */}
+                <img src="assets/img/flags/es.png" alt="img" height={16} />{" "}
                 Spanish
               </Link>
               <Link href="#" className="dropdown-item">
-                {/* <img src="assets/img/flags/de.png" alt="img" height={16} />{" "} */}
+                <img src="assets/img/flags/de.png" alt="img" height={16} />{" "}
                 German
               </Link>
             </div>
-          </li>
+          </li> */}
           {/* /Flag */}
-          <li className="nav-item nav-item-box">
+          {/* <li className="nav-item nav-item-box">
             <Link
               href="#"
               id="btnFullscreen"
               // onClick={() => toggleFullscreen()}
               className={isFullscreen ? "Exit Fullscreen" : "Go Fullscreen"}
             >
-              {/* <i data-feather="maximize" /> */}
+              <i data-feather="maximize" />
               <Maximize />
             </Link>
-          </li>
-          <li className="nav-item nav-item-box">
+          </li> */}
+          {/* <li className="nav-item nav-item-box">
             <Link href="/email">
-              {/* <i data-feather="mail" /> */}
+              <i data-feather="mail" />
               <Mail />
               <span className="badge rounded-pill">1</span>
             </Link>
-          </li>
+          </li> */}
           {/* Notifications */}
-          <li className="nav-item dropdown nav-item-box">
+          {/* <li className="nav-item dropdown nav-item-box">
             <Link
               href="#"
               className="dropdown-toggle nav-link"
               data-bs-toggle="dropdown"
             >
-              {/* <i data-feather="bell" /> */}
+              <i data-feather="bell" />
               <Bell />
               <span className="badge rounded-pill">2</span>
             </Link>
@@ -353,10 +353,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                     <Link href="/activities">
                       <div className="media d-flex">
                         <span className="avatar flex-shrink-0">
-                          {/* <img
+                          <img
                             alt="img"
                             src="assets/img/profiles/avatar-02.jpg"
-                          /> */}
+                          />
                         </span>
                         <div className="media-body flex-grow-1">
                           <p className="noti-details">
@@ -379,10 +379,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                     <Link href="/activities">
                       <div className="media d-flex">
                         <span className="avatar flex-shrink-0">
-                          {/* <img
+                          <img
                             alt="img"
                             src="assets/img/profiles/avatar-03.jpg"
-                          /> */}
+                          />
                         </span>
                         <div className="media-body flex-grow-1">
                           <p className="noti-details">
@@ -405,10 +405,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                     <Link href="/activities">
                       <div className="media d-flex">
                         <span className="avatar flex-shrink-0">
-                          {/* <img
+                          <img
                             alt="img"
                             src="assets/img/profiles/avatar-06.jpg"
-                          /> */}
+                          />
                         </span>
                         <div className="media-body flex-grow-1">
                           <p className="noti-details">
@@ -434,10 +434,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                     <Link href="/activities">
                       <div className="media d-flex">
                         <span className="avatar flex-shrink-0">
-                          {/* <img
+                          <img
                             alt="img"
                             src="assets/img/profiles/avatar-17.jpg"
-                          /> */}
+                          />
                         </span>
                         <div className="media-body flex-grow-1">
                           <p className="noti-details">
@@ -460,10 +460,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                     <Link href="/activities">
                       <div className="media d-flex">
                         <span className="avatar flex-shrink-0">
-                          {/* <img
+                          <img
                             alt="img"
                             src="assets/img/profiles/avatar-13.jpg"
-                          /> */}
+                          />
                         </span>
                         <div className="media-body flex-grow-1">
                           <p className="noti-details">
@@ -488,14 +488,14 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                 <Link href="/activities">View all Notifications</Link>
               </div>
             </div>
-          </li>
+          </li> */}
           {/* /Notifications */}
-          <li className="nav-item nav-item-box">
+          {/* <li className="nav-item nav-item-box">
             <Link href="/general-settings">
-              {/* <i data-feather="settings" /> */}
+              <i data-feather="settings" />
               <Settings />
             </Link>
-          </li>
+          </li> */}
           <li className="nav-item dropdown has-arrow main-drop">
             <Link
               href="#"
