@@ -6,11 +6,7 @@ const ProuctsList = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="Products list"
-            para="Products list"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <ProductsListComponent />
           </div>

@@ -8,7 +8,7 @@ const Users = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader title="Users" para="Manage Your Users" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <div className="card-body">
               <div className="tabs-set">

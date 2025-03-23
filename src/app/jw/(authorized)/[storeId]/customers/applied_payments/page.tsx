@@ -6,11 +6,7 @@ const AppliedPayments = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="Applied Payments"
-            para="Applied Payments"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <AppliedPaymentsComponent />
           </div>

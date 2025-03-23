@@ -7,11 +7,7 @@ const BalanceAging = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="Invoice Aging Report"
-            para="AR Aging Report"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <BalanceAgingComponent />
           </div>

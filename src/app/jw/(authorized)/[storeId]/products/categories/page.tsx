@@ -6,7 +6,7 @@ const Categories = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader title="Category" para="Category" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <CategoryComponent />
           </div>

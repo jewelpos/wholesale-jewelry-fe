@@ -6,11 +6,7 @@ const OnHandChecks = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="On Hands Check"
-            para="On Hands Check"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <OnHandChecksComponent />
           </div>

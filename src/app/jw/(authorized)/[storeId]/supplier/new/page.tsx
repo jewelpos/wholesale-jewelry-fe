@@ -6,7 +6,7 @@ const NewSupplier = () => {
     <div>
       <div className="page-wrapper  cardhead">
         <div className="content">
-          <PageHeader title="New Supplier" para="New Supplier" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <NewSupplierForm />
         </div>
       </div>

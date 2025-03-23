@@ -1,23 +1,58 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import Breadcrumb from "./Breadcrumb";
+import Link from "next/link";
+import { useAppSelector } from "@/lib/store/hook";
+import { usePathname } from "next/navigation";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
+import { MenuAction } from "@/types/permissions";
 
 type Props = {
-  title: string;
-  para?: string;
   showBreadcrumb?: boolean;
 };
 
-const PageHeader = ({ title, para, showBreadcrumb }: Props) => {
+const PageHeader = ({ showBreadcrumb }: Props) => {
+  const user = useAppSelector((state) => state.user.data);
+  const menus = user?.permissions?.menus;
+  const pathname = usePathname();
+  const { basePath } = useDefaultRoute();
+  const path = pathname.replace(basePath, "");
+  const parentPath = "/" + path.split("/")[1];
+  const childPath = "/" + path.split("/")[2];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentMenu: any = useMemo(() => {
+    let selectedMenu;
+    menus?.forEach((menu) => {
+      if (menu.menuurl === parentPath) {
+        selectedMenu = menu.children?.find(
+          (child) => child.menuurl === childPath
+        );
+      }
+    });
+    return selectedMenu;
+  }, [menus, parentPath, childPath]);
+
   return (
     <div className="page-header">
       <div className="add-item d-flex">
         <div className="page-title">
-          <h4>{title}</h4>
-          {para && <h6 className="mb-3">{para}</h6>}
+          <h4>{currentMenu?.permissiondisplayname}</h4>
+          {currentMenu?.permissiondescription && (
+            <h6 className="mb-3">{currentMenu?.permissiondescription}</h6>
+          )}
           {showBreadcrumb && <Breadcrumb />}
         </div>
       </div>
-      {/* <div className="page-btn">{showBreadcrumb && <Breadcrumb />}</div> */}
+      {!!currentMenu?.action.length &&
+        currentMenu.action.map((btn: MenuAction) => (
+          <div className="page-btn">
+            <Link href={`${basePath}`} className="btn btn-added">
+              {btn.actiondisplayname}
+            </Link>
+          </div>
+        ))}
     </div>
   );
 };

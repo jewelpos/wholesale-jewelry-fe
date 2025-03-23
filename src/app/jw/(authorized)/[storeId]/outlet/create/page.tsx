@@ -8,11 +8,7 @@ const CreateStore = () => {
     <div>
       <div className="page-wrapper">
         <div className="content">
-          <PageHeader
-            title="Create an outlet."
-            para="Create your outlet, and  details."
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="row">
             <div className="col-md-12">
               <CreateOutletForm />

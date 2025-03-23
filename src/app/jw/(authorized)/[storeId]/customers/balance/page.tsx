@@ -6,11 +6,7 @@ const Balance = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="Balance Invoices"
-            para="AR Balance"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <BalanceComponent />
           </div>

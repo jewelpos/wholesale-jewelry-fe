@@ -6,7 +6,7 @@ const AddUser = () => {
     <div>
       <div className="page-wrapper  cardhead">
         <div className="content">
-          <PageHeader title="Add user" para="Add user" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <AddUserForm />
         </div>
       </div>

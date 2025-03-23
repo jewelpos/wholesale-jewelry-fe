@@ -6,11 +6,7 @@ const SupplierLedgerActivity = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader
-            title="Supplier List"
-            para="Supplier List"
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <SupplierListComponent />
           </div>

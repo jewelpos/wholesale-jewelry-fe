@@ -6,11 +6,7 @@ const CreateStore = () => {
     <div>
       <div className="page-wrapper  ">
         <div className="content">
-          <PageHeader
-            title="Create your store"
-            para="Set up your store effortlessly and start managing your products, services, and users seamlessly."
-            showBreadcrumb
-          />
+          <PageHeader showBreadcrumb />
           <div className="row">
             <div className="col-md-12">
               <AddStore />

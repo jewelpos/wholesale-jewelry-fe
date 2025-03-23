@@ -6,7 +6,7 @@ const SubCategories = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader title="Sub category" para="Sub category" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <SubCategoryComponent />
           </div>
