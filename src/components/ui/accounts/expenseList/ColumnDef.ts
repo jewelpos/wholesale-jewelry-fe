@@ -5,15 +5,20 @@ import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
 export const expenseListColumnDefs: ColDef<AccountsExpenseListType>[] = [
-    { headerName: "Amount", field: "expenseamount", cellRenderer: currencyFormattedCellRenderer },
-    { headerName: "Expense detail", field: "expensedetail" },
-    { headerName: "Description", field: "accountdescription" },
-    { headerName: "Mode", field: "expensemode" },
-    { headerName: "Notes", field: "expensenotes" },
-    { headerName: "Warehouse name", field: "warehousename" },
-    {
-        headerName: "Date",
-        field: "expensedate",
-        cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    },
+  {
+    headerName: "Amount",
+    field: "expenseamount",
+    cellRenderer: currencyFormattedCellRenderer,
+  },
+  { headerName: "Expense detail", field: "expensedetail" },
+  { headerName: "Description", field: "accountdescription" },
+  { headerName: "Mode", field: "expensemode" },
+  { headerName: "Notes", field: "expensenotes" },
+  { headerName: "Warehouse name", field: "warehousename" },
+  {
+    headerName: "Date",
+    field: "expensedate",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+  },
 ];

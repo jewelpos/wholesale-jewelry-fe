@@ -1,7 +1,6 @@
 import PageHeader from "@/components/ui/PageHeader";
 import AddUserButton from "@/components/ui/user/AddUserButton";
 import UserComponent from "@/components/ui/user/UserComponent";
-import Link from "next/link";
 
 const Users = () => {
   return (

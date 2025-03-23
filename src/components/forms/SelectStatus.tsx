@@ -36,7 +36,7 @@ any) => {
       });
       trigger();
     }
-  }, [setValue, status]);
+  }, [setValue, status, trigger]);
 
   return (
     <Select<SelectOption>

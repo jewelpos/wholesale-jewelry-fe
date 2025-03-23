@@ -10,7 +10,6 @@ const SelectWarehouse = ({
   onChange,
   className,
   trigger,
-  warehouseId,
   storeId,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any

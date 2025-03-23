@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -26,30 +25,33 @@ const ExpenseListComponent = () => {
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
 
-  const fetchReport = useCallback(async (selectedOutlet: number) => {
-    const result = await handleTryCatch(
-      async () => {
-        const { data } = await getExpenseList({
-          variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
-        });
-        if (data.getExpenseList) {
-          setRowData(data.getExpenseList.data);
+  const fetchReport = useCallback(
+    async (selectedOutlet: number) => {
+      const result = await handleTryCatch(
+        async () => {
+          const { data } = await getExpenseList({
+            variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
+          });
+          if (data.getExpenseList) {
+            setRowData(data.getExpenseList.data);
+          }
+          return true;
+        },
+        () => {
+          setLoading(false);
         }
-        return true;
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
       );
-    }
-  }, []);
+      if (result.error) {
+        dispatch(
+          showNotification({
+            message: result.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    },
+    [getExpenseList, dispatch]
+  );
 
   useEffect(() => {
     if (selectedOutlet) {

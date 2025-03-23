@@ -49,7 +49,7 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
         currentMenu.action.map((btn: MenuAction) => {
           if (btn.actionname === "add_edit_customer") {
             return (
-              <div className="page-btn">
+              <div className="page-btn" key={btn.actionname}>
                 <Link
                   href={`${basePath}/customers/new`}
                   className="btn btn-added"
@@ -60,7 +60,7 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
             );
           } else if (btn.actionname === "add_edit_purchase_order") {
             return (
-              <div className="page-btn">
+              <div className="page-btn" key={btn.actionname}>
                 <Link
                   href={`${basePath}/supplier/new`}
                   className="btn btn-added"
@@ -71,7 +71,7 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
             );
           }
           return (
-            <div className="page-btn">
+            <div className="page-btn" key={btn.actionname}>
               <Link href={`${basePath}`} className="btn btn-added">
                 {btn.actiondisplayname}
               </Link>
