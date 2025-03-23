@@ -14,7 +14,7 @@ const ActionFooter = ({
           <button
             type="button"
             onClick={handleCancel}
-            className="btn btn-light me-3"
+            className="btn btn-cancel me-3"
           >
             Cancel
           </button>

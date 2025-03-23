@@ -42,7 +42,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ capitalizeItems = true }) => {
   });
 
   return (
-    <nav aria-label="breadcrumb" className="mb-3">
+    <nav aria-label="breadcrumb">
       <ol className="breadcrumb breadcrumb-arrow mb-0">
         <li className="breadcrumb-item">
           <Link href={homePagePath}>Home</Link>

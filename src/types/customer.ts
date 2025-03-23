@@ -109,3 +109,70 @@ export type CustomerPaymentListResponseType = {
   total: number;
   data: CustomerPaymentListType[];
 };
+
+export type CustomersListType = {
+  customerid: string;
+  custcompanyname: string;
+  fullname: string;
+  custcity: string;
+  phone: string;
+  lastsaledate: string;
+  lastpaymentdate: string;
+  days_since_last_sale: number;
+  numberofsales: number;
+  balancedue: number;
+  totalsale: number;
+  opencredit: number;
+  mobile: string;
+  custregistrationdate: string;
+  custemailadd: string;
+  warehousename: string;
+  warehouseid: number;
+  outletid: number;
+};
+
+export type CustomersListResponseType = {
+  total: number;
+  data: CustomersListType[];
+};
+
+export type NewCustomerFormType = {
+  custcompanyname: string;
+  custfname: string;
+  custlname: string;
+  custadd1: string;
+  custadd2: string;
+  custcity: string;
+  custstate: string;
+  custzip: string;
+  custcountry: string;
+  custtitle: string;
+  custphone1: string;
+  custphone2: string;
+  custphone3: string;
+  custfax: string;
+  custcell: string;
+  custdob: string;
+  custtaxid: string;
+  custdlno: string;
+  custssno: string;
+  custremarks: string;
+  custalertremarks: string;
+  custemailadd: string;
+  status: number;
+  termsid: number;
+  custalert: number; //checkbox
+  custphotopath: string;
+  warehouseid: number;
+  custshippingmethod: string; //drop
+  custdiscount: number;
+  custcreditlimit: number;
+  custcreditcardno: string;
+  custcardexpiry: string;
+  custauthorizedname: string;
+  custbillto: string;
+  custshipto: string;
+  custsalestax: number;
+  custtaxexemptid: string;
+  storeid: number;
+};

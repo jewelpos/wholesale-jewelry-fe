@@ -135,3 +135,31 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_CUSTOMER_LIST_QUERY = gql`
+  query GetCustomerList($storeid: Int!, $page: Int!, $perpage: Int!) {
+    getCustomerList(storeid: $storeid, page: $page, perpage: $perpage) {
+      total
+      data {
+        customerid
+        custcompanyname
+        fullname
+        custcity
+        phone
+        lastsaledate
+        lastpaymentdate
+        days_since_last_sale
+        numberofsales
+        balancedue
+        totalsale
+        opencredit
+        mobile
+        custregistrationdate
+        custemailadd
+        warehousename
+        warehouseid
+        outletid
+      }
+    }
+  }
+`;

@@ -1,5 +1,5 @@
 export const phoneNumberValidation = {
-  required: "Store Phone is required",
+  required: "Phone number is required",
   pattern: {
     value: /^[0-9]+$/,
     message: "Phone number must contain only digits",
