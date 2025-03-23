@@ -46,13 +46,38 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
         </div>
       </div>
       {!!currentMenu?.action.length &&
-        currentMenu.action.map((btn: MenuAction) => (
-          <div className="page-btn">
-            <Link href={`${basePath}`} className="btn btn-added">
-              {btn.actiondisplayname}
-            </Link>
-          </div>
-        ))}
+        currentMenu.action.map((btn: MenuAction) => {
+          if (btn.actionname === "add_edit_customer") {
+            return (
+              <div className="page-btn">
+                <Link
+                  href={`${basePath}/customers/new`}
+                  className="btn btn-added"
+                >
+                  Add customer
+                </Link>
+              </div>
+            );
+          } else if (btn.actionname === "add_edit_purchase_order") {
+            return (
+              <div className="page-btn">
+                <Link
+                  href={`${basePath}/supplier/new`}
+                  className="btn btn-added"
+                >
+                  Add supplier
+                </Link>
+              </div>
+            );
+          }
+          return (
+            <div className="page-btn">
+              <Link href={`${basePath}`} className="btn btn-added">
+                {btn.actiondisplayname}
+              </Link>
+            </div>
+          );
+        })}
     </div>
   );
 };
