@@ -53,3 +53,29 @@ export type SupplierListResponseType = {
   total: number;
   data: SupplierListType[];
 };
+
+export type NewSupplierFormType = {
+  companyname: string;
+  address1: string;
+  address2: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  country: string;
+  contactperson1: string;
+  phone1: string;
+  phone2: string;
+  cellphone: string;
+  emailaddress: string;
+  webaddress: string;
+  shippimgmethod: string;
+  termsid: number;
+  accountno: string;
+  discountrate: number;
+  supplierstatus: number;
+  remarks: string;
+  warehouseid: number;
+  supplierfname: string;
+  supplierlname: string;
+  storeid: number;
+};

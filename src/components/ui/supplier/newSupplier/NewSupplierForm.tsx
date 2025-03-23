@@ -12,15 +12,14 @@ import { useDispatch } from "react-redux";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import { NewCustomerFormType } from "@/types/customer";
-import { ADD_CUSTOMER_MUTATION } from "@/lib/graphql/mutations/customer";
-import CustomerInformationInputs from "./CustomerInformationInputs";
-import CustomerAddressInformationInputs from "./CustomerAddressInformationInputs";
-import CustomerOtherInformation from "./CustomerOtherInformation";
-import dayjs from "dayjs";
+import { NewSupplierFormType } from "@/types/supplier";
+import { ADD_SUPPLIER_MUTATION } from "@/lib/graphql/mutations/supplier";
+import SupplierInformationInputs from "./SupplierInformationInputs";
+import SupplierAddressInformationInputs from "./SupplierAddressInformationInputs";
+import SupplierOtherInformation from "./SupplierOtherInformation";
 
 type NewCustomerResponse = {
-  createCustomer: {
+  createSupplier: {
     success: boolean;
     message: string;
     error: string | null;
@@ -28,15 +27,15 @@ type NewCustomerResponse = {
   };
 };
 
-const NewCustomerForm = () => {
+const NewSupplierForm = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const [createCustomer, { loading }] = useMutation<
+  const [createSupplier, { loading }] = useMutation<
     NewCustomerResponse,
-    { input: NewCustomerFormType }
-  >(ADD_CUSTOMER_MUTATION);
+    { input: NewSupplierFormType }
+  >(ADD_SUPPLIER_MUTATION);
   const {
     register,
     handleSubmit,
@@ -46,51 +45,36 @@ const NewCustomerForm = () => {
     trigger,
     reset,
     setValue,
-  } = useForm<NewCustomerFormType>({
+  } = useForm<NewSupplierFormType>({
     defaultValues: {
-      custcompanyname: "",
-      custfname: "",
-      custlname: "",
-      custadd1: "",
-      custadd2: "",
-      custcity: "",
-      custstate: "",
-      custzip: "",
-      custcountry: "",
-      custtitle: "",
-      custphone1: "",
-      custphone2: "",
-      custphone3: "",
-      custfax: "",
-      custcell: "",
-      custdob: "",
-      custtaxid: "",
-      custdlno: "",
-      custssno: "",
-      custremarks: "",
-      custalertremarks: "",
-      custemailadd: "",
-      status: 1,
+      companyname: "",
+      address1: "",
+      address2: "",
+      city: "",
+      state: "",
+      zipcode: "",
+      country: "",
+      contactperson1: "",
+      phone1: "",
+      phone2: "",
+      cellphone: "",
+      emailaddress: "",
+      webaddress: "",
+      shippimgmethod: "",
       termsid: 0,
-      custalert: 0,
-      custphotopath: "",
+      accountno: "",
+      discountrate: 0,
+      supplierstatus: 0,
+      remarks: "",
       warehouseid: 0,
-      custshippingmethod: "",
-      custdiscount: 0,
-      custcreditlimit: 0,
-      custcreditcardno: "",
-      custcardexpiry: "",
-      custauthorizedname: "",
-      custbillto: "",
-      custshipto: "",
-      custsalestax: 0,
-      custtaxexemptid: "",
+      supplierfname: "",
+      supplierlname: "",
       storeid: parsedStoreId,
     },
   });
   const storeId = getValues("storeid");
   const warehouseId = getValues("warehouseid");
-  const status = getValues("status");
+  const status = getValues("supplierstatus");
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -100,25 +84,19 @@ const NewCustomerForm = () => {
     },
   });
 
-  const onSubmit: SubmitHandler<NewCustomerFormType> = async (formData) => {
+  const onSubmit: SubmitHandler<NewSupplierFormType> = async (formData) => {
     const payload = {
       ...formData,
-      custalert: formData.custalert ? 1 : 0,
-      custshippingmethod: formData.custshippingmethod.toString(),
-      custdob: dayjs(formData.custdob).format(),
-      custcardexpiry: dayjs(formData.custcardexpiry).format(),
-      custdiscount: Number(formData.custdiscount),
-      custcreditlimit: Number(formData.custcreditlimit),
-      custsalestax: Number(formData.custsalestax),
+      discountrate: Number(formData.discountrate),
     };
     const result = await handleTryCatch(async () => {
-      const { data } = await createCustomer({
+      const { data } = await createSupplier({
         variables: { input: payload },
       });
-      if (data?.createCustomer) {
+      if (data?.createSupplier) {
         dispatch(
           showNotification({
-            message: data.createCustomer.message,
+            message: data.createSupplier.message,
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
@@ -151,34 +129,30 @@ const NewCustomerForm = () => {
                   <input
                     type="text"
                     className={`${
-                      errors.custcompanyname && "is-invalid"
+                      errors.companyname && "is-invalid"
                     }  form-control`}
-                    {...register("custcompanyname", {
+                    {...register("companyname", {
                       required: "Company name is required",
                     })}
                   />
-                  {errors.custcompanyname && (
+                  {errors.companyname && (
                     <div className="invalid-feedback">
-                      {errors.custcompanyname.message}
+                      {errors.companyname.message}
                     </div>
                   )}
                 </div>
               </div>
             </div>
             <br></br>
-            <CustomerInformationInputs
+            <SupplierInformationInputs register={register} errors={errors} />
+            <SupplierAddressInformationInputs
               register={register}
               errors={errors}
               control={control}
-            />
-            <CustomerAddressInformationInputs
-              register={register}
-              errors={errors}
-              control={control}
-              selectedCountry={getValues("custcountry")}
+              selectedCountry={getValues("country")}
               trigger={trigger}
             />
-            <CustomerOtherInformation
+            <SupplierOtherInformation
               register={register}
               errors={errors}
               control={control}
@@ -202,4 +176,4 @@ const NewCustomerForm = () => {
   );
 };
 
-export default NewCustomerForm;
+export default NewSupplierForm;
