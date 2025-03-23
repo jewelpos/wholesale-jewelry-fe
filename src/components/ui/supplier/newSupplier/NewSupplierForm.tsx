@@ -88,6 +88,8 @@ const NewSupplierForm = () => {
     const payload = {
       ...formData,
       discountrate: Number(formData.discountrate),
+      shippimgmethod: formData.shippimgmethod.toString(),
+      supplierstatus: formData.supplierstatus ? 1 : 0,
     };
     const result = await handleTryCatch(async () => {
       const { data } = await createSupplier({
