@@ -17,9 +17,13 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
   const menus = user?.permissions?.menus;
   const pathname = usePathname();
   const { basePath } = useDefaultRoute();
+  console.log("basePath",basePath);
   const path = pathname.replace(basePath, "");
+  console.log("path",path);
   const parentPath = "/" + path.split("/")[1];
+  console.log("parentPath",parentPath);
   const childPath = "/" + path.split("/")[2];
+  console.log("childPath",childPath);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const currentMenu: any = useMemo(() => {
@@ -33,6 +37,8 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
     });
     return selectedMenu;
   }, [menus, parentPath, childPath]);
+  console.log("currentMenu",currentMenu)
+  console.log("menus",menus)
 
   return (
     <div className="page-header">
