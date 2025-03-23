@@ -6,7 +6,7 @@ const ExpenseList = () => {
     <div>
       <div className="page-wrapper ">
         <div className="content">
-          <PageHeader title="Expense List" para="Expense List" showBreadcrumb />
+          <PageHeader showBreadcrumb />
           <div className="card table-list-card">
             <ExpenseListComponent />
           </div>
