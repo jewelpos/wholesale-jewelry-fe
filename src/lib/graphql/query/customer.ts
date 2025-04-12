@@ -1,10 +1,20 @@
 import { gql } from "@apollo/client";
 
-// $filters: JSON
-// $sort: JSON
 export const GET_INVOICE_AGING_REPORT_QUERY = gql`
-  query GetInvoiceAgingReport($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getInvoiceAgingReport(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetInvoiceAgingReport(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getInvoiceAgingReport(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         customerid
@@ -25,8 +35,20 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
-  query GetCustomerChequeList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getCustomerChequeList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetCustomerChequeList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getCustomerChequeList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         customerid
@@ -54,11 +76,19 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
-  query GetCustomerLedgerReport($outletid: Int!, $page: Int!, $perpage: Int!) {
+  query GetCustomerLedgerReport(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
     getCustomerLedgerReport(
       outletid: $outletid
       page: $page
       perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
     ) {
       total
       data {
@@ -81,11 +111,19 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
-  query GetCustomerBalanceReport($outletid: Int!, $page: Int!, $perpage: Int!) {
+  query GetCustomerBalanceReport(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
     getCustomerBalanceReport(
       outletid: $outletid
       page: $page
       perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
     ) {
       total
       data {
@@ -105,11 +143,19 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
-  query GetCustomerPaymentList($outletid: Int!, $page: Int!, $perpage: Int!) {
+  query GetCustomerPaymentList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
     getCustomerPaymentList(
       outletid: $outletid
       page: $page
       perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
     ) {
       total
       data {

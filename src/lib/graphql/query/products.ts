@@ -1,8 +1,20 @@
 import { gql } from "@apollo/client";
 
 export const GET_ITEM_CATEGORY_LIST_QUERY = gql`
-  query GetItemCategoryList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getItemCategoryList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetItemCategoryList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getItemCategoryList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         categoryid
@@ -22,11 +34,19 @@ export const GET_ITEM_CATEGORY_LIST_QUERY = gql`
 `;
 
 export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
-  query GetItemSubCategoryList($outletid: Int!, $page: Int!, $perpage: Int!) {
+  query GetItemSubCategoryList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
     getItemSubCategoryList(
       outletid: $outletid
       page: $page
       perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
     ) {
       total
       data {
@@ -46,8 +66,20 @@ export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
 `;
 
 export const GET_PRODUCT_LIST_QUERY = gql`
-  query GetProductList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getProductList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetProductList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getProductList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         itemcode

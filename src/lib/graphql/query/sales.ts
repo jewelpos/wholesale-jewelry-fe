@@ -1,8 +1,20 @@
 import { gql } from "@apollo/client";
 
 export const GET_SALES_INVOICE_LIST_QUERY = gql`
-  query GetInvoiceList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getInvoiceList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetInvoiceList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getInvoiceList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         invoicenumber
@@ -36,8 +48,20 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
 `;
 
 export const GET_SALES_ORDER_LIST_QUERY = gql`
-  query GetSalesOrderList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getSalesOrderList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetSalesOrderList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getSalesOrderList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         customerid

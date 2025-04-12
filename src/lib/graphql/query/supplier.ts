@@ -1,8 +1,20 @@
 import { gql } from "@apollo/client";
 
 export const GET_SUPPLIER_LEDGER_LIST_QUERY = gql`
-  query GetSupplierLedgerList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getSupplierLedgerList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetSupplierLedgerList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getSupplierLedgerList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         supplierid
@@ -24,8 +36,20 @@ export const GET_SUPPLIER_LEDGER_LIST_QUERY = gql`
 `;
 
 export const GET_SUPPLIER_LIST_QUERY = gql`
-  query GetSupplierList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getSupplierList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetSupplierList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getSupplierList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         supplierid
