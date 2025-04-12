@@ -80,8 +80,8 @@ const SubCategoryComponent = () => {
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
-    <div className="card-body">
-      <div className="table-top">
+    <div className="card-body p-2">
+      <div className="table-top mb-2">
         <div className="search-set">
           <div className="search-input">
             <OutletsFilter

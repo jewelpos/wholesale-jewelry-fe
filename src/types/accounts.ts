@@ -19,3 +19,14 @@ export type AccountsExpenseListResponseType = {
   total: number;
   data: AccountsExpenseListType[];
 };
+
+export type AccountsBankListType = {
+  bankid: number;
+  bankname: string;
+  created_at: string;
+};
+
+export type AccountsBankListResponseType = {
+  total: number;
+  data: AccountsBankListType[];
+};

@@ -9,25 +9,43 @@ export const currencyFormattedCellRenderer = (params: any) => {
 };
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
-  { headerName: "Product", field: "itemcode" },
+  { headerName: "Product", field: "itemcode", filter: "agTextColumnFilter" },
   {
     headerName: "Description",
     field: "itemdescription",
     maxWidth: 200,
     resizable: true,
     tooltipField: "itemdescription",
+    filter: "agTextColumnFilter",
   },
   {
     headerName: "Price",
     field: "itemsellprice",
     minWidth: 100,
     cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
   },
-  { headerName: "Category", field: "categoryname" },
-  { headerName: "Company", field: "companyname" },
-  { headerName: "Quantity instock", field: "itemquantityinhand" },
-  { headerName: "Total quantity", field: "overall_qty" },
-  { headerName: "Status", field: "itemstatus" },
-  { headerName: "Outlet", field: "outletid" },
-  { headerName: "Warehouse name", field: "warehousename" },
+  {
+    headerName: "Category",
+    field: "categoryname",
+    filter: "agTextColumnFilter",
+  },
+  { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
+  {
+    headerName: "Quantity instock",
+    field: "itemquantityinhand",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Total quantity",
+    field: "overall_qty",
+    filter: "agNumberColumnFilter",
+  },
+  { headerName: "Status", field: "itemstatus", filter: "agTextColumnFilter" },
+  { headerName: "Outlet", field: "outletid", filter: "agTextColumnFilter" },
+  {
+    headerName: "Warehouse name",
+    field: "warehousename",
+    filter: "agTextColumnFilter",
+  },
 ];

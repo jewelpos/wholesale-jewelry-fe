@@ -23,3 +23,16 @@ export const GET_EXPENSE_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_BANK_LIST_QUERY = gql`
+  query GetBanksList($storeId: Int!, $page: Int!, $perpage: Int!) {
+    getBanksList(storeid: $storeId, page: $page, perpage: $perpage) {
+      total
+      data {
+        bankid
+        bankname
+        created_at
+      }
+    }
+  }
+`;

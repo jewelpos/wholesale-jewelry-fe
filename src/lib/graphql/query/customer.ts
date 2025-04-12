@@ -137,8 +137,20 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_LIST_QUERY = gql`
-  query GetCustomerList($storeid: Int!, $page: Int!, $perpage: Int!) {
-    getCustomerList(storeid: $storeid, page: $page, perpage: $perpage) {
+  query GetCustomerList(
+    $storeid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+  ) {
+    getCustomerList(
+      storeid: $storeid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+    ) {
       total
       data {
         customerid

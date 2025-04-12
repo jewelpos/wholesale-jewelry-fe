@@ -8,23 +8,23 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { GET_CUSTOMER_LIST_QUERY } from "@/lib/graphql/query/customer";
-import { CustomersListType } from "@/types/customer";
 import "ag-grid-enterprise";
-import { customersListColumnDefs } from "./ColumnDef";
 import { useParams } from "next/navigation";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
+import { AccountsBankListType } from "@/types/accounts";
+import { bankListColumnDefs } from "./ColumnDef";
+import { GET_BANK_LIST_QUERY } from "@/lib/graphql/query/accounts";
 
-const CustomerListComponent = () => {
-  const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
+const BankListComponent = () => {
+  const [getBanksList] = useLazyQuery(GET_BANK_LIST_QUERY);
   const dispatch = useAppDispatch();
   const { storeId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
+  const handleOnGridReady = (params: GridReadyEvent<AccountsBankListType>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
@@ -34,18 +34,18 @@ const CustomerListComponent = () => {
       getRows: async (params: any) => {
         const filters = filterVariables(params);
         const result = await handleTryCatch(async () => {
-          const { data } = await getCustomerList({
+          const { data } = await getBanksList({
             variables: {
               storeid: parsedStoreId,
               ...filters,
             },
           });
-          if (data.getCustomerList) {
+          if (data.getBanksList) {
             params.success({
-              rowData: data.getCustomerList.data,
-              rowCount: data.getCustomerList.total,
+              rowData: data.getBanksList.data,
+              rowCount: data.getBanksList.total,
             });
-            if (!data.getCustomerList.data.length) {
+            if (!data.getBanksList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -79,7 +79,7 @@ const CustomerListComponent = () => {
       <div className="ag-theme-quartz custom-theme">
         <POSGrid
           ref={gridRef}
-          columnDefs={customersListColumnDefs}
+          columnDefs={bankListColumnDefs}
           onGridReady={handleOnGridReady}
         />
       </div>
@@ -87,4 +87,4 @@ const CustomerListComponent = () => {
   );
 };
 
-export default CustomerListComponent;
+export default BankListComponent;

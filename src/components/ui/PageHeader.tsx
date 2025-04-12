@@ -35,12 +35,12 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
   }, [menus, parentPath, childPath]);
 
   return (
-    <div className="page-header">
+    <div className="page-header mb-1">
       <div className="add-item d-flex">
         <div className="page-title">
           <h4>{currentMenu?.permissiondisplayname}</h4>
           {currentMenu?.permissiondescription && (
-            <h6 className="mb-3">{currentMenu?.permissiondescription}</h6>
+            <h6 className="mb-1">{currentMenu?.permissiondescription}</h6>
           )}
           {showBreadcrumb && <Breadcrumb />}
         </div>
