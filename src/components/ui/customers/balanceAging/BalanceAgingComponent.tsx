@@ -1,39 +1,28 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import {
-  _InfiniteRowModelGridApi,
-  ColDef,
-  GridReadyEvent,
-} from "ag-grid-community";
+import { _InfiniteRowModelGridApi, GridReadyEvent } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
-import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import { GET_INVOICE_AGING_REPORT_QUERY } from "@/lib/graphql/query/customer";
 import { CustomerBalanceAgingType } from "@/types/customer";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
-import { useParams } from "next/navigation";
-import Select from "react-select";
 import OutletsFilter from "../../grid/OutletsFilter";
-import { GridWrapper } from "../../grid/GridWrapper";
-import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 import { balanceAgingColumnDefs } from "./ColumnDef";
+import POSGrid from "../../grid/POSGrid";
+import { filterVariables } from "@/lib/utils/gridFilters";
 
 const BalanceAgingComponent = () => {
   const [getInvoiceAgingReport] = useLazyQuery(GET_INVOICE_AGING_REPORT_QUERY);
-  const { autoSizeStrategy } = useAutoSizeAggrid();
-  const [rowData, setRowData] = useState<CustomerBalanceAgingType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
-  // const gridRef = useRef<AgGridReact>(null);
+  const gridRef = useRef<AgGridReact>(null);
 
   const handleOnGridReady = (
     params: GridReadyEvent<CustomerBalanceAgingType>
@@ -41,139 +30,71 @@ const BalanceAgingComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const fetchReport = useCallback(async (selectedOutlet: number) => {
-    const result = await handleTryCatch(
-      async () => {
-        const { data } = await getInvoiceAgingReport({
-          variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
+  const datasource = useMemo(
+    () => ({
+      getRows: async (params: any) => {
+        const filters = filterVariables(params);
+        const result = await handleTryCatch(async () => {
+          const { data } = await getInvoiceAgingReport({
+            variables: {
+              outletid: selectedOutlet,
+              ...filters,
+            },
+          });
+          if (data.getInvoiceAgingReport) {
+            params.success({
+              rowData: data.getInvoiceAgingReport.data,
+              rowCount: data.getInvoiceAgingReport.total,
+            });
+            if (!data.getInvoiceAgingReport.data.length) {
+              gridRef.current?.api?.showNoRowsOverlay();
+            } else {
+              gridRef.current?.api?.hideOverlay();
+            }
+          }
+          return true;
         });
-        if (data.getInvoiceAgingReport) {
-          setRowData(data.getInvoiceAgingReport.data);
-          // params.successCallback(data.getRows.rows, data.getRows.lastRow);
+        if (result.error) {
+          gridRef.current?.api?.showNoRowsOverlay();
+          dispatch(
+            showNotification({
+              message: result.error,
+              type: NOTIFICATION_TYPES.ERROR,
+            })
+          );
+          params.fail();
         }
-        return true;
       },
-      () => {
-        setLoading(false);
-      }
-    );
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
-      // params.failCallback();
-    }
-  }, []);
-
-  // const datasource = useMemo(
-  //   () => ({
-  //     getRows: async (params: any) => {
-  //       const { startRow, endRow, filterModel } = params.request;
-
-  //       const filters = Object.keys(filterModel).reduce((acc, key) => {
-  //         acc[key] = filterModel[key].filter;
-  //         return acc;
-  //       }, {} as any);
-
-  //       const result = await handleTryCatch(
-  //         async () => {
-  //           const { data } = await getInvoiceAgingReport({
-  //             variables: { outletid: 73, page: 1, perPage: 1 },
-  //           });
-  //           if (data.getInvoiceAgingReport) {
-  //             params.successCallback(data.getRows.rows, data.getRows.lastRow);
-  //           }
-  //           return true;
-  //         },
-  //         () => {
-  //           setLoading(false);
-  //         }
-  //       );
-  //       if (result.error) {
-  //         dispatch(
-  //           showNotification({
-  //             message: result.error,
-  //             type: NOTIFICATION_TYPES.ERROR,
-  //           })
-  //         );
-  //         params.failCallback();
-  //       }
-  //     },
-  //   }),
-  //   []
-  // );
-
-  //for server side
-  // const onGridReady = useCallback(
-  //   (params: any) => {
-  //     params.api.setServerSideDatasource(datasource);
-  //   },
-  //   [datasource]
-  // );
+    }),
+    [selectedOutlet]
+  );
 
   useEffect(() => {
-    if (selectedOutlet) {
-      fetchReport(selectedOutlet);
+    if (selectedOutlet && gridRef.current) {
+      gridRef.current.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [selectedOutlet, fetchReport]);
+  }, [gridRef, datasource, selectedOutlet]);
 
   return (
     <div className="card-body">
       <div className="table-top">
-        <div className="form-sort">
-          <OutletsFilter
-            fetchOutletsList={fetchOutletsList}
-            outlets={outlets}
-            loading={outletsLoading}
-            setSelectedOutlet={setSelectedOutlet}
-            selectedOutlet={selectedOutlet}
-          />
+        <div className="search-set">
+          <div className="search-input">
+            <OutletsFilter
+              fetchOutletsList={fetchOutletsList}
+              outlets={outlets}
+              loading={outletsLoading}
+              setSelectedOutlet={setSelectedOutlet}
+              selectedOutlet={selectedOutlet}
+            />
+          </div>
         </div>
       </div>
-      <div className="ag-theme-quartz custom-theme">
-        {/* server side */}
-        {/* <AgGridReact<CustomerBalanceAgingType>
+      <POSGrid
         ref={gridRef}
-        columnDefs={columnDefs}
-        defaultColDef={{
-          filter: true,
-          flex: 1,
-          sortable: true,
-        }}
-        rowModelType="serverSide"
-        pagination={true}
-        paginationPageSize={10}
-        onGridReady={onGridReady}
-      /> */}
-
-        {!outletsLoading && (
-          <GridWrapper>
-            <AgGridReact<CustomerBalanceAgingType>
-              loading={loading}
-              rowData={rowData}
-              columnDefs={balanceAgingColumnDefs}
-              defaultColDef={{
-                filter: true,
-                flex: 1,
-              }}
-              gridOptions={{
-                rowHeight: 37,
-                headerHeight: 50,
-              }}
-              pagination
-              paginationPageSize={20}
-              domLayout="normal"
-              onGridReady={handleOnGridReady}
-              autoSizeStrategy={autoSizeStrategy}
-              loadingOverlayComponent={CustomLoadingOverlay}
-              noRowsOverlayComponent={CustomNoRowsOverlay}
-            />
-          </GridWrapper>
-        )}
-      </div>
+        columnDefs={balanceAgingColumnDefs}
+        onGridReady={handleOnGridReady}
+      />
     </div>
   );
 };

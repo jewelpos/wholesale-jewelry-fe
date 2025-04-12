@@ -1,18 +1,11 @@
-import PageHeader from "@/components/ui/PageHeader";
+import Content from "@/components/layout/Content";
 import SalesListComponent from "@/components/ui/sales/salesList/SalesListComponent";
 
 const SalesList = () => {
   return (
-    <div>
-      <div className="page-wrapper ">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <div className="card table-list-card">
-            <SalesListComponent />
-          </div>
-        </div>
-      </div>
-    </div>
+    <Content>
+      <SalesListComponent />
+    </Content>
   );
 };
 

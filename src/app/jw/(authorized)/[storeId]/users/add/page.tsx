@@ -1,16 +1,11 @@
-import PageHeader from "@/components/ui/PageHeader";
+import Content from "@/components/layout/Content";
 import AddUserForm from "@/components/ui/users/AddUserForm";
 
 const AddUser = () => {
   return (
-    <div>
-      <div className="page-wrapper  cardhead">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <AddUserForm />
-        </div>
-      </div>
-    </div>
+    <Content>
+      <AddUserForm />
+    </Content>
   );
 };
 

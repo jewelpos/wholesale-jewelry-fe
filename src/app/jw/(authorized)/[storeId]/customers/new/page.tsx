@@ -1,16 +1,12 @@
+import Content from "@/components/layout/Content";
 import NewCustomerForm from "@/components/ui/customers/newCustomer/NewCustomerForm";
 import PageHeader from "@/components/ui/PageHeader";
 
 const NewCustomer = () => {
   return (
-    <div>
-      <div className="page-wrapper  cardhead">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <NewCustomerForm />
-        </div>
-      </div>
-    </div>
+    <Content>
+      <NewCustomerForm />
+    </Content>
   );
 };
 

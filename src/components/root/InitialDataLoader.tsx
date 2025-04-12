@@ -9,6 +9,13 @@ import FullPageLoader from "../ui/FullPageLoader";
 import useAuth from "@/hooks/useAuth";
 import useStores from "@/hooks/useStores";
 import useUserData from "@/hooks/useUserData";
+import "ag-grid-enterprise";
+import { LicenseManager } from "ag-grid-enterprise";
+
+if (typeof window !== "undefined") {
+  const licenseKey = process.env.NEXT_PUBLIC_AG_GRID_LICENSE_KEY || "";
+  LicenseManager.setLicenseKey(licenseKey);
+}
 
 const InitialDataLoader = ({
   children,

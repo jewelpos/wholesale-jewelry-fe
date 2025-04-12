@@ -1,18 +1,11 @@
-import PageHeader from "@/components/ui/PageHeader";
+import Content from "@/components/layout/Content";
 import SalesOrderListComponent from "@/components/ui/sales/salesOrderList/SalesOrderListComponent";
 
 const SalesOrderList = () => {
   return (
-    <div>
-      <div className="page-wrapper ">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <div className="card table-list-card">
-            <SalesOrderListComponent />
-          </div>
-        </div>
-      </div>
-    </div>
+    <Content>
+      <SalesOrderListComponent />
+    </Content>
   );
 };
 

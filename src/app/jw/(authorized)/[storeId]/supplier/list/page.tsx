@@ -1,18 +1,11 @@
-import PageHeader from "@/components/ui/PageHeader";
+import Content from "@/components/layout/Content";
 import SupplierListComponent from "@/components/ui/supplier/supplierList/SupplierListComponent";
 
 const SupplierLedgerActivity = () => {
   return (
-    <div>
-      <div className="page-wrapper ">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <div className="card table-list-card">
-            <SupplierListComponent />
-          </div>
-        </div>
-      </div>
-    </div>
+    <Content>
+      <SupplierListComponent />
+    </Content>
   );
 };
 

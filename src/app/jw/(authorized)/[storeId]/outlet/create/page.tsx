@@ -1,20 +1,11 @@
+import Content from "@/components/layout/Content";
 import CreateOutletForm from "@/components/ui/outlet/CreateOutletForm";
-import PageHeader from "@/components/ui/PageHeader";
 
 const CreateStore = () => {
   return (
-    <div>
-      <div className="page-wrapper">
-        <div className="content">
-          <PageHeader showBreadcrumb />
-          <div className="row">
-            <div className="col-md-12">
-              <CreateOutletForm />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Content>
+      <CreateOutletForm />
+    </Content>
   );
 };
 
