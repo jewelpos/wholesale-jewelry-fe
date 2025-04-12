@@ -1,6 +1,6 @@
 import { TIME_FORMAT } from "@/lib/config/constants";
 import { CustomerChequeListType } from "@/types/customer";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
@@ -31,13 +31,15 @@ export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
   {
     headerName: "Posting date",
     field: "checkpostingdate",
-    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   {
     headerName: "Entry date",
     field: "checkentrydate",
-    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
 ];

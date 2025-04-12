@@ -1,6 +1,5 @@
 "use client";
 
-import useStores from "@/hooks/useStores";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";

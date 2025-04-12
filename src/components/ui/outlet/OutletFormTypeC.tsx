@@ -1,6 +1,5 @@
 "use client";
 
-import { useAppSelector } from "@/lib/store/hook";
 import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
 import { CreateOutlet } from "@/types/outlet";

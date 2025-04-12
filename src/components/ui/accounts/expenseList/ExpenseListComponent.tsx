@@ -13,7 +13,7 @@ import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_EXPENSE_LIST_QUERY } from "@/lib/graphql/query/accounts";
 import { AccountsExpenseListType } from "@/types/accounts";
 import { expenseListColumnDefs } from "./ColumnDef";
-import { GridReadyEvent } from "ag-grid-enterprise";
+import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-enterprise";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 
@@ -34,7 +34,7 @@ const ExpenseListComponent = () => {
 
   const datasource = useMemo(
     () => ({
-      getRows: async (params: any) => {
+      getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params);
         const result = await handleTryCatch(async () => {
           const { data } = await getExpenseList({
@@ -68,7 +68,7 @@ const ExpenseListComponent = () => {
         }
       },
     }),
-    [selectedOutlet]
+    [selectedOutlet, dispatch, getExpenseList]
   );
 
   useEffect(() => {

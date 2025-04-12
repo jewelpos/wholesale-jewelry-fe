@@ -1,8 +1,8 @@
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { ProductListType } from "@/types/product";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 
-export const currencyFormattedCellRenderer = (params: any) => {
+export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   return params.value !== null
     ? `${detectUserCurrency().format(params.value)}`
     : params.value;

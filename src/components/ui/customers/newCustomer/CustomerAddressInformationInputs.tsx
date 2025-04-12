@@ -2,11 +2,10 @@
 
 import SelectCountry from "@/components/forms/SelectCountry";
 import SelectState from "@/components/forms/SelectState";
-import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
 import { NewCustomerFormType } from "@/types/customer";
 import React from "react";
-import { Info, PlusCircle } from "react-feather";
+import { Info } from "react-feather";
 import {
   Control,
   Controller,

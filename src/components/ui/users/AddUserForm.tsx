@@ -7,8 +7,8 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
 import { useMutation, useQuery } from "@apollo/client";
-import { useParams, useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 
@@ -25,8 +25,6 @@ import { AddUserPermissionType } from "@/types/permissions";
 import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import { useAppSelector } from "@/lib/store/hook";
-import { SelectOption } from "@/types/form";
 
 type AddUserResponse = {
   createOutletUser: {
@@ -135,7 +133,7 @@ const AddUserForm = () => {
     if (storeId) {
       fetchOutletsList([storeId]);
     }
-  }, [storeId]);
+  }, [storeId, fetchOutletsList]);
 
   const onSubmit: SubmitHandler<AddUserFormType> = async (formData) => {
     const updatedMenus = menus?.map((menu) => {

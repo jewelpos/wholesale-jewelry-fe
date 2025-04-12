@@ -3,7 +3,6 @@
 import SelectCountry from "@/components/forms/SelectCountry";
 import SelectState from "@/components/forms/SelectState";
 import { CreateOutlet } from "@/types/outlet";
-import { CreateStore } from "@/types/store";
 import React from "react";
 import {
   Control,

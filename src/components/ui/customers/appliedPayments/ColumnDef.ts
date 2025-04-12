@@ -40,12 +40,14 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
   {
     headerName: "Payment date",
     field: "paymentdate",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   {
     headerName: "Date of entry",
     field: "dateofentry",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },

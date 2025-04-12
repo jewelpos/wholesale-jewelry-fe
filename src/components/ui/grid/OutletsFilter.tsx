@@ -29,7 +29,7 @@ const OutletsFilter = ({
     if (parsedStoreId) {
       fetchOutletsList([parsedStoreId]);
     }
-  }, [parsedStoreId]);
+  }, [parsedStoreId, fetchOutletsList]);
 
   const outletList = outlets.map((outlet) => ({
     label: outlet.outletname,
@@ -40,7 +40,7 @@ const OutletsFilter = ({
     if (outlets.length) {
       setSelectedOutlet(outlets[0]?.outletid);
     }
-  }, [outlets]);
+  }, [outlets, setSelectedOutlet]);
 
   return (
     <Row className="d-flex align-items-center justify-content-center">

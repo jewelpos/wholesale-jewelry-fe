@@ -4,18 +4,7 @@ import { useAppSelector } from "@/lib/store/hook";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Search,
-  Settings,
-  User,
-  XCircle,
-  ChevronsLeft,
-  Globe,
-  Maximize,
-  Mail,
-  Bell,
-  LogOut,
-} from "react-feather";
+import { Settings, User, ChevronsLeft, LogOut } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
 import { useParams } from "next/navigation";
 
@@ -27,7 +16,7 @@ type Props = {
 const Header = ({ onLogout, storeLoading }: Props) => {
   const { storeId } = useParams();
   const [toggle, SetToggle] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
   const defaultPage = storeId ? `/jw/${storeId}/home` : `/jw/home`;
 
@@ -66,7 +55,7 @@ const Header = ({ onLogout, storeLoading }: Props) => {
           .webkitFullscreenElement ||
         (document as Document & { msFullscreenElement?: Element })
           .msFullscreenElement;
-      setIsFullscreen(!!fullscreenElement);
+      // setIsFullscreen(!!fullscreenElement);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);

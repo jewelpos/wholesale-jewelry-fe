@@ -3,15 +3,9 @@
 import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
 import { NewSupplierFormType } from "@/types/supplier";
-import { DatePicker } from "antd";
 import React from "react";
-import { Info, PlusCircle } from "react-feather";
-import {
-  Control,
-  Controller,
-  FieldErrors,
-  UseFormRegister,
-} from "react-hook-form";
+import { Info } from "react-feather";
+import { FieldErrors, UseFormRegister } from "react-hook-form";
 
 interface Props {
   register: UseFormRegister<NewSupplierFormType>;

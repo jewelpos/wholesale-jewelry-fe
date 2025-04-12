@@ -3,7 +3,6 @@
 import SelectCountry from "@/components/forms/SelectCountry";
 import SelectState from "@/components/forms/SelectState";
 import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
-import { NewCustomerFormType } from "@/types/customer";
 import { NewSupplierFormType } from "@/types/supplier";
 import React from "react";
 import { Info } from "react-feather";

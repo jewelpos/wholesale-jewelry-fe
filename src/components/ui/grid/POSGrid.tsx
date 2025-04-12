@@ -5,8 +5,11 @@ import CustomNoRowsOverlay from "./CustomNoRowsOverlay";
 import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 
 interface POSGridProps extends AgGridReactProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columnDefs: any[]; // Replace `any[]` with the actual type of columnDefs if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gridOptions?: any; // You can type gridOptions more specifically if needed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onGridReady: (params: any) => void; // Type this callback function as needed
 }
 
@@ -67,5 +70,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     );
   }
 );
+
+POSGrid.displayName = "POSGrid";
 
 export default POSGrid;

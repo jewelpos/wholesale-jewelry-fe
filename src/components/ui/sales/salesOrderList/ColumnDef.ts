@@ -1,6 +1,6 @@
 import { TIME_FORMAT } from "@/lib/config/constants";
 import { SalesOrderListType } from "@/types/sales";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
@@ -33,13 +33,15 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
   {
     headerName: "Order date",
     field: "orderdate",
-    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   {
     headerName: "Order processed date",
     field: "orderprocesseddate",
-    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
 ];

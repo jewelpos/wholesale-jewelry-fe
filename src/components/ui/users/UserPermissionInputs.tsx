@@ -5,15 +5,9 @@ import {
   AddUserMenuAction,
   AddUserMenuChildType,
   AddUserMenusType,
-  Menu,
-  MenuAction,
-  MenuChild,
-  Menus,
-  permissions,
 } from "@/types/permissions";
-import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
+import { AddUserPermittedMenu } from "@/types/user";
 import React, { Dispatch, Fragment, SetStateAction } from "react";
-import { Control, Controller, UseFormRegister } from "react-hook-form";
 
 interface Props {
   menus: AddUserMenusType;
@@ -25,10 +19,6 @@ interface MenuListProps {
   menus: AddUserMenuChildType[];
   permittedMenus: AddUserPermittedMenu[];
   setPermittedMenus: Dispatch<SetStateAction<AddUserPermittedMenu[]>>;
-}
-
-interface ActionListProps {
-  actions: AddUserMenuAction[];
 }
 
 const renderActionList = (actions: AddUserMenuAction[]) => {

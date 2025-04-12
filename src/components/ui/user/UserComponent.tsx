@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { Table, Input, Select, Switch, Avatar } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useLazyQuery } from "@apollo/client";
 import { GET_USERS_LIST_QUERY } from "@/lib/graphql/query/user";
 import { useParams } from "next/navigation";
 import { UsersListType } from "@/types/user";
-import { ColDef, GridApi, GridReadyEvent } from "ag-grid-community";
+import { ColDef, GridReadyEvent, ICellRendererParams } from "ag-grid-community";
 import Link from "next/link";
 import { getRandomUserAvatar, getShortName } from "@/lib/utils/parse";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -18,17 +16,11 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CustomLoadingOverlay from "../grid/CustomLoadingOverlay";
 import CustomNoRowsOverlay from "../grid/CustomNoRowsOverlay";
 
-const { Option } = Select;
-
 const UserComponent = () => {
   const { storeId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
-  const [search, setSearch] = useState<string>("");
-  const [roleFilter, setRoleFilter] = useState<string>("All roles");
-  const [outletFilter, setOutletFilter] = useState<string>("All outlets");
   const [getUserListUnderStore] = useLazyQuery(GET_USERS_LIST_QUERY);
   const [users, setUsers] = useState<UsersListType[]>([]);
-  const [gridApi, setGridApi] = useState<GridApi | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
 
@@ -37,7 +29,7 @@ const UserComponent = () => {
       headerName: "User",
       field: "userfullname",
       filter: true,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Link
           href={`/`}
           style={{ display: "flex", alignItems: "center", gap: 10 }}
@@ -59,8 +51,7 @@ const UserComponent = () => {
     { headerName: "Email ID", field: "emailaddress" },
   ];
 
-  const onGridReady = useCallback(async (params: GridReadyEvent) => {
-    setGridApi(params.api);
+  const onGridReady = useCallback(async () => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
@@ -84,7 +75,7 @@ const UserComponent = () => {
         })
       );
     }
-  }, []);
+  }, [dispatch, getUserListUnderStore, parsedStoreId]);
 
   return (
     <div className="ag-theme-quartz custom-theme">

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { _InfiniteRowModelGridApi, GridReadyEvent } from "ag-grid-community";
+import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -31,7 +31,7 @@ const BankListComponent = () => {
 
   const datasource = useMemo(
     () => ({
-      getRows: async (params: any) => {
+      getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params);
         const result = await handleTryCatch(async () => {
           const { data } = await getBanksList({
@@ -65,7 +65,7 @@ const BankListComponent = () => {
         }
       },
     }),
-    [parsedStoreId]
+    [parsedStoreId, dispatch, getBanksList]
   );
 
   useEffect(() => {

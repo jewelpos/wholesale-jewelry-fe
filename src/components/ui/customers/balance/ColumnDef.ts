@@ -41,6 +41,7 @@ export const balanceReportColumnDefs: ColDef<CustomerBalanceReportType>[] = [
   {
     headerName: "Last sale date",
     field: "last_sale_date",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },

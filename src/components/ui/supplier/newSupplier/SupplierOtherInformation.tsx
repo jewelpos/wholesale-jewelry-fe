@@ -2,16 +2,11 @@
 
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
-import SelectStatus from "@/components/forms/SelectStatus";
 import SelectStore from "@/components/forms/SelectStore";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
-import { emailValidation } from "@/lib/utils/validations/authValidations";
-import { phoneNumberValidation } from "@/lib/utils/validations/formValidations";
-import { NewCustomerFormType } from "@/types/customer";
 import { NewSupplierFormType } from "@/types/supplier";
-import { DatePicker } from "antd";
 import React from "react";
-import { Info, PlusCircle } from "react-feather";
+import { Info } from "react-feather";
 import {
   Control,
   Controller,
