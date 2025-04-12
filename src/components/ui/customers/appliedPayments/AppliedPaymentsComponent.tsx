@@ -25,10 +25,12 @@ const AppliedPaymentsComponent = () => {
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
+  const [gridReady, setGridReady] = useState<boolean>(false);
 
   const handleOnGridReady = (
     params: GridReadyEvent<CustomerPaymentListType>
   ) => {
+    setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
@@ -72,10 +74,10 @@ const AppliedPaymentsComponent = () => {
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridRef.current) {
-      gridRef.current.api!.setGridOption("serverSideDatasource", datasource);
+    if (selectedOutlet && gridReady) {
+      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet]);
+  }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
     <div className="card-body">

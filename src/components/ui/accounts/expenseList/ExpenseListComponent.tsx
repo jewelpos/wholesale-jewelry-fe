@@ -1,63 +1,81 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
-import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_EXPENSE_LIST_QUERY } from "@/lib/graphql/query/accounts";
 import { AccountsExpenseListType } from "@/types/accounts";
-import { GridWrapper } from "../../grid/GridWrapper";
 import { expenseListColumnDefs } from "./ColumnDef";
+import { GridReadyEvent } from "ag-grid-enterprise";
+import { filterVariables } from "@/lib/utils/gridFilters";
+import POSGrid from "../../grid/POSGrid";
 
 const ExpenseListComponent = () => {
   const [getExpenseList] = useLazyQuery(GET_EXPENSE_LIST_QUERY);
-  const [rowData, setRowData] = useState<AccountsExpenseListType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const gridRef = useRef<AgGridReact>(null);
+  const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const fetchReport = useCallback(
-    async (selectedOutlet: number) => {
-      const result = await handleTryCatch(
-        async () => {
+  const handleOnGridReady = (
+    params: GridReadyEvent<AccountsExpenseListType>
+  ) => {
+    setGridReady(true);
+    params?.api?.autoSizeAllColumns?.();
+  };
+
+  const datasource = useMemo(
+    () => ({
+      getRows: async (params: any) => {
+        const filters = filterVariables(params);
+        const result = await handleTryCatch(async () => {
           const { data } = await getExpenseList({
-            variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
+            variables: {
+              outletid: selectedOutlet,
+              ...filters,
+            },
           });
           if (data.getExpenseList) {
-            setRowData(data.getExpenseList.data);
+            params.success({
+              rowData: data.getExpenseList.data,
+              rowCount: data.getExpenseList.total,
+            });
+            if (!data.getExpenseList.data.length) {
+              gridRef.current?.api?.showNoRowsOverlay();
+            } else {
+              gridRef.current?.api?.hideOverlay();
+            }
           }
           return true;
-        },
-        () => {
-          setLoading(false);
+        });
+        if (result.error) {
+          gridRef.current?.api?.showNoRowsOverlay();
+          dispatch(
+            showNotification({
+              message: result.error,
+              type: NOTIFICATION_TYPES.ERROR,
+            })
+          );
+          params.fail();
         }
-      );
-      if (result.error) {
-        dispatch(
-          showNotification({
-            message: result.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
-    },
-    [getExpenseList, dispatch]
+      },
+    }),
+    [selectedOutlet]
   );
 
   useEffect(() => {
-    if (selectedOutlet) {
-      fetchReport(selectedOutlet);
+    if (selectedOutlet && gridReady) {
+      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [selectedOutlet, fetchReport]);
+  }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
     <div className="card-body">
@@ -74,30 +92,11 @@ const ExpenseListComponent = () => {
           </div>
         </div>
       </div>
-      <div className="ag-theme-quartz custom-theme">
-        {!outletsLoading && (
-          <GridWrapper>
-            <AgGridReact<AccountsExpenseListType>
-              loading={loading}
-              rowData={rowData}
-              columnDefs={expenseListColumnDefs}
-              defaultColDef={{
-                filter: true,
-                flex: 1,
-              }}
-              gridOptions={{
-                rowHeight: 37,
-                headerHeight: 50,
-              }}
-              pagination
-              paginationPageSize={20}
-              domLayout="normal"
-              loadingOverlayComponent={CustomLoadingOverlay}
-              noRowsOverlayComponent={CustomNoRowsOverlay}
-            />
-          </GridWrapper>
-        )}
-      </div>
+      <POSGrid
+        ref={gridRef}
+        columnDefs={expenseListColumnDefs}
+        onGridReady={handleOnGridReady}
+      />
     </div>
   );
 };

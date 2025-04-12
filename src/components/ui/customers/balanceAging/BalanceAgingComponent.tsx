@@ -23,10 +23,12 @@ const BalanceAgingComponent = () => {
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
+  const [gridReady, setGridReady] = useState<boolean>(false);
 
   const handleOnGridReady = (
     params: GridReadyEvent<CustomerBalanceAgingType>
   ) => {
+    setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
@@ -70,10 +72,10 @@ const BalanceAgingComponent = () => {
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridRef.current) {
-      gridRef.current.api!.setGridOption("serverSideDatasource", datasource);
+    if (selectedOutlet && gridReady) {
+      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet]);
+  }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
     <div className="card-body">

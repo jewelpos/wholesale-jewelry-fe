@@ -8,8 +8,12 @@ export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
   {
     headerName: "Customer",
     field: "ledgercustid",
+    filter: "agTextColumnFilter",
+    filterParams: {
+      filterOptions: ["contains", "notContains"],
+    },
   },
-  { headerName: "Code", field: "ledgercode" },
+  { headerName: "Code", field: "ledgercode", filter: "agTextColumnFilter" },
   { headerName: "Description", field: "ledgerdescription" },
   {
     headerName: "Amount debited",

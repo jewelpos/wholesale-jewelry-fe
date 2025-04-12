@@ -1,72 +1,79 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import {
-  _InfiniteRowModelGridApi,
-  ColDef,
-  GridReadyEvent,
-} from "ag-grid-community";
+import { _InfiniteRowModelGridApi, GridReadyEvent } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
-import CustomLoadingOverlay from "../../grid/CustomLoadingOverlay";
-import CustomNoRowsOverlay from "../../grid/CustomNoRowsOverlay";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
 import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SALES_ORDER_LIST_QUERY } from "@/lib/graphql/query/sales";
 import { SalesOrderListType } from "@/types/sales";
-import { GridWrapper } from "../../grid/GridWrapper";
-import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 import { salesOrderColumnDefs } from "./ColumnDef";
+import { filterVariables } from "@/lib/utils/gridFilters";
+import POSGrid from "../../grid/POSGrid";
 
 const SalesOrderListComponent = () => {
   const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
-  const { autoSizeStrategy } = useAutoSizeAggrid();
-  const [rowData, setRowData] = useState<SalesOrderListType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const gridRef = useRef<AgGridReact>(null);
+  const [gridReady, setGridReady] = useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesOrderListType>) => {
+    setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const fetchReport = useCallback(async (selectedOutlet: number) => {
-    const result = await handleTryCatch(
-      async () => {
-        const { data } = await getSalesOrderList({
-          variables: { outletid: selectedOutlet, page: 1, perpage: 1000 },
+  const datasource = useMemo(
+    () => ({
+      getRows: async (params: any) => {
+        const filters = filterVariables(params);
+        const result = await handleTryCatch(async () => {
+          const { data } = await getSalesOrderList({
+            variables: {
+              outletid: selectedOutlet,
+              ...filters,
+            },
+          });
+          if (data.getSalesOrderList) {
+            params.success({
+              rowData: data.getSalesOrderList.data,
+              rowCount: data.getSalesOrderList.total,
+            });
+            if (!data.getSalesOrderList.data.length) {
+              gridRef.current?.api?.showNoRowsOverlay();
+            } else {
+              gridRef.current?.api?.hideOverlay();
+            }
+          }
+          return true;
         });
-        if (data.getSalesOrderList) {
-          setRowData(data.getSalesOrderList.data);
+        if (result.error) {
+          gridRef.current?.api?.showNoRowsOverlay();
+          dispatch(
+            showNotification({
+              message: result.error,
+              type: NOTIFICATION_TYPES.ERROR,
+            })
+          );
+          params.fail();
         }
-        return true;
       },
-      () => {
-        setLoading(false);
-      }
-    );
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
-    }
-  }, []);
+    }),
+    [selectedOutlet]
+  );
 
   useEffect(() => {
-    if (selectedOutlet) {
-      fetchReport(selectedOutlet);
+    if (selectedOutlet && gridReady) {
+      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [selectedOutlet, fetchReport]);
+  }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
     <div className="card-body">
@@ -83,32 +90,11 @@ const SalesOrderListComponent = () => {
           </div>
         </div>
       </div>
-      <div className="ag-theme-quartz custom-theme">
-        {!outletsLoading && (
-          <GridWrapper>
-            <AgGridReact<SalesOrderListType>
-              loading={loading}
-              rowData={rowData}
-              columnDefs={salesOrderColumnDefs}
-              defaultColDef={{
-                filter: true,
-                flex: 1,
-              }}
-              gridOptions={{
-                rowHeight: 37,
-                headerHeight: 50,
-              }}
-              pagination
-              paginationPageSize={20}
-              domLayout="normal"
-              onGridReady={handleOnGridReady}
-              autoSizeStrategy={autoSizeStrategy}
-              loadingOverlayComponent={CustomLoadingOverlay}
-              noRowsOverlayComponent={CustomNoRowsOverlay}
-            />
-          </GridWrapper>
-        )}
-      </div>
+      <POSGrid
+        ref={gridRef}
+        columnDefs={salesOrderColumnDefs}
+        onGridReady={handleOnGridReady}
+      />
     </div>
   );
 };
