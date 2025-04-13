@@ -15,7 +15,7 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     field: "custcompanyname",
     filter: "agTextColumnFilter",
   },
-  { headerName: "phone", field: "phone", filter: "agNumberColumnFilter" },
+  { headerName: "Phone", field: "phone", filter: "agNumberColumnFilter" },
   {
     headerName: "Number of sales",
     field: "numberofsales",

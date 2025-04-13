@@ -17,14 +17,17 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
   ({ columnDefs, gridOptions, onGridReady }, ref) => {
     const { autoSizeStrategy } = useAutoSizeAggrid();
     return (
-      <div className="ag-theme-quartz custom-theme">
+      <div
+        className="ag-theme-quartz custom-theme"
+        style={{ height: "550px", width: "100%" }}
+      >
         <AgGridReact
           ref={ref}
           columnDefs={columnDefs}
           defaultColDef={{
             filter: true,
-            flex: 1,
             sortable: true,
+            enableRowGroup: true,
           }}
           gridOptions={{
             rowHeight: 37,
@@ -33,7 +36,8 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
             sideBar: true,
             ...gridOptions,
           }}
-          domLayout="autoHeight"
+          rowGroupPanelShow="always"
+          domLayout="normal"
           rowModelType="serverSide"
           pagination={true}
           onGridReady={onGridReady}
@@ -63,7 +67,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
                 toolPanel: "agFiltersToolPanel",
               },
             ],
-            defaultToolPanel: "filters", // optional: open with Filters
+            defaultToolPanel: "", // optional: open with Filters
           }}
         />
       </div>
