@@ -7,6 +7,8 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getInvoiceList(
       outletid: $outletid
@@ -14,6 +16,8 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -54,6 +58,8 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getSalesOrderList(
       outletid: $outletid
@@ -61,6 +67,8 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {

@@ -7,6 +7,8 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getInvoiceAgingReport(
       outletid: $outletid
@@ -14,6 +16,8 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -41,6 +45,8 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getCustomerChequeList(
       outletid: $outletid
@@ -48,6 +54,8 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -82,6 +90,8 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getCustomerLedgerReport(
       outletid: $outletid
@@ -89,6 +99,8 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -117,6 +129,8 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getCustomerBalanceReport(
       outletid: $outletid
@@ -124,6 +138,8 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -149,6 +165,8 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getCustomerPaymentList(
       outletid: $outletid
@@ -156,6 +174,8 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
@@ -189,6 +209,8 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
     $perpage: Int!
     $filters: [FilterKeyValuePair]
     $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
   ) {
     getCustomerList(
       storeid: $storeid
@@ -196,6 +218,8 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
       perpage: $perpage
       filters: $filters
       sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
     ) {
       total
       data {
