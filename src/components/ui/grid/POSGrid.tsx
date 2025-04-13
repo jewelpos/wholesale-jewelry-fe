@@ -23,14 +23,16 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           columnDefs={columnDefs}
           defaultColDef={{
             filter: true,
-            flex: 1,
+            floatingFilter: true,
             sortable: true,
+            enableRowGroup: true,
+            minWidth: 200,
           }}
           gridOptions={{
             rowHeight: 37,
             headerHeight: 50,
             suppressServerSideFullWidthLoadingRow: true,
-            sideBar: true,
+            // sideBar: true,
             ...gridOptions,
           }}
           domLayout="autoHeight"
@@ -49,10 +51,12 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
                 labelKey: "columns",
                 iconKey: "columns",
                 toolPanel: "agColumnsToolPanel",
+
                 toolPanelParams: {
                   suppressRowGroups: true,
                   suppressValues: true,
-                  suppressPivots: false, // show Pivot section
+                  suppressPivots: true, // show Pivot section
+                  suppressPivotMode: true,
                 },
               },
               {
@@ -63,8 +67,11 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
                 toolPanel: "agFiltersToolPanel",
               },
             ],
-            defaultToolPanel: "filters", // optional: open with Filters
+            defaultToolPanel: "",
           }}
+          rowGroupPanelShow="always"
+          groupDisplayType="singleColumn"
+          maxBlocksInCache={100}
         />
       </div>
     );
