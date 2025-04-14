@@ -3,6 +3,7 @@ import { CustomersListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
@@ -58,5 +59,26 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: CustomersListType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: CustomersListType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: CustomersListType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

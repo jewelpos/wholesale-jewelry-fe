@@ -32,7 +32,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
             minWidth: 200,
           }}
           gridOptions={{
-            rowHeight: 37,
+            rowHeight: 42,
             headerHeight: 50,
             suppressServerSideFullWidthLoadingRow: true,
             // sideBar: true,

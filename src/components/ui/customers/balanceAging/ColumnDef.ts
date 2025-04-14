@@ -1,6 +1,7 @@
 import { CustomerBalanceAgingType } from "@/types/customer";
 import { ColDef } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const balanceAgingColumnDefs: ColDef<CustomerBalanceAgingType>[] = [
   {
@@ -54,5 +55,26 @@ export const balanceAgingColumnDefs: ColDef<CustomerBalanceAgingType>[] = [
     field: "total_due",
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: CustomerBalanceAgingType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: CustomerBalanceAgingType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: CustomerBalanceAgingType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

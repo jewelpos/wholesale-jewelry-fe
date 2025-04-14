@@ -1,7 +1,7 @@
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { ProductListType } from "@/types/product";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
-import ActionCellRenderer from "./ActionRenderer";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   return params.value !== null
@@ -51,12 +51,23 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
   },
   {
     headerName: "Actions",
-    cellRenderer: ActionCellRenderer, // use the registered component name
-    maxWidth: 125,
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
-    suppressMenu: true,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: ProductListType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: ProductListType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: ProductListType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

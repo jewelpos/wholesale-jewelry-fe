@@ -494,15 +494,15 @@ ul.ant-pagination.ant-table-pagination li button.ant-pagination-item-link {
   color: #67748e;
 }
 
-.ant-table-cell .action-table-data {
+.action-table-data {
   border-bottom: 0 !important;
 }
 
-.ant-table-cell .action-table-data:hover {
+.action-table-data:hover {
   background: none;
 }
 
-.ant-table-cell.ant-table-cell-row-hover .action-table-data {
+.action-table-data {
   background: none;
 }
 
@@ -634,7 +634,7 @@ div.ant-picker .ant-picker-input input {
 .ant-picker-dropdown {
   z-index: 9999;
 }
-table tbody div.action-table-data a {
+.action-table-data a {
   border: 1px solid rgba(145, 158, 171, 0.3);
   background-color: #ffffff;
   border-radius: 8px;
@@ -649,16 +649,16 @@ table tbody div.action-table-data a {
   -ms-flex-pack: center;
   padding: 8px;
 }
-table tbody div.action-table-data a .feather-view {
+.action-table-data a .feather-view {
   width: 14px;
   height: 14px;
 }
-table tbody div.action-table-data a .feather-trash-2 {
+.action-table-data a .feather-trash-2 {
   color: #ff0000;
   width: 14px;
   height: 14px;
 }
-table tbody div.action-table-data a .feather-edit {
+.action-table-data a .feather-edit {
   color: #3577f1;
   width: 14px;
   height: 14px;
@@ -719,12 +719,12 @@ div.rc-slider-handle:active {
 .react-select-min-width .css-b62m3t-container {
   min-width: 70px;
 }
-table tbody td > div.action-table-data a .feather-edit {
+.action-table-data a .feather-edit {
   color: #3577f1;
   width: 14px;
   height: 14px;
 }
-table tbody td > div.action-table-data a {
+.action-table-data a {
   border: 1px solid rgba(145, 158, 171, 0.3);
   background-color: #ffffff;
   border-radius: 8px;
@@ -743,20 +743,42 @@ table tbody td > div.action-table-data a {
   display: flex;
   align-items: center;
 }
-table tbody td .action-table-data a .action-eye {
+.action-table-data a .action-eye {
   color: #092c4c;
   width: 14px;
   height: 14px;
 }
-table tbody td .action-table-data a .action-download {
+.action-table-data a .action-download {
   color: #3577f1;
   width: 14px;
   height: 14px;
 }
-table tbody td .action-table-data a .action-edit {
+.action-table-data a .action-edit {
   color: #5b6670;
   width: 14px;
   height: 14px;
+}
+.edit-delete-action {
+  display: flex;
+  align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  justify-content: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  height: 42px;
+  // height: 50px;
+}
+.edit-delete-action a:hover {
+  background-color: rgb(40, 142, 199);
+  border-color: rgb(40, 142, 199);
+}
+.edit-delete-action a.confirm-text:hover {
+  background-color: #ff0000;
+  border-color: #ff0000;
+}
+.edit-delete-action a:hover svg {
+  color: #ffffff !important;
 }
 .custom-active-hassubroute-false a {
   background: rgba(254, 159, 67, 0.08);

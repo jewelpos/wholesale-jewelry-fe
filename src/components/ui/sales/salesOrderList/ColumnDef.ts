@@ -3,6 +3,7 @@ import { SalesOrderListType } from "@/types/sales";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
   {
@@ -43,5 +44,26 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: SalesOrderListType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: SalesOrderListType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: SalesOrderListType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

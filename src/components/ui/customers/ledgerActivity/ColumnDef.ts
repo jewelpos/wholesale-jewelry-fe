@@ -3,6 +3,7 @@ import { CustomerLedgerReportType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
   {
@@ -50,5 +51,26 @@ export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: CustomerLedgerReportType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: CustomerLedgerReportType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: CustomerLedgerReportType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

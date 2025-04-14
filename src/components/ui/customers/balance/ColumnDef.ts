@@ -3,6 +3,7 @@ import { CustomerBalanceReportType } from "@/types/customer";
 import { ColDef } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const balanceReportColumnDefs: ColDef<CustomerBalanceReportType>[] = [
   {
@@ -44,5 +45,26 @@ export const balanceReportColumnDefs: ColDef<CustomerBalanceReportType>[] = [
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: CustomerBalanceReportType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: CustomerBalanceReportType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: CustomerBalanceReportType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];

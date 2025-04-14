@@ -16,6 +16,7 @@ import { SalesInvoiceListType } from "@/types/sales";
 import { salesInvoiceColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
+import Link from "next/link";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
@@ -80,14 +81,27 @@ const SalesListComponent = () => {
       <div className="table-top mb-2">
         <div className="search-set">
           <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+            <input
+              type="search"
+              className="form-control form-control-sm"
+              placeholder="Search"
+              aria-controls="DataTables_Table_0"
+              // value={searchText}
+              // onChange={handleSearch}
             />
+            <Link href={""} className="btn btn-searchset">
+              <i data-feather="search" className="feather-search" />
+            </Link>
           </div>
+        </div>
+        <div className="form-sort stylewidth">
+          <OutletsFilter
+            fetchOutletsList={fetchOutletsList}
+            outlets={outlets}
+            loading={outletsLoading}
+            setSelectedOutlet={setSelectedOutlet}
+            selectedOutlet={selectedOutlet}
+          />
         </div>
       </div>
       <POSGrid

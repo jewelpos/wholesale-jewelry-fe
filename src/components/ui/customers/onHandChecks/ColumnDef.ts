@@ -3,6 +3,7 @@ import { CustomerChequeListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
   {
@@ -41,5 +42,26 @@ export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
+  },
+  {
+    headerName: "Actions",
+    cellRenderer: ActionCellRenderer,
+    maxWidth: 150,
+    pinned: "right",
+    suppressSizeToFit: false,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+    cellRendererParams: {
+      onEdit: (data: CustomerChequeListType) => {
+        console.log("Edit clicked", data);
+      },
+      onDelete: (data: CustomerChequeListType) => {
+        console.log("Delete clicked", data);
+      },
+      onView: (data: CustomerChequeListType) => {
+        console.log("View clicked", data);
+      },
+    },
   },
 ];
