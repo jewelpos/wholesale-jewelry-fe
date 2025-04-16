@@ -11,10 +11,20 @@ interface POSGridProps extends AgGridReactProps {
   gridOptions?: any; // You can type gridOptions more specifically if needed
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onGridReady: (params: any) => void; // Type this callback function as needed
+  // You can type gridOptions more specifically if needed
+  defaultColDef?: any;
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
-  ({ columnDefs, gridOptions, onGridReady }, ref) => {
+  (
+    {
+      columnDefs,
+      gridOptions,
+      onGridReady,
+      defaultColDef = { filter: true, floatingFilter: true },
+    },
+    ref
+  ) => {
     const { autoSizeStrategy } = useAutoSizeAggrid();
     return (
       <div
@@ -25,11 +35,10 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           ref={ref}
           columnDefs={columnDefs}
           defaultColDef={{
-            filter: true,
-            floatingFilter: true,
             sortable: true,
             enableRowGroup: true,
             minWidth: 200,
+            ...defaultColDef,
           }}
           gridOptions={{
             rowHeight: 42,

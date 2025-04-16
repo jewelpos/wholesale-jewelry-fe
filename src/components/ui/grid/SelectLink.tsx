@@ -10,7 +10,13 @@ const SelectLink = <T extends unknown>({
   value,
   link = "",
 }: SelectLinkRendererParams<T>) => {
-  return <Link href={link}>{value}</Link>;
+  return (
+    <Link href={link}>
+      <strong>
+        <u>{value}</u>
+      </strong>
+    </Link>
+  );
 };
 
 export default SelectLink;

@@ -9,22 +9,20 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SALES_INVOICE_LIST_QUERY } from "@/lib/graphql/query/sales";
 import { SalesInvoiceListType } from "@/types/sales";
 import { salesInvoiceColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
-import Link from "next/link";
+import CustomFilterSections from "../../grid/CustomFilterSections";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -78,32 +76,12 @@ const SalesListComponent = () => {
 
   return (
     <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <input
-              type="search"
-              className="form-control form-control-sm"
-              placeholder="Search"
-              aria-controls="DataTables_Table_0"
-              // value={searchText}
-              // onChange={handleSearch}
-            />
-            <Link href={""} className="btn btn-searchset">
-              <i data-feather="search" className="feather-search" />
-            </Link>
-          </div>
-        </div>
-        <div className="form-sort stylewidth">
-          <OutletsFilter
-            fetchOutletsList={fetchOutletsList}
-            outlets={outlets}
-            loading={outletsLoading}
-            setSelectedOutlet={setSelectedOutlet}
-            selectedOutlet={selectedOutlet}
-          />
-        </div>
-      </div>
+      <CustomFilterSections
+        search={search}
+        setSearch={setSearch}
+        selectedOutlet={selectedOutlet}
+        setSelectedOutlet={setSelectedOutlet}
+      />
       <POSGrid
         ref={gridRef}
         columnDefs={salesInvoiceColumnDefs}
