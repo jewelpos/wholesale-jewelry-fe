@@ -5,7 +5,7 @@ import React from "react";
 export interface SelectLinkRendererParams<T = any> extends ICellRendererParams {
   link: string;
 }
-
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
 const SelectLink = <T extends unknown>({
   value,
   link = "",

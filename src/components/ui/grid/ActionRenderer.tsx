@@ -10,6 +10,7 @@ export interface ActionCellRendererParams<T = any> extends ICellRendererParams {
   onView?: (data: T) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
 const ActionCellRenderer = <T extends unknown>({
   data,
   onEdit,
