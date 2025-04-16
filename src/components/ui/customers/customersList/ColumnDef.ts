@@ -4,8 +4,18 @@ import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import ActionCellRenderer from "../../grid/ActionRenderer";
+import SelectLink from "../../grid/SelectLink";
 
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
+  {
+    headerName: "Customer id",
+    field: "customerid",
+    filter: "agTextColumnFilter",
+    cellRenderer: SelectLink,
+    cellRendererParams: {
+      link: "",
+    },
+  },
   {
     headerName: "Name",
     field: "fullname",

@@ -15,6 +15,8 @@ import { customersListColumnDefs } from "./ColumnDef";
 import { useParams } from "next/navigation";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const CustomerListComponent = () => {
   const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
@@ -23,6 +25,8 @@ const CustomerListComponent = () => {
   const parsedStoreId = parseInt(storeId as string, 10);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
     setGridReady(true);
@@ -32,7 +36,11 @@ const CustomerListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "fullname, custcompanyname"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getCustomerList({
             variables: {
@@ -65,7 +73,7 @@ const CustomerListComponent = () => {
         }
       },
     }),
-    [parsedStoreId, dispatch, getCustomerList]
+    [parsedStoreId, dispatch, getCustomerList, debouncedSearch]
   );
 
   useEffect(() => {
@@ -74,13 +82,25 @@ const CustomerListComponent = () => {
     }
   }, [gridRef, datasource, parsedStoreId, gridReady]);
 
+  useEffect(() => {
+    if (debouncedSearch && gridReady) {
+      gridRef?.current?.api?.setFilterModel(null);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
+
   return (
     <div className="card-body p-2">
+      <CustomFilterSections search={search} setSearch={setSearch} />
       <div className="ag-theme-quartz custom-theme">
         <POSGrid
           ref={gridRef}
           columnDefs={customersListColumnDefs}
           onGridReady={handleOnGridReady}
+          defaultColDef={{
+            filter: !debouncedSearch,
+            floatingFilter: !debouncedSearch,
+          }}
         />
       </div>
     </div>
