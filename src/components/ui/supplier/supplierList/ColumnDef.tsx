@@ -1,6 +1,6 @@
 import { SupplierListType } from "@/types/supplier";
 import { ColDef } from "ag-grid-community";
-import ActionCellRenderer from "../../grid/ActionRenderer";
+import SupplierActions from "./SupplierActions";
 
 export const suopplierListcolumnDefs: ColDef<SupplierListType>[] = [
   { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
@@ -28,23 +28,12 @@ export const suopplierListcolumnDefs: ColDef<SupplierListType>[] = [
   },
   {
     headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
+    cellRenderer: SupplierActions,
     maxWidth: 150,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
     suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: SupplierListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: SupplierListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: SupplierListType) => {
-        console.log("View clicked", data);
-      },
-    },
   },
 ];

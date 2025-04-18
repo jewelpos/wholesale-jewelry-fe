@@ -10,3 +10,14 @@ export const ADD_SUPPLIER_MUTATION = gql`
     }
   }
 `;
+
+export const DELETE_SUPPLIER_MUTATION = gql`
+  mutation DeleteSupplier($supplierid: Int!, $outletid: Int!) {
+    deleteSupplier(supplierid: $supplierid, outletid: $outletid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

@@ -245,3 +245,36 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_CUSTOMER_QUERY = gql`
+  query GetCustomer($storeid: Int!, $customerid: Int!) {
+    getCustomer(storeid: $storeid, customerid: $customerid) {
+      customerid
+      custcompanyname
+      custadd1
+      custcity
+      custstate
+      custzip
+      custcountry
+      custphone1
+      custcell
+      custemailadd
+      custfname
+      custlname
+      custphone2
+      warehouseid
+      custdiscount
+      custcreditlimit
+      termsid
+      custshippingmethod
+      custbillto
+      custshipto
+      custtaxid
+      custsalestax
+      status
+      custremarks
+      custalertremarks
+      custphotopath
+    }
+  }
+`;

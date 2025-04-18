@@ -59,14 +59,9 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     filter: false,
     suppressHeaderMenuButton: true,
     cellRendererParams: {
-      onEdit: (data: ProductListType) => {
-        console.log("Edit clicked", data);
-      },
+      editPath: "/products/edit",
       onDelete: (data: ProductListType) => {
         console.log("Delete clicked", data);
-      },
-      onView: (data: ProductListType) => {
-        console.log("View clicked", data);
       },
     },
   },

@@ -1,21 +1,18 @@
 import { apolloClient } from "@/lib/apolloClient";
 import { setCookieResponse } from "@/lib/authStorage";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 import { REFRESH_TOKEN_MUTATION } from "@/lib/graphql/mutations/auth";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
+  const config = getEnvironmentConfig();
   try {
     const token = request.cookies.get("refreshToken")?.value;
     if (!token) {
       return NextResponse.json({ error: "No refresh token" }, { status: 401 });
     }
-    const { data } = await apolloClient.mutate({
-      mutation: REFRESH_TOKEN_MUTATION,
-      variables: {
-        refreshToken: token,
-      },
-    });
+    const { data } = await api.post(config.apiUrl, { refreshToken: token });
     const { accessToken, refreshToken } = data.refreshToken.data;
     const response = NextResponse.json(data.refreshToken, {
       status: 201,
@@ -39,9 +36,4 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
-}
-
-export async function GET() {
-  const token = (await cookies()).get("refreshToken")?.value;
-  return Response.json({ token });
 }

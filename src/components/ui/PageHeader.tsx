@@ -10,9 +10,11 @@ import { MenuAction } from "@/types/permissions";
 
 type Props = {
   showBreadcrumb?: boolean;
+  title?: string;
+  subtitle?: string;
 };
 
-const PageHeader = ({ showBreadcrumb }: Props) => {
+const PageHeader = ({ showBreadcrumb, title, subtitle }: Props) => {
   const user = useAppSelector((state) => state.user.data);
   const menus = user?.permissions?.menus;
   const pathname = usePathname();
@@ -38,9 +40,11 @@ const PageHeader = ({ showBreadcrumb }: Props) => {
     <div className="page-header mb-1">
       <div className="add-item d-flex">
         <div className="page-title">
-          <h4>{currentMenu?.permissiondisplayname}</h4>
+          <h4>{currentMenu?.permissiondisplayname || title || ""}</h4>
           {currentMenu?.permissiondescription && (
-            <h6 className="mb-1">{currentMenu?.permissiondescription}</h6>
+            <h6 className="mb-1">
+              {currentMenu?.permissiondescription || subtitle || ""}
+            </h6>
           )}
           {showBreadcrumb && <Breadcrumb />}
         </div>

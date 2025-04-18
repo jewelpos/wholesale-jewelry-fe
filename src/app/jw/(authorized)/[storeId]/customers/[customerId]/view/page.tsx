@@ -1,12 +1,12 @@
 import Content from "@/components/layout/Content";
 import CustomerForm from "@/components/ui/customers/customerForm/CustomerForm";
 
-const NewCustomer = () => {
+const ViewCustomer = () => {
   return (
-    <Content showBreadcrumb={false}>
-      <CustomerForm />
+    <Content showBreadcrumb={false} title="View customer">
+      <CustomerForm disableField />
     </Content>
   );
 };
 
-export default NewCustomer;
+export default ViewCustomer;

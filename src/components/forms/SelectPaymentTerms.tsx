@@ -12,6 +12,7 @@ const SelectPaymentTerms = ({
   className,
   trigger,
   storeId,
+  disableField,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -39,13 +40,14 @@ any) => {
       options={paymentTermsOptions}
       placeholder="Select payment terms"
       isClearable
+      isDisabled={disableField}
       className={`form-control p-0 ${className}`}
       value={
         value
           ? {
               value: value,
               label:
-                paymentTermsOptions.find((term) => term.value === value)
+                paymentTermsOptions?.find((term) => term.value === value)
                   ?.label || "",
             }
           : null

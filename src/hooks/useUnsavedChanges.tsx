@@ -22,20 +22,20 @@ const useUnsavedChanges = ({ isDirty, onCancel }: UseUnsavedChangesProps) => {
     };
 
     const handleBackNavigation = (event: PopStateEvent) => {
-      if (isDirty) {
-        event.preventDefault();
-        showConfirmation(() => router.back());
-        router.replace(window.location.pathname); // Prevent navigation
-      }
+      // if (isDirty) {
+      //   event.preventDefault();
+      //   showConfirmation(() => router.back());
+      //   router.replace(window.location.pathname); // Prevent navigation
+      // }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("popstate", handleBackNavigation);
+    // window.addEventListener("beforeunload", handleBeforeUnload);
+    // window.addEventListener("popstate", handleBackNavigation);
 
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("popstate", handleBackNavigation);
-    };
+    // return () => {
+    //   window.removeEventListener("beforeunload", handleBeforeUnload);
+    //   window.removeEventListener("popstate", handleBackNavigation);
+    // };
   }, [isDirty, router]);
 
   const showConfirmation = (onConfirm: () => void) => {
@@ -55,13 +55,13 @@ const useUnsavedChanges = ({ isDirty, onCancel }: UseUnsavedChangesProps) => {
   };
 
   const handleCancel = () => {
-    if (isDirty) {
-      showConfirmation(() => {
-        onCancel?.();
-      });
-    } else {
-      onCancel?.();
-    }
+    // if (isDirty) {
+    //   showConfirmation(() => {
+    //     onCancel?.();
+    //   });
+    // } else {
+    //   onCancel?.();
+    // }
   };
 
   return { handleCancel };

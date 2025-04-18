@@ -136,43 +136,34 @@ export type CustomersListResponseType = {
   data: CustomersListType[];
 };
 
-export type NewCustomerFormType = {
+export type CustomerFormType = {
+  customerid?: string;
   custcompanyname: string;
-  custfname: string;
-  custlname: string;
   custadd1: string;
-  custadd2: string;
   custcity: string;
   custstate: string;
   custzip: string;
   custcountry: string;
-  custtitle: string;
   custphone1: string;
-  custphone2: string;
-  custphone3: string;
-  custfax: string;
   custcell: string;
-  custdob: string;
-  custtaxid: string;
-  custdlno: string;
-  custssno: string;
-  custremarks: string;
-  custalertremarks: string;
   custemailadd: string;
-  status: number;
-  termsid: number;
-  custalert: number; //checkbox
-  custphotopath: string;
-  warehouseid: number;
-  custshippingmethod: string; //drop
+  custfname: string;
+  custlname: string;
+  custphone2: string;
+  storeid: number;
+  warehouseid: string;
   custdiscount: number;
   custcreditlimit: number;
-  custcreditcardno: string;
-  custcardexpiry: string;
-  custauthorizedname: string;
+  termsid: number;
+  custshippingmethod: string;
   custbillto: string;
   custshipto: string;
+  custtaxid: string;
   custsalestax: number;
-  custtaxexemptid: string;
-  storeid: number;
+  status: number;
+  custremarks: string;
+  custalertremarks: string;
+  custphotopath: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  file: any;
 };

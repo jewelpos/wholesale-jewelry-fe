@@ -3,18 +3,20 @@ import { CustomersListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
-import ActionCellRenderer from "../../grid/ActionRenderer";
-import SelectLink from "../../grid/SelectLink";
+import ViewLink from "../../grid/ViewLink";
+import CustomerActions from "./CustomerActions";
 
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
     headerName: "Customer id",
     field: "customerid",
-    filter: "agTextColumnFilter",
-    cellRenderer: SelectLink,
-    cellRendererParams: {
-      link: "",
-    },
+    filter: "agNumberColumnFilter",
+    cellRenderer: ViewLink,
+    cellRendererParams: (params: ICellRendererParams<CustomersListType>) => ({
+      link: params.data
+        ? `/customers/${params.data.customerid}/view`
+        : "/customers",
+    }),
   },
   {
     headerName: "Name",
@@ -44,7 +46,6 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
   },
-
   {
     headerName: "Open credit",
     field: "opencredit",
@@ -72,23 +73,12 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   },
   {
     headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
+    cellRenderer: CustomerActions,
     maxWidth: 150,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
     suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: CustomersListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: CustomersListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: CustomersListType) => {
-        console.log("View clicked", data);
-      },
-    },
   },
 ];
