@@ -166,41 +166,41 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
     }
   }, [customerData, parsedStoreId, customerId, reset]);
 
-  if (customerLoading) {
-    return [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />);
-  }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <fieldset disabled={disableField}>
         <div className="card">
           <div className="card-body">
-            <div className="new-employee-field">
-              <CustomerInputsA
-                register={register}
-                errors={errors}
-                control={control}
-                trigger={trigger}
-                setValue={setValue}
-                photoPath={photoPath}
-                customerId={customerid}
-                disableField={disableField}
-              />
-              <CustomerInputsB
-                register={register}
-                errors={errors}
-                control={control}
-                trigger={trigger}
-                setValue={setValue}
-                storeId={storeId}
-                warehouseId={warehouseId}
-                status={status}
-                disableField={disableField}
-              />
-            </div>
+            {customerLoading ? (
+              [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
+            ) : (
+              <div className="new-employee-field">
+                <CustomerInputsA
+                  register={register}
+                  errors={errors}
+                  control={control}
+                  trigger={trigger}
+                  setValue={setValue}
+                  photoPath={photoPath}
+                  customerId={customerid}
+                  disableField={disableField}
+                />
+                <CustomerInputsB
+                  register={register}
+                  errors={errors}
+                  control={control}
+                  trigger={trigger}
+                  setValue={setValue}
+                  storeId={storeId}
+                  warehouseId={warehouseId}
+                  status={status}
+                  disableField={disableField}
+                />
+              </div>
+            )}
           </div>
         </div>
-        {!disableField && (
+        {!disableField && !customerLoading && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
               loading={loading}

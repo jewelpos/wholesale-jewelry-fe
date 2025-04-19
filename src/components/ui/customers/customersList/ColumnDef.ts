@@ -79,6 +79,8 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
+    suppressMovable: true,
     suppressHeaderMenuButton: true,
+    enableRowGroup: false,
   },
 ];

@@ -9,6 +9,11 @@ import { CustomersListType } from "@/types/customer";
 import Link from "next/link";
 import { Edit, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import { useParams } from "next/navigation";
+
+const MySwal = withReactContent(Swal);
 
 interface CustomerActionsProps {
   data: CustomersListType;
@@ -18,36 +23,50 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
   const dispatch = useAppDispatch();
   const [deleteCustomer] = useMutation(DELETE_CUSTOMER_MUTATION);
   const { basePath } = useDefaultRoute();
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
 
   const handleDelete = async () => {
-    const result = await handleTryCatch(async () => {
-      const { data: responseData } = await deleteCustomer({
-        variables: {
-          customerid: parseInt(data.customerid),
-          storeid: data.outletid,
-        },
-      });
-
-      if (responseData?.deleteCustomer.success) {
-        dispatch(
-          showNotification({
-            message: responseData.deleteCustomer.message,
-            type: NOTIFICATION_TYPES.SUCCESS,
-          })
-        );
-        // Refresh the grid
-        window.location.reload();
-      }
-      return true;
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
     });
 
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
+    if (result.isConfirmed) {
+      const deleteResult = await handleTryCatch(async () => {
+        const { data: responseData } = await deleteCustomer({
+          variables: {
+            customerid: parseInt(data.customerid),
+            storeid: parsedStoreId,
+          },
+        });
+
+        if (responseData?.deleteCustomer.success) {
+          dispatch(
+            showNotification({
+              message: responseData.deleteCustomer.message,
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+          // Refresh the grid
+          window.location.reload();
+        }
+        return true;
+      });
+
+      if (deleteResult.error) {
+        dispatch(
+          showNotification({
+            message: deleteResult.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
     }
   };
 
