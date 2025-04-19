@@ -8,6 +8,10 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SupplierListType } from "@/types/supplier";
 import Link from "next/link";
 import { Edit, Trash2 } from "react-feather";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
+const MySwal = withReactContent(Swal);
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -18,34 +22,46 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data }) => {
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
 
   const handleDelete = async () => {
-    const result = await handleTryCatch(async () => {
-      const { data: responseData } = await deleteSupplier({
-        variables: {
-          supplierid: data.supplierid,
-          outletid: data.outletid,
-        },
-      });
-
-      if (responseData?.deleteSupplier.success) {
-        dispatch(
-          showNotification({
-            message: responseData.deleteSupplier.message,
-            type: NOTIFICATION_TYPES.SUCCESS,
-          })
-        );
-        // Refresh the grid
-        window.location.reload();
-      }
-      return true;
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
     });
 
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
+    if (result.isConfirmed) {
+      const deleteResult = await handleTryCatch(async () => {
+        const { data: responseData } = await deleteSupplier({
+          variables: {
+            supplierid: data.supplierid,
+            outletid: data.outletid,
+          },
+        });
+
+        if (responseData?.deleteSupplier.success) {
+          dispatch(
+            showNotification({
+              message: responseData.deleteSupplier.message,
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+          // Refresh the grid
+          window.location.reload();
+        }
+        return true;
+      });
+
+      if (deleteResult.error) {
+        dispatch(
+          showNotification({
+            message: deleteResult.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
     }
   };
 

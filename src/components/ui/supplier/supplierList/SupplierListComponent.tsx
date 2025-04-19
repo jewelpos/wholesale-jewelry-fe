@@ -9,19 +9,20 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { SupplierListType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import { suopplierListcolumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
@@ -33,7 +34,7 @@ const SupplierListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(params, debouncedSearch, "companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierList({
             variables: {
@@ -66,7 +67,7 @@ const SupplierListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierList]
+    [selectedOutlet, dispatch, getSupplierList, debouncedSearch]
   );
 
   useEffect(() => {
@@ -75,25 +76,29 @@ const SupplierListComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
+  useEffect(() => {
+    if (debouncedSearch && gridReady) {
+      gridRef?.current?.api?.setFilterModel(null);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
+
   return (
     <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
-            />
-          </div>
-        </div>
-      </div>
+      <CustomFilterSections
+        search={search}
+        setSearch={setSearch}
+        selectedOutlet={selectedOutlet}
+        setSelectedOutlet={setSelectedOutlet}
+      />
       <POSGrid
         ref={gridRef}
         columnDefs={suopplierListcolumnDefs}
         onGridReady={handleOnGridReady}
+        defaultColDef={{
+          filter: !debouncedSearch,
+          floatingFilter: !debouncedSearch,
+        }}
       />
     </div>
   );
