@@ -12,9 +12,13 @@ import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 
 interface SupplierActionsProps {
   data: SupplierListType;
+  onDeleteSuccess?: () => void;
 }
 
-const SupplierActions: React.FC<SupplierActionsProps> = ({ data }) => {
+const SupplierActions: React.FC<SupplierActionsProps> = ({
+  data,
+  onDeleteSuccess,
+}) => {
   const dispatch = useAppDispatch();
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
 
@@ -43,8 +47,8 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data }) => {
               type: NOTIFICATION_TYPES.SUCCESS,
             })
           );
-          // Refresh the grid
-          window.location.reload();
+          // Trigger the callback to refresh data
+          onDeleteSuccess?.();
         }
         return true;
       });

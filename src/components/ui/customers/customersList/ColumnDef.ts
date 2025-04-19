@@ -4,7 +4,6 @@ import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import ViewLink from "../../grid/ViewLink";
-import CustomerActions from "./CustomerActions";
 
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
@@ -70,17 +69,5 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
-  },
-  {
-    headerName: "Actions",
-    cellRenderer: CustomerActions,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressMovable: true,
-    suppressHeaderMenuButton: true,
-    enableRowGroup: false,
   },
 ];

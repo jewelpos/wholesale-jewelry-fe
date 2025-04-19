@@ -1,6 +1,5 @@
 import { SupplierListType } from "@/types/supplier";
 import { ColDef } from "ag-grid-community";
-import SupplierActions from "./SupplierActions";
 
 export const suopplierListcolumnDefs: ColDef<SupplierListType>[] = [
   { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
@@ -25,15 +24,5 @@ export const suopplierListcolumnDefs: ColDef<SupplierListType>[] = [
     headerName: "Warehouse name",
     field: "warehousename",
     filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Actions",
-    cellRenderer: SupplierActions,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressHeaderMenuButton: true,
   },
 ];

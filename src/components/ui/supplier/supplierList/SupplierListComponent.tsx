@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -16,6 +27,7 @@ import { suopplierListcolumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
+import SupplierActions from "./SupplierActions";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -70,6 +82,12 @@ const SupplierListComponent = () => {
     [selectedOutlet, dispatch, getSupplierList, debouncedSearch]
   );
 
+  const handleDeleteSuccess = useCallback(() => {
+    if (selectedOutlet && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, selectedOutlet]);
+
   useEffect(() => {
     if (selectedOutlet && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
@@ -83,6 +101,33 @@ const SupplierListComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      ...suopplierListcolumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<SupplierListType>) =>
+          params.data ? (
+            <SupplierActions
+              data={params.data}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 120,
+        sortable: false,
+        filter: false,
+        maxWidth: 150,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
+  );
+
   return (
     <div className="card-body p-2">
       <CustomFilterSections
@@ -93,7 +138,7 @@ const SupplierListComponent = () => {
       />
       <POSGrid
         ref={gridRef}
-        columnDefs={suopplierListcolumnDefs}
+        columnDefs={columnDefs}
         onGridReady={handleOnGridReady}
         defaultColDef={{
           filter: !debouncedSearch,

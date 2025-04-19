@@ -14,9 +14,13 @@ import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 
 interface CustomerActionsProps {
   data: CustomersListType;
+  onDeleteSuccess?: () => void;
 }
 
-const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
+const CustomerActions: React.FC<CustomerActionsProps> = ({
+  data,
+  onDeleteSuccess,
+}) => {
   const dispatch = useAppDispatch();
   const [deleteCustomer] = useMutation(DELETE_CUSTOMER_MUTATION);
   const { basePath } = useDefaultRoute();
@@ -48,6 +52,9 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
               type: NOTIFICATION_TYPES.SUCCESS,
             })
           );
+
+          // Trigger the callback to refresh data
+          onDeleteSuccess?.();
         }
         return true;
       });
