@@ -1,7 +1,7 @@
 import { SupplierListType } from "@/types/supplier";
 import { ColDef } from "ag-grid-community";
 
-export const suopplierListcolumnDefs: ColDef<SupplierListType>[] = [
+export const supplierListcolumnDefs: ColDef<SupplierListType>[] = [
   { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
   { headerName: "Name", field: "contactname", filter: "agTextColumnFilter" },
   {

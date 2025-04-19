@@ -7,6 +7,7 @@ import { useAppSelector } from "@/lib/store/hook";
 import { usePathname } from "next/navigation";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { MenuAction } from "@/types/permissions";
+import { PlusCircle, Upload } from "react-feather";
 
 type Props = {
   showBreadcrumb?: boolean;
@@ -51,25 +52,27 @@ const PageHeader = ({ showBreadcrumb, title, subtitle }: Props) => {
       </div>
       {!!currentMenu?.action.length &&
         currentMenu.action.map((btn: MenuAction) => {
-          if (btn.actionname === "add_edit_customer") {
+          if (btn.actionname.includes("add_new")) {
             return (
               <div className="page-btn" key={btn.actionname}>
                 <Link
-                  href={`${basePath}/customers/new`}
+                  href={`${basePath}${parentPath}/new`}
                   className="btn btn-added"
                 >
-                  Add customer
+                  <PlusCircle className="me-2 iconsize" />
+                  {btn.actiondisplayname}
                 </Link>
               </div>
             );
-          } else if (btn.actionname === "add_edit_purchase_order") {
+          } else if (btn.actionname.includes("export")) {
             return (
-              <div className="page-btn" key={btn.actionname}>
+              <div className="page-btn import" key={btn.actionname}>
                 <Link
                   href={`${basePath}/supplier/new`}
-                  className="btn btn-added"
+                  className="btn btn-added btn-secondary"
                 >
-                  Add supplier
+                  <Upload className="me-2 iconsize" />
+                  {btn.actiondisplayname}
                 </Link>
               </div>
             );

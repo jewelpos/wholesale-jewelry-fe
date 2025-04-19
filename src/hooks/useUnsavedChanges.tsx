@@ -62,6 +62,7 @@ const useUnsavedChanges = ({ isDirty, onCancel }: UseUnsavedChangesProps) => {
     // } else {
     //   onCancel?.();
     // }
+    onCancel?.();
   };
 
   return { handleCancel };

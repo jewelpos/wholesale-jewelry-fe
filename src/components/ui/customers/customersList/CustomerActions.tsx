@@ -76,7 +76,7 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
         <div className="input-block add-lists"></div>
         <Link
           className="me-2 p-2"
-          href={`${basePath}/customers/edit/${data.customerid}`}
+          href={`${basePath}/customers/${data.customerid}/edit`}
           scroll={false}
         >
           <Edit className="feather-edit" />

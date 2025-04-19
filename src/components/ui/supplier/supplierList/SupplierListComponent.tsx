@@ -23,7 +23,7 @@ import "ag-grid-enterprise";
 import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { SupplierListType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
-import { suopplierListcolumnDefs } from "./ColumnDef";
+import { supplierListcolumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -103,7 +103,7 @@ const SupplierListComponent = () => {
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      ...suopplierListcolumnDefs,
+      ...supplierListcolumnDefs,
       {
         headerName: "Actions",
         field: "actions",
