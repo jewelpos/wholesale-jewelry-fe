@@ -8,10 +8,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SupplierListType } from "@/types/supplier";
 import Link from "next/link";
 import { Edit, Trash2 } from "react-feather";
-import Swal from "sweetalert2";
-import withReactContent from "sweetalert2-react-content";
-
-const MySwal = withReactContent(Swal);
+import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -22,14 +19,12 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data }) => {
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
 
   const handleDelete = async () => {
-    const result = await MySwal.fire({
+    const result = await showConfirmationDialog({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
-      reverseButtons: true,
+      icon: "warning",
     });
 
     if (result.isConfirmed) {

@@ -9,11 +9,8 @@ import { CustomersListType } from "@/types/customer";
 import Link from "next/link";
 import { Edit, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
-import Swal from "sweetalert2";
-import withReactContent from "sweetalert2-react-content";
 import { useParams } from "next/navigation";
-
-const MySwal = withReactContent(Swal);
+import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 
 interface CustomerActionsProps {
   data: CustomersListType;
@@ -27,14 +24,12 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
   const parsedStoreId = parseInt(storeIdParam as string, 10);
 
   const handleDelete = async () => {
-    const result = await MySwal.fire({
+    const result = await showConfirmationDialog({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
-      reverseButtons: true,
+      icon: "warning",
     });
 
     if (result.isConfirmed) {
@@ -53,8 +48,6 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
               type: NOTIFICATION_TYPES.SUCCESS,
             })
           );
-          // Refresh the grid
-          window.location.reload();
         }
         return true;
       });
@@ -76,7 +69,7 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({ data }) => {
         <div className="input-block add-lists"></div>
         <Link
           className="me-2 p-2"
-          href={`${basePath}/customers/${data.customerid}/edit`}
+          href={`${basePath}/customers/edit/${data.customerid}`}
           scroll={false}
         >
           <Edit className="feather-edit" />
