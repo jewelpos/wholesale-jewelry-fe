@@ -1,12 +1,11 @@
+import Content from "@/components/layout/Content";
 import HomeComponent from "@/components/ui/home/HomeComponent";
 
 const Home = async () => {
   return (
-    <div>
-      <div className="main-wrapper m-header cardhead">
-        <HomeComponent />
-      </div>
-    </div>
+    <Content>
+      <HomeComponent />
+    </Content>
   );
 };
 

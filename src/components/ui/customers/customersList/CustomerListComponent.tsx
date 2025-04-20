@@ -30,6 +30,7 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import CustomerActions from "./CustomerActions";
 import PageHeader from "../../PageHeader";
+import CustomerListHeader from "./CustomerListHeader";
 
 const CustomerListComponent = () => {
   const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
@@ -153,7 +154,7 @@ const CustomerListComponent = () => {
 
   return (
     <>
-      <PageHeader showBreadcrumb />
+      <CustomerListHeader />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections search={search} setSearch={setSearch} />
@@ -166,7 +167,12 @@ const CustomerListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
-              rowSelection="multiple"
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                enableClickSelection: true,
+              }}
             />
           </div>
         </div>

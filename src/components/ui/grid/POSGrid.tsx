@@ -37,7 +37,6 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           defaultColDef={{
             sortable: true,
             enableRowGroup: true,
-            minWidth: 200,
             ...defaultColDef,
           }}
           gridOptions={{

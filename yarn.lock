@@ -856,45 +856,45 @@ acorn-jsx@^5.3.2:
   resolved "https://registry.npmjs.org/acorn/-/acorn-8.14.0.tgz"
   integrity sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA==
 
-ag-charts-community@10.3.3:
-  version "10.3.3"
-  resolved "https://registry.npmjs.org/ag-charts-community/-/ag-charts-community-10.3.3.tgz"
-  integrity sha512-LUlbVS+4sX1UHqZNuE9m3LISr7D4FEO/Y88fwit1fYPTk2l1ZJG/82gFnm5bQ+iG4QgNIwRa2TWm7w2MLnyJlA==
+ag-charts-community@10.3.6:
+  version "10.3.6"
+  resolved "https://registry.npmjs.org/ag-charts-community/-/ag-charts-community-10.3.6.tgz"
+  integrity sha512-jDhyD7RnMhqLgOztZMwqEN9aTq/Doh9b27vDeu2ptTeR1BQQHPu287K59cipMW3rUu6SN/7HST1Jki8fwkLzmg==
   dependencies:
-    ag-charts-locale "10.3.3"
-    ag-charts-types "10.3.3"
+    ag-charts-locale "10.3.6"
+    ag-charts-types "10.3.6"
 
-ag-charts-locale@10.3.3:
-  version "10.3.3"
-  resolved "https://registry.npmjs.org/ag-charts-locale/-/ag-charts-locale-10.3.3.tgz"
-  integrity sha512-+ZAQYhkFHbdEwLYP1jZeF44X/8wwSH6SNiTykEIIk6EUuP6mm45X2YfQ0bvyekTkEJlLvFspvRQ+C6mspwLx4w==
+ag-charts-locale@10.3.6:
+  version "10.3.6"
+  resolved "https://registry.npmjs.org/ag-charts-locale/-/ag-charts-locale-10.3.6.tgz"
+  integrity sha512-uJIMyOfbkfPGFN+lSnvsad0cFb89XwkO/Axuz8oh365+qNYlGDHPQrdoR/Nu6bBp2pJUOIJ2akrHy+CETDAAbw==
 
-ag-charts-types@10.3.3:
-  version "10.3.3"
-  resolved "https://registry.npmjs.org/ag-charts-types/-/ag-charts-types-10.3.3.tgz"
-  integrity sha512-8rmyquaTkwfP4Lzei/W/cbkq9wwEl8+grIo3z97mtxrMIXh9sHJK1oJipd/u08MmBZrca5Jjtn5F1+UNPu/4fQ==
+ag-charts-types@10.3.6:
+  version "10.3.6"
+  resolved "https://registry.npmjs.org/ag-charts-types/-/ag-charts-types-10.3.6.tgz"
+  integrity sha512-t/s+L4XSkF84RtVwFLAwQ+cS3VJg02HnPnwAU1LFFDIQj/O+psbwkJ8V9Grbg+GkCyiK6KjvqUQ2vx/UZI352g==
 
-ag-grid-community@^32.3.3, ag-grid-community@32.3.3:
-  version "32.3.3"
-  resolved "https://registry.npmjs.org/ag-grid-community/-/ag-grid-community-32.3.3.tgz"
-  integrity sha512-KhSJ3B6mwRFA4cLjNjOZkDndJBh8o83794ZHl4Q7xP9MJf43oCN9qoZ8pyBanohgpVfLcP0scYYCr9xIlzjdiA==
+ag-grid-community@^32.3.3, ag-grid-community@32.3.6:
+  version "32.3.6"
+  resolved "https://registry.npmjs.org/ag-grid-community/-/ag-grid-community-32.3.6.tgz"
+  integrity sha512-GY0E3+przy5MkLf5TV+joUvO+/jlHJpwrR7oszJdjaJ+kdp96pQfz9nz+QPXyk2Og2hp18HepXLMkBByI39mGQ==
   dependencies:
-    ag-charts-types "10.3.3"
+    ag-charts-types "10.3.6"
 
 ag-grid-enterprise@^32.3.3:
-  version "32.3.3"
-  resolved "https://registry.npmjs.org/ag-grid-enterprise/-/ag-grid-enterprise-32.3.3.tgz"
-  integrity sha512-Seb3ha74qiTUXznL/Xzu948jsEfrYx/ndkds2l0LrQBRUK1gV6O8IkHfTTfvoWZQf+Za6RNgOjiy9GdxO0YDfQ==
+  version "32.3.6"
+  resolved "https://registry.npmjs.org/ag-grid-enterprise/-/ag-grid-enterprise-32.3.6.tgz"
+  integrity sha512-VCBCxlgeT2jLrcStGCW2Si/XXQ4YDyPQlTA+nciG63Dnzuwzx2dvNeiNlvL8RLkolOuhfDAVoxekEYRd26HIDQ==
   dependencies:
-    ag-charts-community "10.3.3"
-    ag-grid-community "32.3.3"
+    ag-charts-community "10.3.6"
+    ag-grid-community "32.3.6"
 
 ag-grid-react@^32.3.3:
-  version "32.3.3"
-  resolved "https://registry.npmjs.org/ag-grid-react/-/ag-grid-react-32.3.3.tgz"
-  integrity sha512-0u6oYoSHf7P2eRgK8FtnXix+bW8hcbiGXhYhg+UpYJHNlKug+spNqjGSzX43f70AZ2QpOBLsL7Bz2FPsadv3HA==
+  version "32.3.6"
+  resolved "https://registry.npmjs.org/ag-grid-react/-/ag-grid-react-32.3.6.tgz"
+  integrity sha512-BWygVzWrhE/RmHXneGv/zfvefhSFhQR23YPLTTOdFrdYxCD5icKSA6ESBr8D0SW81i22QRrpnYtMRLvruz57uw==
   dependencies:
-    ag-grid-community "32.3.3"
+    ag-grid-community "32.3.6"
     prop-types "^15.8.1"
 
 ajv@^6.12.4:
