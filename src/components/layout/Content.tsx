@@ -6,7 +6,6 @@ const Content = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-  showBreadcrumb?: boolean;
   title?: string;
   subtitle?: string;
 }>) => {

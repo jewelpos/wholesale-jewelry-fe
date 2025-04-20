@@ -15,7 +15,7 @@ interface BreadcrumbProps {
 
 const Breadcrumb: React.FC<BreadcrumbProps> = ({ capitalizeItems = true }) => {
   const pathname = usePathname();
-  const { homePagePath } = useDefaultRoute();
+  const { homePagePath, basePath } = useDefaultRoute();
 
   const pathSegments = pathname
     .split("/")
@@ -55,7 +55,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ capitalizeItems = true }) => {
               </li>
             ) : (
               <li className="breadcrumb-item">
-                <Link href={`${homePagePath}${item.href}`}>{item.label}</Link>
+                <Link href={`${basePath}${item.href}`}>{item.label}</Link>
               </li>
             )}
           </Fragment>

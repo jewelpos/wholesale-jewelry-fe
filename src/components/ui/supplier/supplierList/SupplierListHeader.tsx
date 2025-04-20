@@ -8,8 +8,9 @@ import { PlusCircle, Upload } from "react-feather";
 import { OverlayTrigger } from "react-bootstrap";
 import { MenuAction } from "@/types/permissions";
 
-const CustomerListHeader = () => {
+const SupplierListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
+  console.log("sdsdsd", currentMenu);
 
   return (
     <PageHeader
@@ -54,4 +55,4 @@ const CustomerListHeader = () => {
   );
 };
 
-export default CustomerListHeader;
+export default SupplierListHeader;

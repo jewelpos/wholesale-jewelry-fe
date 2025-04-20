@@ -7,7 +7,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SupplierListType } from "@/types/supplier";
 import Link from "next/link";
-import { Edit, Trash2 } from "react-feather";
+import { Edit, Eye, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 
 interface SupplierActionsProps {
@@ -70,7 +70,14 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
         <div className="input-block add-lists"></div>
         <Link
           className="me-2 p-2"
-          href={`/suppliers/edit/${data.supplierid}`}
+          href={`/suppliers/${data.supplierid}/view`}
+          scroll={false}
+        >
+          <Eye className="feather-view" />
+        </Link>
+        <Link
+          className="me-2 p-2"
+          href={`/suppliers/${data.supplierid}/edit`}
           scroll={false}
         >
           <Edit className="feather-edit" />

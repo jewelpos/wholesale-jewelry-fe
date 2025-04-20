@@ -1,18 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import Breadcrumb from "./Breadcrumb";
-import Link from "next/link";
-import { useAppSelector } from "@/lib/store/hook";
-import { usePathname } from "next/navigation";
-import useDefaultRoute from "@/hooks/useDefaultRoute";
-import { MenuAction } from "@/types/permissions";
-import { PlusCircle, Upload } from "react-feather";
 
 type Props = {
   title: string;
   subtitle?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   showBreadcrumb?: boolean;
 };
 

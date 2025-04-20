@@ -28,6 +28,7 @@ import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import SupplierActions from "./SupplierActions";
+import SupplierListHeader from "./SupplierListHeader";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -114,10 +115,9 @@ const SupplierListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 120,
+        width: 150,
         sortable: false,
         filter: false,
-        maxWidth: 150,
         pinned: "right",
         suppressSizeToFit: false,
         suppressMovable: true,
@@ -129,23 +129,30 @@ const SupplierListComponent = () => {
   );
 
   return (
-    <div className="card-body p-2">
-      <CustomFilterSections
-        search={search}
-        setSearch={setSearch}
-        selectedOutlet={selectedOutlet}
-        setSelectedOutlet={setSelectedOutlet}
-      />
-      <POSGrid
-        ref={gridRef}
-        columnDefs={columnDefs}
-        onGridReady={handleOnGridReady}
-        defaultColDef={{
-          filter: !debouncedSearch,
-          floatingFilter: !debouncedSearch,
-        }}
-      />
-    </div>
+    <>
+      <SupplierListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={columnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
