@@ -2,13 +2,13 @@ import Content from "@/components/layout/Content";
 import PageHeader from "@/components/ui/PageHeader";
 import SupplierForm from "@/components/ui/supplier/supplierForm/SupplierForm";
 
-const NewSupplier = () => {
+const EditSupplier = () => {
   return (
     <Content>
-      <PageHeader title="Add new supplier" showBreadcrumb />
+      <PageHeader title="Edit supplier" showBreadcrumb />
       <SupplierForm />
     </Content>
   );
 };
 
-export default NewSupplier;
+export default EditSupplier;

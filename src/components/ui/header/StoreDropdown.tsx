@@ -17,10 +17,11 @@ const StoreDropdown = ({ storeLoading }: Props) => {
   }
 
   return (
-    <li className="nav-item dropdown has-arrow main-drop select-store-dropdown">
+    <li className="nav-item dropdown has-arrow main-drop select-store-dropdown store-with-label">
+      Select Store
       <Link
         href="#"
-        className="dropdown-toggle nav-link select-store"
+        className="dropdown-toggle nav-link select-store mx-2"
         data-bs-toggle="dropdown"
       >
         <span className="user-info">

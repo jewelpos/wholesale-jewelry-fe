@@ -5,8 +5,12 @@ import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import Link from "next/link";
 import { PlusCircle, Upload } from "react-feather";
-import { OverlayTrigger } from "react-bootstrap";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { MenuAction } from "@/types/permissions";
+
+const renderTooltip = (value: string) => (
+  <Tooltip id="tooltip">{value}</Tooltip>
+);
 
 const CustomerListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
@@ -23,7 +27,10 @@ const CustomerListHeader = () => {
             if (btn.actionname.includes("export")) {
               return (
                 <li key={btn.actionname}>
-                  <OverlayTrigger placement="top" overlay={<></>}>
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={renderTooltip(btn.actiondisplayname)}
+                  >
                     <Link href={""}>
                       <Upload />
                     </Link>

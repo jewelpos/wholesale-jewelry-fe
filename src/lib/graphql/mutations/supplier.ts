@@ -21,3 +21,14 @@ export const DELETE_SUPPLIER_MUTATION = gql`
     }
   }
 `;
+
+export const UPDATE_SUPPLIER_MUTATION = gql`
+  mutation EditSupplier($input: EditSupplierInput!) {
+    editSupplier(editSupplierInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

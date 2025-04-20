@@ -9,6 +9,7 @@ import { SupplierListType } from "@/types/supplier";
 import Link from "next/link";
 import { Edit, Eye, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -21,6 +22,7 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
+  const { basePath } = useDefaultRoute();
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -70,14 +72,14 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
         <div className="input-block add-lists"></div>
         <Link
           className="me-2 p-2"
-          href={`/suppliers/${data.supplierid}/view`}
+          href={`${basePath}/supplier/${data.supplierid}/view`}
           scroll={false}
         >
           <Eye className="feather-view" />
         </Link>
         <Link
           className="me-2 p-2"
-          href={`/suppliers/${data.supplierid}/edit`}
+          href={`${basePath}/supplier/${data.supplierid}/edit`}
           scroll={false}
         >
           <Edit className="feather-edit" />

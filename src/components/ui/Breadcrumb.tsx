@@ -47,8 +47,8 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ capitalizeItems = true }) => {
         <li className="breadcrumb-item">
           <Link href={homePagePath}>Home</Link>
         </li>
-        {breadcrumbItems.map((item, index) => (
-          <Fragment key={`${item.label}-${index}`}>
+        {breadcrumbItems.map((item) => (
+          <Fragment key={`${item.label}`}>
             {item.isLastItem ? (
               <li className="breadcrumb-item active" aria-current="page">
                 {item.label}

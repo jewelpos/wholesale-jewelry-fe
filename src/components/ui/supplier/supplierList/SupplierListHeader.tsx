@@ -5,12 +5,15 @@ import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import Link from "next/link";
 import { PlusCircle, Upload } from "react-feather";
-import { OverlayTrigger } from "react-bootstrap";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { MenuAction } from "@/types/permissions";
+
+const renderTooltip = (value: string) => (
+  <Tooltip id="tooltip">{value}</Tooltip>
+);
 
 const SupplierListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
-  console.log("sdsdsd", currentMenu);
 
   return (
     <PageHeader
@@ -24,7 +27,10 @@ const SupplierListHeader = () => {
             if (btn.actionname.includes("export")) {
               return (
                 <li key={btn.actionname}>
-                  <OverlayTrigger placement="top" overlay={<></>}>
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={renderTooltip(btn.actiondisplayname)}
+                  >
                     <Link href={""}>
                       <Upload />
                     </Link>
@@ -38,10 +44,21 @@ const SupplierListHeader = () => {
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&
           currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("add_new")) {
+            if (btn.actionname.includes("add_")) {
+              let url = "";
+              if (btn.actionname === "add_new_ap_invoice") {
+                url = "/invoice";
+              } else if (btn.actionname === "add_new_supplier") {
+                url = "/new";
+              } else if (btn.actionname === "add_supplier_payment") {
+                url = "/payments";
+              } else if (btn.actionname === "add_new_ap_check") {
+                url = "/checks";
+              }
+
               return (
                 <div className="page-btn" key={btn.actionname}>
-                  <Link href={`${currentPath}/new`} className="btn btn-added">
+                  <Link href={`${currentPath}${url}`} className="btn btn-added">
                     <PlusCircle className="me-2" />
                     {btn.actiondisplayname}
                   </Link>
