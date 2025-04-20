@@ -13,6 +13,7 @@ interface POSGridProps extends AgGridReactProps {
   onGridReady: (params: any) => void; // Type this callback function as needed
   // You can type gridOptions more specifically if needed
   defaultColDef?: any;
+  rowSelection?: "single" | "multiple";
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
@@ -22,6 +23,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       gridOptions,
       onGridReady,
       defaultColDef = { filter: true, floatingFilter: true },
+      rowSelection,
     },
     ref
   ) => {
@@ -37,6 +39,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           defaultColDef={{
             sortable: true,
             enableRowGroup: true,
+            minWidth: 200,
             ...defaultColDef,
           }}
           gridOptions={{
@@ -46,6 +49,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
             // sideBar: true,
             ...gridOptions,
           }}
+          rowSelection={rowSelection}
           rowGroupPanelShow="always"
           domLayout="normal"
           rowModelType="serverSide"

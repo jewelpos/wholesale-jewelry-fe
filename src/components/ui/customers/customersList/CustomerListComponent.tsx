@@ -29,7 +29,6 @@ import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import CustomerActions from "./CustomerActions";
-import PageHeader from "../../PageHeader";
 import CustomerListHeader from "./CustomerListHeader";
 
 const CustomerListComponent = () => {
@@ -167,12 +166,7 @@ const CustomerListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
-              rowSelection={{
-                mode: "multiRow",
-                checkboxes: true,
-                headerCheckbox: true,
-                enableClickSelection: true,
-              }}
+              rowSelection="multiple"
             />
           </div>
         </div>

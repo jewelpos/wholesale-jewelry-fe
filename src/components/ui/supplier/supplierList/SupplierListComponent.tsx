@@ -104,6 +104,22 @@ const SupplierListComponent = () => {
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
+      {
+        headerName: "",
+        field: "checkbox",
+        headerCheckboxSelection: true,
+        checkboxSelection: true,
+        width: 50,
+        pinned: "left",
+        sortable: false,
+        filter: false,
+        maxWidth: 50,
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+        headerCheckboxSelectionFilteredOnly: true,
+      },
       ...supplierListcolumnDefs,
       {
         headerName: "Actions",
@@ -148,6 +164,7 @@ const SupplierListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
+              rowSelection="multiple"
             />
           </div>
         </div>

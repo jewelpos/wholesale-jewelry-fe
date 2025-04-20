@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Edit, Eye, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import { useParams } from "next/navigation";
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -23,6 +24,8 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
   const dispatch = useAppDispatch();
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
   const { basePath } = useDefaultRoute();
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -38,7 +41,7 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
         const { data: responseData } = await deleteSupplier({
           variables: {
             supplierid: data.supplierid,
-            outletid: data.outletid,
+            storeid: parsedStoreId,
           },
         });
 
