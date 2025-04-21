@@ -19,29 +19,27 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { GET_CUSTOMER_LIST_QUERY } from "@/lib/graphql/query/customer";
-import { CustomersListType } from "@/types/customer";
 import "ag-grid-enterprise";
-import { customersListColumnDefs } from "./ColumnDef";
-import { useParams } from "next/navigation";
+import { GET_SUPPLIER_INVOICE_LIST_QUERY } from "@/lib/graphql/query/supplier";
+import { SupplierInvoiceType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
-import CustomerActions from "./CustomerActions";
-import CustomerListHeader from "./CustomerListHeader";
+import { supplierInvoiceListColumnDefs } from "./ColumnDef";
+import SupplierInvoiceActions from "./SupplierInvoiceActions";
+import SupplierInvoiceListHeader from "./SupplierInvoiceListHeader";
 
-const CustomerListComponent = () => {
-  const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
+const SupplierInvoiceListComponent = () => {
+  const [getSupplierInvoiceList] = useLazyQuery(GET_SUPPLIER_INVOICE_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { storeId: storeIdParam } = useParams();
-  const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const gridRef = useRef<AgGridReact>(null);
-  const [gridReady, setGridReady] = useState<boolean>(false);
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
+  const gridRef = useRef<AgGridReact>(null);
+  const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
+  const handleOnGridReady = (params: GridReadyEvent<SupplierInvoiceType>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
@@ -49,24 +47,20 @@ const CustomerListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
-          params,
-          debouncedSearch,
-          "fullname, custcompanyname"
-        );
+        const filters = filterVariables(params, debouncedSearch, "veninvoiceno");
         const result = await handleTryCatch(async () => {
-          const { data } = await getCustomerList({
+          const { data } = await getSupplierInvoiceList({
             variables: {
-              storeid: parsedStoreId,
+              outletid: selectedOutlet,
               ...filters,
             },
           });
-          if (data.getCustomerList) {
+          if (data.getSupplierInvoiceList) {
             params.success({
-              rowData: data.getCustomerList.data,
-              rowCount: data.getCustomerList.total,
+              rowData: data.getSupplierInvoiceList.data,
+              rowCount: data.getSupplierInvoiceList.total,
             });
-            if (!data.getCustomerList.data.length) {
+            if (!data.getSupplierInvoiceList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -86,45 +80,44 @@ const CustomerListComponent = () => {
         }
       },
     }),
-    [parsedStoreId, dispatch, getCustomerList, debouncedSearch]
+    [selectedOutlet, dispatch, getSupplierInvoiceList, debouncedSearch]
   );
 
   const handleDeleteSuccess = useCallback(() => {
-    if (parsedStoreId && gridReady) {
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    if (selectedOutlet && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [datasource, gridReady, parsedStoreId]);
+  }, [datasource, gridReady, selectedOutlet]);
 
   useEffect(() => {
-    if (parsedStoreId && gridReady) {
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    if (selectedOutlet && gridReady) {
+      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, parsedStoreId, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   useEffect(() => {
     if (debouncedSearch && gridReady) {
       gridRef?.current?.api?.setFilterModel(null);
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [debouncedSearch, gridReady, datasource]);
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      ...customersListColumnDefs,
+      ...supplierInvoiceListColumnDefs,
       {
         headerName: "Actions",
         field: "actions",
-        cellRenderer: (params: ICellRendererParams<CustomersListType>) =>
+        cellRenderer: (params: ICellRendererParams<SupplierInvoiceType>) =>
           params.data ? (
-            <CustomerActions
+            <SupplierInvoiceActions
               data={params.data}
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 120,
+        width: 80,
         sortable: false,
         filter: false,
-        maxWidth: 150,
         pinned: "right",
         suppressSizeToFit: false,
         suppressMovable: true,
@@ -137,10 +130,16 @@ const CustomerListComponent = () => {
 
   return (
     <>
-      <CustomerListHeader />
+      <SupplierInvoiceListHeader
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <CustomFilterSections search={search} setSearch={setSearch} />
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
@@ -164,4 +163,4 @@ const CustomerListComponent = () => {
   );
 };
 
-export default CustomerListComponent;
+export default SupplierInvoiceListComponent;

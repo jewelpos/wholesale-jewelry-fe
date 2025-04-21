@@ -166,4 +166,5 @@ export type CustomerFormType = {
   custphotopath: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   file: any;
+  custalert: number;
 };

@@ -90,22 +90,6 @@ const SalesListComponent = () => {
 
   const columnDefs = useMemo(
     () => [
-      {
-        headerName: "",
-        field: "checkbox",
-        headerCheckboxSelection: true,
-        checkboxSelection: true,
-        width: 50,
-        pinned: "left",
-        sortable: false,
-        filter: false,
-        maxWidth: 50,
-        suppressSizeToFit: false,
-        suppressMovable: true,
-        suppressHeaderMenuButton: true,
-        enableRowGroup: false,
-        headerCheckboxSelectionFilteredOnly: true,
-      },
       ...salesInvoiceColumnDefs,
       {
         headerName: "Actions",
@@ -168,7 +152,12 @@ const SalesListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
-              rowSelection="multiple"
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes:   true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
             />
           </div>
         </div>

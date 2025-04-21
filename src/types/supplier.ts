@@ -80,3 +80,45 @@ export type SupplierFormType = {
   storeid: number;
   supplierid?: string;
 };
+
+export type SupplierInvoiceType = {
+  supplierinvoiceid: number;
+  supplierid: number;
+  veninvoiceno: string;
+  veninvoicedate: Date; // or string if date is in ISO format
+  veninvoicetotal: number;
+  veninvamtpaid: number;
+  veninvamtbalance: number;
+  refponumber: number;
+  invpostingdate: Date; // or string if date is in ISO format
+  veninvremarks: string;
+  warehouseid: number;
+  veninvbankid: number;
+  enteredbyid: number;
+  termsid: number;
+  venpostchkamount: number;
+  venpostchkamountdue: number;
+  vencrediapplied: number;
+  lastmodifiedbyid: number;
+  lastmodifieddate: Date; // or string if date is in ISO format
+  warehousename: string;
+  suppliername: string;
+  termsname: string;
+  enteredbyname: string;
+};
+
+export type SupplierInvoiceResponseType = {
+  total: number;
+  data: SupplierInvoiceType[];
+};
+
+export type SupplierInvoiceFormType = {
+  warehouseid: string;
+  supplierid: string;
+  veninvoiceno: string;
+  refponumber: number;
+  veninvoicedate: string;
+  invpostingdate: string;
+  termsid: number;
+  storeid: number;
+};

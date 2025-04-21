@@ -14,7 +14,8 @@ interface POSGridProps extends AgGridReactProps {
   // You can type gridOptions more specifically if needed
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultColDef?: any;
-  rowSelection?: "single" | "multiple";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rowSelection?: any;
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(

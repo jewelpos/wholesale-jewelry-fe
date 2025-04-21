@@ -32,3 +32,36 @@ export const UPDATE_SUPPLIER_MUTATION = gql`
     }
   }
 `;
+
+export const ADD_SUPPLIER_INVOICE_MUTATION = gql`
+  mutation CreateSupplierInvoice($input: CreateSupplierInvoiceInput!) {
+    createSupplierInvoice(createSupplierInvoiceInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const DELETE_SUPPLIER_INVOICE_MUTATION = gql`
+  mutation DeleteSupplierInvoice($supplierinvoiceid: Int!, $storeid: Int!) {
+    deleteSupplierInvoice(supplierinvoiceid: $supplierinvoiceid, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const UPDATE_SUPPLIER_INVOICE_MUTATION = gql`
+  mutation editSupplierInvoice($input: EditSupplierInvoiceInput!) {
+    editSupplierInvoice(editSupplierInvoiceInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
