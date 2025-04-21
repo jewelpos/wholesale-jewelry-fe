@@ -1,27 +1,41 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { SupplierListType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
-import { suopplierListcolumnDefs } from "./ColumnDef";
+import { supplierListcolumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
+import SupplierActions from "./SupplierActions";
+import SupplierListHeader from "./SupplierListHeader";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
@@ -33,7 +47,7 @@ const SupplierListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(params, debouncedSearch, "companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierList({
             variables: {
@@ -66,8 +80,14 @@ const SupplierListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierList]
+    [selectedOutlet, dispatch, getSupplierList, debouncedSearch]
   );
+
+  const handleDeleteSuccess = useCallback(() => {
+    if (selectedOutlet && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, selectedOutlet]);
 
   useEffect(() => {
     if (selectedOutlet && gridReady) {
@@ -75,27 +95,81 @@ const SupplierListComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
+  useEffect(() => {
+    if (debouncedSearch && gridReady) {
+      gridRef?.current?.api?.setFilterModel(null);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
+
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      {
+        headerName: "",
+        field: "checkbox",
+        headerCheckboxSelection: true,
+        checkboxSelection: true,
+        width: 50,
+        pinned: "left",
+        sortable: false,
+        filter: false,
+        maxWidth: 50,
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+        headerCheckboxSelectionFilteredOnly: true,
+      },
+      ...supplierListcolumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<SupplierListType>) =>
+          params.data ? (
+            <SupplierActions
+              data={params.data}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 80,
+        sortable: false,
+        filter: false,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
+  );
+
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <SupplierListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={columnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
+              rowSelection="multiple"
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={suopplierListcolumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

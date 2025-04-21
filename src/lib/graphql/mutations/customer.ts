@@ -10,3 +10,14 @@ export const ADD_CUSTOMER_MUTATION = gql`
     }
   }
 `;
+
+export const DELETE_CUSTOMER_MUTATION = gql`
+  mutation DeleteCustomer($customerid: Int!, $storeid: Int!) {
+    deleteCustomer(customerid: $customerid, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

@@ -54,7 +54,7 @@ export type SupplierListResponseType = {
   data: SupplierListType[];
 };
 
-export type NewSupplierFormType = {
+export type SupplierFormType = {
   companyname: string;
   address1: string;
   address2: string;
@@ -74,8 +74,9 @@ export type NewSupplierFormType = {
   discountrate: number;
   supplierstatus: number;
   remarks: string;
-  warehouseid: number;
+  warehouseid: string;
   supplierfname: string;
   supplierlname: string;
   storeid: number;
+  supplierid?: string;
 };

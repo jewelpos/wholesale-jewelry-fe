@@ -24,7 +24,7 @@
   {
     "icon": "/assets/img/gif/user.gif",
     "title": "Set up your users and their roles",
-    "para": "Create user accounts and manage what your users are allowed to see and do in Lightspeed Retail.",
+    "para": "Create user accounts and manage what your users are allowed to see and do in  Retail.",
     "linkText": "Learn more about setting up users",
     "linkUrl": "#",
     "btnText": "Add users",
@@ -56,7 +56,7 @@
   },
   {
     "icon": "/assets/img/gif/products.gif",
-    "title": "Add your product catalog to Lightspeed Retail",
+    "title": "Add your product catalog to  Retail",
     "para": "Build your product catalog so you can start selling products in-store and online.",
     "linkText": "Learn more about adding products",
     "linkUrl": "#",
@@ -69,7 +69,7 @@
     "icon": "/assets/img/gif/inventory.gif",
     "title": "Inventory added to your products",
     "para": "Continue using stock control to ensure your inventory levels and costs stay accurate.",
-    "linkText": "Learn more about inventory in Lightspeed Retail",
+    "linkText": "Learn more about inventory in  Retail",
     "linkUrl": "#",
     "btnText": "",
     "btnUrl": "/store/create",

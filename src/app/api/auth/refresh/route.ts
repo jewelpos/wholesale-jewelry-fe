@@ -1,6 +1,7 @@
 import { apolloClient } from "@/lib/apolloClient";
 import { setCookieResponse } from "@/lib/authStorage";
 import { REFRESH_TOKEN_MUTATION } from "@/lib/graphql/mutations/auth";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -38,4 +39,9 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+}
+
+export async function GET() {
+  const token = (await cookies()).get("refreshToken")?.value;
+  return Response.json({ token });
 }

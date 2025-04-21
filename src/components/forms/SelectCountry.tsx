@@ -10,6 +10,7 @@ const SelectCountry = ({
   onChange,
   className,
   trigger,
+  disableField,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -21,11 +22,25 @@ any) => {
     label: country.name,
   }));
 
+  const handleInputChange = (newValue: string) => {
+    setInput(newValue);
+    if (
+      newValue &&
+      !countryList.some((country) =>
+        country.label.toLowerCase().includes(newValue.toLowerCase())
+      )
+    ) {
+      onChange(newValue);
+      trigger(field.name);
+    }
+  };
+
   return (
     <Select<SelectOption>
       options={countryList}
-      placeholder="Select store category"
+      placeholder="Select country"
       isClearable
+      isDisabled={disableField}
       className={`form-control p-0 ${className}`}
       value={
         value
@@ -33,7 +48,7 @@ any) => {
               value: value,
               label:
                 countryList.find((country) => country.value === value)?.label ||
-                "",
+                value,
             }
           : null
       }
@@ -45,7 +60,7 @@ any) => {
       onMenuOpen={() => setMenuIsOpen(true)}
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
-      onInputChange={setInput}
+      onInputChange={handleInputChange}
       {...field}
     />
   );

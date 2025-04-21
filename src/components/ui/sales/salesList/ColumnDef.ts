@@ -80,25 +80,4 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
-  {
-    headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: SalesInvoiceListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: SalesInvoiceListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: SalesInvoiceListType) => {
-        console.log("View clicked", data);
-      },
-    },
-  },
 ];

@@ -1,10 +1,12 @@
 import Content from "@/components/layout/Content";
-import NewSupplierForm from "@/components/ui/supplier/newSupplier/NewSupplierForm";
+import PageHeader from "@/components/ui/PageHeader";
+import SupplierForm from "@/components/ui/supplier/supplierForm/SupplierForm";
 
 const NewSupplier = () => {
   return (
     <Content>
-      <NewSupplierForm />
+      <PageHeader title="Add new supplier" showBreadcrumb />
+      <SupplierForm />
     </Content>
   );
 };

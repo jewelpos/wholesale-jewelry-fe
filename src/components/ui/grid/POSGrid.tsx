@@ -12,7 +12,9 @@ interface POSGridProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onGridReady: (params: any) => void; // Type this callback function as needed
   // You can type gridOptions more specifically if needed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultColDef?: any;
+  rowSelection?: "single" | "multiple";
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
@@ -22,6 +24,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       gridOptions,
       onGridReady,
       defaultColDef = { filter: true, floatingFilter: true },
+      rowSelection,
     },
     ref
   ) => {
@@ -47,6 +50,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
             // sideBar: true,
             ...gridOptions,
           }}
+          rowSelection={rowSelection}
           rowGroupPanelShow="always"
           domLayout="normal"
           rowModelType="serverSide"

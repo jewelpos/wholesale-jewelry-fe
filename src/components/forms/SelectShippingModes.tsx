@@ -12,6 +12,7 @@ const SelectShippingModes = ({
   className,
   trigger,
   storeId,
+  disableField,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -37,8 +38,9 @@ any) => {
     <Select<SelectOption>
       isLoading={loading}
       options={options}
-      placeholder="Select bank"
+      placeholder="Select mode"
       isClearable
+      isDisabled={disableField}
       className={`form-control p-0 ${className}`}
       value={
         value

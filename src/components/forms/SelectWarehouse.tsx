@@ -11,6 +11,7 @@ const SelectWarehouse = ({
   className,
   trigger,
   storeId,
+  disableField,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -41,6 +42,7 @@ any) => {
       options={warehouseOptions}
       placeholder="Select store category"
       isClearable
+      isDisabled={disableField}
       className={`form-control p-0 ${className}`}
       value={
         value

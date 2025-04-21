@@ -1,10 +1,12 @@
 import Content from "@/components/layout/Content";
-import NewCustomerForm from "@/components/ui/customers/newCustomer/NewCustomerForm";
+import CustomerForm from "@/components/ui/customers/customerForm/CustomerForm";
+import PageHeader from "@/components/ui/PageHeader";
 
 const NewCustomer = () => {
   return (
     <Content>
-      <NewCustomerForm />
+      <PageHeader title="Add new customer" showBreadcrumb />
+      <CustomerForm />
     </Content>
   );
 };

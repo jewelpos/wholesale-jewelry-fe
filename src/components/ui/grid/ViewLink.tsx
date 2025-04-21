@@ -1,17 +1,20 @@
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { ICellRendererParams } from "ag-grid-community";
 import Link from "next/link";
 import React from "react";
 
-export interface SelectLinkRendererParams<T = any> extends ICellRendererParams {
+export interface ViewLinkRendererParams<T = any> extends ICellRendererParams {
   link: string;
 }
+
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
-const SelectLink = <T extends unknown>({
+const ViewLink = <T extends unknown>({
   value,
   link = "",
-}: SelectLinkRendererParams<T>) => {
+}: ViewLinkRendererParams<T>) => {
+  const { basePath } = useDefaultRoute();
   return (
-    <Link href={link}>
+    <Link href={`${basePath}${link}`}>
       <strong>
         <u>{value}</u>
       </strong>
@@ -19,4 +22,4 @@ const SelectLink = <T extends unknown>({
   );
 };
 
-export default SelectLink;
+export default ViewLink;

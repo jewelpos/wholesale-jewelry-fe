@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -15,6 +25,9 @@ import { salesInvoiceColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
+import SalesListHeader from "./SalesListHeader";
+import { useDebounce } from "@/hooks/useDebounce";
+import SalesActions from "./SalesActions";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
@@ -23,6 +36,7 @@ const SalesListComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -32,7 +46,7 @@ const SalesListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(params, debouncedSearch, "companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getInvoiceList({
             variables: {
@@ -65,7 +79,60 @@ const SalesListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getInvoiceList]
+    [selectedOutlet, dispatch, getInvoiceList, debouncedSearch]
+  );
+
+  const handleDeleteSuccess = useCallback(() => {
+    if (selectedOutlet && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, selectedOutlet]);
+
+  const columnDefs = useMemo(
+    () => [
+      {
+        headerName: "",
+        field: "checkbox",
+        headerCheckboxSelection: true,
+        checkboxSelection: true,
+        width: 50,
+        pinned: "left",
+        sortable: false,
+        filter: false,
+        maxWidth: 50,
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+        headerCheckboxSelectionFilteredOnly: true,
+      },
+      ...salesInvoiceColumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        width: 120,
+        cellRenderer: (params: ICellRendererParams<SalesInvoiceListType>) => {
+          if (params.data) {
+            return (
+              <SalesActions
+                data={params.data}
+                onDeleteSuccess={handleDeleteSuccess}
+              />
+            );
+          }
+          return null;
+        },
+        sortable: false,
+        filter: false,
+        maxWidth: 150,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
   );
 
   useEffect(() => {
@@ -74,20 +141,39 @@ const SalesListComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
+  useEffect(() => {
+    if (debouncedSearch && gridReady) {
+      gridRef?.current?.api?.setFilterModel(null);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
+
   return (
-    <div className="card-body p-2">
-      <CustomFilterSections
-        search={search}
-        setSearch={setSearch}
-        selectedOutlet={selectedOutlet}
-        setSelectedOutlet={setSelectedOutlet}
-      />
-      <POSGrid
-        ref={gridRef}
-        columnDefs={salesInvoiceColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    <>
+      <SalesListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={columnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
+              rowSelection="multiple"
+            />
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 

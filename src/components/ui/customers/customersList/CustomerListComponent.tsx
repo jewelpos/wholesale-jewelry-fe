@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -17,12 +28,14 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
+import CustomerActions from "./CustomerActions";
+import CustomerListHeader from "./CustomerListHeader";
 
 const CustomerListComponent = () => {
   const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { storeId } = useParams();
-  const parsedStoreId = parseInt(storeId as string, 10);
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -76,6 +89,12 @@ const CustomerListComponent = () => {
     [parsedStoreId, dispatch, getCustomerList, debouncedSearch]
   );
 
+  const handleDeleteSuccess = useCallback(() => {
+    if (parsedStoreId && gridReady) {
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, parsedStoreId]);
+
   useEffect(() => {
     if (parsedStoreId && gridReady) {
       gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
@@ -85,25 +104,74 @@ const CustomerListComponent = () => {
   useEffect(() => {
     if (debouncedSearch && gridReady) {
       gridRef?.current?.api?.setFilterModel(null);
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, gridReady, debouncedSearch]);
+  }, [debouncedSearch, gridReady, datasource]);
+
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      {
+        headerName: "",
+        field: "checkbox",
+        headerCheckboxSelection: true,
+        checkboxSelection: true,
+        width: 50,
+        pinned: "left",
+        sortable: false,
+        filter: false,
+        maxWidth: 50,
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+        headerCheckboxSelectionFilteredOnly: true,
+      },
+      ...customersListColumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<CustomersListType>) =>
+          params.data ? (
+            <CustomerActions
+              data={params.data}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 120,
+        sortable: false,
+        filter: false,
+        maxWidth: 150,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
+  );
 
   return (
-    <div className="card-body p-2">
-      <CustomFilterSections search={search} setSearch={setSearch} />
-      <div className="ag-theme-quartz custom-theme">
-        <POSGrid
-          ref={gridRef}
-          columnDefs={customersListColumnDefs}
-          onGridReady={handleOnGridReady}
-          defaultColDef={{
-            filter: !debouncedSearch,
-            floatingFilter: !debouncedSearch,
-          }}
-        />
+    <>
+      <CustomerListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections search={search} setSearch={setSearch} />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={columnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
+              rowSelection="multiple"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

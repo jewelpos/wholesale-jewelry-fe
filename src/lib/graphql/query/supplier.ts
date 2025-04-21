@@ -91,3 +91,33 @@ export const GET_SUPPLIER_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_SUPPLIER_QUERY = gql`
+  query GetSupplierBySupplierId($storeid: Int!, $supplierid: Int!) {
+    getSupplierBySupplierId(storeid: $storeid, supplierid: $supplierid) {
+      supplierid
+      companyname
+      address1
+      address2
+      city
+      state
+      zipcode
+      country
+      contactperson1
+      phone1
+      phone2
+      cellphone
+      emailaddress
+      webaddress
+      shippimgmethod
+      termsid
+      accountno
+      discountrate
+      supplierstatus
+      remarks
+      warehouseid
+      supplierfname
+      supplierlname
+    }
+  }
+`;
