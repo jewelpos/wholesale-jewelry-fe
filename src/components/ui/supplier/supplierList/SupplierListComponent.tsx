@@ -131,7 +131,7 @@ const SupplierListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 150,
+        width: 80,
         sortable: false,
         filter: false,
         pinned: "right",

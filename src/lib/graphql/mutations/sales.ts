@@ -10,3 +10,14 @@ export const DELETE_SALES_ORDER_MUTATION = gql`
     }
   }
 `;
+
+export const DELETE_SALE_MUTATION = gql`
+  mutation DeleteSalesOrder($salesorderno: String!, $outletid: Int!) {
+    deleteSalesOrder(salesorderno: $salesorderno, outletid: $outletid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
