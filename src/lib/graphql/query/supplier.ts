@@ -124,7 +124,7 @@ export const GET_SUPPLIER_QUERY = gql`
 
 export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
   query GetSupplierInvoiceList(
-    $outletid: Int!
+    $storeid: Int!
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -133,7 +133,7 @@ export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
     $groupKeys: [String]
   ) {
     getSupplierInvoiceList(
-      outletid: $outletid
+      storeid: $storeid
       page: $page
       perpage: $perpage
       filters: $filters

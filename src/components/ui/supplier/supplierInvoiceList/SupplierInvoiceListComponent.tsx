@@ -29,15 +29,19 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { supplierInvoiceListColumnDefs } from "./ColumnDef";
 import SupplierInvoiceActions from "./SupplierInvoiceActions";
 import SupplierInvoiceListHeader from "./SupplierInvoiceListHeader";
+import { useParams } from "next/navigation";
 
 const SupplierInvoiceListComponent = () => {
-  const [getSupplierInvoiceList] = useLazyQuery(GET_SUPPLIER_INVOICE_LIST_QUERY);
+  const [getSupplierInvoiceList] = useLazyQuery(
+    GET_SUPPLIER_INVOICE_LIST_QUERY
+  );
   const dispatch = useAppDispatch();
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierInvoiceType>) => {
     setGridReady(true);
@@ -47,11 +51,15 @@ const SupplierInvoiceListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "veninvoiceno");
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "veninvoiceno"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierInvoiceList({
             variables: {
-              outletid: selectedOutlet,
+              storeid: parsedStoreId,
               ...filters,
             },
           });
@@ -80,20 +88,20 @@ const SupplierInvoiceListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierInvoiceList, debouncedSearch]
+    [parsedStoreId, dispatch, getSupplierInvoiceList, debouncedSearch]
   );
 
   const handleDeleteSuccess = useCallback(() => {
-    if (selectedOutlet && gridReady) {
+    if (parsedStoreId && gridReady) {
       gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [datasource, gridReady, selectedOutlet]);
+  }, [datasource, gridReady, parsedStoreId]);
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if (parsedStoreId && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, parsedStoreId, gridReady]);
 
   useEffect(() => {
     if (debouncedSearch && gridReady) {
@@ -130,16 +138,10 @@ const SupplierInvoiceListComponent = () => {
 
   return (
     <>
-      <SupplierInvoiceListHeader
-      />
+      <SupplierInvoiceListHeader />
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <CustomFilterSections
-            search={search}
-            setSearch={setSearch}
-            selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
-          />
+          <CustomFilterSections search={search} setSearch={setSearch} />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
@@ -151,7 +153,7 @@ const SupplierInvoiceListComponent = () => {
               }}
               rowSelection={{
                 mode: "multiRow",
-                checkboxes:   true,
+                checkboxes: true,
                 headerCheckbox: true,
                 suppressRowClickSelection: true,
               }}

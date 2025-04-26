@@ -85,12 +85,12 @@ export type SupplierInvoiceType = {
   supplierinvoiceid: number;
   supplierid: number;
   veninvoiceno: string;
-  veninvoicedate: Date; // or string if date is in ISO format
+  veninvoicedate: string
   veninvoicetotal: number;
   veninvamtpaid: number;
   veninvamtbalance: number;
   refponumber: number;
-  invpostingdate: Date; // or string if date is in ISO format
+  invpostingdate: string
   veninvremarks: string;
   warehouseid: number;
   veninvbankid: number;
@@ -100,7 +100,7 @@ export type SupplierInvoiceType = {
   venpostchkamountdue: number;
   vencrediapplied: number;
   lastmodifiedbyid: number;
-  lastmodifieddate: Date; // or string if date is in ISO format
+  lastmodifieddate: string
   warehousename: string;
   suppliername: string;
   termsname: string;

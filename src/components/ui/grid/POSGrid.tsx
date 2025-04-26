@@ -26,6 +26,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       onGridReady,
       defaultColDef = { filter: true, floatingFilter: true },
       rowSelection,
+      ...props
     },
     ref
   ) => {
@@ -33,7 +34,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     return (
       <div
         className="ag-theme-quartz custom-theme"
-        style={{ height: "550px", width: "100%" }}
+        style={{ height: "calc(100vh - 300px)", width: "100%" }}
       >
         <AgGridReact
           ref={ref}
@@ -89,6 +90,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           }}
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
+          {...props}
         />
       </div>
     );

@@ -16,6 +16,7 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
         ? `/customers/${params.data.customerid}/view`
         : "/customers",
     }),
+    enableRowGroup: false
   },
   {
     headerName: "Name",

@@ -36,5 +36,5 @@ export const MENU_STATUS_TYPES = {
   NOT_ALLOWED: "NOT_ALLOWED",
 };
 
-export const TIME_FORMAT = "DD.MM.YYYY [at] HH:mm";
+export const TIME_FORMAT = "DD.MM.YYYY";
 export const HEIGHT_BUFFER_SIZE = 300;

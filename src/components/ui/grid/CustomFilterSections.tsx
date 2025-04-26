@@ -1,12 +1,19 @@
 import React from "react";
 import OutletsFilter from "./OutletsFilter";
 import useOutlets from "@/hooks/useOutlets";
+import WarehouseFilter from "./WarehouseFilter";
+import useWarehouse from "@/hooks/useWarehouse";
+import { useParams } from "next/navigation";
 
 interface Props {
   search?: string;
   setSearch?: React.Dispatch<React.SetStateAction<string>>;
   selectedOutlet?: number | undefined;
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
+  selectedWarehouse?: number | undefined;
+  setSelectedWarehouse?: React.Dispatch<
+    React.SetStateAction<number | undefined>
+  >;
 }
 
 const CustomFilterSections = ({
@@ -14,8 +21,17 @@ const CustomFilterSections = ({
   setSearch,
   selectedOutlet,
   setSelectedOutlet,
+  selectedWarehouse,
+  setSelectedWarehouse,
 }: Props) => {
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
+  const {
+    fetchWarehouseByStoreId,
+    loading: warehousesLoading,
+    warehouses,
+  } = useWarehouse();
   return (
     <div className="container-fluid my-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -39,6 +55,17 @@ const CustomFilterSections = ({
               loading={outletsLoading}
               setSelectedOutlet={setSelectedOutlet}
               selectedOutlet={selectedOutlet}
+            />
+          </div>
+        )}
+        {setSelectedWarehouse && (
+          <div className="d-flex align-items-center w-25 w-md-100">
+            <WarehouseFilter
+              fetchWarehousesList={fetchWarehouseByStoreId}
+              warehouses={warehouses}
+              loading={warehousesLoading}
+              setSelectedWarehouse={setSelectedWarehouse}
+              selectedWarehouse={selectedWarehouse}
             />
           </div>
         )}

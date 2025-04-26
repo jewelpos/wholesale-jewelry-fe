@@ -12,7 +12,13 @@ const renderTooltip = (value: string) => (
   <Tooltip id="tooltip">{value}</Tooltip>
 );
 
-const CustomerListHeader = () => {
+interface CustomerListHeaderProps {
+  selectedCustomerId?: number;
+}
+
+const CustomerListHeader = ({
+  selectedCustomerId,
+}: CustomerListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
 
   return (
@@ -32,7 +38,7 @@ const CustomerListHeader = () => {
                     overlay={renderTooltip(btn.actiondisplayname)}
                   >
                     <Link href={""}>
-                      <Upload />
+                      <i data-feather="upload" className="feather-upload" />
                     </Link>
                   </OverlayTrigger>
                 </li>
@@ -40,6 +46,22 @@ const CustomerListHeader = () => {
             }
             return null;
           })}
+        {selectedCustomerId && (
+          <>
+            <li>
+              <Link href={""} title="Mail">
+                <i data-feather="mail" className="feather-mail" />
+              </Link>
+            </li>
+            <li>
+              <OverlayTrigger placement="top" overlay={renderTooltip("Print")}>
+                <Link href={""}>
+                  <i data-feather="printer" className="feather-printer" />
+                </Link>
+              </OverlayTrigger>
+            </li>
+          </>
+        )}
       </ul>
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&

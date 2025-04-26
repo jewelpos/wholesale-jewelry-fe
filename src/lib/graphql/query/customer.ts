@@ -275,6 +275,7 @@ export const GET_CUSTOMER_QUERY = gql`
       custremarks
       custalertremarks
       custphotopath
+      custalert
     }
   }
 `;
