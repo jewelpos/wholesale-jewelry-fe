@@ -47,6 +47,8 @@ export type CustomerChequeListResponseType = {
 
 export type CustomerLedgerReportType = {
   ledgercustid: number;
+  custcompanyname: string;
+  customername: string;
   ledgerdate: string;
   ledgerid: number;
   ledgercode: string;

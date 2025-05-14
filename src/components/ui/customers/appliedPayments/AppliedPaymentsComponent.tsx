@@ -39,7 +39,7 @@ const AppliedPaymentsComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        let filtersMain = filterVariables(
+        const filtersMain = filterVariables(
           params,
           debouncedSearch,
           "transactionno, custcompanyname"
@@ -83,7 +83,7 @@ const AppliedPaymentsComponent = () => {
     if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   return (
     <>

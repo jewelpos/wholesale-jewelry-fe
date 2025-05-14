@@ -105,6 +105,8 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
       total
       data {
         ledgercustid
+        custcompanyname
+        customername
         ledgerdate
         ledgerid
         ledgercode
