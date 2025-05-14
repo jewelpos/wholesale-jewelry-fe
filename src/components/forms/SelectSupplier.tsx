@@ -17,13 +17,13 @@ const SelectSupplier = ({
 any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchSupplierByStoreId, suppliers, loading } = useSupplier();
+  const { fetchSuppliersByStoreId, suppliers, loading } = useSupplier();
 
   useEffect(() => {
     if (storeId) {
-      fetchSupplierByStoreId(storeId);
+      fetchSuppliersByStoreId(storeId);
     }
-  }, [fetchSupplierByStoreId, storeId]);
+  }, [fetchSuppliersByStoreId, storeId]);
 
   const supplierOptions: SelectOption[] = useMemo(
     () =>

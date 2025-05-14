@@ -4,15 +4,15 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useLazyQuery } from "@apollo/client";
 import { useCallback, useState } from "react";
-import { GET_SUPPLIER_BY_STORE_ID_QUERY } from "@/lib/graphql/query/supplier";
+import { GET_SUPPLIERS_BY_STORE_ID_QUERY } from "@/lib/graphql/query/supplier";
 
 const useSupplier = () => {
   const dispatch = useAppDispatch();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [getSuppliersByStoreId] = useLazyQuery(GET_SUPPLIER_BY_STORE_ID_QUERY);
+  const [getSuppliersByStoreId] = useLazyQuery(GET_SUPPLIERS_BY_STORE_ID_QUERY);
 
-  const fetchSupplierByStoreId = useCallback(async (storeIds: number[]) => {
+  const fetchSuppliersByStoreId = useCallback(async (storeIds: number[]) => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
@@ -39,7 +39,7 @@ const useSupplier = () => {
   }, []);
 
   return {
-    fetchSupplierByStoreId,
+    fetchSuppliersByStoreId,
     suppliers,
     loading: loading,
   };

@@ -56,7 +56,7 @@ export const DELETE_SUPPLIER_INVOICE_MUTATION = gql`
 `;
 
 export const UPDATE_SUPPLIER_INVOICE_MUTATION = gql`
-  mutation editSupplierInvoice($input: EditSupplierInvoiceInput!) {
+  mutation EditSupplierInvoice($input: EditSupplierInvoiceInput!) {
     editSupplierInvoice(editSupplierInvoiceInput: $input) {
       success
       message

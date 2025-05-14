@@ -172,32 +172,66 @@ export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
 `;
 
 
-export const GET_SUPPLIER_BY_STORE_ID_QUERY = gql`
-  query GetSupplierByStoreId($storeid: Int!) {
-    getSupplierByStoreId(storeid: $storeid) {
+export const GET_SUPPLIERS_BY_STORE_ID_QUERY = gql`
+  query GetSuppliersByStoreId($storeid: Int!) {
+    getSuppliersByStoreId(storeid: $storeid) {
       supplierid
       companyname
-      address1
-      address2
+      contactname
       city
-      state
-      zipcode
-      country
-      contactperson1
+      accountno
+      termsname
       phone1
-      phone2
       cellphone
       emailaddress
       webaddress
       shippimgmethod
-      termsid
-      accountno
       discountrate
+      warehousename
+      address1
+      address2
+      state
+      zipcode
+      country
+      phone2
       supplierstatus
       remarks
       warehouseid
-      supplierfname
-      supplierlname
+      outletid
+      createdbyid
+      createddate
+      lastmodifiedbyid
+      lastmodifieddate
     }
   }
+`;
+
+export const GET_SUPPLIER_INVOICE_QUERY = gql`
+query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
+  getSingleSupplierInvoice(storeid: $storeid, supplierinvoiceid: $supplierinvoiceid) {
+    supplierinvoiceid
+    supplierid
+    veninvoiceno
+    veninvoicedate
+    veninvoicetotal
+    veninvamtpaid
+    veninvamtbalance
+    refponumber
+    invpostingdate
+    veninvremarks
+    warehouseid
+    veninvbankid
+    enteredbyid
+    termsid
+    venpostchkamount
+    venpostchkamountdue
+    vencrediapplied
+    lastmodifiedbyid
+    lastmodifieddate
+    warehousename
+    suppliername
+    termsname
+    enteredbyname
+  }
+}
 `;

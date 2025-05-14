@@ -11,21 +11,23 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_CUSTOMER_PAYMENT_LIST_QUERY } from "@/lib/graphql/query/customer";
 import { CustomerPaymentListType } from "@/types/customer";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
 import { appliedPaymentsColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
+import { useDebounce } from "@/hooks/useDebounce";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import AppliedPaymentHeader from "./AppliedPaymentHeader";
 
 const AppliedPaymentsComponent = () => {
   const [getCustomerPaymentList] = useLazyQuery(
     GET_CUSTOMER_PAYMENT_LIST_QUERY
   );
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
 
   const handleOnGridReady = (
     params: GridReadyEvent<CustomerPaymentListType>
@@ -37,12 +39,16 @@ const AppliedPaymentsComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        let filtersMain = filterVariables(
+          params,
+          debouncedSearch,
+          "transactionno, custcompanyname"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getCustomerPaymentList({
             variables: {
               outletid: selectedOutlet,
-              ...filters,
+              ...filtersMain,
             },
           });
           if (data.getCustomerPaymentList) {
@@ -70,36 +76,40 @@ const AppliedPaymentsComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getCustomerPaymentList]
+    [selectedOutlet, dispatch, getCustomerPaymentList, debouncedSearch]
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <AppliedPaymentHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={appliedPaymentsColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={appliedPaymentsColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

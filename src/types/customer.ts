@@ -85,24 +85,25 @@ export type CustomerBalanceReportResponseType = {
 };
 
 export type CustomerPaymentListType = {
-  customerid: number;
   transactionno: string;
-  paymentdate: string;
+  custcompanyname: string;
+  paymentdate: Date;
   invoiceno: string;
   paymode: string;
   checkcardno: string;
   amountpaid: number;
   paymentstatus: string;
-  appliedbyid: number;
+  appliedby: string;
+  paymentreference: string;
+  customerid: string;
+  bankname: string;
   warehousename: string;
   warehouseid: number;
   outletid: number;
-  bankid: number;
-  paymentreference: string;
-  dateofentry: string;
+  dateofentry: Date;
   voidpayment: boolean;
   customerpaymentid: number;
-  lastmodifieddate: string;
+  lastmodifieddate: Date;
 };
 
 export type CustomerPaymentListResponseType = {

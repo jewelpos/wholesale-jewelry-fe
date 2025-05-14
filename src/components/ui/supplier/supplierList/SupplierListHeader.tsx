@@ -47,7 +47,7 @@ const SupplierListHeader = () => {
             if (btn.actionname.includes("add_")) {
               let url = "";
               if (btn.actionname === "add_new_ap_invoice") {
-                url = "/invoice";
+                url = "/invoice/new";
               } else if (btn.actionname === "add_new_supplier") {
                 url = "/new";
               } else if (btn.actionname === "add_supplier_payment") {

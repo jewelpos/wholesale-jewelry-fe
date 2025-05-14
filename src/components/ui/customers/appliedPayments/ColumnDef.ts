@@ -3,25 +3,36 @@ import { CustomerPaymentListType } from "@/types/customer";
 import { ColDef } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
-import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
-  {
-    headerName: "Customer",
-    field: "customerid",
-    filter: "agTextColumnFilter",
-  },
   {
     headerName: "Transaction number",
     field: "transactionno",
     filter: "agNumberColumnFilter",
   },
   {
+    headerName: "Company name",
+    field: "custcompanyname",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Payment date",
+    field: "paymentdate",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
+    filter: "agDateColumnFilter",
+  },
+  {
     headerName: "Invoice number",
     field: "invoiceno",
     filter: "agNumberColumnFilter",
   },
-  { headerName: "Payment mode", field: "paymode" },
+  { headerName: "Payment mode", field: "paymode", filter: "agTextColumnFilter" },
+  {
+    headerName: "Card number",
+    field: "checkcardno",
+    filter: "agTextColumnFilter",
+  },
   {
     headerName: "Paid amount",
     field: "amountpaid",
@@ -34,16 +45,19 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
     filter: "agTextColumnFilter",
   },
   {
-    headerName: "Warehouse name",
-    field: "warehousename",
+    headerName: "Applied by",
+    field: "appliedby",
     filter: "agTextColumnFilter",
   },
   {
-    headerName: "Payment date",
-    field: "paymentdate",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
-    filter: "agDateColumnFilter",
+    headerName: "Payment reference",
+    field: "paymentreference",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Customer id",
+    field: "customerid",
+    filter: "agTextColumnFilter",
   },
   {
     headerName: "Date of entry",
@@ -51,26 +65,5 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellRenderer: (params: any) => dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
-  },
-  {
-    headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: CustomerPaymentListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: CustomerPaymentListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: CustomerPaymentListType) => {
-        console.log("View clicked", data);
-      },
-    },
   },
 ];

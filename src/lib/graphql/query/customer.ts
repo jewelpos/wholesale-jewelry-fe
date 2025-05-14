@@ -179,20 +179,21 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
     ) {
       total
       data {
-        customerid
         transactionno
+        custcompanyname
         paymentdate
         invoiceno
         paymode
         checkcardno
         amountpaid
         paymentstatus
-        appliedbyid
+        appliedby
+        paymentreference
+        customerid
+        bankname
         warehousename
         warehouseid
         outletid
-        bankid
-        paymentreference
         dateofentry
         voidpayment
         customerpaymentid

@@ -27,7 +27,7 @@ const CustomerListHeader = ({
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <ul className="table-top-head">
+      {/* <ul className="table-top-head d-block d-sm-none">
         {!!currentMenu?.action.length &&
           currentMenu.action.map((btn: MenuAction) => {
             if (btn.actionname.includes("export")) {
@@ -62,7 +62,7 @@ const CustomerListHeader = ({
             </li>
           </>
         )}
-      </ul>
+      </ul> */}
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&
           currentMenu.action.map((btn: MenuAction) => {
@@ -71,6 +71,39 @@ const CustomerListHeader = ({
                 <div className="page-btn" key={btn.actionname}>
                   <Link href={`${currentPath}/new`} className="btn btn-added">
                     <PlusCircle className="me-2" />
+                    {btn.actiondisplayname}
+                  </Link>
+                </div>
+              );
+            } else if (btn.actionname.includes("export")) {
+              return (
+                <div
+                  className="page-btn d-none d-sm-block"
+                  key={btn.actionname}
+                >
+                  <Link
+                    href={`${currentPath}/new`}
+                    className="btn btn-added btn-dark"
+                  >
+                    <i data-feather="upload" className="feather-upload me-2" />
+                    {btn.actiondisplayname}
+                  </Link>
+                </div>
+              );
+            } else if (btn.actionname.includes("print") && selectedCustomerId) {
+              return (
+                <div
+                  className="page-btn d-none d-sm-block"
+                  key={btn.actionname}
+                >
+                  <Link
+                    href={`${currentPath}/new`}
+                    className="btn btn-added btn-info"
+                  >
+                    <i
+                      data-feather="printer"
+                      className="feather-printer me-2"
+                    />
                     {btn.actiondisplayname}
                   </Link>
                 </div>
