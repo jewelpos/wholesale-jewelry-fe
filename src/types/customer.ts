@@ -25,7 +25,7 @@ export type CustomerChequeListType = {
   checkamount: number;
   checkstatus: string;
   checkentrydate: string;
-  checkenteredbyid: number;
+  enteredby: string;
   customercheckdetailid: number;
   chkinvoiceno: string;
   chkremarks: string;
@@ -37,12 +37,33 @@ export type CustomerChequeListType = {
   chknsf: boolean;
   chkvoid: boolean;
   lastmodifieddate: string;
-  lastmodifiedbyid: number;
+  modifiedby: string;
 };
 
 export type CustomerChequeListResponseType = {
   total: number;
   data: CustomerChequeListType[];
+};
+
+export type CustomerChequeSummaryListType = {
+  customerid: string;
+  customercompanyname: string;
+  warehouseid: number;
+  outletid: number;
+  year: number;
+  Jan: string;
+  Feb: string;
+  Mar: string;
+  Apr: string;
+  May: string;
+  Jun: string;
+  Jul: string;
+  Aug: string;
+  Sep: string;
+  Oct: string;
+  Nov: string;
+  Dec: string;
+  yearly_total: string;
 };
 
 export type CustomerLedgerReportType = {

@@ -1,46 +1,35 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
-import useWarehouse from "@/hooks/useWarehouse";
 
-const SelectWarehouse = ({
+const SelectYear = ({
   value,
   onChange,
   className,
   trigger,
-  storeId,
   disableField,
+  totalYears,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchWarehouseByStoreId, warehouses, loading } = useWarehouse();
 
-  useEffect(() => {
-    if (storeId) {
-      fetchWarehouseByStoreId(storeId);
-    }
-  }, [fetchWarehouseByStoreId, storeId]);
-
-  const warehouseOptions: SelectOption[] = useMemo(
+  const yearOptions: SelectOption[] = useMemo(
     () =>
-      warehouses.map(
-        (warehouse: { warehouseid: number; warehousename: string }) => ({
-          value: warehouse.warehouseid,
-          label: warehouse.warehousename,
-        })
-      ),
-    [warehouses]
+      Array.from({ length: totalYears }, (_, i) => ({
+        value: new Date().getFullYear() - i,
+        label: String(new Date().getFullYear() - i),
+      })),
+    [totalYears]
   );
 
   return (
     <Select<SelectOption>
-      isLoading={loading}
-      options={warehouseOptions}
-      placeholder="Select warehouse"
+      options={yearOptions}
+      placeholder="Select year"
       isClearable
       isDisabled={disableField}
       className={`form-control p-0 ${className}`}
@@ -49,8 +38,7 @@ any) => {
           ? {
               value: value,
               label:
-                warehouseOptions.find((warehouse) => warehouse.value === value)
-                  ?.label || "",
+                yearOptions.find((year) => year.value === value)?.label || "",
             }
           : null
       }
@@ -68,4 +56,4 @@ any) => {
   );
 };
 
-export default SelectWarehouse;
+export default SelectYear;

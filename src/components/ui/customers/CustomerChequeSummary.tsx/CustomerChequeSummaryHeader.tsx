@@ -5,10 +5,11 @@ import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import Link from "next/link";
+import { PlusCircle } from "react-feather";
 
-const LedgerActivityHeader = () => {
+const CustomerChequeSummaryHeader = () => {
   const { currentMenu, currentPath } = useMenu();
-
+  console.log("currentMenu", currentMenu);
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
@@ -18,7 +19,16 @@ const LedgerActivityHeader = () => {
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&
           currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("export")) {
+            if (btn.actionname.includes("add_new")) {
+              return (
+                <div className="page-btn" key={btn.actionname}>
+                  <Link href={`${currentPath}/new`} className="btn btn-added">
+                    <PlusCircle className="me-2" />
+                    {btn.actiondisplayname}
+                  </Link>
+                </div>
+              );
+            } else if (btn.actionname.includes("export")) {
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -33,24 +43,6 @@ const LedgerActivityHeader = () => {
                   </Link>
                 </div>
               );
-            } else if (btn.actionname.includes("print")) {
-              return (
-                <div
-                  className="page-btn d-none d-sm-block"
-                  key={btn.actionname}
-                >
-                  <Link
-                    href={`${currentPath}/new`}
-                    className="btn btn-added btn-info"
-                  >
-                    <i
-                      data-feather="printer"
-                      className="feather-printer me-2"
-                    />
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
             }
             return null;
           })}
@@ -59,4 +51,4 @@ const LedgerActivityHeader = () => {
   );
 };
 
-export default LedgerActivityHeader;
+export default CustomerChequeSummaryHeader;

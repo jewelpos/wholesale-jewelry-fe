@@ -3,18 +3,12 @@ import { CustomerChequeListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
-import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
   {
-    headerName: "Customer",
-    field: "customerid",
-    filter: "agTextColumnFilter",
-  },
-  {
     headerName: "Check number",
     field: "checkno",
-    filter: "agNumberColumnFilter",
+    filter: "agTextColumnFilter",
   },
   {
     headerName: "Check amount",
@@ -22,13 +16,6 @@ export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
   },
-  { headerName: "Status", field: "checkstatus", filter: "agTextColumnFilter" },
-  {
-    headerName: "Warehouse name",
-    field: "warehousename",
-    filter: "agTextColumnFilter",
-  },
-  { headerName: "Remarks", field: "chkremarks", filter: "agTextColumnFilter" },
   {
     headerName: "Posting date",
     field: "checkpostingdate",
@@ -37,31 +24,42 @@ export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
     filter: "agDateColumnFilter",
   },
   {
-    headerName: "Entry date",
-    field: "checkentrydate",
+    headerName: "Check status",
+    field: "checkstatus",
+    filter: "agTextColumnFilter",
+  },
+  { headerName: "Entry date", field: "checkentrydate", cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT), filter: "agDateColumnFilter" },
+  {
+    headerName: "Entered by",
+    field: "enteredby",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Invoice number",
+    field: "chkinvoiceno",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Warehouse name",
+    field: "warehousename",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Outlet",
+    field: "outletid",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Last modified date",
+    field: "lastmodifieddate",
     cellRenderer: (params: ICellRendererParams) =>
       dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   {
-    headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: CustomerChequeListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: CustomerChequeListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: CustomerChequeListType) => {
-        console.log("View clicked", data);
-      },
-    },
+    headerName: "Last modified by",
+    field: "modifiedby",
+    filter: "agTextColumnFilter",
   },
 ];

@@ -40,7 +40,8 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
 
 export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
   query GetCustomerChequeList(
-    $outletid: Int!
+    $storeid: Int!
+    $customerid: Int!
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -49,7 +50,8 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
     $groupKeys: [String]
   ) {
     getCustomerChequeList(
-      outletid: $outletid
+      storeid: $storeid
+      customerid: $customerid
       page: $page
       perpage: $perpage
       filters: $filters
@@ -60,12 +62,13 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
       total
       data {
         customerid
+        custcompanyname
         checkpostingdate
         checkno
         checkamount
         checkstatus
         checkentrydate
-        checkenteredbyid
+        enteredby
         customercheckdetailid
         chkinvoiceno
         chkremarks
@@ -77,7 +80,7 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
         chknsf
         chkvoid
         lastmodifieddate
-        lastmodifiedbyid
+        modifiedby
       }
     }
   }
@@ -85,7 +88,7 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
 
 export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
   query GetCustomerLedgerReport(
-    $outletid: Int!
+    $customerid: Int!
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -249,6 +252,31 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
   }
 `;
 
+export const GET_CUSTOMERS_QUERY = gql`
+  query GetCustomers($storeid: Int!) {
+    getCustomers(storeid: $storeid) {
+        customerid
+        custcompanyname
+        fullname
+        custcity
+        phone
+        lastsaledate
+        lastpaymentdate
+        days_since_last_sale
+        numberofsales
+        balancedue
+        totalsale
+        opencredit
+        mobile
+        custregistrationdate
+        custemailadd
+        warehousename
+        warehouseid
+        outletid
+    }
+  }
+`;
+
 export const GET_CUSTOMER_QUERY = gql`
   query GetCustomer($storeid: Int!, $customerid: Int!) {
     getCustomer(storeid: $storeid, customerid: $customerid) {
@@ -282,3 +310,39 @@ export const GET_CUSTOMER_QUERY = gql`
     }
   }
 `;
+
+
+
+export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
+  query GetCustomerChequeSummaryList(
+    $storeid: Int!
+    $customerid: Int
+    $year: Int
+    $warehouseid: Int
+  ) {
+    getCustomerChequeSummaryList(
+    storeid: $storeid
+    customerid: $customerid
+    year: $year
+    warehouseid: $warehouseid
+  ) {
+    customerid
+    customercompanyname
+    warehouseid
+    outletid
+    year
+    Jan
+    Feb
+    Mar
+    Apr
+    May
+    Jun
+    Jul
+    Aug
+    Sep
+    Oct
+    Nov
+    Dec
+    yearly_total
+  }
+}`;

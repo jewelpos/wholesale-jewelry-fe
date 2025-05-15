@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
-import useWarehouse from "@/hooks/useWarehouse";
+import useCustomers from "@/hooks/useCustomers";
 
-const SelectWarehouse = ({
+const SelectCustomer = ({
   value,
   onChange,
   className,
@@ -17,30 +17,30 @@ const SelectWarehouse = ({
 any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchWarehouseByStoreId, warehouses, loading } = useWarehouse();
+  const { fetchCustomersByStoreId, customers, loading } = useCustomers();
 
   useEffect(() => {
     if (storeId) {
-      fetchWarehouseByStoreId(storeId);
+      fetchCustomersByStoreId(storeId);
     }
-  }, [fetchWarehouseByStoreId, storeId]);
+  }, [fetchCustomersByStoreId, storeId]);
 
-  const warehouseOptions: SelectOption[] = useMemo(
+  const customerOptions: SelectOption[] = useMemo(
     () =>
-      warehouses.map(
-        (warehouse: { warehouseid: number; warehousename: string }) => ({
-          value: warehouse.warehouseid,
-          label: warehouse.warehousename,
+      customers.map(
+        (customer: { customerid: number; custcompanyname: string }) => ({
+          value: customer.customerid,
+          label: customer.custcompanyname,
         })
       ),
-    [warehouses]
+    [customers]
   );
 
   return (
     <Select<SelectOption>
       isLoading={loading}
-      options={warehouseOptions}
-      placeholder="Select warehouse"
+      options={customerOptions}
+      placeholder="Select customer"
       isClearable
       isDisabled={disableField}
       className={`form-control p-0 ${className}`}
@@ -49,7 +49,7 @@ any) => {
           ? {
               value: value,
               label:
-                warehouseOptions.find((warehouse) => warehouse.value === value)
+                customerOptions.find((customer) => customer.value === value)
                   ?.label || "",
             }
           : null
@@ -68,4 +68,4 @@ any) => {
   );
 };
 
-export default SelectWarehouse;
+export default SelectCustomer;
