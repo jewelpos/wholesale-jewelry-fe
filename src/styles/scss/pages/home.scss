@@ -20,3 +20,7 @@
   align-items: center;
   gap: 2;
 }
+.modal-height {
+  max-height: 70vh !important;
+  overflow-y: auto;
+}

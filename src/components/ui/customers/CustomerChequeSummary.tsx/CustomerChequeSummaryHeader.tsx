@@ -7,9 +7,13 @@ import { MenuAction } from "@/types/permissions";
 import Link from "next/link";
 import { PlusCircle } from "react-feather";
 
-const CustomerChequeSummaryHeader = () => {
+const CustomerChequeSummaryHeader = ({
+  setShowPrintModal,
+}: {
+  setShowPrintModal: (value: boolean) => void;
+}) => {
   const { currentMenu, currentPath } = useMenu();
-  console.log("currentMenu", currentMenu);
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
@@ -22,7 +26,11 @@ const CustomerChequeSummaryHeader = () => {
             if (btn.actionname.includes("add_new")) {
               return (
                 <div className="page-btn" key={btn.actionname}>
-                  <Link href={`${currentPath}/new`} className="btn btn-added">
+                  <Link
+                    href="#"
+                    className="btn btn-added"
+                    onClick={() => setShowPrintModal(true)}
+                  >
                     <PlusCircle className="me-2" />
                     {btn.actiondisplayname}
                   </Link>

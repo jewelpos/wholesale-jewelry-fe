@@ -30,6 +30,8 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import CustomerActions from "./CustomerActions";
 import CustomerListHeader from "./CustomerListHeader";
+import PrintModal from "../../PrintModal";
+import CustomerPrintDetails from "./CustomerPrintDetails";
 
 const CustomerListComponent = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<
@@ -46,6 +48,7 @@ const CustomerListComponent = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<
     number | undefined
   >(undefined);
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
     setGridReady(true);
@@ -165,7 +168,10 @@ const CustomerListComponent = () => {
 
   return (
     <>
-      <CustomerListHeader selectedCustomerId={selectedCustomerId} />
+      <CustomerListHeader
+        selectedCustomerId={selectedCustomerId}
+        setShowPrintModal={setShowPrintModal}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -197,6 +203,11 @@ const CustomerListComponent = () => {
           </div>
         </div>
       </div>
+      {showPrintModal && selectedCustomerId && (
+        <PrintModal setShowPrintModal={setShowPrintModal}>
+          <CustomerPrintDetails selectedCustomerId={selectedCustomerId} />
+        </PrintModal>
+      )}
     </>
   );
 };

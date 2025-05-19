@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  ICellRendererParams,
+  IServerSideGetRowsParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -15,6 +26,7 @@ import { onHandsColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import { useParams } from "next/navigation";
+import OnHandChecksActions from "./OnHandChecksActions";
 
 interface Props {
   data: CustomerChequeListType;
@@ -81,14 +93,46 @@ const OnHandChecksComponent = ({ data }: Props) => {
     }
   }, [gridRef, datasource, gridReady, data.customerid, parsedStoreId]);
 
+  const retryFetchData = useCallback(() => {
+    gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+  }, [datasource]);
+
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      ...onHandsColumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<CustomerChequeListType>) =>
+          params.data ? (
+            <OnHandChecksActions
+              data={params.data}
+              retryFetchData={retryFetchData}
+            />
+          ) : null,
+        width: 120,
+        sortable: false,
+        filter: false,
+        maxWidth: 180,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [retryFetchData]
+  );
+
   return (
     <div className="card table-list-card">
       <div className="card-body p-2">
         <div className="ag-theme-quartz custom-theme">
           <POSGrid
             ref={gridRef}
-            columnDefs={onHandsColumnDefs}
+            columnDefs={columnDefs}
             onGridReady={handleOnGridReady}
+            domLayout="autoHeight"
           />
         </div>
       </div>

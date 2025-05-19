@@ -47,7 +47,7 @@ export type CustomerChequeListResponseType = {
 
 export type CustomerChequeSummaryListType = {
   customerid: string;
-  customercompanyname: string;
+  custcompanyname: string;
   warehouseid: number;
   outletid: number;
   year: number;
@@ -153,6 +153,9 @@ export type CustomersListType = {
   warehousename: string;
   warehouseid: number;
   outletid: number;
+  custstate: string;
+  custzip: string;
+  custaddress: string;
 };
 
 export type CustomersListResponseType = {
@@ -192,3 +195,42 @@ export type CustomerFormType = {
   file: any;
   custalert: number;
 };
+
+export type CustomerType = {
+  customerid: number;
+  custcompanyname: string;
+  custadd1: string;
+  custcity: string;
+  custstate: string;
+  custzip: string;
+  custcountry: string;
+  custphone1: string;
+  custcell: string;
+  custemailadd: string;
+  custfname: string;
+  custlname: string;
+  custphone2: string;
+  storeid: number;
+  warehouseid: string;
+  custdiscount: number;
+  custcreditlimit: number;
+  termsid: number;
+  custshippingmethod: string;
+  custbillto: string;
+  custshipto: string;
+  custtaxid: string;
+  custsalestax: number;
+  status: number;
+  custremarks: string;
+  custalertremarks: string;
+  custphotopath: string;
+  custalert: number;
+}
+
+export type AddNewCheckOnHandType={
+  warehouseid: string;
+  customerid: string;
+  checkno: string;
+  checkamount: string;
+  checkpostingdate: string;
+}

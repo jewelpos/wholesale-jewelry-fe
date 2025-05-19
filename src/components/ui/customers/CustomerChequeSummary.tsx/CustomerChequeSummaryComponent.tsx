@@ -18,6 +18,7 @@ import SelectCustomer from "@/components/forms/SelectCustomer";
 import SelectYear from "@/components/forms/SelectYear";
 import OnHandChecksComponent from "../onHandChecks/OnHandChecksComponent";
 import CustomerChequeSummaryHeader from "./CustomerChequeSummaryHeader";
+import AddOnHandChequeModal from "./AddOnHandChequeModal";
 
 const CustomerChequeSummaryComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
@@ -29,6 +30,7 @@ const CustomerChequeSummaryComponent = () => {
   const [selectedYear, setSelectedYear] = useState<number>(0);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [openAddChequeModal, setOpenAddChequeModal] = useState<boolean>(false);
 
   const [getCustomerChequeSummaryList] = useLazyQuery(
     GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY
@@ -87,7 +89,7 @@ const CustomerChequeSummaryComponent = () => {
 
   return (
     <>
-      <CustomerChequeSummaryHeader />
+      <CustomerChequeSummaryHeader setShowPrintModal={setOpenAddChequeModal} />
       <div className="barcode-content-list">
         <div className="row">
           <div className="col-lg-12 col-12">
@@ -146,12 +148,24 @@ const CustomerChequeSummaryComponent = () => {
                 loading={loading}
                 masterDetail
                 detailCellRenderer={OnHandChecksComponent}
-                detailRowAutoHeight
               />
             </div>
           </div>
         </div>
       </div>
+      {openAddChequeModal && (
+        <AddOnHandChequeModal
+          setShowPrintModal={setOpenAddChequeModal}
+          triggerFetchSummary={() =>
+            fetchChequeSummary(
+              parsedStoreId,
+              selectedCustomer,
+              selectedYear,
+              selectedWarehouse
+            )
+          }
+        />
+      )}
     </>
   );
 };

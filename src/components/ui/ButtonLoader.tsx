@@ -8,6 +8,7 @@ type Props = {
   loadingText?: string;
   type?: "submit" | "button" | "reset";
   className?: string;
+  disabled?: boolean;
 };
 
 const ButtonLoader = ({
@@ -16,9 +17,10 @@ const ButtonLoader = ({
   loadingText,
   type = "submit",
   className = "btn btn-primary",
+  disabled = false,
 }: Props) => {
   return (
-    <button type={type} disabled={loading} className={className}>
+    <button type={type} disabled={loading || disabled} className={className}>
       {loading ? (
         <>
           <i className="fas fa-spinner fa-spin me-2" /> {loadingText}

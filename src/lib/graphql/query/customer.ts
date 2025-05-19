@@ -88,7 +88,7 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
 
 export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
   query GetCustomerLedgerReport(
-    $customerid: Int!
+    $outletid: Int!
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -327,7 +327,7 @@ export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
     warehouseid: $warehouseid
   ) {
     customerid
-    customercompanyname
+    custcompanyname
     warehouseid
     outletid
     year

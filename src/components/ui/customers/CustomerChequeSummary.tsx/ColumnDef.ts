@@ -11,13 +11,19 @@ export const customerChequeSummaryColumnDefs: ColDef<CustomerChequeSummaryListTy
   },
   {
     headerName: "Company name",
-    field: "customercompanyname",
+    field: "custcompanyname",
     filter: "agTextColumnFilter",
   },
   {
     headerName: "Year",
     field: "year",
     filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Total",
+    field: "yearly_total",
+    filter: "agTextColumnFilter",
+    cellRenderer: currencyFormattedCellRenderer,
   },
   { headerName: "January", field: "Jan", filter: "agTextColumnFilter" },
   { headerName: "February", field: "Feb", filter: "agTextColumnFilter" },
@@ -70,12 +76,5 @@ export const customerChequeSummaryColumnDefs: ColDef<CustomerChequeSummaryListTy
     headerName: "December",
     field: "Dec",
     filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Total",
-    field: "yearly_total",
-    filter: "agTextColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
-  },
-  
+  }, 
 ];
