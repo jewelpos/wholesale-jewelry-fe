@@ -44,7 +44,7 @@ any) => {
       placeholder="Select month"
       isClearable
       isDisabled={disableField}
-      className={`form-control p-0 ${className}`}
+      className={`form-control p-0 ${className} select-form-custom`}
       value={
         value
           ? {

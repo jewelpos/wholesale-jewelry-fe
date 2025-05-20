@@ -24,3 +24,6 @@
   max-height: 70vh !important;
   overflow-y: auto;
 }
+.select-form-custom [aria-disabled="true"] {
+  height: 40px !important;
+}

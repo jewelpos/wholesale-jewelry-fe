@@ -23,7 +23,7 @@ export const DELETE_CUSTOMER_MUTATION = gql`
 `;
 
 export const ADD_NEW_CHECK_ON_HAND_MUTATION = gql`
-  mutation CreateNewCheckOnHand($input: [CreateNewCheckOnHandInput!]!, $storeid: Int!) {
+  mutation CreateNewCheckOnHand($input: CreateNewCheckOnHandInput!, $storeid: Int!) {
     createNewCheckOnHand(createNewCheckOnHandInput: $input, storeid: $storeid) {
       success
       message
@@ -43,3 +43,27 @@ export const CHANGE_ON_HAND_CHECK_STATUS_MUTATION = gql`
     }
   }
 `;
+
+export const UPDATE_CHECK_ON_HAND_MUTATION = gql`
+  mutation UpdateNewCheckOnHand($input: EditCheckOnHandInput!, $storeid: Int!) {
+    updateNewCheckOnHand(editCheckOnHandInput: $input, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const DELETE_CHECK_ON_HAND_MUTATION = gql`
+  mutation DeleteCheckOnHand($customercheckdetailid: Int!, $storeid: Int!) {
+    deleteCheckOnHand(customercheckdetailid: $customercheckdetailid, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+

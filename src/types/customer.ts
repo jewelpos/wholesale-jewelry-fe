@@ -227,10 +227,11 @@ export type CustomerType = {
   custalert: number;
 }
 
-export type AddNewCheckOnHandType={
+export type CheckOnHandType={
   warehouseid: string;
   customerid: string;
   checkno: string;
   checkamount: string;
   checkpostingdate: string;
+  customercheckdetailid?: number | string;
 }
