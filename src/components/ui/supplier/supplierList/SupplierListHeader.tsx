@@ -12,7 +12,11 @@ const renderTooltip = (value: string) => (
   <Tooltip id="tooltip">{value}</Tooltip>
 );
 
-const SupplierListHeader = () => {
+const SupplierListHeader = ({
+  setShowInvoiceFormModal,
+}: {
+  setShowInvoiceFormModal: (value: boolean) => void;
+}) => {
   const { currentMenu, currentPath } = useMenu();
 
   return (
@@ -47,23 +51,38 @@ const SupplierListHeader = () => {
             if (btn.actionname.includes("add_")) {
               let url = "";
               if (btn.actionname === "add_new_ap_invoice") {
-                url = "/invoice/new";
-              } else if (btn.actionname === "add_new_supplier") {
-                url = "/new";
-              } else if (btn.actionname === "add_supplier_payment") {
-                url = "/payments";
-              } else if (btn.actionname === "add_new_ap_check") {
-                url = "/checks";
+                return (
+                  <div className="page-btn" key={btn.actionname}>
+                    <Link
+                      href={"#"}
+                      onClick={() => setShowInvoiceFormModal(true)}
+                      className="btn btn-added"
+                    >
+                      <PlusCircle className="me-2" />
+                      {btn.actiondisplayname}
+                    </Link>
+                  </div>
+                );
+              } else {
+                if (btn.actionname === "add_new_supplier") {
+                  url = "/new";
+                } else if (btn.actionname === "add_supplier_payment") {
+                  url = "/payments";
+                } else if (btn.actionname === "add_new_ap_check") {
+                  url = "/checks";
+                }
+                return (
+                  <div className="page-btn" key={btn.actionname}>
+                    <Link
+                      href={`${currentPath}${url}`}
+                      className="btn btn-added"
+                    >
+                      <PlusCircle className="me-2" />
+                      {btn.actiondisplayname}
+                    </Link>
+                  </div>
+                );
               }
-
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <Link href={`${currentPath}${url}`} className="btn btn-added">
-                    <PlusCircle className="me-2" />
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
             }
             return null;
           })}

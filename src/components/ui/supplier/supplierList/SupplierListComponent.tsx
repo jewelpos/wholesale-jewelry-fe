@@ -29,6 +29,7 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import SupplierActions from "./SupplierActions";
 import SupplierListHeader from "./SupplierListHeader";
+import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -38,6 +39,8 @@ const SupplierListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [showInvoiceFormModal, setShowInvoiceFormModal] =
+    useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierListType>) => {
     setGridReady(true);
@@ -130,7 +133,7 @@ const SupplierListComponent = () => {
 
   return (
     <>
-      <SupplierListHeader />
+      <SupplierListHeader setShowInvoiceFormModal={setShowInvoiceFormModal} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -150,7 +153,7 @@ const SupplierListComponent = () => {
               }}
               rowSelection={{
                 mode: "multiRow",
-                checkboxes:   true,
+                checkboxes: true,
                 headerCheckbox: true,
                 suppressRowClickSelection: true,
               }}
@@ -158,6 +161,11 @@ const SupplierListComponent = () => {
           </div>
         </div>
       </div>
+      {showInvoiceFormModal && (
+        <SupplierInvoiceFormModal
+          setShowInvoiceFormModal={setShowInvoiceFormModal}
+        />
+      )}
     </>
   );
 };

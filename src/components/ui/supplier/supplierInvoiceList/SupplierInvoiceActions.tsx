@@ -14,20 +14,31 @@ import { useParams } from "next/navigation";
 
 interface SupplierInvoiceActionsProps {
   data: SupplierInvoiceType;
-  onDeleteSuccess?: () => void;
+  handleRefreshInvoice?: () => void;
+  setSelectedInvoiceId?: (value: number) => void;
 }
 
 const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
   data,
-  onDeleteSuccess,
+  handleRefreshInvoice,
+  setSelectedInvoiceId,
 }) => {
   const dispatch = useAppDispatch();
   const [deleteSupplierInvoice] = useMutation(DELETE_SUPPLIER_INVOICE_MUTATION);
-  const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
 
   const handleDelete = async () => {
+    if (data.veninvamtpaid > 0) {
+      dispatch(
+        showNotification({
+          message:
+            "Invoice has been partially or fully paid. You cannot delete it.",
+          type: NOTIFICATION_TYPES.WARNING,
+        })
+      );
+      return;
+    }
     const result = await showConfirmationDialog({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -52,8 +63,7 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
               type: NOTIFICATION_TYPES.SUCCESS,
             })
           );
-          // Trigger the callback to refresh data
-          onDeleteSuccess?.();
+          handleRefreshInvoice?.();
         }
         return true;
       });
@@ -69,22 +79,25 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
     }
   };
 
+  const handleEdit = () => {
+    if (data.veninvamtpaid > 0) {
+      dispatch(
+        showNotification({
+          message:
+            "Invoice has been partially or fully paid. You cannot edit it.",
+          type: NOTIFICATION_TYPES.WARNING,
+        })
+      );
+      return;
+    }
+    setSelectedInvoiceId?.(data.supplierinvoiceid);
+  };
+
   return (
     <div className="action-table-data">
       <div className="edit-delete-action">
         <div className="input-block add-lists"></div>
-        <Link
-          className="me-2 p-2"
-          href={`${basePath}/supplier/invoice/${data.supplierinvoiceid}/view`}
-          scroll={false}
-        >
-          <Eye className="feather-view" />
-        </Link>
-        <Link
-          className="me-2 p-2"
-          href={`${basePath}/supplier/invoice/${data.supplierinvoiceid}/edit`}
-          scroll={false}
-        >
+        <Link className="me-2 p-2" href="#" onClick={handleEdit} scroll={false}>
           <Edit className="feather-edit" />
         </Link>
         <Link

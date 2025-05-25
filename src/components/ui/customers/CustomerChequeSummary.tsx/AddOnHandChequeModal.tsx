@@ -12,13 +12,10 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { CheckOnHandType } from "@/types/customer";
 import { useMutation } from "@apollo/client";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import React, { useState } from "react";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
-import { PlusCircle } from "react-feather";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
-import ButtonLoader from "../../ButtonLoader";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
 
 const renderTooltip = (value: string) => (
@@ -62,19 +59,13 @@ const AddOnHandChequeModal = ({
     },
     mode: "all",
   });
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control,
     name: "entries",
   });
-  const [createNewCheckOnHand, { loading: createLoading }] = useMutation(
-    ADD_NEW_CHECK_ON_HAND_MUTATION
-  );
-  const [updateCheckOnHand, { loading: updateLoading }] = useMutation(
-    UPDATE_CHECK_ON_HAND_MUTATION
-  );
-  const [deleteCheckOnHand, { loading: deleteLoading }] = useMutation(
-    DELETE_CHECK_ON_HAND_MUTATION
-  );
+  const [createNewCheckOnHand] = useMutation(ADD_NEW_CHECK_ON_HAND_MUTATION);
+  const [updateCheckOnHand] = useMutation(UPDATE_CHECK_ON_HAND_MUTATION);
+  const [deleteCheckOnHand] = useMutation(DELETE_CHECK_ON_HAND_MUTATION);
   const dispatch = useAppDispatch();
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
@@ -221,7 +212,10 @@ const AddOnHandChequeModal = ({
                 <button
                   type="button"
                   className="close"
-                  onClick={() => setShowPrintModal(false)}
+                  onClick={() => {
+                    triggerFetchSummary();
+                    setShowPrintModal(false);
+                  }}
                 >
                   <span aria-hidden="true">X</span>
                 </button>

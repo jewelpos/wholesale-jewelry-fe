@@ -12,10 +12,9 @@ const renderTooltip = (value: string) => (
   <Tooltip id="tooltip">{value}</Tooltip>
 );
 
-const SupplierInvoiceListHeader = ({
-}) => {
+const SupplierInvoiceListHeader = ({}) => {
   const { currentMenu, currentPath } = useMenu();
-  console.log("dsdsd", currentMenu);
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}

@@ -20,10 +20,10 @@ any) => {
   const { fetchSuppliersByStoreId, suppliers, loading } = useSupplier();
 
   useEffect(() => {
-    if (storeId) {
+    if (storeId && !disableField) {
       fetchSuppliersByStoreId(storeId);
     }
-  }, [fetchSuppliersByStoreId, storeId]);
+  }, [fetchSuppliersByStoreId, storeId, disableField]);
 
   const supplierOptions: SelectOption[] = useMemo(
     () =>
@@ -37,34 +37,40 @@ any) => {
   );
 
   return (
-    <Select<SelectOption>
-      isLoading={loading}
-      options={supplierOptions}
-      placeholder="Select supplier"
-      isClearable
-      isDisabled={disableField}
-      className={`form-control p-0 ${className} select-form-custom`}
-      value={
-        value
-          ? {
-              value: value,
-              label:
-                supplierOptions.find((supplier) => supplier.value === value)
-                  ?.label || "",
-            }
-          : null
-      }
-      onChange={(option) => {
-        onChange(option?.value);
-        trigger(field.name);
-      }}
-      menuIsOpen={menuIsOpen}
-      onMenuOpen={() => setMenuIsOpen(true)}
-      onMenuClose={() => setMenuIsOpen(false)}
-      inputValue={input}
-      onInputChange={setInput}
-      {...field}
-    />
+    <>
+      {disableField ? (
+        <input type="text" className="form-control" value={value} disabled />
+      ) : (
+        <Select<SelectOption>
+          isLoading={loading}
+          options={supplierOptions}
+          placeholder="Select supplier"
+          isClearable
+          isDisabled={disableField}
+          className={`form-control p-0 ${className} select-form-custom`}
+          value={
+            value
+              ? {
+                  value: value,
+                  label:
+                    supplierOptions.find((supplier) => supplier.value === value)
+                      ?.label || "",
+                }
+              : null
+          }
+          onChange={(option) => {
+            onChange(option?.value);
+            trigger(field.name);
+          }}
+          menuIsOpen={menuIsOpen}
+          onMenuOpen={() => setMenuIsOpen(true)}
+          onMenuClose={() => setMenuIsOpen(false)}
+          inputValue={input}
+          onInputChange={setInput}
+          {...field}
+        />
+      )}
+    </>
   );
 };
 

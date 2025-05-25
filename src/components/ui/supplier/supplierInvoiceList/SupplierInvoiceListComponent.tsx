@@ -30,6 +30,7 @@ import { supplierInvoiceListColumnDefs } from "./ColumnDef";
 import SupplierInvoiceActions from "./SupplierInvoiceActions";
 import SupplierInvoiceListHeader from "./SupplierInvoiceListHeader";
 import { useParams } from "next/navigation";
+import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 
 const SupplierInvoiceListComponent = () => {
   const [getSupplierInvoiceList] = useLazyQuery(
@@ -42,6 +43,9 @@ const SupplierInvoiceListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
+    null
+  );
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierInvoiceType>) => {
     setGridReady(true);
@@ -91,7 +95,7 @@ const SupplierInvoiceListComponent = () => {
     [parsedStoreId, dispatch, getSupplierInvoiceList, debouncedSearch]
   );
 
-  const handleDeleteSuccess = useCallback(() => {
+  const handleRefreshInvoice = useCallback(() => {
     if (parsedStoreId && gridReady) {
       gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
@@ -120,7 +124,8 @@ const SupplierInvoiceListComponent = () => {
           params.data ? (
             <SupplierInvoiceActions
               data={params.data}
-              onDeleteSuccess={handleDeleteSuccess}
+              handleRefreshInvoice={handleRefreshInvoice}
+              setSelectedInvoiceId={setSelectedInvoiceId}
             />
           ) : null,
         width: 80,
@@ -133,7 +138,7 @@ const SupplierInvoiceListComponent = () => {
         enableRowGroup: false,
       },
     ],
-    [handleDeleteSuccess]
+    [handleRefreshInvoice, setSelectedInvoiceId]
   );
 
   return (
@@ -161,6 +166,13 @@ const SupplierInvoiceListComponent = () => {
           </div>
         </div>
       </div>
+      {selectedInvoiceId && (
+        <SupplierInvoiceFormModal
+          setShowInvoiceFormModal={() => setSelectedInvoiceId(null)}
+          supplierinvoiceid={selectedInvoiceId}
+          handleRefreshInvoice={handleRefreshInvoice}
+        />
+      )}
     </>
   );
 };

@@ -4,7 +4,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import ActionFooter from "../../../ActionFooter";
@@ -18,27 +18,33 @@ import {
 import { useMutation, useQuery } from "@apollo/client";
 import { GET_SUPPLIER_INVOICE_QUERY } from "@/lib/graphql/query/supplier";
 import SupplierInvoiceFormInputA from "./SupplierInvoiceFormInputA";
-import SupplierInvoiceFormInputB from "./SupplierInvoiceFormInputB";
 import PlaceHolder from "../../../PlaceHolder";
+import useSupplier from "@/hooks/useSupplier";
+import dayjs from "dayjs";
 
-const SupplierInvoiceForm = ({ disableField }: { disableField?: boolean }) => {
+const SupplierInvoiceForm = ({
+  supplierinvoiceid,
+  setShowInvoiceFormModal,
+  handleRefreshInvoice,
+}: {
+  supplierinvoiceid?: number;
+  setShowInvoiceFormModal: (value: boolean) => void;
+  handleRefreshInvoice?: () => void;
+}) => {
   const dispatch = useDispatch();
-  const router = useRouter();
-  const { storeId: storeIdParam, supplierinvoiceid } = useParams();
+  const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const parsedSupplierInvoiceId = parseInt(supplierinvoiceid as string, 10);
-
   const { data: invoiceData, loading: invoiceLoading } = useQuery(
     GET_SUPPLIER_INVOICE_QUERY,
     {
       variables: {
         storeid: parsedStoreId,
-        supplierinvoiceid: parsedSupplierInvoiceId,
+        supplierinvoiceid: supplierinvoiceid,
       },
-      skip: !storeIdParam || !parsedSupplierInvoiceId,
+      skip: !storeIdParam || !supplierinvoiceid,
     }
   );
-
+  const { supplier, fetchSupplier, loading: supplierLoading } = useSupplier();
   const [createInvoice, { loading: createLoading }] = useMutation(
     ADD_SUPPLIER_INVOICE_MUTATION
   );
@@ -55,45 +61,54 @@ const SupplierInvoiceForm = ({ disableField }: { disableField?: boolean }) => {
     getValues,
     trigger,
     reset,
-    setValue,
   } = useForm<SupplierInvoiceFormType>({
     defaultValues: {
       warehouseid: "",
       supplierid: "",
       veninvoiceno: "",
-      refponumber: 0,
-      veninvoicedate: "",
-      invpostingdate: "",
-      termsid: 0,
+      refponumber: "",
+      veninvoicedate: dayjs(),
+      termsid: 1,
       storeid: parsedStoreId,
+      veninvoicetotal: "",
     },
+    mode: "all",
   });
+  const disableField = !!supplierinvoiceid;
 
-  const storeId = getValues("storeid");
+  const supplierId = getValues("supplierid");
   const warehouseId = getValues("warehouseid");
+  const savedAmount =
+    invoiceData?.getSingleSupplierInvoice?.veninvoicetotal || 0;
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
     onCancel: () => {
       reset();
-      router.back();
+      setShowInvoiceFormModal(false);
     },
   });
 
-  const onSubmit: SubmitHandler<SupplierInvoiceFormType> = async ({
-    supplierid,
-    ...formData
-  }) => {
+  useEffect(() => {
+    if (supplierId && parsedStoreId) {
+      fetchSupplier(parsedStoreId, Number(supplierId));
+    }
+  }, [supplierId, parsedStoreId]);
+
+  const onSubmit: SubmitHandler<SupplierInvoiceFormType> = async (formData) => {
     let editPayload = {};
     if (supplierinvoiceid) {
       editPayload = {
         ...editPayload,
-        supplierinvoiceid: supplierinvoiceid ? Number(supplierinvoiceid) : null,
+        supplierinvoiceid: supplierinvoiceid,
       };
     }
     const payload = {
       ...formData,
       ...editPayload,
+      refponumber: Number(formData.refponumber),
+      veninvoicedate: formData.veninvoicedate,
+      veninvoicetotal: Number(formData.veninvoicetotal),
     };
 
     const result = await handleTryCatch(async () => {
@@ -118,7 +133,10 @@ const SupplierInvoiceForm = ({ disableField }: { disableField?: boolean }) => {
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        router.back();
+        if (supplierinvoiceid && handleRefreshInvoice) {
+          handleRefreshInvoice();
+        }
+        setShowInvoiceFormModal(false);
       }
       return true;
     });
@@ -136,48 +154,43 @@ const SupplierInvoiceForm = ({ disableField }: { disableField?: boolean }) => {
   };
 
   useEffect(() => {
-    if (invoiceData?.getSupplierInvoiceBySupplierInvoiceId) {
-      const { __typename, ...invoice } =
-        invoiceData.getSupplierInvoiceBySupplierInvoiceId;
+    if (invoiceData?.getSingleSupplierInvoice) {
+      const { __typename, ...invoice } = invoiceData.getSingleSupplierInvoice;
       reset({
-        ...invoice,
+        warehouseid: invoice.warehouseid,
+        supplierid: invoice.supplierid,
+        veninvoiceno: invoice.veninvoiceno,
+        refponumber: invoice.refponumber.toString(),
+        veninvoicedate: dayjs(invoice.veninvoicedate),
+        termsid: invoice.termsid,
         storeid: parsedStoreId,
+        veninvoicetotal: invoice.veninvoicetotal.toString(),
       });
     }
   }, [invoiceData, parsedStoreId, reset]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <fieldset disabled={disableField}>
-        <div className="card">
-          <div className="card-body">
-            {invoiceLoading ? (
-              [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
-            ) : (
-              <div className="new-employee-field">
-                <SupplierInvoiceFormInputA
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  storeId={storeId}
-                  warehouseId={warehouseId}
-                  disableField={disableField}
-                />
-                <SupplierInvoiceFormInputB
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  setValue={setValue}
-                  storeId={storeId}
-                  disableField={disableField}
-                />
-              </div>
-            )}
+      <fieldset>
+        {invoiceLoading ? (
+          [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
+        ) : (
+          <div className="new-employee-field">
+            <SupplierInvoiceFormInputA
+              register={register}
+              errors={errors}
+              control={control}
+              trigger={trigger}
+              warehouseId={warehouseId}
+              disableField={disableField}
+              supplier={supplier}
+              supplierLoading={supplierLoading}
+              storeId={parsedStoreId}
+              savedAmount={savedAmount}
+            />
           </div>
-        </div>
-        {!disableField && !invoiceLoading && (
+        )}
+        {!invoiceLoading && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
               loading={createLoading || updateLoading}
