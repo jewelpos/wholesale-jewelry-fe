@@ -45,9 +45,7 @@ const CustomerListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<
-    number | undefined
-  >(undefined);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
@@ -63,7 +61,7 @@ const CustomerListComponent = () => {
           debouncedSearch,
           "fullname, custcompanyname"
         );
-        if (selectedWarehouse) {
+        if (selectedWarehouse !== -1) {
           filtersMain = {
             ...filtersMain,
             filters: [

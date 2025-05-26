@@ -5,10 +5,10 @@ import { WarehouseType } from "@/types/warehouse";
 import { Col, Row } from "react-bootstrap";
 
 interface WarehouseFilterProps {
-  fetchWarehousesList: (parsedStoreId: number[]) => void;
+  fetchWarehousesList: (parsedStoreId: number) => void;
   warehouses: WarehouseType[];
   loading: boolean;
-  setSelectedWarehouse: Dispatch<SetStateAction<number | undefined>>;
+  setSelectedWarehouse: Dispatch<SetStateAction<number>>;
   selectedWarehouse: number | undefined;
 }
 
@@ -29,7 +29,7 @@ const WarehouseFilter = ({
   }, [parsedStoreId, fetchWarehousesList]);
 
   const warehouseList = [
-    { label: "All", value: undefined },
+    { label: "All", value: -1 },
     ...warehouses.map((warehouse) => ({
       label: warehouse.warehousename,
       value: warehouse.warehouseid,

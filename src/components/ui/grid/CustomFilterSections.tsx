@@ -11,9 +11,7 @@ interface Props {
   selectedOutlet?: number | undefined;
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedWarehouse?: number | undefined;
-  setSelectedWarehouse?: React.Dispatch<
-    React.SetStateAction<number | undefined>
-  >;
+  setSelectedWarehouse?: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const CustomFilterSections = ({
