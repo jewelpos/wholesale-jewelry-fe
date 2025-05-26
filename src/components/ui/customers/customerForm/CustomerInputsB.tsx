@@ -238,6 +238,23 @@ const CustomerInputsB = ({
           </div>
         </div>
       </div>
+      <div className="col-lg-12 col-md-6">
+        <div className="mb-3">
+          <div className="form-check form-check-md form-switch">
+            <label className="form-label">Alert warning</label>
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              {...register("custalert")}
+              onChange={(e) => {
+                setValue("custalert", e.target.checked ? 1 : 0);
+                trigger("custalert");
+              }}
+            />
+          </div>
+        </div>
+      </div>
       <div className="col-lg-6 col-md-12">
         <div className="mb-3">
           <label className="form-label">Alert remarks</label>

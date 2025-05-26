@@ -29,6 +29,7 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import SupplierActions from "./SupplierActions";
 import SupplierListHeader from "./SupplierListHeader";
+import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -38,6 +39,8 @@ const SupplierListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [showInvoiceFormModal, setShowInvoiceFormModal] =
+    useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierListType>) => {
     setGridReady(true);
@@ -104,22 +107,6 @@ const SupplierListComponent = () => {
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      {
-        headerName: "",
-        field: "checkbox",
-        headerCheckboxSelection: true,
-        checkboxSelection: true,
-        width: 50,
-        pinned: "left",
-        sortable: false,
-        filter: false,
-        maxWidth: 50,
-        suppressSizeToFit: false,
-        suppressMovable: true,
-        suppressHeaderMenuButton: true,
-        enableRowGroup: false,
-        headerCheckboxSelectionFilteredOnly: true,
-      },
       ...supplierListcolumnDefs,
       {
         headerName: "Actions",
@@ -146,7 +133,7 @@ const SupplierListComponent = () => {
 
   return (
     <>
-      <SupplierListHeader />
+      <SupplierListHeader setShowInvoiceFormModal={setShowInvoiceFormModal} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -164,11 +151,21 @@ const SupplierListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
-              rowSelection="multiple"
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
             />
           </div>
         </div>
       </div>
+      {showInvoiceFormModal && (
+        <SupplierInvoiceFormModal
+          setShowInvoiceFormModal={setShowInvoiceFormModal}
+        />
+      )}
     </>
   );
 };

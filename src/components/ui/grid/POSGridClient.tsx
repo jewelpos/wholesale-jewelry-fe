@@ -1,0 +1,109 @@
+import { AgGridReact, AgGridReactProps } from "ag-grid-react";
+import React, { forwardRef } from "react";
+import CustomLoadingOverlay from "./CustomLoadingOverlay";
+import CustomNoRowsOverlay from "./CustomNoRowsOverlay";
+import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+
+interface POSGridClientProps extends AgGridReactProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columnDefs: any[]; // Replace `any[]` with the actual type of columnDefs if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gridOptions?: any; // You can type gridOptions more specifically if needed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onGridReady: (params: any) => void; // Type this callback function as needed
+  // You can type gridOptions more specifically if needed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  defaultColDef?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rowSelection?: any;
+  loading?: boolean;
+  masterDetail?: boolean;
+}
+
+const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
+  (
+    {
+      columnDefs,
+      gridOptions,
+      onGridReady,
+      defaultColDef = { filter: true, floatingFilter: true },
+      rowSelection,
+      rowData,
+      loading,
+      masterDetail,
+      ...props
+    },
+    ref
+  ) => {
+    const { autoSizeStrategy } = useAutoSizeAggrid();
+    return (
+      <div
+        className="ag-theme-quartz custom-theme"
+        style={{ height: "calc(100vh - 300px)", width: "100%" }}
+      >
+        <AgGridReact
+          ref={ref}
+          columnDefs={columnDefs}
+          defaultColDef={{
+            sortable: true,
+            enableRowGroup: true,
+            minWidth: 200,
+            ...defaultColDef,
+          }}
+          gridOptions={{
+            rowHeight: 42,
+            headerHeight: 50,
+            suppressServerSideFullWidthLoadingRow: true,
+            // sideBar: true,
+            ...gridOptions,
+          }}
+          rowData={rowData}
+          rowSelection={rowSelection}
+          rowGroupPanelShow="always"
+          domLayout="normal"
+          pagination={true}
+          onGridReady={onGridReady}
+          autoSizeStrategy={autoSizeStrategy}
+          paginationPageSize={20}
+          loadingOverlayComponent={CustomLoadingOverlay}
+          noRowsOverlayComponent={CustomNoRowsOverlay}
+          sideBar={{
+            toolPanels: [
+              {
+                id: "columns",
+                labelDefault: "Columns",
+                labelKey: "columns",
+                iconKey: "columns",
+                toolPanel: "agColumnsToolPanel",
+
+                toolPanelParams: {
+                  suppressRowGroups: true,
+                  suppressValues: true,
+                  suppressPivots: true, // show Pivot section
+                  suppressPivotMode: true,
+                },
+              },
+              {
+                id: "filters",
+                labelDefault: "Filters",
+                labelKey: "filters",
+                iconKey: "filter",
+                toolPanel: "agFiltersToolPanel",
+              },
+            ],
+            defaultToolPanel: "", // optional: open with Filters
+          }}
+          groupDisplayType="singleColumn"
+          maxBlocksInCache={100}
+          loading={loading}
+          masterDetail={masterDetail}
+          {...props}
+        />
+      </div>
+    );
+  }
+);
+
+POSGridClient.displayName = "POSGridClient";
+
+export default POSGridClient;

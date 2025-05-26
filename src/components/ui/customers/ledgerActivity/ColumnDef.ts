@@ -3,15 +3,26 @@ import { CustomerLedgerReportType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
-import ActionCellRenderer from "../../grid/ActionRenderer";
 
 export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
   {
     headerName: "Customer",
     field: "ledgercustid",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Company name",
+    field: "custcompanyname",
     filter: "agTextColumnFilter",
   },
-  { headerName: "Code", field: "ledgercode", filter: "agTextColumnFilter" },
+  {
+    headerName: "Date",
+    field: "ledgerdate",
+    cellRenderer: (params: ICellRendererParams) =>
+      dayjs(params.value).format(TIME_FORMAT),
+    filter: "agDateColumnFilter",
+  },
+  { headerName: "Activity", field: "ledgercode", filter: "agTextColumnFilter" },
   {
     headerName: "Description",
     field: "ledgerdescription",
@@ -45,32 +56,5 @@ export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
     field: "warehousename",
     filter: "agTextColumnFilter",
   },
-  {
-    headerName: "Date",
-    field: "ledgerdate",
-    cellRenderer: (params: ICellRendererParams) =>
-      dayjs(params.value).format(TIME_FORMAT),
-    filter: "agDateColumnFilter",
-  },
-  {
-    headerName: "Actions",
-    cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
-    pinned: "right",
-    suppressSizeToFit: false,
-    sortable: false,
-    filter: false,
-    suppressHeaderMenuButton: true,
-    cellRendererParams: {
-      onEdit: (data: CustomerLedgerReportType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: CustomerLedgerReportType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: CustomerLedgerReportType) => {
-        console.log("View clicked", data);
-      },
-    },
-  },
+  
 ];

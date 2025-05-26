@@ -14,7 +14,9 @@ interface POSGridProps extends AgGridReactProps {
   // You can type gridOptions more specifically if needed
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultColDef?: any;
-  rowSelection?: "single" | "multiple";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rowSelection?: any;
+  domLayout?: "autoHeight" | "normal";
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
@@ -25,6 +27,8 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       onGridReady,
       defaultColDef = { filter: true, floatingFilter: true },
       rowSelection,
+      domLayout = "normal",
+      ...props
     },
     ref
   ) => {
@@ -32,7 +36,10 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     return (
       <div
         className="ag-theme-quartz custom-theme"
-        style={{ height: "550px", width: "100%" }}
+        style={{
+          height: domLayout === "autoHeight" ? "auto" : "calc(100vh - 300px)",
+          width: "100%",
+        }}
       >
         <AgGridReact
           ref={ref}
@@ -52,7 +59,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           }}
           rowSelection={rowSelection}
           rowGroupPanelShow="always"
-          domLayout="normal"
+          domLayout={domLayout}
           rowModelType="serverSide"
           pagination={true}
           onGridReady={onGridReady}
@@ -88,6 +95,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           }}
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
+          {...props}
         />
       </div>
     );

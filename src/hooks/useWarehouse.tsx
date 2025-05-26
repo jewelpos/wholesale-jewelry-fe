@@ -15,12 +15,12 @@ const useWarehouse = () => {
     GET_WAREHOUSES_BY_STORE_ID_QUERY
   );
 
-  const fetchWarehouseByStoreId = useCallback(async (storeIds: number[]) => {
+  const fetchWarehouseByStoreId = useCallback(async (storeId: number) => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
         const { data } = await getWarehousesByStoreId({
-          variables: { storeid: storeIds },
+          variables: { storeid: storeId },
         });
         if (data.getWarehousesByStoreId) {
           setWarehouses(data.getWarehousesByStoreId);

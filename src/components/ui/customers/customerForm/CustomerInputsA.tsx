@@ -3,7 +3,7 @@
 import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { phoneNumberValidationCustomized } from "@/lib/utils/validations/formValidations";
 import { CustomerFormType } from "@/types/customer";
-import React from "react";
+import React, { useState, useRef } from "react";
 import { PlusCircle } from "react-feather";
 import Image from "next/image";
 import {
@@ -15,6 +15,7 @@ import {
   UseFormTrigger,
 } from "react-hook-form";
 import SelectCountry from "@/components/forms/SelectCountry";
+import ImageCaptureUpload from "@/components/ui/common/ImageCaptureUpload";
 
 interface Props {
   register: UseFormRegister<CustomerFormType>;
@@ -37,15 +38,6 @@ const CustomerInputsA = ({
   customerId,
   disableField,
 }: Props) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setValue("custphotopath", url);
-      trigger("custphotopath");
-    }
-  };
-
   return (
     <>
       <div className="row">
@@ -189,39 +181,27 @@ const CustomerInputsA = ({
         </div>
         <div className="col-lg-4 col-md-6 d-flex justify-content-center align-items-center">
           <div className="profile-pic-upload text-center">
-            <div className="profile-pic">
-              {!photoPath && (
-                <span>
-                  <PlusCircle className="plus-down-add" />
-                  Profile Photo
-                </span>
-              )}
-              {photoPath && (
-                <Image
-                  src={photoPath}
-                  unoptimized
-                  alt="Preview"
-                  width={100}
-                  height={100}
+            <Controller
+              name="file"
+              control={control}
+              render={({ field }) => (
+                <ImageCaptureUpload
+                  value={field.value || photoPath || null}
+                  onChange={(img) => {
+                    field.onChange(img);
+                    if (typeof img === "string") {
+                      setValue("custphotopath", img);
+                    } else if (img instanceof File) {
+                      const url = URL.createObjectURL(img);
+                      setValue("custphotopath", url);
+                    }
+                    trigger("custphotopath");
+                  }}
+                  label="Profile Photo"
+                  disabled={!!disableField}
                 />
               )}
-            </div>
-            {!disableField && (
-              <div className="input-blocks mb-0">
-                <div className="image-upload mb-0">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment" // opens camera on mobile
-                    {...register("file")}
-                    onChange={handleFileChange}
-                  />
-                  <div className="image-uploads">
-                    <h4>Change image</h4>
-                  </div>
-                </div>
-              </div>
-            )}
+            />
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import Content from "@/components/layout/Content";
 import SupplierListComponent from "@/components/ui/supplier/supplierList/SupplierListComponent";
 
-const SupplierLedgerActivity = () => {
+const SupplierList = () => {
   return (
     <Content>
       <SupplierListComponent />
@@ -9,4 +9,4 @@ const SupplierLedgerActivity = () => {
   );
 };
 
-export default SupplierLedgerActivity;
+export default SupplierList;

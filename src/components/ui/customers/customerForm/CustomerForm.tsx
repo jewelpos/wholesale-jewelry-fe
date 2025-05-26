@@ -73,6 +73,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
       custphotopath: "",
       file: null,
       customerid: "",
+      custalert: 0,
     },
   });
   const storeId = getValues("storeid");
@@ -92,19 +93,33 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
 
   const onSubmit: SubmitHandler<CustomerFormType> = async (formData) => {
     setLoading(true);
+    let updatedParams = {};
+    if (formData?.file) {
+      updatedParams = {
+        ...updatedParams,
+        file: formData?.file,
+      };
+    }
+    if (customerId) {
+      updatedParams = {
+        ...updatedParams,
+        customerid: Number(formData.customerid),
+      };
+    }
+    const { file, customerid, ...rest } = formData;
     const payload = {
-      ...formData,
+      ...rest,
       custshippingmethod: formData.custshippingmethod.toString(),
       custdiscount: Number(formData.custdiscount),
       custcreditlimit: Number(formData.custcreditlimit),
       custsalestax: Number(formData.custsalestax),
-      warehouseId: Number(formData.warehouseid),
-      file: formData?.file[0] || null,
-      customerid: customerId ? Number(formData.customerid) : null,
+      warehouseid: Number(formData.warehouseid),
+      ...updatedParams,
       custphotopath: "",
     };
     const form = new FormData();
-    Object.entries(payload).forEach(([key, value]) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Object.entries(payload).forEach(([key, value]: [string, any]) => {
       form.append(key, value);
     });
     const result = await handleTryCatch(

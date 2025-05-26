@@ -121,3 +121,117 @@ export const GET_SUPPLIER_QUERY = gql`
     }
   }
 `;
+
+export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
+  query GetSupplierInvoiceList(
+    $storeid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getSupplierInvoiceList(
+      storeid: $storeid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        supplierinvoiceid
+        supplierid
+        veninvoiceno
+        veninvoicedate
+        veninvoicetotal
+        veninvamtpaid
+        veninvamtbalance
+        refponumber
+        invpostingdate
+        veninvremarks
+        warehouseid
+        veninvbankid
+        enteredbyid
+        termsid
+        venpostchkamount
+        venpostchkamountdue
+        vencrediapplied
+        lastmodifiedbyid
+        lastmodifieddate
+        warehousename
+        suppliername
+        termsname
+        enteredbyname
+      }
+    }
+  }
+`;
+
+
+export const GET_SUPPLIERS_BY_STORE_ID_QUERY = gql`
+  query GetSuppliersByStoreId($storeid: Int!) {
+    getSuppliersByStoreId(storeid: $storeid) {
+      supplierid
+      companyname
+      contactname
+      city
+      accountno
+      termsname
+      phone1
+      cellphone
+      emailaddress
+      webaddress
+      shippimgmethod
+      discountrate
+      warehousename
+      address1
+      address2
+      state
+      zipcode
+      country
+      phone2
+      supplierstatus
+      remarks
+      warehouseid
+      outletid
+      createdbyid
+      createddate
+      lastmodifiedbyid
+      lastmodifieddate
+    }
+  }
+`;
+
+export const GET_SUPPLIER_INVOICE_QUERY = gql`
+query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
+  getSingleSupplierInvoice(storeid: $storeid, supplierinvoiceid: $supplierinvoiceid) {
+    supplierinvoiceid
+    supplierid
+    veninvoiceno
+    veninvoicedate
+    veninvoicetotal
+    veninvamtpaid
+    veninvamtbalance
+    refponumber
+    invpostingdate
+    veninvremarks
+    warehouseid
+    veninvbankid
+    enteredbyid
+    termsid
+    venpostchkamount
+    venpostchkamountdue
+    vencrediapplied
+    lastmodifiedbyid
+    lastmodifieddate
+    warehousename
+    suppliername
+    termsname
+    enteredbyname
+  }
+}
+`;

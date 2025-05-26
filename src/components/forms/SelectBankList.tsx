@@ -37,7 +37,7 @@ any) => {
       options={options}
       placeholder="Select bank"
       isClearable
-      className={`form-control p-0 ${className}`}
+      className={`form-control p-0 ${className} select-form-custom`}
       value={
         value
           ? {

@@ -30,8 +30,13 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import CustomerActions from "./CustomerActions";
 import CustomerListHeader from "./CustomerListHeader";
+import PrintModal from "../../PrintModal";
+import CustomerPrintDetails from "./CustomerPrintDetails";
 
 const CustomerListComponent = () => {
+  const [selectedCustomerId, setSelectedCustomerId] = useState<
+    number | undefined
+  >(undefined);
   const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY);
   const dispatch = useAppDispatch();
   const { storeId: storeIdParam } = useParams();
@@ -40,6 +45,8 @@ const CustomerListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
     setGridReady(true);
@@ -49,16 +56,32 @@ const CustomerListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
+        let filtersMain = filterVariables(
           params,
           debouncedSearch,
           "fullname, custcompanyname"
         );
+        if (selectedWarehouse !== -1) {
+          filtersMain = {
+            ...filtersMain,
+            filters: [
+              ...filtersMain.filters,
+              {
+                key: "warehouseid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedWarehouse,
+                },
+              },
+            ],
+          };
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getCustomerList({
             variables: {
               storeid: parsedStoreId,
-              ...filters,
+              ...filtersMain,
             },
           });
           if (data.getCustomerList) {
@@ -86,7 +109,13 @@ const CustomerListComponent = () => {
         }
       },
     }),
-    [parsedStoreId, dispatch, getCustomerList, debouncedSearch]
+    [
+      parsedStoreId,
+      dispatch,
+      getCustomerList,
+      debouncedSearch,
+      selectedWarehouse,
+    ]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -106,26 +135,10 @@ const CustomerListComponent = () => {
       gridRef?.current?.api?.setFilterModel(null);
       gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [debouncedSearch, gridReady, datasource]);
+  }, [debouncedSearch, gridReady, datasource, selectedWarehouse]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      {
-        headerName: "",
-        field: "checkbox",
-        headerCheckboxSelection: true,
-        checkboxSelection: true,
-        width: 50,
-        pinned: "left",
-        sortable: false,
-        filter: false,
-        maxWidth: 50,
-        suppressSizeToFit: false,
-        suppressMovable: true,
-        suppressHeaderMenuButton: true,
-        enableRowGroup: false,
-        headerCheckboxSelectionFilteredOnly: true,
-      },
       ...customersListColumnDefs,
       {
         headerName: "Actions",
@@ -153,10 +166,18 @@ const CustomerListComponent = () => {
 
   return (
     <>
-      <CustomerListHeader />
+      <CustomerListHeader
+        selectedCustomerId={selectedCustomerId}
+        setShowPrintModal={setShowPrintModal}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <CustomFilterSections search={search} setSearch={setSearch} />
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
+          />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
@@ -166,11 +187,25 @@ const CustomerListComponent = () => {
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
-              rowSelection="multiple"
+              rowSelection={{
+                mode: "singleRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
+              onSelectionChanged={() => {
+                const selected = gridRef.current?.api?.getSelectedRows() || [];
+                setSelectedCustomerId(selected[0]?.customerid);
+              }}
             />
           </div>
         </div>
       </div>
+      {showPrintModal && selectedCustomerId && (
+        <PrintModal setShowPrintModal={setShowPrintModal}>
+          <CustomerPrintDetails selectedCustomerId={selectedCustomerId} />
+        </PrintModal>
+      )}
     </>
   );
 };

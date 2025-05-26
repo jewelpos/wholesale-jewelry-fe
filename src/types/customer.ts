@@ -25,7 +25,7 @@ export type CustomerChequeListType = {
   checkamount: number;
   checkstatus: string;
   checkentrydate: string;
-  checkenteredbyid: number;
+  enteredby: string;
   customercheckdetailid: number;
   chkinvoiceno: string;
   chkremarks: string;
@@ -37,7 +37,7 @@ export type CustomerChequeListType = {
   chknsf: boolean;
   chkvoid: boolean;
   lastmodifieddate: string;
-  lastmodifiedbyid: number;
+  modifiedby: string;
 };
 
 export type CustomerChequeListResponseType = {
@@ -45,8 +45,31 @@ export type CustomerChequeListResponseType = {
   data: CustomerChequeListType[];
 };
 
+export type CustomerChequeSummaryListType = {
+  customerid: string;
+  custcompanyname: string;
+  warehouseid: number;
+  outletid: number;
+  year: number;
+  Jan: string;
+  Feb: string;
+  Mar: string;
+  Apr: string;
+  May: string;
+  Jun: string;
+  Jul: string;
+  Aug: string;
+  Sep: string;
+  Oct: string;
+  Nov: string;
+  Dec: string;
+  yearly_total: string;
+};
+
 export type CustomerLedgerReportType = {
   ledgercustid: number;
+  custcompanyname: string;
+  customername: string;
   ledgerdate: string;
   ledgerid: number;
   ledgercode: string;
@@ -85,24 +108,25 @@ export type CustomerBalanceReportResponseType = {
 };
 
 export type CustomerPaymentListType = {
-  customerid: number;
   transactionno: string;
-  paymentdate: string;
+  custcompanyname: string;
+  paymentdate: Date;
   invoiceno: string;
   paymode: string;
   checkcardno: string;
   amountpaid: number;
   paymentstatus: string;
-  appliedbyid: number;
+  appliedby: string;
+  paymentreference: string;
+  customerid: string;
+  bankname: string;
   warehousename: string;
   warehouseid: number;
   outletid: number;
-  bankid: number;
-  paymentreference: string;
-  dateofentry: string;
+  dateofentry: Date;
   voidpayment: boolean;
   customerpaymentid: number;
-  lastmodifieddate: string;
+  lastmodifieddate: Date;
 };
 
 export type CustomerPaymentListResponseType = {
@@ -129,6 +153,9 @@ export type CustomersListType = {
   warehousename: string;
   warehouseid: number;
   outletid: number;
+  custstate: string;
+  custzip: string;
+  custaddress: string;
 };
 
 export type CustomersListResponseType = {
@@ -166,4 +193,45 @@ export type CustomerFormType = {
   custphotopath: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   file: any;
+  custalert: number;
 };
+
+export type CustomerType = {
+  customerid: number;
+  custcompanyname: string;
+  custadd1: string;
+  custcity: string;
+  custstate: string;
+  custzip: string;
+  custcountry: string;
+  custphone1: string;
+  custcell: string;
+  custemailadd: string;
+  custfname: string;
+  custlname: string;
+  custphone2: string;
+  storeid: number;
+  warehouseid: string;
+  custdiscount: number;
+  custcreditlimit: number;
+  termsid: number;
+  custshippingmethod: string;
+  custbillto: string;
+  custshipto: string;
+  custtaxid: string;
+  custsalestax: number;
+  status: number;
+  custremarks: string;
+  custalertremarks: string;
+  custphotopath: string;
+  custalert: number;
+}
+
+export type CheckOnHandType={
+  warehouseid: string;
+  customerid: string;
+  checkno: string;
+  checkamount: string;
+  checkpostingdate: string;
+  customercheckdetailid?: number | string;
+}
