@@ -45,10 +45,10 @@ export type AddUserFormType = {
   storeid: number;
   outlets: MultiValue<SelectOption>;
   roleid: number;
-  permissions: AddUserPermissionType;
 };
 
 export type UsersListType = {
+  id: number;
   userid: number;
   userfullname: string;
   emailaddress: string;

@@ -128,7 +128,7 @@ export type SupplierInvoiceFormType = {
 
 export type SupplierType = {
   supplierid: number;
-  companyname?: string;
+  companyname: string;
   address1?: string;
   address2?: string;
   city?: string;
@@ -151,3 +151,73 @@ export type SupplierType = {
   supplierfname?: string;
   supplierlname?: string;
 };
+
+export type SupplierPayment = {
+  paymentid: number;
+  companyname: string;
+  postingdate: string;
+  reference: string;
+  paymode: string;
+  checkcardno: string;
+  chk_description: string;
+  amountpaid: number;
+  checkstatus: string;
+  appliedby: string;
+  supplierid: number;
+  bankname: string;
+  warehousename: string;
+  warehouseid: number;
+  voided: string;
+  username: string;
+  lastmodifieddate: string;
+};
+
+export type SupplierPaymentResponseType = {
+  total: number;
+  data: SupplierPayment[];
+};
+
+export type AppliedPaymentType = {
+  appliedamountid: number;
+  supplierpaymentid: number;
+  paymode: string;
+  appliedamount: number;
+  invoicenumber: string;
+  applieddate: string;
+  checkcardno: string;
+  appliedby: string;
+  voided: string;
+  creditinvoice: string;
+  warehousename: string;
+  chk_description: string;
+  companyname: string;
+  lastmodifieddate: string;
+  supplierid: number;
+  warehouseid: number;
+};
+
+export type AppliedPaymentResponseType = {
+  total: number;
+  data: AppliedPaymentType[];
+};
+
+export type NewPaymentFormType = {
+  supplierid: number,
+  postingdate: dayjs.Dayjs,
+  paymentmodeid: number,
+  checkcardno: string,
+  amount: string,
+  invoicenumber: string,
+  reference: string 
+}
+
+export type SupplierBalanceDueType = {
+  supplierinvoiceid: number;
+  supplierid: number;
+  veninvoiceno: string;
+  veninvoicedate: string;
+  veninvoicetotal: number;
+  veninvamtpaid: number;
+  veninvamtbalance: number;
+  warehouseid: number;
+}

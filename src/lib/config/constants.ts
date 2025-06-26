@@ -49,3 +49,17 @@ export const CHECK_STATUS = {
   CREDIT_ADJUSTMENT: "ADJ",
   WRITE_OFF_ADJUSTMENT: "OFF"
 }
+
+export const paymentModes = {
+  CHECK: "Check",
+  CASH: "Cash",
+  CHARGE: "Charge",
+  CASH_CHECK: "CashChk",
+  MONEY_ORDER: "MnyOrd",
+  CREDIT_INV: "CrdInv",
+  WIRE_TRANSFER: "WireTrn",
+  RE_DEPOSIT: "ReDep",
+  NSF: "NSF",
+  VOID: "Void",
+  WRITE_OFF: "WriteOff",
+};

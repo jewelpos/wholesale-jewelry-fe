@@ -4,43 +4,54 @@ import React, { useEffect, useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import useSupplier from "@/hooks/useSupplier";
+import { UseFormTrigger } from "react-hook-form";
 
-const SelectSupplier = ({
+interface SelectSupplierInvoiceProps {
+  value: number | string | null;
+  onChange: (value: any) => void;
+  className?: string;
+  trigger: UseFormTrigger<any>;
+  storeId: number;
+  supplierId: number | null;
+  disableField?: boolean;
+  // other Controller props
+  [key: string]: any;
+}
+
+const SelectSupplierInvoice = ({
   value,
   onChange,
   className,
   trigger,
   storeId,
+  supplierId,
   disableField,
   ...field
-}: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-any) => {
+}: SelectSupplierInvoiceProps) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchSuppliersByStoreId, suppliers, loading } = useSupplier();
+  const { fetchSupplierInvoices, supplierInvoices, loading } = useSupplier();
 
   useEffect(() => {
-    if (storeId) {
-      fetchSuppliersByStoreId(storeId);
+    if (storeId && supplierId) {
+      fetchSupplierInvoices(storeId, supplierId);
     }
-  }, [fetchSuppliersByStoreId, storeId]);
+  }, [fetchSupplierInvoices, storeId, supplierId]);
 
-  const supplierOptions: SelectOption[] = useMemo(
+  const invoiceOptions: SelectOption[] = useMemo(
     () =>
-      suppliers.map(
-        (supplier: { supplierid: number; companyname: string }) => ({
-          value: supplier.supplierid,
-          label: supplier.companyname,
-        })
-      ),
-    [suppliers]
+      supplierInvoices.map((inv) => ({
+        value: inv.veninvoiceno,
+        label: inv.veninvoiceno,
+      })),
+    [supplierInvoices]
   );
 
   return (
     <Select<SelectOption>
       isLoading={loading}
-      options={supplierOptions}
-      placeholder="Select supplier"
+      options={invoiceOptions}
+      placeholder="Select invoice"
       isClearable
       isDisabled={disableField}
       className={`form-control p-0 ${className} select-form-custom`}
@@ -49,8 +60,7 @@ any) => {
           ? {
               value: value,
               label:
-                supplierOptions.find((supplier) => supplier.value === value)
-                  ?.label || "",
+                invoiceOptions.find((inv) => inv.value === value)?.label || "",
             }
           : null
       }
@@ -68,4 +78,4 @@ any) => {
   );
 };
 
-export default SelectSupplier;
+export default SelectSupplierInvoice;

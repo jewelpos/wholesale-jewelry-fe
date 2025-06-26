@@ -6,7 +6,7 @@ import { useLazyQuery } from "@apollo/client";
 import { GET_USERS_LIST_QUERY } from "@/lib/graphql/query/user";
 import { useParams } from "next/navigation";
 import { UsersListType } from "@/types/user";
-import { ColDef, GridReadyEvent, ICellRendererParams } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import Link from "next/link";
 import { getRandomUserAvatar, getShortName } from "@/lib/utils/parse";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -15,6 +15,10 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CustomLoadingOverlay from "../grid/CustomLoadingOverlay";
 import CustomNoRowsOverlay from "../grid/CustomNoRowsOverlay";
+import UserListHeader from "./UserListHeader";
+import POSGridClient from "../grid/POSGridClient";
+// import UserActions from "./UserActions";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 const UserComponent = () => {
   const { storeId } = useParams();
@@ -23,15 +27,16 @@ const UserComponent = () => {
   const [users, setUsers] = useState<UsersListType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const dispatch = useAppDispatch();
+  const { basePath } = useDefaultRoute();
 
-  const columnDefs: ColDef<UsersListType>[] = [
+  const columnDefs: ColDef[] = [
     {
       headerName: "User",
       field: "userfullname",
       filter: true,
       cellRenderer: (params: ICellRendererParams) => (
         <Link
-          href={`/`}
+          href={`${basePath}/users/${params?.data?.id}`}
           style={{ display: "flex", alignItems: "center", gap: 10 }}
         >
           <span
@@ -49,6 +54,21 @@ const UserComponent = () => {
     { headerName: "Outlet", field: "outletname" },
     { headerName: "Phone number", field: "userphone" },
     { headerName: "Email ID", field: "emailaddress" },
+    // {
+    //   headerName: "Actions",
+    //   field: "actions",
+    //   cellRenderer: (params: ICellRendererParams<UsersListType>) =>
+    //     params.data ? <UserActions data={params.data} /> : null,
+    //   width: 120,
+    //   sortable: false,
+    //   filter: false,
+    //   maxWidth: 150,
+    //   pinned: "right",
+    //   suppressSizeToFit: false,
+    //   suppressMovable: true,
+    //   suppressHeaderMenuButton: true,
+    //   enableRowGroup: false,
+    // },
   ];
 
   const onGridReady = useCallback(async () => {
@@ -78,26 +98,25 @@ const UserComponent = () => {
   }, [dispatch, getUserListUnderStore, parsedStoreId]);
 
   return (
-    <div className="ag-theme-quartz custom-theme">
-      <AgGridReact<UsersListType>
-        loading={loading}
-        rowData={users}
-        columnDefs={columnDefs}
-        defaultColDef={{
-          filter: true,
-          flex: 1,
-        }}
-        gridOptions={{
-          rowHeight: 37,
-          headerHeight: 50,
-        }}
-        pagination
-        domLayout="autoHeight"
-        onGridReady={onGridReady}
-        loadingOverlayComponent={CustomLoadingOverlay}
-        noRowsOverlayComponent={CustomNoRowsOverlay}
-      />
-    </div>
+    <>
+      <UserListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <div className="ag-theme-quartz custom-theme">
+            <POSGridClient
+              columnDefs={columnDefs}
+              onGridReady={onGridReady}
+              loadingOverlayComponent={CustomLoadingOverlay}
+              noRowsOverlayComponent={CustomNoRowsOverlay}
+              rowData={users}
+              loading={loading}
+              pagination
+              height="250px"
+            />
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
