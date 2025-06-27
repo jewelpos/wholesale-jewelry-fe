@@ -1,34 +1,15 @@
-"use client";
-
-import React from "react";
-import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
-import Link from "next/link";
+import PageHeader from "../../PageHeader";
 import { MenuAction } from "@/types/permissions";
 import {
   renderActionButtonColor,
   renderActionButtonIconName,
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
+import Link from "next/link";
 
-interface CustomerListHeaderProps {
-  selectedCustomerId?: number;
-  setShowPrintModal: (value: boolean) => void;
-}
-
-const CustomerListHeader = ({
-  selectedCustomerId,
-  setShowPrintModal,
-}: CustomerListHeaderProps) => {
+export default function SupplierPaymentsHeader() {
   const { currentMenu, currentPath } = useMenu();
-
-  const handleAction = (actionName: string) => {
-    if (actionName.includes("print")) {
-      setShowPrintModal(true);
-    } else if (actionName.includes("export")) {
-      setShowPrintModal(true);
-    }
-  };
 
   return (
     <PageHeader
@@ -50,10 +31,6 @@ const CustomerListHeader = ({
               const isModalButton =
                 btn.actionname.includes("print") ||
                 btn.actionname.includes("export");
-              const disabledButton =
-                !selectedCustomerId &&
-                (btn.actionname.includes("print") ||
-                  btn.actionname.includes("export"));
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -61,12 +38,7 @@ const CustomerListHeader = ({
                 >
                   <Link
                     href={isModalButton ? "#" : `${currentPath}/new`}
-                    onClick={() =>
-                      isModalButton ? handleAction(btn.actionname) : null
-                    }
-                    className={`btn btn-added ${btnColor} ${
-                      disabledButton ? "disabled" : ""
-                    }`}
+                    className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
@@ -77,6 +49,4 @@ const CustomerListHeader = ({
       </div>
     </PageHeader>
   );
-};
-
-export default CustomerListHeader;
+}

@@ -20,10 +20,10 @@ any) => {
   const { fetchWarehouseByStoreId, warehouses, loading } = useWarehouse();
 
   useEffect(() => {
-    if (storeId && !disableField) {
+    if (storeId) {
       fetchWarehouseByStoreId(storeId);
     }
-  }, [fetchWarehouseByStoreId, storeId, disableField]);
+  }, [fetchWarehouseByStoreId, storeId]);
 
   const warehouseOptions: SelectOption[] = useMemo(
     () =>
@@ -37,41 +37,34 @@ any) => {
   );
 
   return (
-    <>
-      {disableField ? (
-        <input type="text" className="form-control" value={value} disabled />
-      ) : (
-        <Select<SelectOption>
-          isLoading={loading}
-          options={warehouseOptions}
-          placeholder="Select warehouse"
-          isClearable
-          isDisabled={disableField}
-          className={`form-control p-0 ${className}`}
-          value={
-            value
-              ? {
-                  value: value,
-                  label:
-                    warehouseOptions.find(
-                      (warehouse) => warehouse.value === value
-                    )?.label || "",
-                }
-              : null
-          }
-          onChange={(option) => {
-            onChange(option?.value);
-            trigger(field.name);
-          }}
-          menuIsOpen={menuIsOpen}
-          onMenuOpen={() => setMenuIsOpen(true)}
-          onMenuClose={() => setMenuIsOpen(false)}
-          inputValue={input}
-          onInputChange={setInput}
-          {...field}
-        />
-      )}
-    </>
+    <Select<SelectOption>
+      isLoading={loading}
+      options={warehouseOptions}
+      placeholder="Select warehouse"
+      isClearable
+      isDisabled={disableField}
+      className={`form-control p-0 ${className} select-form-custom`}
+      value={
+        value
+          ? {
+              value: value,
+              label:
+                warehouseOptions.find((warehouse) => warehouse.value === value)
+                  ?.label || "",
+            }
+          : null
+      }
+      onChange={(option) => {
+        onChange(option?.value);
+        trigger(field.name);
+      }}
+      menuIsOpen={menuIsOpen}
+      onMenuOpen={() => setMenuIsOpen(true)}
+      onMenuClose={() => setMenuIsOpen(false)}
+      inputValue={input}
+      onInputChange={setInput}
+      {...field}
+    />
   );
 };
 

@@ -8,6 +8,7 @@ import {
   FieldErrors,
   UseFormRegister,
   UseFormTrigger,
+  UseFormWatch,
 } from "react-hook-form";
 import { SelectOption } from "@/types/form";
 import Select from "react-select";
@@ -26,8 +27,8 @@ interface Props {
   rolesLoading: boolean;
   register: UseFormRegister<AddUserFormType>;
   permissionLoading: boolean;
-  permittedMenus: AddUserPermittedMenu[];
-  setPermittedMenus: Dispatch<SetStateAction<AddUserPermittedMenu[]>>;
+  permittedMenus: AddUserMenusType;
+  setPermittedMenus: Dispatch<SetStateAction<AddUserMenusType>>;
 }
 
 const UserRolesAndPermissionsInputs = ({
@@ -51,7 +52,7 @@ const UserRolesAndPermissionsInputs = ({
           </div>
           <div className="col-md-7">
             <div className="mb-3">
-              <label className="form-label">Outlets</label>
+              <label className="form-label">Roles</label>
               <Controller
                 name="roleid"
                 control={control}

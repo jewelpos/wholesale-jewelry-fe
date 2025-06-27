@@ -4,6 +4,8 @@ import useOutlets from "@/hooks/useOutlets";
 import WarehouseFilter from "./WarehouseFilter";
 import useWarehouse from "@/hooks/useWarehouse";
 import { useParams } from "next/navigation";
+import SupplierFilter from "./SupplierFilter";
+import useSupplier from "@/hooks/useSupplier";
 
 interface Props {
   search?: string;
@@ -12,6 +14,10 @@ interface Props {
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedWarehouse?: number | undefined;
   setSelectedWarehouse?: React.Dispatch<React.SetStateAction<number>>;
+  selectedSupplier?: number | undefined;
+  setSelectedSupplier?: React.Dispatch<
+    React.SetStateAction<number | undefined>
+  >;
 }
 
 const CustomFilterSections = ({
@@ -21,6 +27,8 @@ const CustomFilterSections = ({
   setSelectedOutlet,
   selectedWarehouse,
   setSelectedWarehouse,
+  selectedSupplier,
+  setSelectedSupplier,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -30,6 +38,11 @@ const CustomFilterSections = ({
     loading: warehousesLoading,
     warehouses,
   } = useWarehouse();
+  const {
+    fetchSuppliersByStoreId,
+    loading: suppliersLoading,
+    suppliers,
+  } = useSupplier();
   return (
     <div className="container-fluid my-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -64,6 +77,17 @@ const CustomFilterSections = ({
               loading={warehousesLoading}
               setSelectedWarehouse={setSelectedWarehouse}
               selectedWarehouse={selectedWarehouse}
+            />
+          </div>
+        )}
+        {setSelectedSupplier && (
+          <div className="d-flex align-items-center w-25 w-md-100">
+            <SupplierFilter
+              fetchSuppliersList={fetchSuppliersByStoreId}
+              suppliers={suppliers}
+              loading={suppliersLoading}
+              setSelectedSupplier={setSelectedSupplier}
+              selectedSupplier={selectedSupplier}
             />
           </div>
         )}

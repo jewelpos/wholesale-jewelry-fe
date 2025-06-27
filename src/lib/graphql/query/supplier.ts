@@ -171,6 +171,35 @@ export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
   }
 `;
 
+export const GET_FULL_SUPPLIER_INVOICE_LIST_QUERY = gql`
+  query GetFullSupplierInvoiceList($storeid: Int!, $supplierid: Int!) {
+    getFullSupplierInvoiceList(storeid: $storeid, supplierid: $supplierid) {
+      supplierinvoiceid
+      supplierid
+      veninvoiceno
+      veninvoicedate
+      veninvoicetotal
+      veninvamtpaid
+      veninvamtbalance
+      refponumber
+      invpostingdate
+      veninvremarks
+      warehouseid
+      veninvbankid
+      enteredbyid
+      termsid
+      venpostchkamount
+      venpostchkamountdue
+      vencrediapplied
+      lastmodifiedbyid
+      lastmodifieddate
+      warehousename
+      suppliername
+      termsname
+      enteredbyname
+    }
+  }
+`;
 
 export const GET_SUPPLIERS_BY_STORE_ID_QUERY = gql`
   query GetSuppliersByStoreId($storeid: Int!) {
@@ -206,6 +235,95 @@ export const GET_SUPPLIERS_BY_STORE_ID_QUERY = gql`
   }
 `;
 
+export const GET_SUPPLIER_PAYMENTS_QUERY = gql`
+  query GetAPPaymentsList(
+    $storeid: Int!
+    $supplierid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getAPPaymentsList(
+      storeid: $storeid
+      supplierid: $supplierid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        paymentid
+        companyname
+        postingdate
+        reference
+        paymode
+        checkcardno
+        chk_description
+        amountpaid
+        checkstatus
+        appliedby
+        supplierid
+        bankname
+        warehousename
+        warehouseid
+        voided
+        username
+        lastmodifieddate
+      }
+    }
+  }
+`;
+
+export const GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY = gql`
+  query GetSupplierAppliedAmountList(
+    $storeid: Int!
+    $supplierpaymentid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getSupplierAppliedAmountList(
+      storeid: $storeid
+      supplierpaymentid: $supplierpaymentid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        appliedamountid
+        supplierpaymentid
+        paymode
+        appliedamount
+        invoicenumber
+        applieddate
+        checkcardno
+        appliedby
+        voided
+        creditinvoice
+        warehousename
+        chk_description
+        companyname
+        lastmodifieddate
+        supplierid
+        warehouseid
+      }
+    }
+  }
+`;
+
 export const GET_SUPPLIER_INVOICE_QUERY = gql`
 query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
   getSingleSupplierInvoice(storeid: $storeid, supplierinvoiceid: $supplierinvoiceid) {
@@ -232,6 +350,21 @@ query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
     suppliername
     termsname
     enteredbyname
+  }
+}
+`;
+
+export const GET_SUPPLIER_BALANCE_DUE_QUERY = gql`
+query GetSupplierBalanceDue($storeid: Int!, $supplierid: Int!) {
+  getSupplierBalanceDue(storeid: $storeid, supplierid: $supplierid) {
+    supplierinvoiceid
+    supplierid
+    veninvoiceno
+    veninvoicedate
+    veninvoicetotal
+    veninvamtpaid
+    veninvamtbalance
+    warehouseid
   }
 }
 `;

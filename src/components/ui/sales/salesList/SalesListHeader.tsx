@@ -4,17 +4,15 @@ import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import Link from "next/link";
-import { Mail, PlusCircle, Upload } from "react-feather";
-import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { MenuAction } from "@/types/permissions";
-
-const renderTooltip = (value: string) => (
-  <Tooltip id="tooltip">{value}</Tooltip>
-);
+import {
+  renderActionButtonColor,
+  renderActionButtonIconName,
+} from "@/lib/utils/utils";
+import FeatherIcon from "../../FeatherIcon";
 
 const SalesListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
-  console.log("sdsdd", currentMenu);
 
   return (
     <PageHeader
@@ -22,74 +20,35 @@ const SalesListHeader = () => {
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <ul className="table-top-head">
-        {!!currentMenu?.action.length &&
-          currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("export")) {
-              return (
-                <li key={btn.actionname}>
-                  <OverlayTrigger
-                    placement="top"
-                    overlay={renderTooltip(btn.actiondisplayname)}
-                  >
-                    <Link href={""}>
-                      <i data-feather="upload" className="feather-upload" />
-                    </Link>
-                  </OverlayTrigger>
-                </li>
-              );
-            } else if (btn.actionname.includes("print")) {
-              return (
-                <li key={btn.actionname}>
-                  <OverlayTrigger
-                    placement="top"
-                    overlay={renderTooltip(btn.actiondisplayname)}
-                  >
-                    <Link href={""}>
-                      <i data-feather="printer" className="feather-printer" />
-                    </Link>
-                  </OverlayTrigger>
-                </li>
-              );
-            } else if (btn.actionname.includes("email")) {
-              return (
-                <li key={btn.actionname}>
-                  <OverlayTrigger
-                    placement="top"
-                    overlay={renderTooltip(btn.actiondisplayname)}
-                  >
-                    <Link href={""}>
-                      <i data-feather="mail" className="feather-mail" />
-                    </Link>
-                  </OverlayTrigger>
-                </li>
-              );
-            }
-            return null;
-          })}
-      </ul>
       <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action.length &&
-          currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("add_")) {
-              let url = "";
-              if (btn.actionname === "add_new_sales_invoice") {
-                url = "/new";
-              } else if (btn.actionname === "add_new_sales_order") {
-                url = "/orders/new";
-              }
-
+        {!!currentMenu?.action?.length &&
+          [...currentMenu.action]
+            .sort((a: MenuAction, b: MenuAction) => {
+              if (a.actionorder < b.actionorder) return -1;
+              if (a.actionorder > b.actionorder) return 1;
+              return 0;
+            })
+            .map((btn: MenuAction) => {
+              const btnColor = renderActionButtonColor(btn.actionname);
+              const iconName = renderActionButtonIconName(btn.actionname);
+              const isModalButton =
+                btn.actionname.includes("print") ||
+                btn.actionname.includes("export");
               return (
-                <div className="page-btn" key={btn.actionname}>
-                  <Link href={`${currentPath}${url}`} className="btn btn-added">
-                    <PlusCircle className="me-2" />
+                <div
+                  className="page-btn d-none d-sm-block"
+                  key={btn.actionname}
+                >
+                  <Link
+                    href={isModalButton ? "#" : `${currentPath}/new`}
+                    className={`btn btn-added ${btnColor}`}
+                  >
+                    {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
                   </Link>
                 </div>
               );
-            }
-            return null;
-          })}
+            })}
       </div>
     </PageHeader>
   );

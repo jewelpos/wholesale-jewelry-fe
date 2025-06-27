@@ -72,7 +72,7 @@ export type AddUserMenuChildType = {
   status?: "SELECTED" | "SELECTABLE" | "NOT_ALLOWED";
 };
 
-type AddUserMenuType = {
+export type AddUserMenuType = {
   permissiondisplayname: string;
   permissionid: number;
   storetypeid: number;

@@ -28,6 +28,7 @@ export const GET_ACTIVE_USER = gql`
 export const GET_USERS_LIST_QUERY = gql`
   query GetUserListUnderStore($storeid: Int!) {
     getUserListUnderStore(storeid: $storeid) {
+      id
       userid
       userfullname
       emailaddress
@@ -59,4 +60,47 @@ export const GET_USERS_LIST_QUERY = gql`
       outletname
     }
   }
+`;
+
+export const GET_USER_QUERY = gql`
+  query GetUserByIdUnderStore($id: Int!) {
+    getUserByIdUnderStore(id: $id) {
+      id
+      userid
+      userfullname
+      emailaddress
+      userphone
+      login
+      isenabled
+      userpermissions {
+        roleid
+        rolename
+        menus {
+          menuid
+          iconurl
+          menuurl
+          menuname
+          slugname
+          menuorder
+          storetypeid
+          permissionid
+          permissiondisplayname
+          children {
+            permissionid
+            permissionname
+            name
+            action {
+              actionid
+              actionname
+              actiondisplayname
+            }
+          }
+        }
+      }
+      roleid
+      rolename
+      outletid
+      outletname
+  }
+}
 `;

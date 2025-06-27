@@ -10,3 +10,14 @@ export const CREATE_OUTLET_USER_MUTATION = gql`
     }
   }
 `;
+
+export const EDIT_OUTLET_USER_MUTATION = gql`
+  mutation EditOutletUser($input: EditOutletUserInput!) {
+    editOutletUser(editOutletUserInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -19,8 +19,11 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { GET_CUSTOMER_LIST_QUERY } from "@/lib/graphql/query/customer";
-import { CustomersListType } from "@/types/customer";
+import {
+  GET_CUSTOMER_LIST_QUERY,
+  GET_CUSTOMER_QUERY,
+} from "@/lib/graphql/query/customer";
+import { CustomersListType, CustomerType } from "@/types/customer";
 import "ag-grid-enterprise";
 import { customersListColumnDefs } from "./ColumnDef";
 import { useParams } from "next/navigation";
@@ -30,8 +33,10 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import CustomerActions from "./CustomerActions";
 import CustomerListHeader from "./CustomerListHeader";
-import PrintModal from "../../PrintModal";
+import PrintModal, { PrintPayload } from "../../PrintModal";
 import CustomerPrintDetails from "./CustomerPrintDetails";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 
 const CustomerListComponent = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<
@@ -47,6 +52,19 @@ const CustomerListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const { data: customerData, loading: customerLoading } = useQuery(
+    GET_CUSTOMER_QUERY,
+    {
+      variables: {
+        storeid: parsedStoreId,
+        customerid: Number(selectedCustomerId),
+      },
+      skip: !storeIdParam || !selectedCustomerId,
+    }
+  );
+  const selectedCustomer: CustomerType = customerData?.getCustomer;
+  const config = getEnvironmentConfig();
+  const [loading, setLoading] = useState(false);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
     setGridReady(true);
@@ -164,6 +182,59 @@ const CustomerListComponent = () => {
     [handleDeleteSuccess]
   );
 
+  const handlePrintSubmit = async (payload: PrintPayload) => {
+    setLoading(true);
+    const updatedPayload = {
+      ...payload,
+      customerid: selectedCustomerId,
+      outletid: 123,
+    };
+    const result = await handleTryCatch(
+      async () => {
+        const response = await api.post(
+          `${config.apiUrl}/store/customer/statement`,
+          updatedPayload,
+          {
+            responseType: "blob", // <== CRITICAL
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const { data } = response;
+        if (data) {
+          const url = window.URL.createObjectURL(data);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "file.pdf");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          dispatch(
+            showNotification({
+              message: data.message,
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+        }
+        return true;
+      },
+      () => {
+        setLoading(false);
+      }
+    );
+
+    if (result.error) {
+      setLoading(false);
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  };
+
   return (
     <>
       <CustomerListHeader
@@ -202,8 +273,15 @@ const CustomerListComponent = () => {
         </div>
       </div>
       {showPrintModal && selectedCustomerId && (
-        <PrintModal setShowPrintModal={setShowPrintModal}>
-          <CustomerPrintDetails selectedCustomerId={selectedCustomerId} />
+        <PrintModal
+          setShowPrintModal={setShowPrintModal}
+          handlePrintSubmit={handlePrintSubmit}
+          loading={loading}
+        >
+          <CustomerPrintDetails
+            selectedCustomer={selectedCustomer}
+            loading={customerLoading}
+          />
         </PrintModal>
       )}
     </>

@@ -2,12 +2,15 @@
 
 import useStores from "@/hooks/useStores";
 import { MENU_STATUS_TYPES, NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { CREATE_OUTLET_USER_MUTATION } from "@/lib/graphql/mutations/user";
+import {
+  CREATE_OUTLET_USER_MUTATION,
+  EDIT_OUTLET_USER_MUTATION,
+} from "@/lib/graphql/mutations/user";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
 import { useMutation, useQuery } from "@apollo/client";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
@@ -21,28 +24,25 @@ import UserRolesAndPermissionsInputs from "./UserRolesAndPermissionsInputs";
 import { RolesType } from "@/types/role";
 import { GET_ROLES_QUERY } from "@/lib/graphql/query/role";
 import { GET_PERMISSION_QUERY } from "@/lib/graphql/query/permission";
-import { AddUserPermissionType } from "@/types/permissions";
+import { AddUserMenusType, AddUserPermissionType } from "@/types/permissions";
 import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-
-type AddUserResponse = {
-  createOutletUser: {
-    success: boolean;
-    message: string;
-    error: string | null;
-    data: JSON;
-  };
-};
+import { GET_USER_QUERY } from "@/lib/graphql/query/user";
+import { get } from "http";
 
 const AddUserForm = () => {
   const dispatch = useDispatch();
   const router = useRouter();
-  const [createOutletUser, { loading }] = useMutation<
-    AddUserResponse,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { input: AddUserFormType | any }
-  >(CREATE_OUTLET_USER_MUTATION);
+  const { id: userId, storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedUserId = parseInt(userId as string, 10);
+  const [createOutletUser, { loading }] = useMutation(
+    CREATE_OUTLET_USER_MUTATION
+  );
+  const [editOutletUser, { loading: editLoading }] = useMutation(
+    EDIT_OUTLET_USER_MUTATION
+  );
   const {
     register,
     handleSubmit,
@@ -57,7 +57,6 @@ const AddUserForm = () => {
       confirmpassword: "",
       password: "",
       emailaddress: "",
-      permissions: {},
       userfullname: "",
       userphone: "",
       outlets: [],
@@ -79,12 +78,16 @@ const AddUserForm = () => {
       skip: !roleId || !storeId,
     }
   );
+  const { data: userData, loading: userLoading } = useQuery(GET_USER_QUERY, {
+    variables: { id: parsedUserId },
+    skip: !parsedUserId,
+  });
   const permissions: AddUserPermissionType | undefined =
     permissionData?.getPermissionList?.data[0];
   const menus = permissions?.menus;
-  const [permittedMenus, setPermittedMenus] = useState<
-    AddUserPermittedMenu[] | []
-  >([]);
+  const [permittedMenus, setPermittedMenus] = useState<AddUserMenusType | []>(
+    []
+  );
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -97,28 +100,6 @@ const AddUserForm = () => {
   useEffect(() => {
     fetchStoresData();
   }, [fetchStoresData]);
-
-  useEffect(() => {
-    if (menus?.length) {
-      const customMenus: AddUserPermittedMenu[] = [];
-      menus.forEach((menu) => {
-        if (menu.children.length) {
-          menu.children.map(({ parentid, permissionid, status }) => {
-            if (
-              status !== MENU_STATUS_TYPES.NOT_ALLOWED &&
-              status !== MENU_STATUS_TYPES.SELECTABLE
-            ) {
-              customMenus.push({
-                parentid,
-                permissionid,
-              });
-            }
-          });
-        }
-      });
-      setPermittedMenus(customMenus);
-    }
-  }, [menus]);
 
   useEffect(() => {
     if (!getValues("roleid") && roles?.length) {
@@ -136,18 +117,6 @@ const AddUserForm = () => {
   }, [storeId, fetchOutletsList]);
 
   const onSubmit: SubmitHandler<AddUserFormType> = async (formData) => {
-    const updatedMenus = menus?.map((menu) => {
-      return {
-        ...menu,
-        children: menu.children.filter((child) =>
-          permittedMenus.find(
-            (permMenu) =>
-              permMenu.parentid === child.parentid &&
-              permMenu.permissionid === child.permissionid
-          )
-        ),
-      };
-    });
     const selectedOutlets = formData.outlets.map((outlet) => outlet.value);
     const storeOutlet = {
       storeid: formData.storeid,
@@ -157,20 +126,29 @@ const AddUserForm = () => {
     const payloads = {
       ...otherPayloads,
       permissions: {
-        menus: updatedMenus,
+        menus: permittedMenus,
         roleid: permissions?.roleid,
       },
       storetooutlet: storeOutlet,
     };
 
     const result = await handleTryCatch(async () => {
-      const { data } = await createOutletUser({
-        variables: { input: payloads },
-      });
-      if (data?.createOutletUser) {
+      let response;
+      if (userId) {
+        response = await editOutletUser({
+          variables: { input: payloads },
+        });
+      } else {
+        response = await createOutletUser({
+          variables: { input: payloads },
+        });
+      }
+      const { data } = response;
+      if (data?.createOutletUser || data?.editOutletUser) {
+        const successData = data.createOutletUser || data.editOutletUser;
         dispatch(
           showNotification({
-            message: data.createOutletUser.message,
+            message: successData.message,
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
@@ -191,24 +169,48 @@ const AddUserForm = () => {
     }
   };
 
+  useEffect(() => {
+    if (userData?.getUserByIdUnderStore) {
+      const { __typename, ...user } = userData.getUserByIdUnderStore;
+      reset({
+        emailaddress: user.emailaddress,
+        userfullname: user.userfullname,
+        userphone: user.userphone,
+        outlets: [
+          {
+            value: user.outletid,
+            label: user.outletname,
+          },
+        ],
+        roleid: user.roleid,
+        storeid: parsedStoreId,
+      });
+      setPermittedMenus(user.userpermissions[0].menus);
+    }
+  }, [reset, userData, parsedStoreId]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="row">
         <div className="col-md-12">
           <UserProfileInputs register={register} errors={errors} />
-          <UserStoreInputs
-            control={control}
-            errors={errors}
-            storesLoading={storesLoading}
-            setValue={setValue}
-            storeId={storeId}
-          />
-          <UserOutletInputs
-            control={control}
-            errors={errors}
-            outlets={outlets}
-            outletsLoading={outletsLoading}
-          />
+          {!userId && (
+            <UserStoreInputs
+              control={control}
+              errors={errors}
+              storesLoading={storesLoading}
+              setValue={setValue}
+              storeId={storeId}
+            />
+          )}
+          {!userId && (
+            <UserOutletInputs
+              control={control}
+              errors={errors}
+              outlets={outlets}
+              outletsLoading={outletsLoading}
+            />
+          )}
           <UserRolesAndPermissionsInputs
             control={control}
             errors={errors}
@@ -221,11 +223,13 @@ const AddUserForm = () => {
             permittedMenus={permittedMenus}
             setPermittedMenus={setPermittedMenus}
           />
-          <UserSecurityInputs
-            register={register}
-            errors={errors}
-            password={password}
-          />
+          {!userId && (
+            <UserSecurityInputs
+              register={register}
+              errors={errors}
+              password={password}
+            />
+          )}
         </div>
       </div>
       <ActionFooter handleCancel={handleCancel}>

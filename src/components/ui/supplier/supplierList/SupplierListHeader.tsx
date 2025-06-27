@@ -4,20 +4,29 @@ import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import Link from "next/link";
-import { PlusCircle, Upload } from "react-feather";
-import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { MenuAction } from "@/types/permissions";
-
-const renderTooltip = (value: string) => (
-  <Tooltip id="tooltip">{value}</Tooltip>
-);
+import {
+  renderActionButtonColor,
+  renderActionButtonIconName,
+} from "@/lib/utils/utils";
+import FeatherIcon from "../../FeatherIcon";
 
 const SupplierListHeader = ({
   setShowInvoiceFormModal,
+  setShowPaymentModal,
 }: {
   setShowInvoiceFormModal: (value: boolean) => void;
+  setShowPaymentModal: (value: boolean) => void;
 }) => {
   const { currentMenu, currentPath } = useMenu();
+
+  const handleAction = (actionName: string) => {
+    if (actionName.includes("invoice")) {
+      setShowInvoiceFormModal(true);
+    } else if (actionName.includes("payment")) {
+      setShowPaymentModal(true);
+    }
+  };
 
   return (
     <PageHeader
@@ -25,67 +34,38 @@ const SupplierListHeader = ({
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <ul className="table-top-head">
-        {!!currentMenu?.action.length &&
-          currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("export")) {
-              return (
-                <li key={btn.actionname}>
-                  <OverlayTrigger
-                    placement="top"
-                    overlay={renderTooltip(btn.actiondisplayname)}
-                  >
-                    <Link href={""}>
-                      <Upload />
-                    </Link>
-                  </OverlayTrigger>
-                </li>
-              );
-            }
-            return null;
-          })}
-      </ul>
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&
-          currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("add_")) {
-              let url = "";
-              if (btn.actionname === "add_new_ap_invoice") {
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <Link
-                      href={"#"}
-                      onClick={() => setShowInvoiceFormModal(true)}
-                      className="btn btn-added"
-                    >
-                      <PlusCircle className="me-2" />
-                      {btn.actiondisplayname}
-                    </Link>
-                  </div>
-                );
-              } else {
-                if (btn.actionname === "add_new_supplier") {
-                  url = "/new";
-                } else if (btn.actionname === "add_supplier_payment") {
-                  url = "/payments";
-                } else if (btn.actionname === "add_new_ap_check") {
-                  url = "/checks";
-                }
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <Link
-                      href={`${currentPath}${url}`}
-                      className="btn btn-added"
-                    >
-                      <PlusCircle className="me-2" />
-                      {btn.actiondisplayname}
-                    </Link>
-                  </div>
-                );
-              }
-            }
-            return null;
-          })}
+          [...currentMenu.action]
+            .sort((a: MenuAction, b: MenuAction) => {
+              if (a.actionorder < b.actionorder) return -1;
+              if (a.actionorder > b.actionorder) return 1;
+              return 0;
+            })
+            .map((btn: MenuAction) => {
+              const btnColor = renderActionButtonColor(btn.actionname);
+              const iconName = renderActionButtonIconName(btn.actionname);
+              const isModalButton =
+                btn.actionname.includes("invoice") ||
+                btn.actionname.includes("payment");
+              return (
+                <div
+                  className="page-btn d-none d-sm-block"
+                  key={btn.actionname}
+                >
+                  <Link
+                    href={isModalButton ? "#" : `${currentPath}/new`}
+                    onClick={() =>
+                      isModalButton ? handleAction(btn.actionname) : null
+                    }
+                    className={`btn btn-added ${btnColor}`}
+                  >
+                    {iconName && <FeatherIcon icon={iconName} />}
+                    {btn.actiondisplayname}
+                  </Link>
+                </div>
+              );
+            })}
       </div>
     </PageHeader>
   );

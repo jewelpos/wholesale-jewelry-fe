@@ -8,22 +8,14 @@ import { useQuery } from "@apollo/client";
 import PlaceHolder from "../../PlaceHolder";
 
 interface CustomerPrintDetailsProps {
-  selectedCustomerId?: number;
+  selectedCustomer?: CustomerType;
+  loading?: boolean;
 }
 
 const CustomerPrintDetails = ({
-  selectedCustomerId,
+  selectedCustomer,
+  loading,
 }: CustomerPrintDetailsProps) => {
-  const { storeId: storeIdParam } = useParams();
-  const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const { data: customerData, loading } = useQuery(GET_CUSTOMER_QUERY, {
-    variables: {
-      storeid: parsedStoreId,
-      customerid: Number(selectedCustomerId),
-    },
-    skip: !storeIdParam || !selectedCustomerId,
-  });
-  const selectedCustomer: CustomerType = customerData?.getCustomer;
   return (
     <div className="card ">
       <div className="card-body">

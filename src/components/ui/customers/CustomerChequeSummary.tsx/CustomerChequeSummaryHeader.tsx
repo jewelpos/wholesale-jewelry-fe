@@ -4,8 +4,12 @@ import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
+import {
+  renderActionButtonColor,
+  renderActionButtonIconName,
+} from "@/lib/utils/utils";
+import FeatherIcon from "../../FeatherIcon";
 import Link from "next/link";
-import { PlusCircle } from "react-feather";
 
 const CustomerChequeSummaryHeader = ({
   setShowPrintModal,
@@ -21,22 +25,16 @@ const CustomerChequeSummaryHeader = ({
       showBreadcrumb
     >
       <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action.length &&
-          currentMenu.action.map((btn: MenuAction) => {
-            if (btn.actionname.includes("add_new")) {
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <Link
-                    href="#"
-                    className="btn btn-added"
-                    onClick={() => setShowPrintModal(true)}
-                  >
-                    <PlusCircle className="me-2" />
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            } else if (btn.actionname.includes("export")) {
+        {!!currentMenu?.action?.length &&
+          [...currentMenu.action]
+            .sort((a: MenuAction, b: MenuAction) => {
+              if (a.actionorder < b.actionorder) return -1;
+              if (a.actionorder > b.actionorder) return 1;
+              return 0;
+            })
+            .map((btn: MenuAction) => {
+              const btnColor = renderActionButtonColor(btn.actionname);
+              const iconName = renderActionButtonIconName(btn.actionname);
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -44,16 +42,14 @@ const CustomerChequeSummaryHeader = ({
                 >
                   <Link
                     href={`${currentPath}/new`}
-                    className="btn btn-added btn-dark"
+                    className={`btn btn-added ${btnColor}`}
                   >
-                    <i data-feather="upload" className="feather-upload me-2" />
+                    {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
                   </Link>
                 </div>
               );
-            }
-            return null;
-          })}
+            })}
       </div>
     </PageHeader>
   );
