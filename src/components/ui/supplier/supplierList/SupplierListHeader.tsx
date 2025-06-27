@@ -13,18 +13,14 @@ import FeatherIcon from "../../FeatherIcon";
 
 const SupplierListHeader = ({
   setShowInvoiceFormModal,
-  setShowPaymentModal,
 }: {
   setShowInvoiceFormModal: (value: boolean) => void;
-  setShowPaymentModal: (value: boolean) => void;
 }) => {
   const { currentMenu, currentPath } = useMenu();
 
   const handleAction = (actionName: string) => {
     if (actionName.includes("invoice")) {
       setShowInvoiceFormModal(true);
-    } else if (actionName.includes("payment")) {
-      setShowPaymentModal(true);
     }
   };
 
