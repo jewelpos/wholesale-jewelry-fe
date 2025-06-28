@@ -29,3 +29,25 @@ export const renderActionButtonColor = (actionName: string) => {
     }
     return "";
   };
+
+
+  // Allow only numbers (and a single dot) in the "amount" field
+  export const handleKeyDownAllowNumberOnly = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedKeys = [
+      "Backspace",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Delete",
+      "Home",
+      "End",
+    ];
+
+    if (
+      !/[0-9]/.test(e.key) &&
+      !(e.key === "." && !e.currentTarget.value.includes(".")) &&
+      !allowedKeys.includes(e.key)
+    ) {
+      e.preventDefault();
+    }
+  };

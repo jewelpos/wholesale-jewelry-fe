@@ -65,3 +65,14 @@ export const UPDATE_SUPPLIER_INVOICE_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_SUPPLIER_NEW_PAYMENT_MUTATION = gql`
+  mutation CreateSupplierNewPayment($input: CreateSupplierNewPaymentInput!) {
+    createSupplierNewPayment(createSupplierNewPaymentInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
