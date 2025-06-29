@@ -30,6 +30,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import SupplierActions from "./SupplierActions";
 import SupplierListHeader from "./SupplierListHeader";
 import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
+import PaymentModal from "../appliedPayments/PaymentModal";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -41,6 +42,7 @@ const SupplierListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [showInvoiceFormModal, setShowInvoiceFormModal] =
     useState<boolean>(false);
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierListType>) => {
     setGridReady(true);
@@ -133,7 +135,10 @@ const SupplierListComponent = () => {
 
   return (
     <>
-      <SupplierListHeader setShowInvoiceFormModal={setShowInvoiceFormModal} />
+      <SupplierListHeader
+        setShowInvoiceFormModal={setShowInvoiceFormModal}
+        setShowPaymentModal={setShowPaymentModal}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -165,6 +170,9 @@ const SupplierListComponent = () => {
         <SupplierInvoiceFormModal
           setShowInvoiceFormModal={setShowInvoiceFormModal}
         />
+      )}
+      {showPaymentModal && (
+        <PaymentModal setShowPaymentModal={setShowPaymentModal} />
       )}
     </>
   );

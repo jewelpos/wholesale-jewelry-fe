@@ -14,6 +14,9 @@ interface SelectSupplierInvoiceProps {
   storeId: number;
   supplierId: number | null;
   disableField?: boolean;
+  invoices?: any;
+  hasInvoices?: boolean;
+  onChangeAdditional?: () => void;
   // other Controller props
   [key: string]: any;
 }
@@ -26,6 +29,9 @@ const SelectSupplierInvoice = ({
   storeId,
   supplierId,
   disableField,
+  invoices,
+  hasInvoices,
+  onChangeAdditional,
   ...field
 }: SelectSupplierInvoiceProps) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -33,18 +39,23 @@ const SelectSupplierInvoice = ({
   const { fetchSupplierInvoices, supplierInvoices, loading } = useSupplier();
 
   useEffect(() => {
-    if (storeId && supplierId) {
+    if (storeId && supplierId && !hasInvoices) {
       fetchSupplierInvoices(storeId, supplierId);
     }
-  }, [fetchSupplierInvoices, storeId, supplierId]);
-
+  }, [fetchSupplierInvoices, storeId, supplierId, hasInvoices]);
+  console.log(invoices);
   const invoiceOptions: SelectOption[] = useMemo(
     () =>
-      supplierInvoices.map((inv) => ({
-        value: inv.veninvoiceno,
-        label: inv.veninvoiceno,
-      })),
-    [supplierInvoices]
+      !hasInvoices
+        ? supplierInvoices.map((inv) => ({
+            value: inv.veninvoiceno,
+            label: inv.veninvoiceno,
+          }))
+        : invoices?.map((inv: any) => ({
+            value: inv.veninvoiceno,
+            label: inv.veninvoiceno,
+          })),
+    [supplierInvoices, invoices, hasInvoices]
   );
 
   return (
@@ -67,6 +78,7 @@ const SelectSupplierInvoice = ({
       onChange={(option) => {
         onChange(option?.value);
         trigger(field.name);
+        onChangeAdditional?.();
       }}
       menuIsOpen={menuIsOpen}
       onMenuOpen={() => setMenuIsOpen(true)}
