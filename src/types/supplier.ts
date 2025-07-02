@@ -221,3 +221,9 @@ export type SupplierBalanceDueType = {
   veninvamtbalance: number;
   warehouseid: number;
 }
+
+export type VoidPaymentFormType = {
+  supplierid: number,
+  postingdate: dayjs.Dayjs,
+  paymentid: number,
+}

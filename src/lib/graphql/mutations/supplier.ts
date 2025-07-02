@@ -76,3 +76,14 @@ export const CREATE_SUPPLIER_NEW_PAYMENT_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_SUPPLIER_VOIDED_PAYMENT_MUTATION = gql`
+  mutation CreateSupplierVoidedPayment($input: CreateSupplierVoidedPaymentInput!) {
+    createSupplierVoidedPayment(createSupplierVoidedPaymentInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

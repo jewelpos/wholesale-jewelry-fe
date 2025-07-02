@@ -12,6 +12,7 @@ const SelectSupplier = ({
   trigger,
   storeId,
   disableField,
+  onChangeAdditional,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -55,8 +56,11 @@ any) => {
           : null
       }
       onChange={(option) => {
-        onChange(option?.value);
-        trigger(field.name);
+        if (onChangeAdditional) onChangeAdditional(option?.value);
+        else {
+          onChange(option?.value);
+          trigger(field.name);
+        }
       }}
       menuIsOpen={menuIsOpen}
       onMenuOpen={() => setMenuIsOpen(true)}

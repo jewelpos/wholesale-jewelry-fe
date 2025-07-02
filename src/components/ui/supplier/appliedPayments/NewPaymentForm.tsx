@@ -58,7 +58,6 @@ const NewPaymentForm = ({
   const supplierId = getValues("supplierid");
   const [autoApply, setAutoApply] = useState(false);
   const [paymentMode, setPaymentMode] = useState("");
-  const [allottedRows, setAllottedRows] = useState<string[]>([]);
   const dispatch = useDispatch();
   const [createPayment, { loading: saving }] = useMutation(
     CREATE_SUPPLIER_NEW_PAYMENT_MUTATION
@@ -106,20 +105,15 @@ const NewPaymentForm = ({
     };
   }, [autoApply, amountValue, supplierBalanceDue, selectedInvoiceNo]);
 
-  useEffect(() => {
-    const updated = supplierBalanceDue.filter((_, idx) => allocations[idx] > 0);
-    setAllottedRows(updated.map((row) => row.veninvoiceno));
-  }, [allocations, supplierBalanceDue]);
-
   const onSubmit = async (formData: NewPaymentFormType) => {
     const payload = {
       storeid: storeId,
       supplierid: formData.supplierid,
-      postingdate: formData.postingdate.toISOString(),
+      postingdate: formData.postingdate.format("YYYY-MM-DD"),
       paymentmodeid: formData.paymentmodeid,
       chequecardno: formData.checkcardno,
       chequeamount: Number(formData.amount),
-      invoicenumbers: allottedRows,
+      invoicenumbers: formData.invoicenumber ? [formData.invoicenumber] : [],
       reference: formData.reference,
     };
 
@@ -165,7 +159,7 @@ const NewPaymentForm = ({
                   trigger={trigger}
                   storeId={storeId}
                   {...field}
-                  onChange={(value: string) => {
+                  onChangeAdditional={(value: string) => {
                     field.onChange(value);
                     if (value) {
                       fetchSupplierBalanceDue(storeId, parseInt(value));
@@ -192,7 +186,7 @@ const NewPaymentForm = ({
         <div className="row">
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Posting Date {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Posting Date" loading={invoiceLoading} />
               <div className="input-groupicon calender-input">
                 <Calendar className="info-img" />
                 <Controller
@@ -218,7 +212,7 @@ const NewPaymentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Payment Mode {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Payment Mode" loading={invoiceLoading} />
               <Controller
                 name="paymentmodeid"
                 control={control}
@@ -242,7 +236,7 @@ const NewPaymentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Check/Card No {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Check/Card No" loading={invoiceLoading} />
               <input
                 type="text"
                 className={`${
@@ -264,7 +258,7 @@ const NewPaymentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Check Amount {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Check Amount" loading={invoiceLoading} />
               <Controller
                 name="amount"
                 control={control}
@@ -320,7 +314,7 @@ const NewPaymentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Invoice Number {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Invoice Number" loading={invoiceLoading} />
               <Controller
                 name="invoicenumber"
                 control={control}
@@ -340,7 +334,7 @@ const NewPaymentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <label>Reference {invoiceLoading && <LabelLoader />}</label>
+              <LabelLoader label="Reference" loading={invoiceLoading} />
               <input
                 type="text"
                 className="form-control"
@@ -409,7 +403,9 @@ const NewPaymentForm = ({
                   {supplierBalanceDue.map((item, idx) => (
                     <tr key={item.veninvoiceno}>
                       <td>{item.veninvoiceno}</td>
-                      <td>{dayjs(item.veninvoicedate).format(TIME_FORMAT)}</td>
+                      <td>
+                        {dayjs(Number(item.veninvoicedate)).format(TIME_FORMAT)}
+                      </td>
                       <td>${item.veninvoicetotal}</td>
                       <td>${item.veninvamtpaid}</td>
                       <td>${item.veninvamtbalance}</td>
@@ -427,9 +423,9 @@ const NewPaymentForm = ({
           <ActionFooter handleCancel={closePaymentModal}>
             <ButtonLoader
               loading={saving}
-              btnText="Save"
-              loadingText="Saving ..."
-              disabled={!isValid || !autoApply || saving}
+              btnText="Pay"
+              loadingText="Paying ..."
+              disabled={!isValid || saving}
             />
           </ActionFooter>
         )}

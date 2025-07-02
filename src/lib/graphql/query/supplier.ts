@@ -368,3 +368,78 @@ query GetSupplierBalanceDue($storeid: Int!, $supplierid: Int!) {
   }
 }
 `;
+
+export const GET_NON_VOIDED_SUPPLIER_PAYMENT_TRANSACTION_LIST_QUERY = gql`
+  query GetNonVoidedSupplierPaymentTransactionList($storeid: Int!, $supplierid: Int!) {
+    getNonVoidedSupplierPaymentTransactionList(storeid: $storeid, supplierid: $supplierid) {
+      paymentid
+      companyname
+      postingdate
+      reference
+      paymode
+      checkcardno
+      chk_description
+      amountpaid
+      supplierid
+      bankname
+      warehousename
+      warehouseid
+      voided
+      username
+      lastmodifieddate
+    }
+  }
+`;
+
+export const GET_APPLIED_AMOUNT_LIST_BY_SUPPLIER_PAYMENT_ID_QUERY = gql`
+  query GetAppliedAmountListBySupplierPaymentId($storeid: Int!, $supplierpaymentid: Int!) {
+    getAppliedAmountListBySupplierPaymentId(storeid: $storeid, supplierpaymentid: $supplierpaymentid) {
+      appliedamountid
+      supplierpaymentid
+      paymode
+      appliedamount
+      invoicenumber
+      applieddate
+      checkcardno
+      appliedby
+      voided
+      creditinvoice
+      warehousename
+      chk_description
+      companyname
+      lastmodifieddate
+      supplierid
+      warehouseid
+    }
+  }
+`;
+
+export const GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY = gql`
+  query GetSupplierInvoiceListByPaymentId($storeid: Int!, $supplierid: Int!, $supplierpaymentid: Int!) {
+    getSupplierInvoiceListByPaymentId(storeid: $storeid, supplierid: $supplierid, supplierpaymentid: $supplierpaymentid) {
+      supplierinvoiceid
+      supplierid
+      veninvoiceno
+      veninvoicedate
+      veninvoicetotal
+      veninvamtpaid
+      veninvamtbalance
+      refponumber
+      invpostingdate
+      veninvremarks
+      warehouseid
+      veninvbankid
+      enteredbyid
+      termsid
+      venpostchkamount
+      venpostchkamountdue
+      vencrediapplied
+      lastmodifiedbyid
+      lastmodifieddate
+      warehousename
+      suppliername
+      termsname
+      enteredbyname
+    }
+  }
+`;
