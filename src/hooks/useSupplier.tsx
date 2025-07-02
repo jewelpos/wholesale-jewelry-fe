@@ -9,11 +9,14 @@ import {
   GET_SUPPLIERS_BY_STORE_ID_QUERY,
   GET_SUPPLIER_BALANCE_DUE_QUERY,
   GET_FULL_SUPPLIER_INVOICE_LIST_QUERY,
+  GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY,
+  GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY,
 } from "@/lib/graphql/query/supplier";
 import {
   SupplierBalanceDueType,
   SupplierType,
   SupplierInvoiceType,
+  AppliedPaymentType,
 } from "@/types/supplier";
 
 const useSupplier = () => {
@@ -27,11 +30,20 @@ const useSupplier = () => {
   const [getFullSupplierInvoiceList] = useLazyQuery(
     GET_FULL_SUPPLIER_INVOICE_LIST_QUERY
   );
+  const [getSupplierAppliedAmountList] = useLazyQuery(
+    GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY
+  );
+  const [getSupplierInvoiceListByPaymentId] = useLazyQuery(
+    GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY
+  );
   const [supplierBalanceDue, setSupplierBalanceDue] = useState<
     SupplierBalanceDueType[]
   >([]);
   const [supplierInvoices, setSupplierInvoices] = useState<
     SupplierInvoiceType[]
+  >([]);
+  const [supplierPaymentInvoices, setSupplierPaymentInvoices] = useState<
+    AppliedPaymentType[]
   >([]);
 
   const fetchSupplier = useCallback(
@@ -159,6 +171,75 @@ const useSupplier = () => {
     []
   );
 
+  const fetchSupplierPaymentInvoices = useCallback(
+    async (storeId: number, supplierPaymentId: number) => {
+      const result = await handleTryCatch(
+        async () => {
+          setLoading(true);
+          const { data } = await getSupplierAppliedAmountList({
+            variables: {
+              storeid: storeId,
+              supplierpaymentid: supplierPaymentId,
+              page: 1,
+              perpage: 100,
+              filters: [],
+              sortModel: [],
+              rowGroupCols: [],
+              groupKeys: [],
+            },
+          });
+          if (data?.getSupplierAppliedAmountList) {
+            setSupplierPaymentInvoices(data.getSupplierAppliedAmountList.data);
+          }
+        },
+        () => {
+          setLoading(false);
+        }
+      );
+      if (result.error) {
+        dispatch(
+          showNotification({
+            message: result.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    },
+    []
+  );
+
+  const fetchSupplierInvoicesByPaymentId = useCallback(
+    async (storeId: number, supplierId: number, supplierPaymentId: number) => {
+      const result = await handleTryCatch(
+        async () => {
+          setLoading(true);
+          const { data } = await getSupplierInvoiceListByPaymentId({
+            variables: {
+              storeid: storeId,
+              supplierid: supplierId,
+              supplierpaymentid: supplierPaymentId,
+            },
+          });
+          if (data?.getSupplierInvoiceListByPaymentId) {
+            setSupplierInvoices(data.getSupplierInvoiceListByPaymentId);
+          }
+        },
+        () => {
+          setLoading(false);
+        }
+      );
+      if (result.error) {
+        dispatch(
+          showNotification({
+            message: result.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    },
+    []
+  );
+
   return {
     fetchSuppliersByStoreId,
     suppliers,
@@ -166,9 +247,12 @@ const useSupplier = () => {
     fetchSupplier,
     fetchSupplierBalanceDue,
     fetchSupplierInvoices,
+    fetchSupplierPaymentInvoices,
+    fetchSupplierInvoicesByPaymentId,
     loading: loading,
     supplierBalanceDue,
     supplierInvoices,
+    supplierPaymentInvoices,
   };
 };
 

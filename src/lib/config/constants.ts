@@ -63,3 +63,9 @@ export const paymentModes = {
   VOID: "Void",
   WRITE_OFF: "WriteOff",
 };
+
+export const paymentTypes ={
+  voided:"voided",
+  nonvoided:"nonvoided",
+  all:"all",
+}

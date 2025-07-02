@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import NewPaymentForm from "./NewPaymentForm";
+import VoidPaymentForm from "./VoidPaymentForm";
 import { useParams } from "next/navigation";
 
 const PaymentModal = ({
@@ -26,6 +27,8 @@ const PaymentModal = ({
       title: "Credit Adjustment",
     },
   ];
+  console.log("sas", selectedTab);
+
   return (
     <div
       className="modal fade show"
@@ -70,28 +73,30 @@ const PaymentModal = ({
             <div className="tab-content" id="pills-tabContent">
               <div className="card table-list-card mb-0">
                 <div className="card-body modal-default-height pb-0">
-                  {tabs.map((tab) => (
+                  {selectedTab === "new" && (
                     <div
                       className={`tab-pane fade ${
-                        tab.id === selectedTab ? "show active" : ""
+                        selectedTab === "new" ? "show active" : ""
                       }`}
-                      id={tab.id}
-                      role="tabpanel"
-                      aria-labelledby={tab.id + "-tab"}
-                      key={tab.id}
                     >
-                      {tab.id === "new" && (
-                        <NewPaymentForm
-                          storeId={parsedStoreId}
-                          closePaymentModal={() => setShowPaymentModal(false)}
-                        />
-                      )}
-                      {/* {tab.id === "void" && <div>Void Payment</div>}
-                          {tab.id === "Credit adj" && (
-                            <div>Credit Adjustment</div>
-                          )} */}
+                      <NewPaymentForm
+                        storeId={parsedStoreId}
+                        closePaymentModal={() => setShowPaymentModal(false)}
+                      />
                     </div>
-                  ))}
+                  )}
+                  {selectedTab === "void" && (
+                    <div
+                      className={`tab-pane fade ${
+                        selectedTab === "void" ? "show active" : ""
+                      }`}
+                    >
+                      <VoidPaymentForm
+                        storeId={parsedStoreId}
+                        closePaymentModal={() => setShowPaymentModal(false)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

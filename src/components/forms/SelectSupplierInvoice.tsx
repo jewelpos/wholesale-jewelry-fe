@@ -51,7 +51,8 @@ const SelectSupplierInvoice = ({
             value: inv.veninvoiceno,
             label: inv.veninvoiceno,
           }))
-        : invoices?.map((inv: any) => ({
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          invoices?.map((inv: any) => ({
             value: inv.veninvoiceno,
             label: inv.veninvoiceno,
           })),
