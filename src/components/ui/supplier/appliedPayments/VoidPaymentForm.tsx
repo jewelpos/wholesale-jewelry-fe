@@ -23,9 +23,13 @@ import { useMutation } from "@apollo/client";
 const VoidPaymentForm = ({
   storeId,
   closePaymentModal,
+  supplierid: supplierIdProp,
+  paymentid: paymentIdProp,
 }: {
   storeId: number;
   closePaymentModal: () => void;
+  supplierid?: number;
+  paymentid?: number;
 }) => {
   const dispatch = useAppDispatch();
   const {
@@ -44,9 +48,9 @@ const VoidPaymentForm = ({
     watch,
   } = useForm<VoidPaymentFormType>({
     defaultValues: {
-      supplierid: 0,
+      supplierid: supplierIdProp ?? 0,
       postingdate: dayjs(),
-      paymentid: 0,
+      paymentid: paymentIdProp ?? 0,
     },
     mode: "all",
   });
@@ -111,38 +115,52 @@ const VoidPaymentForm = ({
         <div className="col-lg-4 col-md-6 col-sm-12">
           <div className="input-blocks">
             <label>Supplier</label>
-            <Controller
-              control={control}
-              name="supplierid"
-              rules={{ required: "Supplier is required" }}
-              render={({ field }) => (
-                <SelectSupplier
-                  trigger={trigger}
-                  storeId={storeId}
-                  {...field}
-                  onChangeAdditional={(value: number) => {
-                    field.onChange(value);
-                    if (value) {
-                      fetchNonVoidedSupplierPaymentTransactionList(
-                        storeId,
-                        value
-                      );
-                    }
-                  }}
+            {!supplierIdProp ? (
+              <>
+                <Controller
+                  control={control}
+                  name="supplierid"
+                  rules={{ required: "Supplier is required" }}
+                  render={({ field }) => (
+                    <SelectSupplier
+                      trigger={trigger}
+                      storeId={storeId}
+                      {...field}
+                      onChangeAdditional={(value: number) => {
+                        field.onChange(value);
+                        if (value) {
+                          fetchNonVoidedSupplierPaymentTransactionList(
+                            storeId,
+                            value
+                          );
+                        }
+                      }}
+                    />
+                  )}
                 />
-              )}
-            />
-            {errors.supplierid && (
-              <div className="invalid-feedback d-block">
-                {errors.supplierid.message}
-              </div>
+                {errors.supplierid && (
+                  <div className="invalid-feedback d-block">
+                    {errors.supplierid.message}
+                  </div>
+                )}
+              </>
+            ) : (
+              <input
+                type="text"
+                className="form-control"
+                value={appliedAmounts[0]?.companyname || ""}
+                disabled
+              />
             )}
           </div>
         </div>
       </div>
+
       <div
         className={
-          !paymentLoading && supplierId && !!payments.length
+          !paymentLoading &&
+          supplierId &&
+          (!!payments.length || !!paymentIdProp)
             ? ""
             : "opacity-50 pe-none"
         }
@@ -174,25 +192,36 @@ const VoidPaymentForm = ({
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
               <LabelLoader label="Transaction #" loading={paymentLoading} />
-              <Controller
-                control={control}
-                name="paymentid"
-                rules={{ required: "Payment is required" }}
-                render={({ field }) => (
-                  <SelectPayment
-                    trigger={trigger}
-                    storeId={storeId}
-                    supplierId={supplierId}
-                    hasPayments={true}
-                    propsPayments={payments}
-                    {...field}
+              {paymentIdProp ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  value={paymentIdProp}
+                  disabled
+                />
+              ) : (
+                <>
+                  <Controller
+                    control={control}
+                    name="paymentid"
+                    rules={{ required: "Payment is required" }}
+                    render={({ field }) => (
+                      <SelectPayment
+                        trigger={trigger}
+                        storeId={storeId}
+                        supplierId={supplierId}
+                        hasPayments={true}
+                        propsPayments={payments}
+                        {...field}
+                      />
+                    )}
                   />
-                )}
-              />
-              {errors.paymentid && (
-                <div className="invalid-feedback d-block">
-                  {errors.paymentid.message}
-                </div>
+                  {errors.paymentid && (
+                    <div className="invalid-feedback d-block">
+                      {errors.paymentid.message}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

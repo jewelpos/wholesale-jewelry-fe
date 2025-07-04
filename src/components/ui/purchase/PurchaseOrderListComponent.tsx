@@ -3,37 +3,29 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import {
-  GridReadyEvent,
-  IServerSideGetRowsParams,
-  ICellRendererParams,
-  ColDef,
-} from "ag-grid-community";
+import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import { GET_SUPPLIER_PAYMENTS_QUERY } from "@/lib/graphql/query/supplier";
-import { SupplierPayment } from "@/types/supplier";
+import { PurchaseOrder } from "@/types/purchase";
 import { filterVariables } from "@/lib/utils/gridFilters";
-import POSGrid from "../../grid/POSGrid";
-import CustomFilterSections from "../../grid/CustomFilterSections";
+import POSGrid from "../grid/POSGrid";
+import PurchaseOrderItemsComponent from "./orderItems/PurchaseOrderItemsComponent";
+import CustomFilterSections from "../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
-import SupplierPaymentsHeader from "./SupplierPaymentsHeader";
-import { supplierPaymentColumnDefs } from "./ColumnDef";
 import { useParams } from "next/navigation";
-import SupplierAppliedPaymentComponent from "../appliedPayments/SupplierAppliedPaymentComponent";
-import SupplierPaymentActions from "./SupplierPaymentActions";
-import VoidPaymentModal from "../appliedPayments/VoidPaymentModal";
+import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purchase";
+import { purchaseOrderColumnDefs } from "./ColumnDef";
+import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
 
-const SupplierPaymentsComponent = () => {
-  const handleDeleteSuccess = () => {
-    gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
-  };
+const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const [getAPPaymentsList] = useLazyQuery(GET_SUPPLIER_PAYMENTS_QUERY);
+  const [getPurchaseOrdersList] = useLazyQuery(
+    GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY
+  );
   const dispatch = useAppDispatch();
   const [selectedSupplier, setSelectedSupplier] = useState<number | undefined>(
     -1
@@ -43,26 +35,7 @@ const SupplierPaymentsComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
-  // Void payment modal state
-  const [showVoidModal, setShowVoidModal] = useState(false);
-  const [voidSupplierId, setVoidSupplierId] = useState<number | null>(null);
-  const [voidPaymentId, setVoidPaymentId] = useState<number | null>(null);
-
-  const handleVoidClick = (supplierid: number, paymentid: number) => {
-    setVoidSupplierId(supplierid);
-    setVoidPaymentId(paymentid);
-    setShowVoidModal(true);
-  };
-
-  const handleCloseVoidModal = (value: boolean) => {
-    setShowVoidModal(value);
-    if (!value) {
-      // Refresh grid after void action
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  };
-
-  const handleOnGridReady = (params: GridReadyEvent<SupplierPayment>) => {
+  const handleOnGridReady = (params: GridReadyEvent<PurchaseOrder>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
@@ -73,7 +46,7 @@ const SupplierPaymentsComponent = () => {
         const filters = filterVariables(
           params,
           debouncedSearch,
-          "companyname, reference"
+          "ponumber, suppliername"
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let variables: any = {
@@ -86,18 +59,18 @@ const SupplierPaymentsComponent = () => {
           };
         }
         const result = await handleTryCatch(async () => {
-          const { data } = await getAPPaymentsList({
+          const { data } = await getPurchaseOrdersList({
             variables: {
               ...variables,
               ...filters,
             },
           });
-          if (data.getAPPaymentsList) {
+          if (data.getSupplierPurchaseOrderList) {
             params.success({
-              rowData: data.getAPPaymentsList.data,
-              rowCount: data.getAPPaymentsList.total,
+              rowData: data.getSupplierPurchaseOrderList.data,
+              rowCount: data.getSupplierPurchaseOrderList.total,
             });
-            if (!data.getAPPaymentsList.data.length) {
+            if (!data.getSupplierPurchaseOrderList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -121,36 +94,12 @@ const SupplierPaymentsComponent = () => {
       parsedStoreId,
       selectedSupplier,
       dispatch,
-      getAPPaymentsList,
+      getPurchaseOrdersList,
       debouncedSearch,
     ]
   );
 
-  const columnDefs = useMemo(() => {
-    return [
-      ...supplierPaymentColumnDefs,
-      {
-        headerName: "Actions",
-        field: "paymentid", // Using paymentid as the field since it's part of SupplierPayment type
-        cellRenderer: (params: ICellRendererParams<SupplierPayment>) =>
-          params.data ? (
-            <SupplierPaymentActions
-              data={params.data}
-              onVoid={handleVoidClick}
-            />
-          ) : null,
-        width: 120,
-        sortable: false,
-        filter: false,
-        maxWidth: 150,
-        pinned: "right",
-        suppressSizeToFit: false,
-        suppressMovable: true,
-        suppressHeaderMenuButton: true,
-        enableRowGroup: false,
-      } as ColDef<SupplierPayment>,
-    ];
-  }, [handleVoidClick]);
+  const columnDefs = useMemo(() => purchaseOrderColumnDefs, []);
 
   useEffect(() => {
     if (parsedStoreId && gridReady) {
@@ -167,7 +116,7 @@ const SupplierPaymentsComponent = () => {
 
   return (
     <>
-      <SupplierPaymentsHeader />
+      <PurchaseOrderListHeader />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -186,22 +135,14 @@ const SupplierPaymentsComponent = () => {
                 floatingFilter: !debouncedSearch,
               }}
               masterDetail
-              detailCellRenderer={SupplierAppliedPaymentComponent}
+              detailCellRenderer={PurchaseOrderItemsComponent}
               detailRowAutoHeight
             />
           </div>
         </div>
       </div>
-      {showVoidModal && voidSupplierId && voidPaymentId && (
-        <VoidPaymentModal
-          setShowVoidModal={handleCloseVoidModal}
-          storeId={parsedStoreId}
-          supplierid={voidSupplierId}
-          paymentid={voidPaymentId}
-        />
-      )}
     </>
   );
 };
 
-export default SupplierPaymentsComponent;
+export default PurchaseOrderListComponent;

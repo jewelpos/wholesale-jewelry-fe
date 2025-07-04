@@ -1,6 +1,6 @@
 "use client";
 
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
 export const appliedPaymentsColumnDefs: ColDef[] = [
@@ -8,47 +8,28 @@ export const appliedPaymentsColumnDefs: ColDef[] = [
     headerName: "Invoice Number",
     field: "invoicenumber",
     filter: "agTextColumnFilter",
+    flex: 1,
   },
   {
     headerName: "Applied Amount",
     field: "appliedamount",
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
+    flex: 1,
   },
   {
     headerName: "Pay Mode",
     field: "paymode",
     filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Check/Card No",
-    field: "checkcardno",
-    filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Applied By",
-    field: "appliedby",
-    filter: "agTextColumnFilter",
+    flex: 1,
   },
   {
     headerName: "Status",
     field: "voided",
     filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Warehouse",
-    field: "warehousename",
-    filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Description",
-    field: "chk_description",
-    filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Company",
-    field: "companyname",
-    filter: "agTextColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value === "Yes" ? "Voided" : "Not Voided",
+    flex: 1,
   },
 ];
 
