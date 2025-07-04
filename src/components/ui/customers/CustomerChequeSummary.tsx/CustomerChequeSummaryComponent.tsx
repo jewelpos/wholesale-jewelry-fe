@@ -148,6 +148,7 @@ const CustomerChequeSummaryComponent = () => {
                 loading={loading}
                 masterDetail
                 detailCellRenderer={OnHandChecksComponent}
+                detailRowAutoHeight
               />
             </div>
           </div>

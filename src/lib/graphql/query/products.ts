@@ -114,3 +114,38 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
+  query GetProductActivityList(
+    $storeid: Int!
+    $warehouseid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getProductActivityList(
+      storeid: $storeid
+      warehouseid: $warehouseid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        itemcode
+        transaction_type
+        transation_date
+        reference
+        quantity
+        warehouse
+        warehouseid
+      }
+    }
+  }
+`;

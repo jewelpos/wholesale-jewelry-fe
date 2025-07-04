@@ -58,3 +58,18 @@ export type ProductListTypeResponseType = {
   total: number;
   data: ProductListType[];
 };
+
+export type ProductActivityList = {
+  itemcode: string;
+  transaction_type: string;
+  transation_date: string;
+  reference: string;
+  quantity: number;
+  warehouse: string;
+  warehouseid: number;
+};
+
+export type ProductActivityListResponseType = {
+  total: number;
+  data: ProductActivityList[];
+};

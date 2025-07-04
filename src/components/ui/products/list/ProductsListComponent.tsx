@@ -10,12 +10,15 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
+import useMenu from "@/hooks/useMenu";
 import { GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
 import { productListColumnDefs } from "./columnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
+import ProductsListHeader from "./ProductsListHeader";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -24,6 +27,9 @@ const ProductsListComponent = () => {
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
+  const { currentMenu } = useMenu();
 
   const handleOnGridReady = (params: GridReadyEvent<ProductListType>) => {
     setGridReady(true);
@@ -33,7 +39,11 @@ const ProductsListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "itemcode, itemdescription"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getProductList({
             variables: {
@@ -66,7 +76,7 @@ const ProductsListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getProductList]
+    [selectedOutlet, dispatch, getProductList, debouncedSearch]
   );
 
   useEffect(() => {
@@ -75,27 +85,44 @@ const ProductsListComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady]);
 
+  useEffect(() => {
+    if (debouncedSearch && gridReady) {
+      gridRef?.current?.api?.setFilterModel(null);
+      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [gridRef, datasource, gridReady, debouncedSearch]);
+
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <ProductsListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={productListColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={productListColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

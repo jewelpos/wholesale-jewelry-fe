@@ -8,21 +8,21 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY } from "@/lib/graphql/query/supplier";
-import { AppliedPaymentType, SupplierPayment } from "@/types/supplier";
 import "ag-grid-enterprise";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import { useParams } from "next/navigation";
-import appliedPaymentsColumnDefs from "./ColumnDef";
+import { GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY } from "@/lib/graphql/query/purchase";
+import { PurchaseOrderItem, PurchaseOrder } from "@/types/purchase";
+import purchaseOrderItemsColumnDefs from "./ColumnDef";
 
 interface Props {
-  data: SupplierPayment;
+  data: PurchaseOrder;
 }
 
-const SupplierAppliedPaymentComponent = ({ data }: Props) => {
-  const [getSupplierAppliedAmountList] = useLazyQuery(
-    GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY
+const PurchaseOrderItemsComponent = ({ data }: Props) => {
+  const [getPurchaseOrderItemsList] = useLazyQuery(
+    GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY
   );
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -30,7 +30,7 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const handleOnGridReady = (params: GridReadyEvent<AppliedPaymentType>) => {
+  const handleOnGridReady = (params: GridReadyEvent<PurchaseOrderItem>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
@@ -40,19 +40,19 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params);
         const result = await handleTryCatch(async () => {
-          const { data: paymentData } = await getSupplierAppliedAmountList({
+          const { data: poItemData } = await getPurchaseOrderItemsList({
             variables: {
-              supplierpaymentid: data.paymentid,
+              ponumber: parseInt(data.ponumber, 10),
               storeid: parsedStoreId,
               ...filters,
             },
           });
-          if (paymentData.getSupplierAppliedAmountList) {
+          if (poItemData.getSupplierPurchaseOrderItemsList) {
             params.success({
-              rowData: paymentData.getSupplierAppliedAmountList.data,
-              rowCount: paymentData.getSupplierAppliedAmountList.total,
+              rowData: poItemData.getSupplierPurchaseOrderItemsList.data,
+              rowCount: poItemData.getSupplierPurchaseOrderItemsList.total,
             });
-            if (!paymentData.getSupplierAppliedAmountList.data.length) {
+            if (!poItemData.getSupplierPurchaseOrderItemsList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -72,14 +72,14 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
         }
       },
     }),
-    [dispatch, getSupplierAppliedAmountList, data.paymentid, parsedStoreId]
+    [dispatch, getPurchaseOrderItemsList, data.ponumber, parsedStoreId]
   );
 
   useEffect(() => {
-    if (data.paymentid && parsedStoreId && gridReady) {
+    if (data.ponumber && parsedStoreId && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, gridReady, data.supplierid, parsedStoreId]);
+  }, [gridRef, datasource, gridReady, data.ponumber, parsedStoreId]);
 
   return (
     <div className="card table-list-card bg-gray-200">
@@ -87,7 +87,7 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
         <div className="ag-theme-quartz custom-theme">
           <POSGrid
             ref={gridRef}
-            columnDefs={appliedPaymentsColumnDefs}
+            columnDefs={purchaseOrderItemsColumnDefs}
             onGridReady={handleOnGridReady}
             domLayout="autoHeight"
           />
@@ -97,4 +97,4 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
   );
 };
 
-export default SupplierAppliedPaymentComponent;
+export default PurchaseOrderItemsComponent;

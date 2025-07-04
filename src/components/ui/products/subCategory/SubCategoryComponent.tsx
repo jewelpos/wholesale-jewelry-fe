@@ -10,7 +10,9 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
+import SubCategoryHeader from "./SubCategoryHeader";
 import { GET_ITEM_SUB_CATEGORY_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductSubItemCategoryType } from "@/types/product";
 import { filterVariables } from "@/lib/utils/gridFilters";
@@ -24,6 +26,8 @@ const SubCategoryComponent = () => {
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
@@ -37,7 +41,11 @@ const SubCategoryComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "subcategoryname, categoryid, subcategorydescription"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getItemSubCategoryList({
             variables: {
@@ -70,36 +78,40 @@ const SubCategoryComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getItemSubCategoryList]
+    [selectedOutlet, dispatch, getItemSubCategoryList, debouncedSearch]
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <SubCategoryHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={subCategoryColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={subCategoryColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

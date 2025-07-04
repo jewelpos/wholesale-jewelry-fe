@@ -9,32 +9,35 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import CustomFilterSections from "../../grid/CustomFilterSections";
-import { useDebounce } from "@/hooks/useDebounce";
-import { GET_ITEM_CATEGORY_LIST_QUERY } from "@/lib/graphql/query/products";
-import { ProductItemCategoryType } from "@/types/product";
+import { ProductActivityList } from "@/types/product";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
-import { categoryColumnDefs } from "./ColumnDefs";
-import CategoryHeader from "./CategoryHeader";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useParams } from "next/navigation";
+import { GET_PRODUCT_ACTIVITY_LIST_QUERY } from "@/lib/graphql/query/products";
+import productActivityColumnDefs from "./ColumnDef";
+import ProductActivitiesHeader from "./ProductActivitiesHeader";
 
-const CategoryComponent = () => {
-  const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
+const ProductActivitiesComponent = () => {
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const [getProductActivitiesList] = useLazyQuery(
+    GET_PRODUCT_ACTIVITY_LIST_QUERY
+  );
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const handleOnGridReady = (
-    params: GridReadyEvent<ProductItemCategoryType>
-  ) => {
+  const handleOnGridReady = (params: GridReadyEvent<ProductActivityList>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
+
+  const columnDefs = useMemo(() => productActivityColumnDefs, []);
 
   const datasource = useMemo(
     () => ({
@@ -42,21 +45,31 @@ const CategoryComponent = () => {
         const filters = filterVariables(
           params,
           debouncedSearch,
-          "categoryname, categorycode, categorydescription"
+          "itemcode, transaction_type, reference"
         );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let variables: any = {
+          storeid: parsedStoreId,
+        };
+        if (selectedWarehouse !== -1) {
+          variables = {
+            ...variables,
+            warehouseid: selectedWarehouse,
+          };
+        }
         const result = await handleTryCatch(async () => {
-          const { data } = await getItemCategoryList({
+          const { data } = await getProductActivitiesList({
             variables: {
-              outletid: selectedOutlet,
+              ...variables,
               ...filters,
             },
           });
-          if (data.getItemCategoryList) {
+          if (data.getProductActivityList) {
             params.success({
-              rowData: data.getItemCategoryList.data,
-              rowCount: data.getItemCategoryList.total,
+              rowData: data.getProductActivityList.data,
+              rowCount: data.getProductActivityList.total,
             });
-            if (!data.getItemCategoryList.data.length) {
+            if (!data.getProductActivityList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -76,30 +89,36 @@ const CategoryComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getItemCategoryList, debouncedSearch]
+    [
+      dispatch,
+      getProductActivitiesList,
+      parsedStoreId,
+      debouncedSearch,
+      selectedWarehouse,
+    ]
   );
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
+    if (parsedStoreId && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
+  }, [gridRef, datasource, gridReady, parsedStoreId]);
 
   return (
     <>
-      <CategoryHeader />
+      <ProductActivitiesHeader />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
             search={search}
             setSearch={setSearch}
-            selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
-              columnDefs={categoryColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
@@ -113,4 +132,4 @@ const CategoryComponent = () => {
   );
 };
 
-export default CategoryComponent;
+export default ProductActivitiesComponent;

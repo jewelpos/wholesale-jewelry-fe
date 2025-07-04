@@ -33,6 +33,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
       loading,
       masterDetail,
       height = "300px",
+      domLayout = "normal",
       ...props
     },
     ref
@@ -62,7 +63,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           rowData={rowData}
           rowSelection={rowSelection}
           rowGroupPanelShow="always"
-          domLayout="normal"
+          domLayout={domLayout}
           pagination={true}
           onGridReady={onGridReady}
           autoSizeStrategy={autoSizeStrategy}
