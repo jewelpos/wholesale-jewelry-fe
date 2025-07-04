@@ -10,18 +10,22 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
 import { GET_ITEM_CATEGORY_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductItemCategoryType } from "@/types/product";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import { categoryColumnDefs } from "./ColumnDefs";
+import CategoryHeader from "./CategoryHeader";
 
 const CategoryComponent = () => {
   const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
@@ -35,7 +39,11 @@ const CategoryComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "categoryname, categorycode, categorydescription"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getItemCategoryList({
             variables: {
@@ -68,36 +76,40 @@ const CategoryComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getItemCategoryList]
+    [selectedOutlet, dispatch, getItemCategoryList, debouncedSearch]
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <CategoryHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={categoryColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={categoryColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

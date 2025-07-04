@@ -9,21 +9,23 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
 import { GET_SUPPLIER_LEDGER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { SupplierLedgerListType } from "@/types/supplier";
 import { supplierLedgerColumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
 import { filterVariables } from "@/lib/utils/gridFilters";
+import { useDebounce } from "@/hooks/useDebounce";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import SupplierLedgerActivityHeader from "./SupplierLedgerActivityHeader";
 
 const SupplierLedgerActitvityComponent = () => {
   const [getSupplierLedgerList] = useLazyQuery(GET_SUPPLIER_LEDGER_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
 
   const handleOnGridReady = (
     params: GridReadyEvent<SupplierLedgerListType>
@@ -35,12 +37,16 @@ const SupplierLedgerActitvityComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filtersMain = filterVariables(
+          params,
+          debouncedSearch,
+          "supplierid, ledgercode, ledgerdescription"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierLedgerList({
             variables: {
               outletid: selectedOutlet,
-              ...filters,
+              ...filtersMain,
             },
           });
           if (data.getSupplierLedgerList) {
@@ -68,36 +74,40 @@ const SupplierLedgerActitvityComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierLedgerList]
+    [selectedOutlet, dispatch, getSupplierLedgerList, debouncedSearch]
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <SupplierLedgerActivityHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={supplierLedgerColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={supplierLedgerColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 

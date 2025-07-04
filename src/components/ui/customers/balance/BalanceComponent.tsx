@@ -12,10 +12,12 @@ import { GET_CUSTOMER_BALANCE_REPORT_QUERY } from "@/lib/graphql/query/customer"
 import { CustomerBalanceReportType } from "@/types/customer";
 import "ag-grid-enterprise";
 import useOutlets from "@/hooks/useOutlets";
-import OutletsFilter from "../../grid/OutletsFilter";
-import { balanceReportColumnDefs } from "./ColumnDef";
+import CustomFilterSections from "../../grid/CustomFilterSections";
+import { useDebounce } from "@/hooks/useDebounce";
 import POSGrid from "../../grid/POSGrid";
 import { filterVariables } from "@/lib/utils/gridFilters";
+import { balanceReportColumnDefs } from "./ColumnDef";
+import BalanceHeader from "./BalanceHeader";
 
 const BalanceComponent = () => {
   const [getCustomerBalanceReport] = useLazyQuery(
@@ -24,6 +26,8 @@ const BalanceComponent = () => {
   const dispatch = useAppDispatch();
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
@@ -37,7 +41,11 @@ const BalanceComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
+        const filters = filterVariables(
+          params,
+          debouncedSearch,
+          "customerid, companyname, customername"
+        );
         const result = await handleTryCatch(async () => {
           const { data } = await getCustomerBalanceReport({
             variables: {
@@ -70,36 +78,40 @@ const BalanceComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getCustomerBalanceReport]
+    [selectedOutlet, dispatch, getCustomerBalanceReport, debouncedSearch]
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
+    if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   return (
-    <div className="card-body p-2">
-      <div className="table-top mb-2">
-        <div className="search-set">
-          <div className="search-input">
-            <OutletsFilter
-              fetchOutletsList={fetchOutletsList}
-              outlets={outlets}
-              loading={outletsLoading}
-              setSelectedOutlet={setSelectedOutlet}
-              selectedOutlet={selectedOutlet}
+    <>
+      <BalanceHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
+          <div className="ag-theme-quartz custom-theme">
+            <POSGrid
+              ref={gridRef}
+              columnDefs={balanceReportColumnDefs}
+              onGridReady={handleOnGridReady}
+              defaultColDef={{
+                filter: !debouncedSearch,
+                floatingFilter: !debouncedSearch,
+              }}
             />
           </div>
         </div>
       </div>
-      <POSGrid
-        ref={gridRef}
-        columnDefs={balanceReportColumnDefs}
-        onGridReady={handleOnGridReady}
-      />
-    </div>
+    </>
   );
 };
 
