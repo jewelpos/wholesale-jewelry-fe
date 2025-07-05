@@ -28,9 +28,6 @@ import SupplierPaymentActions from "./SupplierPaymentActions";
 import VoidPaymentModal from "../appliedPayments/VoidPaymentModal";
 
 const SupplierPaymentsComponent = () => {
-  const handleDeleteSuccess = () => {
-    gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
-  };
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [getAPPaymentsList] = useLazyQuery(GET_SUPPLIER_PAYMENTS_QUERY);

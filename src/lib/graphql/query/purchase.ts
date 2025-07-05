@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
   query GetSupplierPurchaseOrderList(
     $storeid: Int!
-    $supplierid: Int!
+    $supplierid: Int
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]

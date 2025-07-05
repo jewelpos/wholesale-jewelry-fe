@@ -1,5 +1,8 @@
 import React from "react";
 import { SupplierPayment } from "@/types/supplier";
+import Link from "next/link";
+import { XSquare } from "react-feather";
+import TooltipComponent from "../../TooltipComponent";
 
 interface SupplierPaymentActionsProps {
   data: SupplierPayment;
@@ -15,13 +18,16 @@ const SupplierPaymentActions: React.FC<SupplierPaymentActionsProps> = ({
       <div className="edit-delete-action">
         <div className="input-block add-lists"></div>
         {data.voided !== "Yes" && (
-          <button
-            type="button"
-            onClick={() => onVoid(data.supplierid, data.paymentid)}
-            className="btn btn-danger me-3"
-          >
-            Void
-          </button>
+          <TooltipComponent value="Void">
+            <Link
+              className="me-2 p-2"
+              href=""
+              scroll={false}
+              onClick={() => onVoid(data.supplierid, data.paymentid)}
+            >
+              <XSquare className="feather-trash-2" />
+            </Link>
+          </TooltipComponent>
         )}
       </div>
     </div>
