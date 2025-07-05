@@ -6,7 +6,7 @@ import useMenu from "@/hooks/useMenu";
 
 const InventoryAdjustmentsHeader = () => {
   const { currentMenu } = useMenu();
-
+  console.log(currentMenu);
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname || "Inventory Adjustments"}
