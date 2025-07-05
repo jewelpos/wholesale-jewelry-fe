@@ -118,7 +118,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
 export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
   query GetProductActivityList(
     $storeid: Int!
-    $warehouseid: Int!
+    $warehouseid: Int
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -145,6 +145,46 @@ export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
         quantity
         warehouse
         warehouseid
+      }
+    }
+  }
+`;
+
+export const GET_INVENTORY_ADJUSTMENT_LIST_QUERY = gql`
+  query GetInventoryAdjustmentList(
+    $storeid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getInventoryAdjustmentList(
+      storeid: $storeid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        itemcode
+        description
+        adjusted_date
+        qty_adjusted
+        cost_adjusted
+        new_qty
+        new_cost
+        updated_by
+        warehouse
+        adj_id
+        itemid
+        lastmodifieddate
+        warehouseid
+        updateremarks
       }
     }
   }

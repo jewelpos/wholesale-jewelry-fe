@@ -73,3 +73,25 @@ export type ProductActivityListResponseType = {
   total: number;
   data: ProductActivityList[];
 };
+
+export type InventoryAdjustment = {
+  itemcode: string;
+  description?: string;
+  adjusted_date?: string;
+  qty_adjusted?: number;
+  cost_adjusted?: number;
+  new_qty?: number;
+  new_cost?: number;
+  updated_by?: string;
+  warehouse?: string;
+  adj_id?: number;
+  itemid?: number;
+  lastmodifieddate?: string;
+  warehouseid?: number;
+  updateremarks?: string;
+};
+
+export type InventoryAdjustmentResponseType = {
+  total: number;
+  data: InventoryAdjustment[];
+};
