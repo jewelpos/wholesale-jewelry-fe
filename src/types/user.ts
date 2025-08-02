@@ -45,6 +45,7 @@ export type AddUserFormType = {
   storeid: number;
   outlets: MultiValue<SelectOption>;
   roleid: number;
+  defaultoutletid: number;
 };
 
 export type UsersListType = {
@@ -60,4 +61,6 @@ export type UsersListType = {
   rolename: string;
   outletid: number;
   outletname: string;
+  storename: string;
+  isdefaultoutlet: boolean;
 };

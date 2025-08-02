@@ -211,6 +211,16 @@ export type NewPaymentFormType = {
   reference: string 
 }
 
+export type CreditAdjustmentFormType = {
+  supplierid: number;
+  postingdate: dayjs.Dayjs;
+  paymentmodeid: number;
+  checkcardno: string;
+  amount: string;
+  invoicenumber: string;
+  reference: string;
+};
+
 export type SupplierBalanceDueType = {
   supplierinvoiceid: number;
   supplierid: number;

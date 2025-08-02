@@ -385,7 +385,7 @@ const NewPaymentForm = ({
             </div>
           </div>
         </div>
-        {!invoiceLoading && supplierId && !!supplierBalanceDue.length && (
+        {!invoiceLoading && !!supplierId && !!supplierBalanceDue.length && (
           <div className="modal-body-table">
             <div className="table-responsive ">
               <table className="table  datanew">
@@ -417,9 +417,9 @@ const NewPaymentForm = ({
             </div>
           </div>
         )}
-        {invoiceLoading &&
+        {!!invoiceLoading &&
           [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)}
-        {!invoiceLoading && supplierId && !!supplierBalanceDue.length && (
+        {!invoiceLoading && !!supplierId && !!supplierBalanceDue.length && (
           <ActionFooter handleCancel={closePaymentModal}>
             <ButtonLoader
               loading={saving}

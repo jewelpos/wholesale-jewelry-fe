@@ -16,7 +16,9 @@ const httpLink = createHttpLink({
 
 export const apolloClientAuthorized = new ApolloClient({
   link: from([errorLink, authLink, httpLink]),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    addTypename: false
+  }),
   defaultOptions: {
     watchQuery: {
       fetchPolicy: "network-only",

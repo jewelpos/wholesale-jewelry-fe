@@ -443,3 +443,30 @@ export const GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY = gql`
     }
   }
 `;
+
+export const GET_SUPPLIER_CREDIT_BALANCE_DUE_QUERY = gql`
+  query GetSupplierCreditBalanceDue($storeid: Int!, $supplierid: Int!) {
+    getSupplierCreditBalanceDue(storeid: $storeid, supplierid: $supplierid) {
+      balanceDueSuppliers {
+        supplierinvoiceid
+        supplierid
+        veninvoiceno
+        veninvoicedate
+        veninvoicetotal
+        veninvamtpaid
+        veninvamtbalance
+        warehouseid
+      }
+      balanceDueInvoices {
+        supplierinvoiceid
+        supplierid
+        veninvoiceno
+        veninvoicedate
+        veninvoicetotal
+        veninvamtpaid
+        veninvamtbalance
+        warehouseid
+      }
+    }
+  }
+`;

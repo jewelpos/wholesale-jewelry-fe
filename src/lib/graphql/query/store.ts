@@ -24,6 +24,12 @@ export const GET_STORES = gql`
       hassetupinventory
       hassetupproduct
       hassetupreceipt
+      outlets {
+        outletid
+        outletname
+        isenabled
+        isdefaultoutlet
+      }
     }
   }
 `;
@@ -43,6 +49,12 @@ export const GET_STORE = gql`
       hassetupinventory
       hassetupproduct
       hassetupreceipt
+      outlets {
+        outletid
+        outletname
+        isenabled
+        isdefaultoutlet
+      }
     }
   }
 `;
