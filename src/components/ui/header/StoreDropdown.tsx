@@ -15,12 +15,14 @@ const StoreDropdown = ({ storeLoading }: Props) => {
   const stores = useAppSelector((state) => state.stores.data);
   const store = useAppSelector((state) => state.store.data);
   const { outletId } = useParams();
+  const pathname = usePathname();
   // Track which store item is currently hovered so its submenu stays open
   const [hoveredStoreId, setHoveredStoreId] = useState<string | number | null>(
     null
   );
+  
   const urlAfterStoreIdAndOutletId = (() => {
-    const segments = usePathname().split("/").filter(Boolean);
+    const segments = pathname.split("/").filter(Boolean);
     return segments.length > 3 ? `/${segments.slice(3).join("/")}` : "";
   })();
 
