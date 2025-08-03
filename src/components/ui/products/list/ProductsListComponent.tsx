@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -19,6 +30,7 @@ import { productListColumnDefs } from "./columnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import ProductsListHeader from "./ProductsListHeader";
+import ProductActions from "./ProductActions";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -79,6 +91,12 @@ const ProductsListComponent = () => {
     [selectedOutlet, dispatch, getProductList, debouncedSearch]
   );
 
+  const handleDeleteSuccess = useCallback(() => {
+    if (selectedOutlet && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, selectedOutlet]);
+
   useEffect(() => {
     if (selectedOutlet && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
@@ -91,6 +109,32 @@ const ProductsListComponent = () => {
       gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
+
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      ...productListColumnDefs.filter(col => col.headerName !== "Actions"),
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<ProductListType>) =>
+          params.data ? (
+            <ProductActions
+              data={params.data}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 80,
+        sortable: false,
+        filter: false,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
+  );
 
   return (
     <>
@@ -106,7 +150,7 @@ const ProductsListComponent = () => {
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
-              columnDefs={productListColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,

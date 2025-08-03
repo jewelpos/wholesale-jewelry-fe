@@ -1,5 +1,28 @@
 import { gql } from "@apollo/client";
 
+// New simplified queries for categories and subcategories
+export const GET_ITEM_CATEGORIES_QUERY = gql`
+  query GetItemCategories($storeid: Int!) {
+    getItemCategories(storeid: $storeid) {
+      categoryid
+      categoryname
+      categorydescription
+      categorycode
+    }
+  }
+`;
+
+export const GET_ITEM_SUBCATEGORIES_QUERY = gql`
+  query GetItemSubcategories($storeid: Int!, $categoryid: Int) {
+    getItemSubcategories(storeid: $storeid, categoryid: $categoryid) {
+      subcategoryid
+      subcategoryname
+      subcategorydescription
+      categoryid
+    }
+  }
+`;
+
 export const GET_ITEM_CATEGORY_LIST_QUERY = gql`
   query GetItemCategoryList(
     $outletid: Int!
@@ -69,6 +92,77 @@ export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
         createddate
         lastmodifieddate
       }
+    }
+  }
+`;
+
+export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
+  query GetProductByItemCode($itemcode: String!, $storeid: Int!) {
+    getProductByItemCode(itemcode: $itemcode, storeid: $storeid) {
+      itemcode
+      itemdescription
+      supplierid
+      supplieritemcode
+      supplierbarcodeid
+      modelno
+      manufacturer
+      itemreorderqtypnt
+      itemreorderqty
+      itemcategoryid
+      subcategoryid
+      itemstatus
+      itemtaxable
+      trackinventory
+      itemimagepath
+      itemlocation
+      itempurchaseprice
+      itemtagpricecode
+      itemtagprice
+      itemdiscount
+      itemmetal
+      itemremarks
+      itemalertwarning
+      itemwarningmessage
+      detaileditemdescription
+      tag1
+      tag2
+      tag3
+      tag4
+      tag5
+      tag6
+      tag7
+      tag8
+      tag9
+      tag10
+      dshape
+      dlab
+      dcerno
+      dcarat
+      ddiameter
+      dcolor
+      dclarity
+      dflorence
+      dpolarity
+      ddepth
+      dtable
+      dgirdle
+      dculut
+      dpolish
+      dsymmetry
+      dcrownheight
+      dcrownangle
+      dpavillionheight
+      dpavillionangle
+      dmesurement
+      dsize
+      dquality
+      dstockno
+      drapprice
+      dcost
+      dsaleprice
+      dpricecode
+      itemid
+      itemwarehouseid
     }
   }
 `;
