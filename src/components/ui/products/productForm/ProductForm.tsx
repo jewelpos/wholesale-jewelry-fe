@@ -270,12 +270,12 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
                 let imageUrls = [];
                 if (typeof product.itemimagepath === "string") {
                   try {
-                    imageUrls = JSON.parse(product.itemimagepath).map(
-                      (path: string) => `${config.apiUrl}/${path}`
-                    );
+                    imageUrls = JSON.parse(product.itemimagepath);
                   } catch {
-                    imageUrls = [`${config.apiUrl}/${product.itemimagepath}`];
+                    imageUrls = [product.itemimagepath];
                   }
+                } else if (Array.isArray(product.itemimagepath)) {
+                  imageUrls = product.itemimagepath;
                 }
 
                 if (imageUrls.length > 0) {
