@@ -963,3 +963,26 @@ input[type="range"]::-webkit-slider-runnable-track {
     }
   }
 }
+
+[dir="rtl"] {
+  input {
+    &[type="week"],
+    &[type="month"],
+    &[type="date"],
+    &[type="datetime-local"],
+    &[type="time"] {
+      text-align: end;
+    }
+  }
+}
+
+// Remove number input arrows/spinners
+input[type="number"] {
+  -moz-appearance: textfield; // Firefox
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none; // Chrome, Safari, Edge
+    margin: 0;
+  }
+}

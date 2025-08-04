@@ -76,24 +76,29 @@ export const GET_USER_QUERY = gql`
         roleid
         rolename
         menus {
-          menuid
-          iconurl
-          menuurl
-          menuname
-          slugname
-          menuorder
           storetypeid
           permissionid
           permissiondisplayname
           children {
-            permissionid
-            permissionname
-            name
             action {
               actionid
               actionname
+              actionorder
+              actionparentid
+              actiondescription
               actiondisplayname
             }
+            parentid
+            packageid
+            storetypeid
+            permissionid
+            permissionname
+            permissionorder
+            permissionparentid
+            permissiondescription
+            permissiondisplayname
+            status
+            storemenuid
           }
         }
       }
@@ -101,6 +106,8 @@ export const GET_USER_QUERY = gql`
       rolename
       outletid
       outletname
+      storename
+      isdefaultoutlet
   }
 }
 `;

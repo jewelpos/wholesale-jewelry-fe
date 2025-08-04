@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import NewPaymentForm from "./NewPaymentForm";
 import VoidPaymentForm from "./VoidPaymentForm";
+import CreditAdjustmentForm from "./CreditAdjustmentForm";
 import { useParams } from "next/navigation";
 
 const PaymentModal = ({
@@ -14,18 +15,9 @@ const PaymentModal = ({
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [selectedTab, setSelectedTab] = useState("new");
   const tabs = [
-    {
-      id: "new",
-      title: "New Payment",
-    },
-    {
-      id: "void",
-      title: "Void Payment",
-    },
-    {
-      id: "Credit adj",
-      title: "Credit Adjustment",
-    },
+    { id: "new", title: "New Payment" },
+    { id: "void", title: "Void Payment" },
+    { id: "credit", title: "Credit Adjustment" },
   ];
   console.log("sas", selectedTab);
 
@@ -92,6 +84,18 @@ const PaymentModal = ({
                       }`}
                     >
                       <VoidPaymentForm
+                        storeId={parsedStoreId}
+                        closePaymentModal={() => setShowPaymentModal(false)}
+                      />
+                    </div>
+                  )}
+                  {selectedTab === "credit" && (
+                    <div
+                      className={`tab-pane fade ${
+                        selectedTab === "credit" ? "show active" : ""
+                      }`}
+                    >
+                      <CreditAdjustmentForm
                         storeId={parsedStoreId}
                         closePaymentModal={() => setShowPaymentModal(false)}
                       />

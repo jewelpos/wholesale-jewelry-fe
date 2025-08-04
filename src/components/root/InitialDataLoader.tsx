@@ -23,7 +23,7 @@ const InitialDataLoader = ({
   children: React.ReactNode;
 }>) => {
   const router = useRouter();
-  const { storeId } = useParams();
+  const { storeId, outletId } = useParams();
   const user = useAppSelector((state) => state.user.data);
   const menus = user?.shouldcreatestore ? [] : user?.permissions?.menus;
   const { loading: authLoading, onLogout } = useAuth();
@@ -32,10 +32,17 @@ const InitialDataLoader = ({
   const stores = useAppSelector((state) => state.stores.data);
 
   useEffect(() => {
-    if (stores?.length && !storeId) {
-      router.push(`/jw/${stores[0].storeid}/home`);
+    if (stores?.length && (!storeId || !outletId)) {
+      const defaultOutlet = stores[0]?.outlets?.find((o) => o.isdefaultoutlet);
+      if (defaultOutlet) {
+        router.push(`/jw/${stores[0].storeid}/${defaultOutlet?.outletid}/home`);
+      } else {
+        router.push(
+          `/jw/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/home`
+        );
+      }
     }
-  }, [storeId, stores, router]);
+  }, [storeId, outletId, stores, router]);
 
   useEffect(() => {
     fetchUserData();

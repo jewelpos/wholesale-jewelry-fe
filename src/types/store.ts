@@ -33,6 +33,12 @@ export type Store = {
   hassetupinventory: boolean;
   hassetupproduct: boolean;
   hassetupreceipt: boolean;
+  outlets?: {
+    outletid: number;
+    outletname: string;
+    isenabled: boolean;
+    isdefaultoutlet: boolean;
+  }[];
 };
 
 export type Stores = Store[];

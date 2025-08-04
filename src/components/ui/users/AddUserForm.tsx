@@ -52,6 +52,7 @@ const AddUserForm = () => {
     trigger,
     reset,
     setValue,
+    watch,
   } = useForm<AddUserFormType>({
     defaultValues: {
       confirmpassword: "",
@@ -62,6 +63,7 @@ const AddUserForm = () => {
       outlets: [],
       roleid: 0,
       storeid: 0,
+      defaultoutletid: 0,
     },
   });
   const { fetchStoresData, loading: storesLoading } = useStores();
@@ -69,6 +71,7 @@ const AddUserForm = () => {
   const password = getValues("password");
   const roleId = getValues("roleid");
   const storeId = getValues("storeid");
+  const selectedOutlets = getValues("outlets");
   const { loading: rolesLoading, data: rolesData } = useQuery(GET_ROLES_QUERY);
   const roles: RolesType | undefined = rolesData?.getRoles;
   const { loading: permissionLoading, data: permissionData } = useQuery(
@@ -136,11 +139,11 @@ const AddUserForm = () => {
       let response;
       if (userId) {
         response = await editOutletUser({
-          variables: { input: payloads },
+          variables: { input: { ...payloads, userid: parsedUserId } },
         });
       } else {
         response = await createOutletUser({
-          variables: { input: payloads },
+          variables: { input: { ...payloads } },
         });
       }
       const { data } = response;
@@ -194,22 +197,78 @@ const AddUserForm = () => {
       <div className="row">
         <div className="col-md-12">
           <UserProfileInputs register={register} errors={errors} />
-          {!userId && (
-            <UserStoreInputs
-              control={control}
-              errors={errors}
-              storesLoading={storesLoading}
-              setValue={setValue}
-              storeId={storeId}
-            />
-          )}
-          {!userId && (
-            <UserOutletInputs
-              control={control}
-              errors={errors}
-              outlets={outlets}
-              outletsLoading={outletsLoading}
-            />
+          {userId ? (
+            <div className="mb-4">
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Store</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={userData?.getUserByIdUnderStore?.storename || ""}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Outlet</label>
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      value={userData?.getUserByIdUnderStore?.outletname || ""}
+                      readOnly
+                      disabled
+                    />
+                    {!userData?.getUserByIdUnderStore?.isdefaultoutlet && (
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="makeDefaultOutlet"
+                          checked={!!watch("defaultoutletid")}
+                          onChange={(e) => {
+                            setValue(
+                              "defaultoutletid",
+                              e.target.checked
+                                ? userData?.getUserByIdUnderStore?.outletid || 0
+                                : 0,
+                              { shouldValidate: true }
+                            );
+                          }}
+                        />
+                        <label
+                          className="form-check-label"
+                          htmlFor="makeDefaultOutlet"
+                        >
+                          Make as default outlet
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <UserStoreInputs
+                control={control}
+                errors={errors}
+                storesLoading={storesLoading}
+                setValue={setValue}
+                storeId={storeId}
+              />
+              <UserOutletInputs
+                control={control}
+                errors={errors}
+                outlets={outlets}
+                outletsLoading={outletsLoading}
+                selectedOutlets={[...selectedOutlets]}
+                trigger={trigger}
+              />
+            </>
           )}
           <UserRolesAndPermissionsInputs
             control={control}
