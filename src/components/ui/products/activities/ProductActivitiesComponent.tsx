@@ -48,7 +48,7 @@ const ProductActivitiesComponent = () => {
           "itemcode, transaction_type, reference"
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let variables: any = {
+        const variables: any = {
           storeid: parsedStoreId,
         };
         if (selectedOutlet) {
