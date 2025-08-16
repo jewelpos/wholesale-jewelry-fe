@@ -188,6 +188,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     ) {
       total
       data {
+        itemid
         itemcode
         itemdescription
         itembarcodeid
@@ -195,7 +196,6 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         categoryname
         subcategoryname
         companyname
-        itemquantityinhand
         overall_qty
         lastsaledate
         itemlocation
@@ -279,6 +279,83 @@ export const GET_INVENTORY_ADJUSTMENT_LIST_QUERY = gql`
         lastmodifieddate
         warehouseid
         updateremarks
+      }
+    }
+  }
+`;
+
+export const GET_INVENTORY_TRANSFER_LIST_QUERY = gql`
+  query GetInventoryTransferList(
+    $storeid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getInventoryTransferList(
+      storeid: $storeid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        inventoryitemtransferid
+        transfermode
+        transfersource
+        destination
+        transfertype
+        totalitemtransfered
+        totalquantities
+        username
+        transferdatetime
+        remarks
+        warehousename
+        warehouseid
+      }
+    }
+  }
+`;
+
+export const GET_INVENTORY_TRANSFER_ITEM_QUERY = gql`
+  query GetInventoryTransferItem(
+    $storeid: Int!
+    $inventoryitemtransferid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getInventoryTransferItem(
+      storeid: $storeid
+      inventoryitemtransferid: $inventoryitemtransferid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        inventoryitemtransferdetailid
+        inventoryitemtransferid
+        itemcode
+        itemdescription
+        transferquantity
+        transferdate
+        username
+        warehousename
+        transferbyid
+        warehouseid
+        lastmodifieddate
       }
     }
   }

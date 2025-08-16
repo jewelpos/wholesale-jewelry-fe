@@ -31,6 +31,7 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
+import useOutlets from "@/hooks/useOutlets";
 import CustomerActions from "./CustomerActions";
 import CustomerListHeader from "./CustomerListHeader";
 import PrintModal, { PrintPayload } from "../../PrintModal";
@@ -50,7 +51,9 @@ const CustomerListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(
+    undefined
+  );
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const { data: customerData, loading: customerLoading } = useQuery(
     GET_CUSTOMER_QUERY,
@@ -79,17 +82,17 @@ const CustomerListComponent = () => {
           debouncedSearch,
           "fullname, custcompanyname"
         );
-        if (selectedWarehouse !== -1) {
+        if (selectedOutlet) {
           filtersMain = {
             ...filtersMain,
             filters: [
               ...filtersMain.filters,
               {
-                key: "warehouseid",
+                key: "outletid",
                 value: {
                   filterType: "text",
                   type: "equals",
-                  filter: selectedWarehouse,
+                  filter: selectedOutlet,
                 },
               },
             ],
@@ -127,13 +130,7 @@ const CustomerListComponent = () => {
         }
       },
     }),
-    [
-      parsedStoreId,
-      dispatch,
-      getCustomerList,
-      debouncedSearch,
-      selectedWarehouse,
-    ]
+    [parsedStoreId, dispatch, getCustomerList, debouncedSearch, selectedOutlet]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -143,17 +140,17 @@ const CustomerListComponent = () => {
   }, [datasource, gridReady, parsedStoreId]);
 
   useEffect(() => {
-    if (parsedStoreId && gridReady) {
+    if (parsedStoreId && gridReady && selectedOutlet) {
       gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, parsedStoreId, gridReady]);
+  }, [gridRef, datasource, parsedStoreId, gridReady, selectedOutlet]);
 
   useEffect(() => {
     if (debouncedSearch && gridReady) {
       gridRef?.current?.api?.setFilterModel(null);
       gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
-  }, [debouncedSearch, gridReady, datasource, selectedWarehouse]);
+  }, [debouncedSearch, gridReady, datasource]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
@@ -246,8 +243,8 @@ const CustomerListComponent = () => {
           <CustomFilterSections
             search={search}
             setSearch={setSearch}
-            selectedWarehouse={selectedWarehouse}
-            setSelectedWarehouse={setSelectedWarehouse}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid

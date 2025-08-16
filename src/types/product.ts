@@ -36,6 +36,7 @@ export type ProductSubItemCategoryResponseType = {
 };
 
 export type ProductListType = {
+  itemid: number;
   itemcode: string;
   itemdescription: string;
   itembarcodeid: string;
@@ -181,3 +182,32 @@ export type ProductFormType = {
   itemid?: number;
   storeid: number
 };
+
+export interface InventoryTransfer {
+  inventoryitemtransferid: number;
+  transfermode: string;
+  transfersource: string;
+  destination: string;
+  transfertype: string;
+  totalitemtransfered: number;
+  totalquantities: number;
+  username: string;
+  transferdatetime: string;
+  remarks: string;
+  warehousename: string;
+  warehouseid: number;
+}
+
+export interface InventoryItemTransferDetail {
+  inventoryitemtransferdetailid: number;
+  inventoryitemtransferid: number;
+  itemcode: string;
+  itemdescription: string;
+  transferquantity: number;
+  transferdate: string;
+  username: string;
+  warehousename: string;
+  transferbyid: number;
+  warehouseid: number;
+  lastmodifieddate: string;
+}
