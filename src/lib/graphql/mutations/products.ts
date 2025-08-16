@@ -25,6 +25,8 @@ export const DELETE_PRODUCT_MUTATION = gql`
     deleteProduct(itemid: $itemid, storeid: $storeid) {
       success
       message
+      error
+      data
     }
   }
 `;

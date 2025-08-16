@@ -14,7 +14,7 @@ export const categoryColumnDefs: ColDef<ProductItemCategoryType>[] = [
     filter: "agTextColumnFilter",
   },
   { headerName: "Code", field: "categorycode", filter: "agTextColumnFilter" },
-  { headerName: "Outlet", field: "outletid", filter: "agTextColumnFilter" },
+  // { headerName: "Outlet", field: "outletid", filter: "agTextColumnFilter" },
   {
     headerName: "Warehouse name",
     field: "warehousename",

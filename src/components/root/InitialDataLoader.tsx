@@ -33,9 +33,15 @@ const InitialDataLoader = ({
 
   useEffect(() => {
     if (stores?.length && (!storeId || !outletId)) {
-      const defaultOutlet = stores[0]?.outlets?.find((o) => o.isdefaultoutlet);
-      if (defaultOutlet) {
-        router.push(`/jw/${stores[0].storeid}/${defaultOutlet?.outletid}/home`);
+      const defaultStore = stores.find((s) =>
+        s.outlets?.find((o) => o.isdefaultoutlet)
+      );
+      if (defaultStore) {
+        router.push(
+          `/jw/${defaultStore?.storeid}/${
+            defaultStore?.outlets?.find((o) => o.isdefaultoutlet)?.outletid
+          }/home`
+        );
       } else {
         router.push(
           `/jw/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/home`

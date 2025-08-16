@@ -26,7 +26,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const router = useRouter();
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const isEdit = !!itemcode;
 
   const [activeTab, setActiveTab] = useState("information");
   const [productImages, setProductImages] = useState<File[]>([]);
@@ -370,6 +370,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
                     storeId={parsedStoreId}
                     productImages={productImages}
                     onImagesChange={setProductImages}
+                    isEdit={isEdit}
                   />
                 </div>
                 <div className={activeTab === "stone-details" ? "" : "d-none"}>

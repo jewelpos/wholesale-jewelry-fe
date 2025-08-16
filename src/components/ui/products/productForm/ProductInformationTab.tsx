@@ -27,6 +27,7 @@ interface ProductInformationTabProps {
   storeId: number;
   productImages: File[];
   onImagesChange: (images: File[]) => void;
+  isEdit?: boolean;
 }
 
 const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
@@ -39,6 +40,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   storeId,
   productImages,
   onImagesChange,
+  isEdit,
 }) => {
   return (
     <div className="new-employee-field">
@@ -84,7 +86,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                 {...register("itemcode", {
                   required: "Item code is required",
                 })}
-                disabled={disableField}
+                disabled={isEdit}
               />
               {errors.itemcode && (
                 <div className="invalid-feedback">

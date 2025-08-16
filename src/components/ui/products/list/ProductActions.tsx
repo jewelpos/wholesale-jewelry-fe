@@ -1,16 +1,19 @@
 import React from "react";
 import { useMutation } from "@apollo/client";
-import { DELETE_PRODUCT_MUTATION } from "@/lib/graphql/mutations/products";
-import { useAppDispatch } from "@/lib/store/hook";
+import { useParams, useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import { DELETE_PRODUCT_MUTATION } from "@/lib/graphql/mutations/products";
 import { ProductListType } from "@/types/product";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+import api from "@/lib/axios";
 import Link from "next/link";
-import { Edit, Trash2 } from "react-feather";
-import showConfirmationDialog from "@/lib/utils/confirmationDialog";
+import { Edit, Printer, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
-import { useParams } from "next/navigation";
+import { useAppDispatch } from "@/lib/store/hook";
 
 interface ProductActionsProps {
   data: ProductListType;
@@ -40,7 +43,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteProduct({
           variables: {
-            itemid: data.itemcode,
+            itemid: data.itemid,
             storeid: parsedStoreId,
           },
         });
@@ -54,6 +57,13 @@ const ProductActions: React.FC<ProductActionsProps> = ({
           );
           // Trigger the callback to refresh data
           onDeleteSuccess?.();
+        } else if (responseData?.deleteProduct.error) {
+          dispatch(
+            showNotification({
+              message: responseData.deleteProduct.error,
+              type: NOTIFICATION_TYPES.ERROR,
+            })
+          );
         }
         return true;
       });
@@ -69,6 +79,50 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     }
   };
 
+  const handlePrint = async () => {
+    const printResult = await handleTryCatch(async () => {
+      const config = getEnvironmentConfig();
+      const response = await api.get(
+        `${config.apiUrl}/store/product/${data.itemid}/${parsedStoreId}/print`,
+        {
+          responseType: "blob", // Critical for PDF download
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const { data: pdfData } = response;
+      if (pdfData) {
+        const url = window.URL.createObjectURL(pdfData);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `product_${data.itemcode}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        dispatch(
+          showNotification({
+            message: "Product document downloaded successfully",
+            type: NOTIFICATION_TYPES.SUCCESS,
+          })
+        );
+      }
+      return true;
+    });
+
+    if (printResult.error) {
+      dispatch(
+        showNotification({
+          message: printResult.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  };
+
   return (
     <div className="action-table-data">
       <div className="edit-delete-action">
@@ -81,12 +135,15 @@ const ProductActions: React.FC<ProductActionsProps> = ({
           <Edit className="feather-edit" />
         </Link>
         <Link
-          className="confirm-text p-2"
+          className="confirm-text p-2 me-2"
           href="#"
           onClick={handleDelete}
           scroll={false}
         >
           <Trash2 className="feather-trash-2" />
+        </Link>
+        <Link className="p-2" href="#" onClick={handlePrint} scroll={false}>
+          <Printer className="feather-view" />
         </Link>
       </div>
     </div>

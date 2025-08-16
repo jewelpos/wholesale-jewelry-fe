@@ -35,7 +35,6 @@ import ProductActions from "./ProductActions";
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
   const dispatch = useAppDispatch();
-  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
@@ -112,7 +111,7 @@ const ProductsListComponent = () => {
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      ...productListColumnDefs.filter(col => col.headerName !== "Actions"),
+      ...productListColumnDefs.filter((col) => col.headerName !== "Actions"),
       {
         headerName: "Actions",
         field: "actions",
@@ -155,12 +154,6 @@ const ProductsListComponent = () => {
               defaultColDef={{
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
-              }}
-              rowSelection={{
-                mode: "multiRow",
-                checkboxes: true,
-                headerCheckbox: true,
-                suppressRowClickSelection: true,
               }}
             />
           </div>
