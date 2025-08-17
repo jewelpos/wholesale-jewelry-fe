@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -11,24 +11,28 @@ import { ProductListType } from "@/types/product";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import api from "@/lib/axios";
 import Link from "next/link";
-import { Edit, Printer, Trash2 } from "react-feather";
+import { Edit, Printer, Settings, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useAppDispatch } from "@/lib/store/hook";
+import ProductAdjustmentModal from "./ProductAdjustmentModal";
 
 interface ProductActionsProps {
   data: ProductListType;
   onDeleteSuccess?: () => void;
+  onAdjustmentSuccess?: () => void;
 }
 
 const ProductActions: React.FC<ProductActionsProps> = ({
   data,
   onDeleteSuccess,
+  onAdjustmentSuccess,
 }) => {
   const dispatch = useAppDispatch();
   const [deleteProduct] = useMutation(DELETE_PRODUCT_MUTATION);
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -79,48 +83,17 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     }
   };
 
-  const handlePrint = async () => {
-    const printResult = await handleTryCatch(async () => {
-      const config = getEnvironmentConfig();
-      const response = await api.get(
-        `${config.apiUrl}/store/product/${data.itemid}/${parsedStoreId}/print`,
-        {
-          responseType: "blob", // Critical for PDF download
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const handleAdjustment = () => {
+    setIsAdjustmentModalOpen(true);
+  };
 
-      const { data: pdfData } = response;
-      if (pdfData) {
-        const url = window.URL.createObjectURL(pdfData);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", `product_${data.itemcode}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+  const handleCloseAdjustmentModal = () => {
+    setIsAdjustmentModalOpen(false);
+  };
 
-        dispatch(
-          showNotification({
-            message: "Product document downloaded successfully",
-            type: NOTIFICATION_TYPES.SUCCESS,
-          })
-        );
-      }
-      return true;
-    });
-
-    if (printResult.error) {
-      dispatch(
-        showNotification({
-          message: printResult.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
-    }
+  const handleAdjustmentModalSuccess = () => {
+    setIsAdjustmentModalOpen(false);
+    onAdjustmentSuccess?.();
   };
 
   return (
@@ -142,10 +115,21 @@ const ProductActions: React.FC<ProductActionsProps> = ({
         >
           <Trash2 className="feather-trash-2" />
         </Link>
-        <Link className="p-2" href="#" onClick={handlePrint} scroll={false}>
-          <Printer className="feather-view" />
+        <Link
+          className="p-2 p-2 me-2"
+          href="#"
+          onClick={handleAdjustment}
+          scroll={false}
+        >
+          <Settings className="feather-view" />
         </Link>
       </div>
+      <ProductAdjustmentModal
+        isOpen={isAdjustmentModalOpen}
+        onClose={handleCloseAdjustmentModal}
+        onSuccess={handleAdjustmentModalSuccess}
+        productData={data}
+      />
     </div>
   );
 };

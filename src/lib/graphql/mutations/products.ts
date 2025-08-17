@@ -30,3 +30,80 @@ export const DELETE_PRODUCT_MUTATION = gql`
     }
   }
 `;
+
+export const ADD_CATEGORY_MUTATION = gql`
+  mutation AddCategory($addCategoryInput: AddCategoryInput!) {
+    addCategory(addCategoryInput: $addCategoryInput) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const EDIT_CATEGORY_MUTATION = gql`
+  mutation EditCategory($editCategoryInput: EditCategoryInput!) {
+    editCategory(editCategoryInput: $editCategoryInput) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const DELETE_CATEGORY_MUTATION = gql`
+  mutation DeleteCategory($categoryid: Int!, $storeid: Int!) {
+    deleteCategory(categoryid: $categoryid, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const ADD_SUBCATEGORY_MUTATION = gql`
+  mutation AddSubcategory($addSubcategoryInput: AddSubcategoryInput!) {
+    addSubcategory(addSubcategoryInput: $addSubcategoryInput) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const EDIT_SUBCATEGORY_MUTATION = gql`
+  mutation EditSubcategory($editSubcategoryInput: EditSubcategoryInput!) {
+    editSubcategory(editSubcategoryInput: $editSubcategoryInput) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const DELETE_SUBCATEGORY_MUTATION = gql`
+  mutation DeleteSubcategory($subcategoryid: Int!, $storeid: Int!) {
+    deleteSubcategory(subcategoryid: $subcategoryid, storeid: $storeid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const ADJUST_PRODUCT_MUTATION = gql`
+  mutation AdjustProduct($adjustProductInput: AdjustProductInput!) {
+    adjustProduct(adjustProductInput: $adjustProductInput) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

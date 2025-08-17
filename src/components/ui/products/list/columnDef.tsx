@@ -10,7 +10,13 @@ export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
 };
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
-  { headerName: "Product", field: "itemcode", filter: "agTextColumnFilter" },
+  // Visible columns
+  { 
+    headerName: "Item Code", 
+    field: "itemcode", 
+    filter: "agTextColumnFilter",
+    hide: false,
+  },
   {
     headerName: "Description",
     field: "itemdescription",
@@ -18,6 +24,13 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     resizable: true,
     tooltipField: "itemdescription",
     filter: "agTextColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Barcode ID",
+    field: "itembarcodeid",
+    filter: "agTextColumnFilter",
+    hide: false,
   },
   {
     headerName: "Price",
@@ -25,29 +38,110 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     minWidth: 100,
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
+    hide: false,
   },
+  {
+    headerName: "Quantity In Stock",
+    field: "itemquantityinhand",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Memo Qty",
+    field: "memoqty",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "SO Quantity",
+    field: "soquantity",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Available Qty",
+    field: "availableqty",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Total Quantity",
+    field: "overall_qty",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Last Sale Date",
+    field: "lastsaledate",
+    filter: "agDateColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Last Purchase Date",
+    field: "lastpurchasedate",
+    filter: "agDateColumnFilter",
+    hide: false,
+  },
+  // Hidden columns
   {
     headerName: "Category",
     field: "categoryname",
     filter: "agTextColumnFilter",
-  },
-  { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
-  {
-    headerName: "Quantity instock",
-    field: "itemquantityinhand",
-    filter: "agNumberColumnFilter",
+    hide: true,
   },
   {
-    headerName: "Total quantity",
-    field: "overall_qty",
-    filter: "agNumberColumnFilter",
+    headerName: "Location",
+    field: "itemlocation",
+    filter: "agTextColumnFilter",
+    hide: true,
   },
-  { headerName: "Status", field: "itemstatus", filter: "agTextColumnFilter" },
-  // { headerName: "Outlet", field: "outletid", filter: "agTextColumnFilter" },
   {
-    headerName: "Warehouse name",
+    headerName: "Subcategory",
+    field: "subcategoryname",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Supplier",
+    field: "companyname",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Status",
+    field: "itemstatus",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Warehouse Name",
     field: "warehousename",
     filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Warehouse ID",
+    field: "itemwarehouseid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Outlet ID",
+    field: "outletid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Item ID",
+    field: "itemid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Image Path",
+    field: "itemimagepath",
+    filter: "agTextColumnFilter",
+    hide: true,
   },
   {
     headerName: "Actions",

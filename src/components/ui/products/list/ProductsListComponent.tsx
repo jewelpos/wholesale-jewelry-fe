@@ -50,16 +50,32 @@ const ProductsListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
+        let filtersMain = filterVariables(
           params,
           debouncedSearch,
           "itemcode, itemdescription"
         );
+        if (selectedOutlet) {
+          filtersMain = {
+            ...filtersMain,
+            filters: [
+              ...filtersMain.filters,
+              {
+                key: "outletid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedOutlet,
+                },
+              },
+            ],
+          };
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getProductList({
             variables: {
               outletid: selectedOutlet,
-              ...filters,
+              ...filtersMain,
             },
           });
           if (data.getProductList) {

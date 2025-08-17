@@ -11,10 +11,13 @@ import { useLazyQuery } from "@apollo/client";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import { ProductFormType } from "@/types/product";
+import { ProductFormType, ProductSettingsInfo } from "@/types/product";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
-import { GET_PRODUCT_BY_ITEMCODE_QUERY } from "@/lib/graphql/query/products";
+import {
+  GET_PRODUCT_BY_ITEMCODE_QUERY,
+  GET_PRODUCT_SETTINGS_INFO_QUERY,
+} from "@/lib/graphql/query/products";
 import ProductInformationTab from "./ProductInformationTab";
 import ProductStoneDetailsTab from "./ProductStoneDetailsTab";
 import PlaceHolder from "../../PlaceHolder";
@@ -32,7 +35,13 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const [productImages, setProductImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [productData, setProductData] = useState<any>(null);
+  const [productSettings, setProductSettings] =
+    useState<ProductSettingsInfo | null>(null);
   const [getProductByItemCode] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY);
+  const [getProductSettingsInfo] = useLazyQuery(
+    GET_PRODUCT_SETTINGS_INFO_QUERY
+  );
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const {
     register,
@@ -50,34 +59,16 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemdescription: "",
       itemwarehouseid: 0,
       supplierid: 0,
-      supplieritemcode: "",
-      supplierbarcodeid: "",
       itemcategoryid: 0,
       subcategoryid: 0,
       itemstatus: "Active",
-      itemtaxable: 1,
-      trackinventory: 1,
       itemimagepath: "",
-      itemlocation: "",
       itempurchaseprice: 0,
-      itemtagpricecode: "",
-      itemtagprice: 0,
-      itemdiscount: 0,
-      itemmetal: "",
+      profitpercent: 0,
       itemremarks: "",
       itemalertwarning: 0,
       itemwarningmessage: "",
       detaileditemdescription: "",
-      tag1: "",
-      tag2: "",
-      tag3: "",
-      tag4: "",
-      tag5: "",
-      tag6: "",
-      tag7: "",
-      tag8: "",
-      tag9: "",
-      tag10: "",
       dshape: "",
       dlab: "",
       dcerno: "",
@@ -117,8 +108,54 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     },
   });
 
+  // Watch for changes in purchase price and profit percent to calculate tag price
+  const watchedValues = watch([
+    "itempurchaseprice",
+    "profitpercent",
+    "itemtagprice",
+  ]);
+  const [itempurchaseprice, profitpercent, itemtagprice] = watchedValues;
+
+  // Fetch product settings on component mount
+  useEffect(() => {
+    const fetchProductSettings = async () => {
+      try {
+        const { data } = await getProductSettingsInfo({
+          variables: {
+            storeid: parsedStoreId,
+            warehouiseid: 1, // Default warehouse ID - you may need to get this from context
+          },
+        });
+
+        if (data?.getProductSettingsInfo?.[0]) {
+          setProductSettings(data.getProductSettingsInfo[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching product settings:", error);
+      }
+    };
+
+    if (parsedStoreId) {
+      fetchProductSettings();
+    }
+  }, [parsedStoreId, getProductSettingsInfo]);
+
+  // Auto-calculate itemtagprice when purchase price, profit percent, or settings change
+  useEffect(() => {
+    if (
+      productSettings?.saletagkey &&
+      itempurchaseprice &&
+      profitpercent &&
+      !isEdit // Only auto-calculate for new products, not when editing
+    ) {
+      const calculatedTagPrice =
+        itempurchaseprice * profitpercent * productSettings.saletagkey;
+      setValue("itemtagprice", Number(calculatedTagPrice.toFixed(2)));
+    }
+  }, [itempurchaseprice, profitpercent, productSettings, setValue, isEdit]);
+
   const onSubmit: SubmitHandler<ProductFormType> = async (formData) => {
-    setLoading(true);
+    setSaveLoading(true);
 
     // Prepare file upload parameters
     let updatedParams = {};
@@ -140,8 +177,6 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     const payload = {
       ...rest,
       // Convert boolean fields to numbers
-      itemtaxable: formData.itemtaxable ? 1 : 0,
-      trackinventory: formData.trackinventory ? 1 : 0,
       itemalertwarning: formData.itemalertwarning ? 1 : 0,
 
       // Convert string IDs to numbers
@@ -156,8 +191,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemtagprice: formData.itemtagprice
         ? Number(formData.itemtagprice)
         : null,
-      itemdiscount: formData.itemdiscount
-        ? Number(formData.itemdiscount)
+      profitpercent: formData.profitpercent
+        ? Number(formData.profitpercent)
         : null,
 
       // Stone detail numeric fields - convert to numbers or null
@@ -236,7 +271,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       return true;
     });
 
-    setLoading(false);
+    setSaveLoading(false);
     if (result.error) {
       dispatch(
         showNotification({
@@ -390,7 +425,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
         {!disableField && !loading && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
-              loading={loading}
+              loading={saveLoading}
               btnText="Save"
               loadingText="Saving ..."
             />
