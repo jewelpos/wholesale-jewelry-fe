@@ -3,7 +3,6 @@
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
-import Link from "next/link";
 import { MenuAction } from "@/types/permissions";
 import {
   renderActionButtonColor,
@@ -11,8 +10,12 @@ import {
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
 
-const CategoryHeader: React.FC = () => {
-  const { currentMenu, currentPath } = useMenu();
+interface CategoryHeaderProps {
+  onOpenModal?: () => void;
+}
+
+const CategoryHeader: React.FC<CategoryHeaderProps> = ({ onOpenModal }) => {
+  const { currentMenu } = useMenu();
 
   return (
     <PageHeader
@@ -36,13 +39,14 @@ const CategoryHeader: React.FC = () => {
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
-                  <Link
-                    href={`${currentPath}/new`}
+                  <button
+                    type="button"
                     className={`btn btn-added ${btnColor}`}
+                    onClick={onOpenModal}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}{" "}
                     {btn.actiondisplayname}
-                  </Link>
+                  </button>
                 </div>
               );
             })}

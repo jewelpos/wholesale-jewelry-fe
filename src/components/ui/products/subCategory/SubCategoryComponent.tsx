@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import { GridReadyEvent, IServerSideGetRowsParams, ColDef, ICellRendererParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -14,10 +14,12 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import SubCategoryHeader from "./SubCategoryHeader";
 import { GET_ITEM_SUB_CATEGORY_LIST_QUERY } from "@/lib/graphql/query/products";
-import { ProductSubItemCategoryType } from "@/types/product";
+import { ProductSubItemCategoryType, Subcategory } from "@/types/product";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import { subCategoryColumnDefs } from "./columnDef";
+import SubcategoryModal from "./SubcategoryModal";
+import SubcategoryActions from "./SubcategoryActions";
 
 const SubCategoryComponent = () => {
   const [getItemSubCategoryList] = useLazyQuery(
@@ -30,6 +32,8 @@ const SubCategoryComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editData, setEditData] = useState<Subcategory | null>(null);
 
   const handleOnGridReady = (
     params: GridReadyEvent<ProductSubItemCategoryType>
@@ -87,9 +91,68 @@ const SubCategoryComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
+  // Modal handlers
+  const handleOpenModal = () => {
+    setEditData(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditData(null);
+  };
+
+  const handleModalSuccess = () => {
+    // Refresh the grid data
+    if (gridRef.current?.api) {
+      gridRef.current.api.setGridOption("serverSideDatasource", datasource);
+    }
+  };
+
+  const handleEditSubcategory = (subcategory: Subcategory) => {
+    setEditData(subcategory);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteSuccess = () => {
+    // Refresh the grid data after successful deletion
+    if (gridRef.current?.api) {
+      gridRef.current.api.setGridOption("serverSideDatasource", datasource);
+    }
+  };
+
+  // Create column definitions with Actions column (following CategoryComponent pattern)
+  const columnDefs = useMemo<ColDef[]>(
+    () => [
+      ...subCategoryColumnDefs,
+      {
+        headerName: "Actions",
+        field: "actions",
+        cellRenderer: (params: ICellRendererParams<ProductSubItemCategoryType>) =>
+          params.data ? (
+            <SubcategoryActions
+              {...params}
+              onEditSubcategory={handleEditSubcategory}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 120,
+        sortable: false,
+        filter: false,
+        maxWidth: 150,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleEditSubcategory, handleDeleteSuccess]
+  );
+
   return (
     <>
-      <SubCategoryHeader />
+      <SubCategoryHeader onOpenModal={handleOpenModal} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -101,7 +164,7 @@ const SubCategoryComponent = () => {
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
-              columnDefs={subCategoryColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
@@ -111,6 +174,12 @@ const SubCategoryComponent = () => {
           </div>
         </div>
       </div>
+      <SubcategoryModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSuccess={handleModalSuccess}
+        editData={editData}
+      />
     </>
   );
 };

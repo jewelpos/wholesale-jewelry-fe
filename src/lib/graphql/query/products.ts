@@ -1,5 +1,16 @@
 import { gql } from "@apollo/client";
 
+// Product settings query
+export const GET_PRODUCT_SETTINGS_INFO_QUERY = gql`
+  query GetProductSettingsInfo($storeid: Int!, $warehouiseid: Int!) {
+    getProductSettingsInfo(storeid: $storeid, warehouiseid: $warehouiseid) {
+      codechars
+      saletagkey
+      tagpricekey
+    }
+  }
+`;
+
 // New simplified queries for categories and subcategories
 export const GET_ITEM_CATEGORIES_QUERY = gql`
   query GetItemCategories($storeid: Int!) {
@@ -19,6 +30,19 @@ export const GET_ITEM_SUBCATEGORIES_QUERY = gql`
       subcategoryname
       subcategorydescription
       categoryid
+    }
+  }
+`;
+
+export const GET_CATEGORY_BY_ID_QUERY = gql`
+  query GetCategoryById($categoryid: Int!, $storeid: Int!) {
+    getCategoryById(categoryid: $categoryid, storeid: $storeid) {
+      categoryid
+      categoryname
+      categorydescription
+      categorycode
+      warehouseid
+      storeid
     }
   }
 `;
@@ -188,22 +212,27 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     ) {
       total
       data {
-        itemid
         itemcode
         itemdescription
         itembarcodeid
-        itemsellprice
         categoryname
-        subcategoryname
-        companyname
+        itemlocation
+        itemsellprice
+        itemquantityinhand
+        memoqty
+        soquantity
+        availableqty
         overall_qty
         lastsaledate
-        itemlocation
+        lastpurchasedate
+        subcategoryname
+        companyname
         itemstatus
-        itemimagepath
         warehousename
         itemwarehouseid
         outletid
+        itemid
+        itemimagepath
       }
     }
   }
