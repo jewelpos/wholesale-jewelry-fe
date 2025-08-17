@@ -169,17 +169,17 @@ export type ProductFormType = {
 
 export interface InventoryTransfer {
   inventoryitemtransferid: number;
-  transferdate: string;
-  fromwarehouseid: number;
-  fromwarehousename: string;
-  towarehouseid: number;
-  towarehousename: string;
-  transfernotes: string;
-  transferstatus: string;
-  createdby: number;
-  createddate: string;
-  modifiedby?: number;
-  modifieddate?: string;
+  transfermode: string;
+  transfersource: string;
+  destination: string;
+  transfertype: string;
+  totalitemtransfered: number;
+  totalquantities: number;
+  username: string;
+  transferdatetime: string;
+  remarks: string;
+  warehousename: string;
+  warehouseid: number;
 }
 
 export interface ProductSettingsInfo {
