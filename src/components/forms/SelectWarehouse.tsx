@@ -12,6 +12,7 @@ const SelectWarehouse = ({
   trigger,
   storeId,
   disableField,
+  isSystemOnly,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 any) => {
@@ -25,16 +26,20 @@ any) => {
     }
   }, [fetchWarehouseByStoreId, storeId]);
 
-  const warehouseOptions: SelectOption[] = useMemo(
-    () =>
-      warehouses.map(
-        (warehouse: { warehouseid: number; warehousename: string }) => ({
-          value: warehouse.warehouseid,
-          label: warehouse.warehousename,
-        })
-      ),
-    [warehouses]
-  );
+  const warehouseOptions: SelectOption[] = useMemo(() => {
+    let warehousesFiltered = warehouses;
+    if (isSystemOnly) {
+      warehousesFiltered = warehousesFiltered.filter(
+        (warehouse: { issystem: boolean }) => warehouse.issystem
+      );
+    }
+    return warehousesFiltered.map(
+      (warehouse: { warehouseid: number; warehousename: string }) => ({
+        value: warehouse.warehouseid,
+        label: warehouse.warehousename,
+      })
+    );
+  }, [warehouses]);
 
   return (
     <Select<SelectOption>

@@ -1,14 +1,13 @@
 import React, { Dispatch, SetStateAction, useEffect } from "react";
 import Select from "react-select";
-import { useParams } from "next/navigation";
 import { WarehouseType } from "@/types/warehouse";
 import { Col, Row } from "react-bootstrap";
 
 interface WarehouseFilterProps {
-  fetchWarehousesList: (parsedStoreId: number) => void;
+  fetchWarehousesList: () => void;
   warehouses: WarehouseType[];
   loading: boolean;
-  setSelectedWarehouse: Dispatch<SetStateAction<number>>;
+  setSelectedWarehouse: Dispatch<SetStateAction<number | undefined>>;
   selectedWarehouse: number | undefined;
 }
 
@@ -19,22 +18,24 @@ const WarehouseFilter = ({
   setSelectedWarehouse,
   selectedWarehouse,
 }: WarehouseFilterProps) => {
-  const { storeId } = useParams();
-  const parsedStoreId = parseInt(storeId as string, 10);
+  useEffect(() => {
+    fetchWarehousesList();
+  }, [fetchWarehousesList]);
+
+  const warehouseList = warehouses.map((warehouse) => ({
+    label: warehouse.warehousename,
+    value: warehouse.warehouseid,
+  }));
 
   useEffect(() => {
-    if (parsedStoreId) {
-      fetchWarehousesList(parsedStoreId);
+    if (warehouses.length) {
+      const warehouse = warehouses.find((warehouse) => warehouse.issystem);
+      if (warehouse) {
+        setSelectedWarehouse(warehouse.warehouseid);
+      }
     }
-  }, [parsedStoreId, fetchWarehousesList]);
+  }, [warehouses, setSelectedWarehouse]);
 
-  const warehouseList = [
-    { label: "All", value: -1 },
-    ...warehouses.map((warehouse) => ({
-      label: warehouse.warehousename,
-      value: warehouse.warehouseid,
-    })),
-  ];
   return (
     <Row className="d-flex align-items-center justify-content-center">
       <Col xs={6} className="mr-0 ">

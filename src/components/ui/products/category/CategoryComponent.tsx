@@ -3,7 +3,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams, ColDef } from "ag-grid-community";
+import {
+  GridReadyEvent,
+  IServerSideGetRowsParams,
+  ColDef,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -25,6 +29,9 @@ const CategoryComponent = () => {
   const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedWarehouse, setSelectedWarehouse] = useState<
+    number | undefined
+  >(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
@@ -42,11 +49,43 @@ const CategoryComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
+        let filters = filterVariables(
           params,
           debouncedSearch,
           "categoryname, categorycode, categorydescription"
         );
+        if (selectedOutlet) {
+          filters = {
+            ...filters,
+            filters: [
+              ...filters.filters,
+              {
+                key: "outletid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedOutlet,
+                },
+              },
+            ],
+          };
+        }
+        if (selectedWarehouse !== -1) {
+          filters = {
+            ...filters,
+            filters: [
+              ...filters.filters,
+              {
+                key: "warehouseid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedWarehouse,
+                },
+              },
+            ],
+          };
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getItemCategoryList({
             variables: {
@@ -79,14 +118,27 @@ const CategoryComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getItemCategoryList, debouncedSearch]
+    [
+      selectedOutlet,
+      selectedWarehouse,
+      dispatch,
+      getItemCategoryList,
+      debouncedSearch,
+    ]
   );
 
   useEffect(() => {
     if ((selectedOutlet || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
+  }, [
+    gridRef,
+    datasource,
+    selectedOutlet,
+    selectedWarehouse,
+    gridReady,
+    debouncedSearch,
+  ]);
 
   // Modal handlers
   const handleOpenModal = () => {
@@ -157,6 +209,8 @@ const CategoryComponent = () => {
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid

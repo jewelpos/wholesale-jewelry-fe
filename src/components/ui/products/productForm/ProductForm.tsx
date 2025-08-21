@@ -27,7 +27,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const config = getEnvironmentConfig();
   const dispatch = useDispatch();
   const router = useRouter();
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const isEdit = !!itemcode;
 
@@ -69,6 +69,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemalertwarning: 0,
       itemwarningmessage: "",
       detaileditemdescription: "",
+      itemreorderqtypnt: 0,
+      itemreorderqty: 0,
       dshape: "",
       dlab: "",
       dcerno: "",
@@ -177,6 +179,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     const payload = {
       ...rest,
       // Convert boolean fields to numbers
+      itemtaxable: formData.itemtaxable ? 1 : 0,
+      trackinventory: formData.trackinventory ? 1 : 0,
       itemalertwarning: formData.itemalertwarning ? 1 : 0,
 
       // Convert string IDs to numbers
@@ -191,8 +195,17 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemtagprice: formData.itemtagprice
         ? Number(formData.itemtagprice)
         : null,
+      itemdiscount: formData.itemdiscount
+        ? Number(formData.itemdiscount)
+        : null,
       profitpercent: formData.profitpercent
         ? Number(formData.profitpercent)
+        : null,
+      itemreorderqtypnt: formData.itemreorderqtypnt
+        ? Number(formData.itemreorderqtypnt)
+        : null,
+      itemreorderqty: formData.itemreorderqtypnt
+        ? Number(formData.itemreorderqtypnt)
         : null,
 
       // Stone detail numeric fields - convert to numbers or null
@@ -406,6 +419,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
                     productImages={productImages}
                     onImagesChange={setProductImages}
                     isEdit={isEdit}
+                    barcodeId={productData?.itembarcodeid}
                   />
                 </div>
                 <div className={activeTab === "stone-details" ? "" : "d-none"}>

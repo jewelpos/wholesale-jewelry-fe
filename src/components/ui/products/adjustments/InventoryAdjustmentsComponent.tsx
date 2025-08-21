@@ -26,7 +26,9 @@ const InventoryAdjustmentsComponent = () => {
   const dispatch = useAppDispatch();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<
+    number | undefined
+  >(-1);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");

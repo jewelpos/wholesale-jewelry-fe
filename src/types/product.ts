@@ -57,6 +57,17 @@ export type ProductListType = {
   warehousename: string;
   itemwarehouseid: number;
   outletid: number;
+  createddate: string;
+  lastmodifieddate: string;
+  isdeletedat: string;
+  totalsoldqty: number;
+  createdby: string;
+  modifiedby: string;
+  itemaveragecost: number;
+  adjdate: string;
+  adjustedby: string;
+  lasttransferdate: string;
+  transferby: string;
 };
 
 export type ProductListTypeResponseType = {
@@ -114,17 +125,31 @@ export type ProductFormType = {
   
   // Information Tab - Supplier Detail Section
   supplierid: number | string;//Supplier ID
+  supplieritemcode?: string;//Supplier Style #
+  supplierbarcodeid?: string;//Supplier UPC #
+
+  // Information Tab - Product Detail Section
+  modelno?: string;//Model #
+  manufacturer?: string;//Manufacturer
+  itemreorderqtypnt?: number;//Item Reorder Point
+  itemreorderqty?: number;//Item Order Quantity
   
   // Information Tab - Product Settings Section
   itemcategoryid: number;//Department
-  subcategoryid?: number;//Product Line
+  subcategoryid: number;//Product Line
   itemstatus: string;//Status
+  itemtaxable: number;//Item Taxable
+  trackinventory?: number;//Non Inventory Item
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  itemimagepath?: any;//Photo
+  itemimagepath: any;//Photo
+  itemlocation?: string;//Item Location
   
   // Information Tab - Sales Setting Section
   itempurchaseprice: number;//Unit Cost
+  itemtagpricecode?: string;//Price Code
   itemtagprice?: number;//Tag Price
+  itemdiscount?: number;//Item Discount
+  itemmetal?: string;//Metal Type
   profitpercent: number; //Profit Percent
   
   // Information Tab - General Setting Section

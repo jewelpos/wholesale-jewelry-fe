@@ -27,7 +27,9 @@ const InventoryTransferListComponent = () => {
     GET_INVENTORY_TRANSFER_LIST_QUERY
   );
   const dispatch = useAppDispatch();
-  const [selectedWarehouse, setSelectedWarehouse] = useState<number>(-1);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<
+    number | undefined
+  >(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
