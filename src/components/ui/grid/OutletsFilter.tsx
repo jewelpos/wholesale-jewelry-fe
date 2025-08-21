@@ -22,8 +22,9 @@ const OutletsFilter = ({
   setSelectedOutlet,
   selectedOutlet,
 }: PropsType) => {
-  const { storeId } = useParams();
+  const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
+  const parsedOutletId = Number(outletId);
 
   useEffect(() => {
     if (parsedStoreId) {
@@ -37,10 +38,15 @@ const OutletsFilter = ({
   }));
 
   useEffect(() => {
-    if (outlets.length) {
-      setSelectedOutlet(outlets[0]?.outletid);
+    if (outlets.length && parsedOutletId) {
+      const outlet = outlets.find(
+        (outlet) => outlet.outletid === parsedOutletId
+      );
+      if (outlet) {
+        setSelectedOutlet(outlet.outletid);
+      }
     }
-  }, [outlets, setSelectedOutlet]);
+  }, [outlets, setSelectedOutlet, parsedOutletId]);
 
   return (
     <Row className="d-flex align-items-center justify-content-center">

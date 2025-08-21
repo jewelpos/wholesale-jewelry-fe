@@ -124,6 +124,7 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
   query GetProductByItemCode($itemcode: String!, $storeid: Int!) {
     getProductByItemCode(itemcode: $itemcode, storeid: $storeid) {
       itemcode
+      itembarcodeid
       itemdescription
       supplierid
       supplieritemcode
@@ -212,27 +213,38 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     ) {
       total
       data {
+        itemid
+        itembarcodeid
         itemcode
         itemdescription
-        itembarcodeid
-        categoryname
-        itemlocation
         itemsellprice
-        itemquantityinhand
-        memoqty
-        soquantity
-        availableqty
-        overall_qty
-        lastsaledate
-        lastpurchasedate
+        categoryname
         subcategoryname
         companyname
+        itemquantityinhand
+        overall_qty
+        itemlocation
         itemstatus
+        itemimagepath
         warehousename
+        createddate
+        lastmodifieddate
         itemwarehouseid
         outletid
-        itemid
-        itemimagepath
+        memoqty
+        soquantity
+        lastsaledate
+        lastpurchasedate
+        availableqty
+        isdeletedat
+        totalsoldqty
+        createdby
+        modifiedby
+        itemaveragecost
+        adjdate
+        adjustedby
+        lasttransferdate
+        transferby
       }
     }
   }

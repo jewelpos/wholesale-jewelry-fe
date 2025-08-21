@@ -20,7 +20,6 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import useOutlets from "@/hooks/useOutlets";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import useMenu from "@/hooks/useMenu";
@@ -36,6 +35,9 @@ const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedWarehouse, setSelectedWarehouse] = useState<
+    number | undefined
+  >(-1);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -66,6 +68,22 @@ const ProductsListComponent = () => {
                   filterType: "text",
                   type: "equals",
                   filter: selectedOutlet,
+                },
+              },
+            ],
+          };
+        }
+        if (selectedWarehouse !== -1) {
+          filtersMain = {
+            ...filtersMain,
+            filters: [
+              ...filtersMain.filters,
+              {
+                key: "itemwarehouseid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedWarehouse,
                 },
               },
             ],
@@ -103,7 +121,13 @@ const ProductsListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getProductList, debouncedSearch]
+    [
+      selectedOutlet,
+      selectedWarehouse,
+      dispatch,
+      getProductList,
+      debouncedSearch,
+    ]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -116,7 +140,7 @@ const ProductsListComponent = () => {
     if (selectedOutlet && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridRef, datasource, selectedOutlet, selectedWarehouse, gridReady]);
 
   useEffect(() => {
     if (debouncedSearch && gridReady) {
@@ -161,6 +185,8 @@ const ProductsListComponent = () => {
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid

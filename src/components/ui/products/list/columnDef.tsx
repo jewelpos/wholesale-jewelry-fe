@@ -2,6 +2,8 @@ import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { ProductListType } from "@/types/product";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import ActionCellRenderer from "../../grid/ActionRenderer";
+import dayjs from "dayjs";
+import { TIME_FORMAT } from "@/lib/config/constants";
 
 export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   return params.value !== null
@@ -10,17 +12,15 @@ export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
 };
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
-  // Visible columns
-  { 
-    headerName: "Item Code", 
-    field: "itemcode", 
+  {
+    headerName: "Item Code",
+    field: "itemcode",
     filter: "agTextColumnFilter",
     hide: false,
   },
   {
     headerName: "Description",
     field: "itemdescription",
-    maxWidth: 200,
     resizable: true,
     tooltipField: "itemdescription",
     filter: "agTextColumnFilter",
@@ -33,15 +33,33 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     hide: false,
   },
   {
-    headerName: "Price",
+    headerName: "Category",
+    field: "categoryname",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Location",
+    field: "itemlocation",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Sell Price",
     field: "itemsellprice",
-    minWidth: 100,
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
     hide: false,
   },
   {
-    headerName: "Quantity In Stock",
+    headerName: "Average Cost",
+    field: "itemaveragecost",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Quantity In Hand",
     field: "itemquantityinhand",
     filter: "agNumberColumnFilter",
     hide: false,
@@ -65,8 +83,14 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     hide: false,
   },
   {
-    headerName: "Total Quantity",
+    headerName: "Overall Qty",
     field: "overall_qty",
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Total Sold Qty",
+    field: "totalsoldqty",
     filter: "agNumberColumnFilter",
     hide: false,
   },
@@ -74,26 +98,17 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     headerName: "Last Sale Date",
     field: "lastsaledate",
     filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
     hide: false,
   },
   {
     headerName: "Last Purchase Date",
     field: "lastpurchasedate",
     filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
     hide: false,
-  },
-  // Hidden columns
-  {
-    headerName: "Category",
-    field: "categoryname",
-    filter: "agTextColumnFilter",
-    hide: true,
-  },
-  {
-    headerName: "Location",
-    field: "itemlocation",
-    filter: "agTextColumnFilter",
-    hide: true,
   },
   {
     headerName: "Subcategory",
@@ -110,6 +125,68 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
   {
     headerName: "Status",
     field: "itemstatus",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Item ID",
+    field: "itemid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Adjustment Date",
+    field: "adjdate",
+    filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    hide: true,
+  },
+  {
+    headerName: "Adjusted By",
+    field: "adjustedby",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Last Transfer Date",
+    field: "lasttransferdate",
+    filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    hide: true,
+  },
+  {
+    headerName: "Transfer By",
+    field: "transferby",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Created Date",
+    field: "createddate",
+    filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    hide: true,
+  },
+  {
+    headerName: "Created By",
+    field: "createdby",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Last Modified Date",
+    field: "lastmodifieddate",
+    filter: "agDateColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    hide: true,
+  },
+  {
+    headerName: "Modified By",
+    field: "modifiedby",
     filter: "agTextColumnFilter",
     hide: true,
   },
@@ -132,12 +209,6 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
     hide: true,
   },
   {
-    headerName: "Item ID",
-    field: "itemid",
-    filter: "agNumberColumnFilter",
-    hide: true,
-  },
-  {
     headerName: "Image Path",
     field: "itemimagepath",
     filter: "agTextColumnFilter",
@@ -146,7 +217,6 @@ export const productListColumnDefs: ColDef<ProductListType>[] = [
   {
     headerName: "Actions",
     cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,

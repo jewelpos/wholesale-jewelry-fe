@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useCallback } from "react";
 import OutletsFilter from "./OutletsFilter";
 import useOutlets from "@/hooks/useOutlets";
 import WarehouseFilter from "./WarehouseFilter";
-import useWarehouse from "@/hooks/useWarehouse";
 import { useParams } from "next/navigation";
 import SupplierFilter from "./SupplierFilter";
 import useSupplier from "@/hooks/useSupplier";
+import useWarehouse from "@/hooks/useWarehouse";
 
 interface Props {
   search?: string;
@@ -13,7 +13,9 @@ interface Props {
   selectedOutlet?: number | undefined;
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedWarehouse?: number | undefined;
-  setSelectedWarehouse?: React.Dispatch<React.SetStateAction<number>>;
+  setSelectedWarehouse?: React.Dispatch<
+    React.SetStateAction<number | undefined>
+  >;
   selectedSupplier?: number | undefined;
   setSelectedSupplier?: React.Dispatch<
     React.SetStateAction<number | undefined>
@@ -35,6 +37,7 @@ const CustomFilterSections = ({
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const {
     fetchWarehouseByStoreId,
+    fetchWarehouseByOutletId,
     loading: warehousesLoading,
     warehouses,
   } = useWarehouse();
@@ -43,6 +46,21 @@ const CustomFilterSections = ({
     loading: suppliersLoading,
     suppliers,
   } = useSupplier();
+
+  // Determine which warehouse fetch function to use based on selected outlet
+  const fetchWarehousesList = useCallback(() => {
+    if (selectedOutlet) {
+      fetchWarehouseByOutletId(selectedOutlet);
+    } else {
+      fetchWarehouseByStoreId(parsedStoreId);
+    }
+  }, [
+    fetchWarehouseByOutletId,
+    fetchWarehouseByStoreId,
+    selectedOutlet,
+    parsedStoreId,
+  ]);
+
   return (
     <div className="container-fluid my-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -72,7 +90,7 @@ const CustomFilterSections = ({
         {setSelectedWarehouse && (
           <div className="d-flex align-items-center w-25 w-md-100">
             <WarehouseFilter
-              fetchWarehousesList={fetchWarehouseByStoreId}
+              fetchWarehousesList={fetchWarehousesList}
               warehouses={warehouses}
               loading={warehousesLoading}
               setSelectedWarehouse={setSelectedWarehouse}

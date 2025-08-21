@@ -27,6 +27,9 @@ const ProductActivitiesComponent = () => {
   );
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedWarehouse, setSelectedWarehouse] = useState<
+    number | undefined
+  >(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
@@ -62,6 +65,22 @@ const ProductActivitiesComponent = () => {
                   filterType: "text",
                   type: "equals",
                   filter: selectedOutlet,
+                },
+              },
+            ],
+          };
+        }
+        if (selectedWarehouse !== -1) {
+          filtersMain = {
+            ...filtersMain,
+            filters: [
+              ...filtersMain.filters,
+              {
+                key: "warehouseid",
+                value: {
+                  filterType: "text",
+                  type: "equals",
+                  filter: selectedWarehouse,
                 },
               },
             ],
@@ -105,6 +124,7 @@ const ProductActivitiesComponent = () => {
       parsedStoreId,
       debouncedSearch,
       selectedOutlet,
+      selectedWarehouse,
     ]
   );
 
@@ -112,7 +132,14 @@ const ProductActivitiesComponent = () => {
     if (parsedStoreId && gridReady && selectedOutlet) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, gridReady, parsedStoreId, selectedOutlet]);
+  }, [
+    gridRef,
+    datasource,
+    gridReady,
+    parsedStoreId,
+    selectedOutlet,
+    selectedWarehouse,
+  ]);
 
   return (
     <>
@@ -124,6 +151,8 @@ const ProductActivitiesComponent = () => {
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
