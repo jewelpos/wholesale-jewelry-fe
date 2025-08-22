@@ -45,7 +45,7 @@ const ProductActivitiesComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        if (selectedOutlet === undefined && selectedWarehouse === -1) {
+        if (!selectedOutlet || selectedWarehouse === -1) {
           return false;
         }
         let filtersMain = filterVariables(
