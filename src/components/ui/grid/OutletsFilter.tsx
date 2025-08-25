@@ -50,7 +50,7 @@ const OutletsFilter = ({
 
   return (
     <Row className="d-flex align-items-center justify-content-center">
-      <Col xs={6} className="mr-0 ">
+      <Col xs={6} className="mr-0 text-end">
         <h6 className="p-0 m-0">Select Outlet</h6>
       </Col>
       <Col xs={6} className="p-0 m-0">

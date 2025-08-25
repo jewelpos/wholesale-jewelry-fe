@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import {
   GET_SUPPLIER_QUERY,
   GET_SUPPLIERS_BY_STORE_ID_QUERY,
+  GET_SUPPLIER_BY_OUTLET_ID_QUERY,
   GET_SUPPLIER_BALANCE_DUE_QUERY,
   GET_FULL_SUPPLIER_INVOICE_LIST_QUERY,
   GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY,
@@ -25,6 +26,7 @@ const useSupplier = () => {
   const [supplier, setSupplier] = useState<SupplierType | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [getSuppliersByStoreId] = useLazyQuery(GET_SUPPLIERS_BY_STORE_ID_QUERY);
+  const [getSupplierByOutletId] = useLazyQuery(GET_SUPPLIER_BY_OUTLET_ID_QUERY);
   const [getSupplierBySupplierId] = useLazyQuery(GET_SUPPLIER_QUERY);
   const [getSupplierBalanceDue] = useLazyQuery(GET_SUPPLIER_BALANCE_DUE_QUERY);
   const [getFullSupplierInvoiceList] = useLazyQuery(
@@ -84,6 +86,32 @@ const useSupplier = () => {
         });
         if (data.getSuppliersByStoreId) {
           setSuppliers(data.getSuppliersByStoreId);
+        }
+        return true;
+      },
+      () => {
+        setLoading(false);
+      }
+    );
+    if (result.error) {
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  }, []);
+
+  const fetchSuppliersByOutletId = useCallback(async (storeId: number, outletId: number) => {
+    const result = await handleTryCatch(
+      async () => {
+        setLoading(true);
+        const { data } = await getSupplierByOutletId({
+          variables: { storeid: storeId, outletid: outletId },
+        });
+        if (data.getSupplierByOutletId) {
+          setSuppliers(data.getSupplierByOutletId);
         }
         return true;
       },
@@ -242,6 +270,7 @@ const useSupplier = () => {
 
   return {
     fetchSuppliersByStoreId,
+    fetchSuppliersByOutletId,
     suppliers,
     supplier,
     fetchSupplier,

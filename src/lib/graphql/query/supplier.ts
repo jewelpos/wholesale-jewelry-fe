@@ -62,31 +62,32 @@ export const GET_SUPPLIER_LIST_QUERY = gql`
       data {
         supplierid
         companyname
-        contactname
-        city
-        accountno
-        termsname
         phone1
         cellphone
+        contactname
+        numberofpurchase
+        totalpurchase
+        balancedue
+        opencredit
+        totalsalevalue
+        lastpurchasedate
+        lastpaymentdate
+        days_since_last_purchase   
+        postchkamount
+        accountno
+        termsname
+        phone2
+        city
         emailaddress
-        webaddress
         shippimgmethod
         discountrate
-        warehousename
-        address1
-        address2
-        state
-        zipcode
-        country
-        phone2
         supplierstatus
         remarks
+        lastmodifieddate
+        modifiedby
+        warehousename
         warehouseid
         outletid
-        createdbyid
-        createddate
-        lastmodifiedbyid
-        lastmodifieddate
       }
     }
   }
@@ -144,28 +145,22 @@ export const GET_SUPPLIER_INVOICE_LIST_QUERY =  gql`
       total
       data {
         supplierinvoiceid
-        supplierid
+        companyname
         veninvoiceno
         veninvoicedate
         veninvoicetotal
         veninvamtpaid
         veninvamtbalance
+        terms
         refponumber
         invpostingdate
         veninvremarks
-        warehouseid
-        veninvbankid
-        enteredbyid
-        termsid
-        venpostchkamount
-        venpostchkamountdue
-        vencrediapplied
-        lastmodifiedbyid
-        lastmodifieddate
         warehousename
-        suppliername
-        termsname
-        enteredbyname
+        enteredby
+        modifiedby
+        lastmodifieddate
+        warehouseid
+        outletid
       }
     }
   }
@@ -467,6 +462,51 @@ export const GET_SUPPLIER_CREDIT_BALANCE_DUE_QUERY = gql`
         veninvamtbalance
         warehouseid
       }
+    }
+  }
+`;
+
+export const GET_SUPPLIER_BY_OUTLET_ID_QUERY = gql`
+  query GetSupplierByOutletId($storeid: Int!, $outletid: Int!) {
+    getSupplierByOutletId(storeid: $storeid, outletid: $outletid) {
+      supplierid
+      companyname
+      contactname
+      city
+      accountno
+      termsname
+      phone1
+      cellphone
+      emailaddress
+      webaddress
+      shippimgmethod
+      discountrate
+      warehousename
+      address1
+      address2
+      state
+      zipcode
+      country
+      phone2
+      supplierstatus
+      remarks
+      warehouseid
+      outletid
+      createdbyid
+      createddate
+      createdby
+      lastmodifiedbyid
+      modifiedby
+      lastmodifieddate
+      lastpurchasedate
+      lastpaymentdate
+      days_since_last_purchase
+      numberofpurchase
+      balancedue
+      totalpurchase
+      opencredit
+      totalsalevalue
+      postchkamount
     }
   }
 `;
