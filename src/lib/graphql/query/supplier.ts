@@ -510,3 +510,49 @@ export const GET_SUPPLIER_BY_OUTLET_ID_QUERY = gql`
     }
   }
 `;
+
+export const GET_ON_HAND_CHEQUE_SUMMARY_LIST_QUERY = gql`
+  query GetOnHandChequeSummaryList(
+    $storeid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getOnHandChequeSummaryList(
+      storeid: $storeid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        supplierid
+        companyname
+        year
+        total_amount
+        total_checks
+        jan
+        feb
+        mar
+        apr
+        may
+        jun
+        jul
+        aug
+        sep
+        oct
+        nov
+        dec
+        warehousename
+        warehouseid
+        outletid
+      }
+    }
+  }
+`;

@@ -242,3 +242,31 @@ export type VoidPaymentFormType = {
   postingdate: dayjs.Dayjs,
   paymentid: number,
 }
+
+export type OnHandChequeSummaryType = {
+  supplierid: string;
+  companyname: string;
+  year: number;
+  total_amount: number;
+  total_checks: string;
+  jan: string;
+  feb: string;
+  mar: string;
+  apr: string;
+  may: string;
+  jun: string;
+  jul: string;
+  aug: string;
+  sep: string;
+  oct: string;
+  nov: string;
+  dec: string;
+  warehousename: string;
+  warehouseid: number;
+  outletid: number;
+}
+
+export type OnHandChequeSummaryResponseType = {
+  total: number;
+  data: OnHandChequeSummaryType[];
+}
