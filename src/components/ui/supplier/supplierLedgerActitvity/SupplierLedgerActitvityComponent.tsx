@@ -22,6 +22,7 @@ const SupplierLedgerActitvityComponent = () => {
   const [getSupplierLedgerList] = useLazyQuery(GET_SUPPLIER_LEDGER_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedSupplier, setSelectedSupplier] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -46,6 +47,7 @@ const SupplierLedgerActitvityComponent = () => {
           const { data } = await getSupplierLedgerList({
             variables: {
               outletid: selectedOutlet,
+              supplierid: selectedSupplier,
               ...filtersMain,
             },
           });
@@ -74,14 +76,14 @@ const SupplierLedgerActitvityComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierLedgerList, debouncedSearch]
+    [selectedOutlet, selectedSupplier, dispatch, getSupplierLedgerList, debouncedSearch]
   );
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
+    if ((selectedOutlet || selectedSupplier || debouncedSearch) && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
+  }, [gridRef, datasource, selectedOutlet, selectedSupplier, gridReady, debouncedSearch]);
 
   return (
     <>
@@ -93,6 +95,8 @@ const SupplierLedgerActitvityComponent = () => {
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
+            selectedSupplier={selectedSupplier}
+            setSelectedSupplier={setSelectedSupplier}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid

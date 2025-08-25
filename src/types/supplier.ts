@@ -27,11 +27,11 @@ export type SupplierListType = {
   contactname: string;
   city: string;
   accountno: string;
-  termsname: number;
-  phone: number;
-  cellphone: number;
+  termsname: string;
+  phone1: string;
+  cellphone: string;
   emailaddress: string;
-  webaddress: number;
+  webaddress: string;
   shippimgmethod: string;
   discountrate: number;
   warehousename: string;
@@ -41,14 +41,25 @@ export type SupplierListType = {
   zipcode: string;
   country: string;
   phone2: string;
-  supplierstatus: string;
+  supplierstatus: number;
   remarks: string;
   warehouseid: number;
   outletid: number;
   createdbyid: number;
   createddate: string;
+  createdby: string;
   lastmodifiedbyid: number;
+  modifiedby: string;
   lastmodifieddate: string;
+  lastpurchasedate: string;
+  lastpaymentdate: string;
+  days_since_last_purchase: number;
+  numberofpurchase: number;
+  balancedue: number;
+  totalpurchase: number;
+  opencredit: number;
+  totalsalevalue: number;
+  postchkamount: number;
 };
 
 export type SupplierListResponseType = {
@@ -85,28 +96,22 @@ export type SupplierFormType = {
 
 export type SupplierInvoiceType = {
   supplierinvoiceid: number;
-  supplierid: number;
+  companyname: string;
   veninvoiceno: string;
-  veninvoicedate: string
+  veninvoicedate: string;
   veninvoicetotal: number;
   veninvamtpaid: number;
   veninvamtbalance: number;
-  refponumber: number;
-  invpostingdate: string
+  terms: string;
+  refponumber: string;
+  invpostingdate: string;
   veninvremarks: string;
-  warehouseid: number;
-  veninvbankid: number;
-  enteredbyid: number;
-  termsid: number;
-  venpostchkamount: number;
-  venpostchkamountdue: number;
-  vencrediapplied: number;
-  lastmodifiedbyid: number;
-  lastmodifieddate: string
   warehousename: string;
-  suppliername: string;
-  termsname: string;
-  enteredbyname: string;
+  enteredby: string;
+  modifiedby: string;
+  lastmodifieddate: string;
+  warehouseid: number;
+  outletid: number;
 };
 
 export type SupplierInvoiceResponseType = {
@@ -236,4 +241,32 @@ export type VoidPaymentFormType = {
   supplierid: number,
   postingdate: dayjs.Dayjs,
   paymentid: number,
+}
+
+export type OnHandChequeSummaryType = {
+  supplierid: string;
+  companyname: string;
+  year: number;
+  total_amount: number;
+  total_checks: string;
+  jan: string;
+  feb: string;
+  mar: string;
+  apr: string;
+  may: string;
+  jun: string;
+  jul: string;
+  aug: string;
+  sep: string;
+  oct: string;
+  nov: string;
+  dec: string;
+  warehousename: string;
+  warehouseid: number;
+  outletid: number;
+}
+
+export type OnHandChequeSummaryResponseType = {
+  total: number;
+  data: OnHandChequeSummaryType[];
 }

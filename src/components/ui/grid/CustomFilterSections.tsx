@@ -43,6 +43,7 @@ const CustomFilterSections = ({
   } = useWarehouse();
   const {
     fetchSuppliersByStoreId,
+    fetchSuppliersByOutletId,
     loading: suppliersLoading,
     suppliers,
   } = useSupplier();
@@ -102,10 +103,12 @@ const CustomFilterSections = ({
           <div className="d-flex align-items-center w-25 w-md-100">
             <SupplierFilter
               fetchSuppliersList={fetchSuppliersByStoreId}
+              fetchSuppliersByOutletId={fetchSuppliersByOutletId}
               suppliers={suppliers}
               loading={suppliersLoading}
               setSelectedSupplier={setSelectedSupplier}
               selectedSupplier={selectedSupplier}
+              outletId={selectedOutlet}
             />
           </div>
         )}
