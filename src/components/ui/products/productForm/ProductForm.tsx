@@ -150,8 +150,10 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       profitpercent &&
       !isEdit // Only auto-calculate for new products, not when editing
     ) {
+      const percentageValue = (itempurchaseprice / 100) * profitpercent;
+      const profitpercentValue = itempurchaseprice + percentageValue;
       const calculatedTagPrice =
-        itempurchaseprice * profitpercent * productSettings.saletagkey;
+        profitpercentValue * productSettings.saletagkey;
       setValue("itemtagprice", Number(calculatedTagPrice.toFixed(2)));
     }
   }, [itempurchaseprice, profitpercent, productSettings, setValue, isEdit]);

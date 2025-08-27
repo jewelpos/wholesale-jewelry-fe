@@ -52,6 +52,9 @@ const ProductsListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
+        if (!selectedOutlet || selectedWarehouse === -1) {
+          return;
+        }
         let filtersMain = filterVariables(
           params,
           debouncedSearch,

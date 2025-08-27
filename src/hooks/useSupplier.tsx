@@ -103,34 +103,37 @@ const useSupplier = () => {
     }
   }, []);
 
-  const fetchSuppliersByOutletId = useCallback(async (storeId: number, outletId: number) => {
-    const result = await handleTryCatch(
-      async () => {
-        setLoading(true);
-        const { data } = await getSupplierByOutletId({
-          variables: { storeid: storeId, outletid: outletId },
-        });
-        if (data.getSupplierByOutletId) {
-          setSuppliers(data.getSupplierByOutletId);
+  const fetchSuppliersByOutletId = useCallback(
+    async (storeId: number, outletId: number) => {
+      const result = await handleTryCatch(
+        async () => {
+          setLoading(true);
+          const { data } = await getSupplierByOutletId({
+            variables: { storeid: storeId, outletid: outletId },
+          });
+          if (data.getSupplierByOutletId) {
+            setSuppliers(data.getSupplierByOutletId);
+          }
+          return true;
+        },
+        () => {
+          setLoading(false);
         }
-        return true;
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-    if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
       );
-    }
-  }, []);
+      if (result.error) {
+        dispatch(
+          showNotification({
+            message: result.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    },
+    []
+  );
 
   const fetchSupplierBalanceDue = useCallback(
-    async (storeId: number, supplierId: number) => {
+    async (storeId: number, outletId: number, supplierId: number) => {
       const result = await handleTryCatch(
         async () => {
           setLoading(true);
@@ -138,6 +141,7 @@ const useSupplier = () => {
             variables: {
               supplierid: supplierId,
               storeid: storeId,
+              outletid: outletId,
             },
           });
           if (data?.getSupplierBalanceDue) {

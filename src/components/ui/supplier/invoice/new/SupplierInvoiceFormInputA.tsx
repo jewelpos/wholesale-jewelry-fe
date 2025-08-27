@@ -7,6 +7,7 @@ import {
   Controller,
   FieldErrors,
   UseFormRegister,
+  UseFormSetValue,
   UseFormTrigger,
 } from "react-hook-form";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
@@ -16,6 +17,8 @@ import useSupplier from "@/hooks/useSupplier";
 import { Calendar } from "react-feather";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
+import useWarehouse from "@/hooks/useWarehouse";
+import { useParams } from "next/navigation";
 
 interface Props {
   register: UseFormRegister<SupplierInvoiceFormType>;
@@ -28,6 +31,7 @@ interface Props {
   supplier?: SupplierType | null;
   supplierLoading: boolean;
   savedAmount?: number;
+  setValue: UseFormSetValue<SupplierInvoiceFormType>;
 }
 
 const SupplierInvoiceFormInputA = ({
@@ -41,7 +45,24 @@ const SupplierInvoiceFormInputA = ({
   supplier,
   supplierLoading,
   savedAmount,
+  setValue,
 }: Props) => {
+  const { outletId } = useParams();
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  const warehouse = warehouses.find((warehouse) => warehouse.issystem);
+
+  useEffect(() => {
+    if (outletId) {
+      fetchWarehouseByOutletId(Number(outletId));
+    }
+  }, [fetchWarehouseByOutletId, outletId]);
+
+  useEffect(() => {
+    if (warehouse) {
+      setValue("warehouseid", warehouse.warehouseid.toString());
+    }
+  }, [warehouse, setValue]);
+
   return (
     <>
       <div className="row">
@@ -70,20 +91,15 @@ const SupplierInvoiceFormInputA = ({
             <div className="col-lg-6 col-sm-12 col-md-6">
               <div className="mb-3">
                 <label className="form-label">Warehouse</label>
-                <Controller
-                  name="warehouseid"
-                  control={control}
-                  rules={{ required: "Warehouse is required" }}
-                  render={({ field }) => (
-                    <SelectWarehouse
-                      className={`${errors.warehouseid && "is-invalid"} `}
-                      trigger={trigger}
-                      warehouseId={warehouseId}
-                      storeId={storeId}
-                      disableField={disableField}
-                      {...field}
-                    />
-                  )}
+                <input
+                  type="text"
+                  className={`${
+                    errors.warehouseid && "is-invalid"
+                  } form-control`}
+                  {...register("warehouseid", {
+                    required: "Warehouse is required",
+                  })}
+                  disabled
                 />
                 {errors.warehouseid && (
                   <div className="invalid-feedback">
@@ -198,11 +214,7 @@ const SupplierInvoiceFormInputA = ({
                   className={`${
                     errors.refponumber && "is-invalid"
                   } form-control`}
-                  {...register("refponumber", {
-                    required: "Reference PO is required",
-                    validate: (value) =>
-                      !isNaN(Number(value)) || "Please enter a valid number",
-                  })}
+                  {...register("refponumber")}
                 />
                 {errors.refponumber && (
                   <div className="invalid-feedback">

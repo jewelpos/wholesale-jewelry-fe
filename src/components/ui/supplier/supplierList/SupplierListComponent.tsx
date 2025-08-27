@@ -42,7 +42,7 @@ const SupplierListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [showInvoiceFormModal, setShowInvoiceFormModal] =
     useState<boolean>(false);
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [paymentModal, setPaymentModal] = useState<string>("");
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierListType>) => {
     setGridReady(true);
@@ -137,7 +137,7 @@ const SupplierListComponent = () => {
     <>
       <SupplierListHeader
         setShowInvoiceFormModal={setShowInvoiceFormModal}
-        setShowPaymentModal={setShowPaymentModal}
+        setPaymentModal={setPaymentModal}
       />
       <div className="card table-list-card">
         <div className="card-body p-2">
@@ -171,8 +171,11 @@ const SupplierListComponent = () => {
           setShowInvoiceFormModal={setShowInvoiceFormModal}
         />
       )}
-      {showPaymentModal && (
-        <PaymentModal setShowPaymentModal={setShowPaymentModal} />
+      {paymentModal && (
+        <PaymentModal
+          setPaymentModal={setPaymentModal}
+          paymentModal={paymentModal}
+        />
       )}
     </>
   );

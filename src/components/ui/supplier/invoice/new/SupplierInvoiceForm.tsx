@@ -61,6 +61,7 @@ const SupplierInvoiceForm = ({
     getValues,
     trigger,
     reset,
+    setValue,
   } = useForm<SupplierInvoiceFormType>({
     defaultValues: {
       warehouseid: "",
@@ -187,6 +188,7 @@ const SupplierInvoiceForm = ({
               supplierLoading={supplierLoading}
               storeId={parsedStoreId}
               savedAmount={savedAmount}
+              setValue={setValue}
             />
           </div>
         )}
