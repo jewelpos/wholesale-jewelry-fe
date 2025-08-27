@@ -69,3 +69,9 @@ export const paymentTypes ={
   nonvoided:"nonvoided",
   all:"all",
 }
+
+export const paymentModalTypes = {
+  add_credit_adjustment:"add_credit_adjustment",
+  add_supplier_payment:"add_supplier_payment",
+  add_void_payment:"add_void_payment",
+}

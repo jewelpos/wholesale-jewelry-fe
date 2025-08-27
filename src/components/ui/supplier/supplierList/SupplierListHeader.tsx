@@ -10,13 +10,14 @@ import {
   renderActionButtonIconName,
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
+import { paymentModalTypes } from "@/lib/config/constants";
 
 const SupplierListHeader = ({
   setShowInvoiceFormModal,
-  setShowPaymentModal,
+  setPaymentModal,
 }: {
   setShowInvoiceFormModal: (value: boolean) => void;
-  setShowPaymentModal: (value: boolean) => void;
+  setPaymentModal: (value: string) => void;
 }) => {
   const { currentMenu, currentPath } = useMenu();
 
@@ -24,11 +25,14 @@ const SupplierListHeader = ({
     if (actionName.includes("invoice")) {
       setShowInvoiceFormModal(true);
     }
-    if (actionName.includes("payment")) {
-      setShowPaymentModal(true);
+    if (
+      actionName.includes(paymentModalTypes.add_credit_adjustment) ||
+      actionName.includes(paymentModalTypes.add_supplier_payment)
+    ) {
+      setPaymentModal(actionName);
     }
   };
-
+  console.log(currentMenu);
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
@@ -48,7 +52,10 @@ const SupplierListHeader = ({
               const iconName = renderActionButtonIconName(btn.actionname);
               const isModalButton =
                 btn.actionname.includes("invoice") ||
-                btn.actionname.includes("payment");
+                btn.actionname.includes(
+                  paymentModalTypes.add_credit_adjustment
+                ) ||
+                btn.actionname.includes(paymentModalTypes.add_supplier_payment);
               return (
                 <div
                   className="page-btn d-none d-sm-block"

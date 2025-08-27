@@ -9,7 +9,7 @@ export const supplierLedgerColumnDefs: ColDef<SupplierLedgerListType>[] = [
     headerName: "Ledger date",
     field: "ledgerdate",
     cellRenderer: (params: ICellRendererParams) =>
-      dayjs(params.value).format(TIME_FORMAT),
+      dayjs(params.value?.toString()).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   { headerName: "Ledger", field: "ledgerid", filter: "agTextColumnFilter" },

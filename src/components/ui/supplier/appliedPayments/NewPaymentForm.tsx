@@ -26,9 +26,11 @@ import { TIME_FORMAT } from "@/lib/config/constants";
 const NewPaymentForm = ({
   storeId,
   closePaymentModal,
+  outletId,
 }: {
   storeId: number;
   closePaymentModal: () => void;
+  outletId: number;
 }) => {
   const {
     fetchSupplierBalanceDue,
@@ -162,7 +164,11 @@ const NewPaymentForm = ({
                   onChangeAdditional={(value: string) => {
                     field.onChange(value);
                     if (value) {
-                      fetchSupplierBalanceDue(storeId, parseInt(value));
+                      fetchSupplierBalanceDue(
+                        storeId,
+                        outletId,
+                        parseInt(value)
+                      );
                     }
                   }}
                 />
