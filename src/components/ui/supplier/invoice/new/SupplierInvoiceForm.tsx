@@ -110,6 +110,7 @@ const SupplierInvoiceForm = ({
       refponumber: Number(formData.refponumber),
       veninvoicedate: formData.veninvoicedate,
       veninvoicetotal: Number(formData.veninvoicetotal),
+      warehouseid: Number(formData.warehouseid),
     };
 
     const result = await handleTryCatch(async () => {
