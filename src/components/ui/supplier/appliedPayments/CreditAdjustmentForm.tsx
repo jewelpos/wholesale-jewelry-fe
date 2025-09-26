@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
 import { Calendar } from "react-feather";
-import { useLazyQuery } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import {
   CreditAdjustmentFormType,
-  SupplierBalanceDueType,
+  SupplierCreditInfo,
 } from "@/types/supplier";
-import { GET_SUPPLIER_CREDIT_BALANCE_DUE_QUERY } from "@/lib/graphql/query/supplier";
+import useSupplier from "@/hooks/useSupplier";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectSupplierInvoice from "@/components/forms/SelectSupplierInvoice";
 import SelectPaymentMode from "@/components/forms/SelectPaymentMode";
@@ -20,12 +20,15 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
+import { CREATE_SUPPLIER_CREDIT_APPLY_MUTATION } from "@/lib/graphql/mutations/supplier";
 
 const CreditAdjustmentForm = ({
   storeId,
+  outletId,
   closePaymentModal,
 }: {
   storeId: number;
+  outletId: number;
   closePaymentModal: () => void;
 }) => {
   const dispatch = useAppDispatch();
@@ -37,12 +40,13 @@ const CreditAdjustmentForm = ({
     setValue,
     trigger,
     register,
+    getValues,
   } = useForm<CreditAdjustmentFormType>({
     defaultValues: {
       supplierid: 0,
       postingdate: dayjs(),
-      paymentmodeid: 0,
-      checkcardno: "", // will store selected invoice number
+      paymentmodeid: 6, // will be disabled, default conceptual 'CrdInv'
+      checkcardno: "", // stores selected credit invoice number
       amount: "",
       invoicenumber: "",
       reference: "",
@@ -50,76 +54,115 @@ const CreditAdjustmentForm = ({
     mode: "all",
   });
 
-  const [getCreditBalanceDue] = useLazyQuery(
-    GET_SUPPLIER_CREDIT_BALANCE_DUE_QUERY
+  const { fetchSupplierCreditApplySummary, supplierCreditInfo, supplierBalanceDue, loading } =
+    useSupplier();
+  const [autoApply, setAutoApply] = useState(false);
+  const [createCreditApply, { loading: saving }] = useMutation(
+    CREATE_SUPPLIER_CREDIT_APPLY_MUTATION
   );
-  const [supplierInvoices, setSupplierInvoices] = useState<
-    SupplierBalanceDueType[]
-  >([]);
-  const [balanceDueInvoices, setBalanceDueInvoices] = useState<
-    SupplierBalanceDueType[]
-  >([]);
-  const [loading, setLoading] = useState(false);
 
   const supplierId = watch("supplierid");
-  const selectedInvoice = watch("checkcardno");
+  const selectedCreditInvoiceNo = watch("checkcardno");
+  const selectedTargetInvoiceNo = watch("invoicenumber");
+  const amountValue = Number(watch("amount") || 0);
 
-  // Fetch credit balance due when supplier changes
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!supplierId) return;
-      const result = await handleTryCatch(
-        async () => {
-          setLoading(true);
-          const { data } = await getCreditBalanceDue({
-            variables: { storeid: storeId, supplierid: supplierId },
-          });
-          if (data?.getSupplierCreditBalanceDue) {
-            const { balanceDueSuppliers, balanceDueInvoices } =
-              data.getSupplierCreditBalanceDue;
-            setSupplierInvoices(balanceDueSuppliers || []);
-            setBalanceDueInvoices(balanceDueInvoices || []);
-          }
-        },
-        () => setLoading(false)
-      );
+  // On supplier select, fetch credit apply summary
+  const onSupplierChangeFetch = async (value: string) => {
+    const parsed = parseInt(value);
+    setValue("supplierid", parsed as unknown as never);
+    if (parsed) {
+      await fetchSupplierCreditApplySummary(storeId, outletId, parsed);
+    }
+  };
 
-      if (result.error) {
-        dispatch(
-          showNotification({
-            message: result.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
-    };
+  // When credit invoice is selected, set amount = its balance
+  const creditInvoices = (supplierCreditInfo?.creditInvoices || []) as SupplierCreditInfo["creditInvoices"];
+  const balanceDueInvoices = supplierCreditInfo?.balanceDueInvoices || [];
+  const selectedCreditInvoice = useMemo(
+    () => creditInvoices.find((c) => c.veninvoiceno === selectedCreditInvoiceNo),
+    [creditInvoices, selectedCreditInvoiceNo]
+  );
 
-    fetchData();
-  }, [supplierId, storeId, getCreditBalanceDue, dispatch]);
-
-  // Auto-fill amount based on selected invoice balance
-  useEffect(() => {
-    if (selectedInvoice) {
-      const invoice = supplierInvoices.find(
-        (inv) => inv.veninvoiceno === selectedInvoice
-      );
-      if (invoice) {
-        setValue("amount", invoice.veninvamtbalance.toString());
-      }
+  React.useEffect(() => {
+    if (selectedCreditInvoice) {
+      // Ensure we use a positive amount for credit invoice balance
+      const positiveBal = Math.abs(Number(selectedCreditInvoice.veninvamtbalance ?? 0));
+      setValue("amount", String(positiveBal));
     } else {
       setValue("amount", "");
     }
-  }, [selectedInvoice, supplierInvoices, setValue]);
+  }, [selectedCreditInvoice, setValue]);
 
-  const onSubmit = (data: CreditAdjustmentFormType) => {
-    // TODO: integrate create credit adjustment mutation when backend is ready
-    dispatch(
-      showNotification({
-        message: "Credit adjustment feature is under development.",
-        type: NOTIFICATION_TYPES.INFO,
-      })
-    );
-    closePaymentModal();
+  // Allocation display similar to NewPaymentForm
+  const { allocations, unappliedAmount } = useMemo(() => {
+    let remaining = amountValue;
+    const allocArr: number[] = [];
+    if (autoApply && amountValue > 0) {
+      if (selectedTargetInvoiceNo) {
+        balanceDueInvoices.forEach((row) => {
+          if (row.veninvoiceno === selectedTargetInvoiceNo && remaining > 0) {
+            const applied = Math.min(Number(row.veninvamtbalance), remaining);
+            allocArr.push(applied);
+            remaining -= applied;
+          } else {
+            allocArr.push(0);
+          }
+        });
+      } else {
+        balanceDueInvoices.forEach((row) => {
+          if (remaining > 0) {
+            const applied = Math.min(Number(row.veninvamtbalance), remaining);
+            allocArr.push(applied);
+            remaining -= applied;
+          } else {
+            allocArr.push(0);
+          }
+        });
+      }
+    } else {
+      balanceDueInvoices.forEach(() => allocArr.push(0));
+    }
+    return { allocations: allocArr, unappliedAmount: autoApply ? remaining : amountValue };
+  }, [autoApply, amountValue, balanceDueInvoices, selectedTargetInvoiceNo]);
+
+  const onSubmit = async (formData: CreditAdjustmentFormType) => {
+    const payload = {
+      storeid: storeId,
+      supplierid: formData.supplierid,
+      outletid: outletId,
+      postingdate: formData.postingdate.format("YYYY-MM-DD"),
+      creditInvoiceNumber: formData.checkcardno,
+      amountToApply: Number(formData.amount),
+      targetInvoiceNumbers: formData.invoicenumber
+        ? [formData.invoicenumber]
+        : [],
+      reference: formData.reference,
+    };
+
+    const result = await handleTryCatch(async () => {
+      const response = await createCreditApply({ variables: { input: payload } });
+      const { data } = response;
+      if (data?.createSupplierCreditApply) {
+        const successData = data.createSupplierCreditApply;
+        dispatch(
+          showNotification({
+            message: successData.message,
+            type: NOTIFICATION_TYPES.SUCCESS,
+          })
+        );
+        closePaymentModal();
+      }
+      return true;
+    });
+
+    if (result.error) {
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
   };
 
   return (
@@ -138,6 +181,7 @@ const CreditAdjustmentForm = ({
                   trigger={trigger}
                   storeId={storeId}
                   {...field}
+                  onChangeAdditional={onSupplierChangeFetch}
                 />
               )}
             />
@@ -177,9 +221,15 @@ const CreditAdjustmentForm = ({
             <Controller
               control={control}
               name="paymentmodeid"
-              rules={{ required: "Payment mode is required" }}
+              // For credit application, this is conceptually fixed to 'CrdInv'
+              rules={{}}
               render={({ field }) => (
-                <SelectPaymentMode trigger={trigger} {...field} />
+                <SelectPaymentMode
+                  trigger={trigger}
+                  storeId={storeId}
+                  disableField
+                  {...field}
+                />
               )}
             />
             {errors.paymentmodeid && (
@@ -196,17 +246,17 @@ const CreditAdjustmentForm = ({
         <div className="row">
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <LabelLoader label="Invoice #" loading={loading} />
+              <LabelLoader label="Check/Card No" loading={loading} />
               <Controller
                 control={control}
                 name="checkcardno"
-                rules={{ required: "Invoice is required" }}
+                rules={{ required: "Credit invoice is required" }}
                 render={({ field }) => (
                   <SelectSupplierInvoice
                     trigger={trigger}
                     storeId={storeId}
                     supplierId={supplierId}
-                    invoices={supplierInvoices}
+                    invoices={creditInvoices as unknown as any}
                     hasInvoices={true}
                     {...field}
                   />
@@ -221,11 +271,41 @@ const CreditAdjustmentForm = ({
           </div>
           <div className="col-lg-4 col-md-6 col-sm-12">
             <div className="input-blocks">
-              <LabelLoader label="Amount" loading={loading} />
+              <LabelLoader label="Check Amount" loading={loading} />
               <input
                 type="text"
-                className="form-control"
-                {...register("amount", { required: "Amount is required" })}
+                className={`form-control ${errors.amount ? "is-invalid" : ""}`}
+                {...register("amount", {
+                  required: "Amount is required",
+                  validate: (value: string) => {
+                    if (!supplierCreditInfo) return true;
+                    const val = Number(value);
+                    // Use positive value in case credit balances are negative from backend
+                    const creditAmt = Math.abs(Number(selectedCreditInvoice?.veninvamtbalance ?? 0));
+                    if (val > creditAmt) {
+                      return "Amount should not be more than credit invoice balance";
+                    }
+                    if (balanceDueInvoices.length > 0) {
+                      if (getValues("invoicenumber")) {
+                        const inv = balanceDueInvoices.find(
+                          (i) => i.veninvoiceno === getValues("invoicenumber")
+                        );
+                        if (inv && val > Number(inv.veninvamtbalance)) {
+                          return "Amount should not be more than balance of the selected invoice";
+                        }
+                      } else {
+                        const totalBalanceDue = balanceDueInvoices.reduce(
+                          (acc, curr) => acc + Number(curr.veninvamtbalance),
+                          0
+                        );
+                        if (val > totalBalanceDue) {
+                          return "Amount should not be more than total of balance due";
+                        }
+                      }
+                    }
+                    return true;
+                  },
+                })}
                 disabled
               />
               {errors.amount && (
@@ -246,6 +326,69 @@ const CreditAdjustmentForm = ({
             </div>
           </div>
         </div>
+        <div className="row">
+          <div className="col-lg-4 col-md-6 col-sm-12">
+            <div className="input-blocks">
+              <LabelLoader label="Invoice Number" loading={loading} />
+              <Controller
+                name="invoicenumber"
+                control={control}
+                render={({ field }) => (
+                  <SelectSupplierInvoice
+                    trigger={trigger}
+                    storeId={storeId}
+                    supplierId={supplierId}
+                    invoices={balanceDueInvoices as unknown as any}
+                    hasInvoices
+                    onChangeAdditional={() => trigger()}
+                    {...field}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-lg-4 col-md-5 col-sm-12 ms-auto">
+            <div className="total-order w-100 max-widthauto m-auto ">
+              <ul>
+                <li>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="credit-auto-apply"
+                      onChange={async (e) => {
+                        const shouldEnable = e.target.checked;
+                        if (!shouldEnable) {
+                          setAutoApply(false);
+                          return;
+                        }
+                        const isAmountValid = await trigger("amount");
+                        if (isAmountValid) {
+                          setAutoApply(true);
+                        }
+                      }}
+                      checked={autoApply}
+                    />
+                    <label className="form-check-label" htmlFor="credit-auto-apply">
+                      Automatically Apply Payments
+                    </label>
+                  </div>
+                  <div className="input-blocks">
+                    <label>Unapplied Amount</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      disabled
+                      value={unappliedAmount.toFixed(2)}
+                    />
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Invoice list table */}
@@ -261,18 +404,20 @@ const CreditAdjustmentForm = ({
                   <th>Amount</th>
                   <th>Amount Paid</th>
                   <th>Balance</th>
+                  <th>Amount Received</th>
                 </tr>
               </thead>
               <tbody>
-                {balanceDueInvoices.map((inv) => (
+                {balanceDueInvoices.map((inv, idx) => (
                   <tr key={inv.veninvoiceno}>
                     <td>{inv.veninvoiceno}</td>
                     <td>
-                      {dayjs(Number(inv.veninvoicedate)).format(TIME_FORMAT)}
+                      {dayjs(inv.veninvoicedate).format(TIME_FORMAT)}
                     </td>
                     <td>${inv.veninvoicetotal}</td>
                     <td>${inv.veninvamtpaid}</td>
                     <td>${inv.veninvamtbalance}</td>
+                    <td>${allocations[idx]?.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -285,10 +430,10 @@ const CreditAdjustmentForm = ({
       {!!supplierId && !loading && (
         <ActionFooter handleCancel={closePaymentModal}>
           <ButtonLoader
-            loading={false}
-            btnText="Save"
+            loading={saving}
+            btnText="Pay"
             loadingText="Saving ..."
-            disabled={!isValid}
+            disabled={!isValid || saving}
           />
         </ActionFooter>
       )}

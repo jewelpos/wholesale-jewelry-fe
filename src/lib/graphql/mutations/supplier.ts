@@ -87,3 +87,14 @@ export const CREATE_SUPPLIER_VOIDED_PAYMENT_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_SUPPLIER_CREDIT_APPLY_MUTATION = gql`
+  mutation CreateSupplierCreditApply($input: CreateSupplierCreditApplyInput!) {
+    createSupplierCreditApply(createSupplierCreditApplyInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

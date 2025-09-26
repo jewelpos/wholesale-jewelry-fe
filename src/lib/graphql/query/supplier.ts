@@ -466,6 +466,38 @@ export const GET_SUPPLIER_CREDIT_BALANCE_DUE_QUERY = gql`
   }
 `;
 
+// New query to get supplier credit apply summary (credit invoices and balance due invoices)
+export const GET_SUPPLIER_CREDIT_APPLY_SUMMARY_QUERY = gql`
+  query GetSupplierCreditApplySummary($storeid: Int!, $outletid: Int!, $supplierid: Int!) {
+    getSupplierCreditApplySummary(storeid: $storeid, outletid: $outletid, supplierid: $supplierid) {
+      hasCredit
+      creditAvailable
+      creditInvoices {
+        supplierinvoiceid
+        supplierid
+        veninvoiceno
+        veninvoicedate
+        veninvoicetotal
+        veninvamtpaid
+        veninvamtbalance
+        warehouseid
+        isCreditInvoice
+      }
+      balanceDueInvoices {
+        supplierinvoiceid
+        supplierid
+        veninvoiceno
+        veninvoicedate
+        veninvoicetotal
+        veninvamtpaid
+        veninvamtbalance
+        warehouseid
+        isCreditInvoice
+      }
+    }
+  }
+`;
+
 export const GET_SUPPLIER_BY_OUTLET_ID_QUERY = gql`
   query GetSupplierByOutletId($storeid: Int!, $outletid: Int!) {
     getSupplierByOutletId(storeid: $storeid, outletid: $outletid) {

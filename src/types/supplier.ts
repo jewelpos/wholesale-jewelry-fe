@@ -226,6 +226,37 @@ export type CreditAdjustmentFormType = {
   reference: string;
 };
 
+// Credit application types
+export type SupplierCreditApplyInvoice = {
+  supplierinvoiceid: number;
+  supplierid: number;
+  veninvoiceno: string;
+  veninvoicedate: string;
+  veninvoicetotal: number;
+  veninvamtpaid: number;
+  veninvamtbalance: number;
+  warehouseid: number;
+  isCreditInvoice: boolean;
+};
+
+export type SupplierCreditInfo = {
+  hasCredit: boolean;
+  creditAvailable: number;
+  creditInvoices: SupplierCreditApplyInvoice[];
+  balanceDueInvoices: SupplierCreditApplyInvoice[];
+};
+
+export type CreditApplicationInput = {
+  storeid: number;
+  supplierid: number;
+  outletid: number;
+  postingdate?: string;
+  creditInvoiceNumber: string;
+  amountToApply?: number;
+  targetInvoiceNumbers?: string[];
+  reference?: string;
+};
+
 export type SupplierBalanceDueType = {
   supplierinvoiceid: number;
   supplierid: number;
