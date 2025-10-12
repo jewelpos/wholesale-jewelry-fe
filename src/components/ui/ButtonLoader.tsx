@@ -9,6 +9,7 @@ type Props = {
   type?: "submit" | "button" | "reset";
   className?: string;
   disabled?: boolean;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 };
 
 const ButtonLoader = ({
@@ -18,9 +19,10 @@ const ButtonLoader = ({
   type = "submit",
   className = "btn btn-primary",
   disabled = false,
+  onClick,
 }: Props) => {
   return (
-    <button type={type} disabled={loading || disabled} className={className}>
+    <button type={type} disabled={loading || disabled} className={className} onClick={onClick}>
       {loading ? (
         <>
           <i className="fas fa-spinner fa-spin me-2" /> {loadingText}

@@ -1,3 +1,5 @@
+"use client";
+
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import {
@@ -8,9 +10,19 @@ import Link from "next/link";
 import PageHeader from "../PageHeader";
 import FeatherIcon from "../FeatherIcon";
 
-export default function PurchaseOrderListHeader() {
+export default function PurchaseOrderListHeader({
+  setShowPurchaseOrderFormModal,
+}: {
+  setShowPurchaseOrderFormModal: (value: boolean) => void;
+}) {
   const { currentMenu, currentPath } = useMenu();
   console.log(currentMenu);
+
+  const handleAction = (actionName: string) => {
+    if (actionName.includes("add_new_purchaseorder")) {
+      setShowPurchaseOrderFormModal(true);
+    }
+  };
 
   return (
     <PageHeader
@@ -31,7 +43,8 @@ export default function PurchaseOrderListHeader() {
               const iconName = renderActionButtonIconName(btn.actionname);
               const isModalButton =
                 btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
+                btn.actionname.includes("export") ||
+                btn.actionname.includes("add_new_purchaseorder");
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -39,6 +52,9 @@ export default function PurchaseOrderListHeader() {
                 >
                   <Link
                     href={isModalButton ? "#" : `${currentPath}/new`}
+                    onClick={() =>
+                      isModalButton ? handleAction(btn.actionname) : null
+                    }
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}

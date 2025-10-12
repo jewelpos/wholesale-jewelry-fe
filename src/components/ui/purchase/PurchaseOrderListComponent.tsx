@@ -19,6 +19,7 @@ import { useParams } from "next/navigation";
 import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purchase";
 import { purchaseOrderColumnDefs } from "./ColumnDef";
 import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
+import PurchaseOrderFormModal from "./new/PurchaseOrderFormModal";
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -34,6 +35,8 @@ const PurchaseOrderListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [showPurchaseOrderFormModal, setShowPurchaseOrderFormModal] =
+    useState<boolean>(false);
 
   const handleOnGridReady = (params: GridReadyEvent<PurchaseOrder>) => {
     setGridReady(true);
@@ -116,7 +119,9 @@ const PurchaseOrderListComponent = () => {
 
   return (
     <>
-      <PurchaseOrderListHeader />
+      <PurchaseOrderListHeader
+        setShowPurchaseOrderFormModal={setShowPurchaseOrderFormModal}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -141,6 +146,11 @@ const PurchaseOrderListComponent = () => {
           </div>
         </div>
       </div>
+      {showPurchaseOrderFormModal && (
+        <PurchaseOrderFormModal
+          setShowPurchaseOrderFormModal={setShowPurchaseOrderFormModal}
+        />
+      )}
     </>
   );
 };
