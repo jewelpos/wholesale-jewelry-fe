@@ -100,6 +100,15 @@ const SupplierInvoiceFormInputA = ({
                     required: "Warehouse is required",
                   })}
                   disabled
+                  hidden
+                />
+                <input
+                  type="text"
+                  className={`${
+                    errors.warehouseid && "is-invalid"
+                  } form-control`}
+                  value={warehouse?.warehousename || ""}
+                  disabled
                 />
                 {errors.warehouseid && (
                   <div className="invalid-feedback">

@@ -43,7 +43,8 @@ const SelectSupplierInvoice = ({
       fetchSupplierInvoices(storeId, supplierId);
     }
   }, [fetchSupplierInvoices, storeId, supplierId, hasInvoices]);
-  console.log(invoices);
+
+  
   const invoiceOptions: SelectOption[] = useMemo(
     () =>
       !hasInvoices

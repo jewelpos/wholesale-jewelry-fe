@@ -89,7 +89,10 @@ const CustomerChequeSummaryComponent = () => {
 
   return (
     <>
-      <CustomerChequeSummaryHeader setShowPrintModal={setOpenAddChequeModal} />
+      <CustomerChequeSummaryHeader
+        setShowPrintModal={setOpenAddChequeModal}
+        setOpenAddChequeModal={setOpenAddChequeModal}
+      />
       <div className="barcode-content-list">
         <div className="row">
           <div className="col-lg-12 col-12">

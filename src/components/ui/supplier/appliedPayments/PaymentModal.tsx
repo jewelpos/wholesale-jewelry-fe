@@ -58,6 +58,7 @@ const PaymentModal = ({
             {paymentModal.includes(paymentModalTypes.add_credit_adjustment) && (
               <CreditAdjustmentForm
                 storeId={parsedStoreId}
+                outletId={parsedOutletId}
                 closePaymentModal={() => setPaymentModal("")}
               />
             )}

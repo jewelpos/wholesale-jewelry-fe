@@ -13,10 +13,26 @@ import Link from "next/link";
 
 const CustomerChequeSummaryHeader = ({
   setShowPrintModal,
+  setOpenAddChequeModal,
 }: {
   setShowPrintModal: (value: boolean) => void;
+  setOpenAddChequeModal: (value: boolean) => void;
 }) => {
   const { currentMenu, currentPath } = useMenu();
+
+  const handleActionClick = (action: MenuAction) => {
+    switch (action.actionname) {
+      case "add_new_checks":
+        setOpenAddChequeModal(true);
+        break;
+      case "print_check_list":
+        setShowPrintModal(true);
+        break;
+      default:
+        break;
+    }
+  };
+  console.log(currentMenu);
 
   return (
     <PageHeader
@@ -35,13 +51,19 @@ const CustomerChequeSummaryHeader = ({
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
+              const isModalButton =
+                btn.actionname.includes("add_new_checks") ||
+                btn.actionname.includes("print_check_list");
               return (
                 <div
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
                   <Link
-                    href={`${currentPath}/new`}
+                    href={isModalButton ? "#" : `${currentPath}/new`}
+                    onClick={() =>
+                      isModalButton ? handleActionClick(btn) : null
+                    }
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}
