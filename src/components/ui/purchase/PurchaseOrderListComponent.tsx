@@ -19,12 +19,9 @@ import { useParams } from "next/navigation";
 import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purchase";
 import { purchaseOrderColumnDefs } from "./ColumnDef";
 import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
-<<<<<<< HEAD
 import PurchaseOrderFormModal from "./new/PurchaseOrderFormModal";
-=======
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
->>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -40,15 +37,12 @@ const PurchaseOrderListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
-<<<<<<< HEAD
   const [showPurchaseOrderFormModal, setShowPurchaseOrderFormModal] =
     useState<boolean>(false);
-=======
   const [selectedPOs, setSelectedPOs] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   const config = getEnvironmentConfig();
->>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
 
   const handleOnGridReady = (params: GridReadyEvent<PurchaseOrder>) => {
     setGridReady(true);
@@ -195,12 +189,9 @@ const PurchaseOrderListComponent = () => {
   return (
     <>
       <PurchaseOrderListHeader
-<<<<<<< HEAD
         setShowPurchaseOrderFormModal={setShowPurchaseOrderFormModal}
-=======
         selectedPOs={selectedPOs}
         handleExport={handleExport}
->>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
       />
       <div className="card table-list-card">
         <div className="card-body p-2">
