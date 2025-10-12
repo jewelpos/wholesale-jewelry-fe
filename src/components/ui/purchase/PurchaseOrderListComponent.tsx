@@ -19,7 +19,12 @@ import { useParams } from "next/navigation";
 import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purchase";
 import { purchaseOrderColumnDefs } from "./ColumnDef";
 import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
+<<<<<<< HEAD
 import PurchaseOrderFormModal from "./new/PurchaseOrderFormModal";
+=======
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+>>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -35,8 +40,15 @@ const PurchaseOrderListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+<<<<<<< HEAD
   const [showPurchaseOrderFormModal, setShowPurchaseOrderFormModal] =
     useState<boolean>(false);
+=======
+  const [selectedPOs, setSelectedPOs] = useState<number[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const config = getEnvironmentConfig();
+>>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
 
   const handleOnGridReady = (params: GridReadyEvent<PurchaseOrder>) => {
     setGridReady(true);
@@ -117,10 +129,78 @@ const PurchaseOrderListComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const handleExport = async (poNumbers: number[], type: string) => {
+    setLoading(true);
+    const updatedPayload = {
+      storeid: parsedStoreId,
+      ponumbers: poNumbers,
+    };
+    const result = await handleTryCatch(
+      async () => {
+        dispatch(
+          showNotification({
+            message: "Processing request...",
+            type: NOTIFICATION_TYPES.INFO,
+          })
+        );
+        const response = await api.post(
+          `${config.apiUrl}/store/purchase-order/print`,
+          updatedPayload,
+          {
+            responseType: "blob", // <== CRITICAL
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const { data } = response;
+        if (data) {
+          if (type === "export") {
+            const url = window.URL.createObjectURL(data);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "purchase_orders.pdf");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          } else {
+            const url = window.URL.createObjectURL(data);
+            window.open(url, "_blank");
+          }
+          dispatch(
+            showNotification({
+              message: data.message,
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+        }
+        return true;
+      },
+      () => {
+        setLoading(false);
+      }
+    );
+
+    if (result.error) {
+      setLoading(false);
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  };
+
   return (
     <>
       <PurchaseOrderListHeader
+<<<<<<< HEAD
         setShowPurchaseOrderFormModal={setShowPurchaseOrderFormModal}
+=======
+        selectedPOs={selectedPOs}
+        handleExport={handleExport}
+>>>>>>> dc52592978219966bc2d353e2568d523bb167d1d
       />
       <div className="card table-list-card">
         <div className="card-body p-2">
@@ -142,6 +222,19 @@ const PurchaseOrderListComponent = () => {
               masterDetail
               detailCellRenderer={PurchaseOrderItemsComponent}
               detailRowAutoHeight
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
+              onSelectionChanged={() => {
+                const selected =
+                  gridRef.current?.api
+                    ?.getSelectedRows()
+                    ?.map?.((row: PurchaseOrder) => Number(row.ponumber)) || [];
+                setSelectedPOs(selected);
+              }}
             />
           </div>
         </div>
