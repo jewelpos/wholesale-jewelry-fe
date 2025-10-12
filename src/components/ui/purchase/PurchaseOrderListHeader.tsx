@@ -8,9 +8,22 @@ import Link from "next/link";
 import PageHeader from "../PageHeader";
 import FeatherIcon from "../FeatherIcon";
 
-export default function PurchaseOrderListHeader() {
+export default function PurchaseOrderListHeader({
+  selectedPOs,
+  handleExport,
+}: {
+  selectedPOs: number[];
+  handleExport: (ids: number[], type: string) => void;
+}) {
   const { currentMenu, currentPath } = useMenu();
-  console.log(currentMenu);
+
+  const handleAction = (actionName: string) => {
+    if (actionName.includes("print")) {
+      handleExport(selectedPOs, "print");
+    } else if (actionName.includes("export")) {
+      handleExport(selectedPOs, "export");
+    }
+  };
 
   return (
     <PageHeader
@@ -32,6 +45,10 @@ export default function PurchaseOrderListHeader() {
               const isModalButton =
                 btn.actionname.includes("print") ||
                 btn.actionname.includes("export");
+              const disabledButton =
+                !selectedPOs.length &&
+                (btn.actionname.includes("print") ||
+                  btn.actionname.includes("export"));
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -39,7 +56,12 @@ export default function PurchaseOrderListHeader() {
                 >
                   <Link
                     href={isModalButton ? "#" : `${currentPath}/new`}
-                    className={`btn btn-added ${btnColor}`}
+                    onClick={() =>
+                      isModalButton ? handleAction(btn.actionname) : null
+                    }
+                    className={`btn btn-added ${btnColor} ${
+                      disabledButton ? "disabled" : ""
+                    }`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
