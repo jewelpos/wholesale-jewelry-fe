@@ -1,3 +1,5 @@
+"use client";
+
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import {
@@ -11,15 +13,19 @@ import FeatherIcon from "../FeatherIcon";
 export default function PurchaseOrderListHeader({
   selectedPOs,
   handleExport,
+  setShowPurchaseOrderFormModal,
 }: {
   selectedPOs: number[];
   handleExport: (ids: number[], type: string) => void;
+  setShowPurchaseOrderFormModal: (value: boolean) => void;
 }) {
   const { currentMenu, currentPath } = useMenu();
 
   const handleAction = (actionName: string) => {
     if (actionName.includes("print")) {
       handleExport(selectedPOs, "print");
+    } else if (actionName.includes("add_new_purchaseorder")) {
+      setShowPurchaseOrderFormModal(true);
     } else if (actionName.includes("export")) {
       handleExport(selectedPOs, "export");
     }
@@ -44,7 +50,8 @@ export default function PurchaseOrderListHeader({
               const iconName = renderActionButtonIconName(btn.actionname);
               const isModalButton =
                 btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
+                btn.actionname.includes("export") ||
+                btn.actionname.includes("add_new_purchaseorder");
               const disabledButton =
                 !selectedPOs.length &&
                 (btn.actionname.includes("print") ||
