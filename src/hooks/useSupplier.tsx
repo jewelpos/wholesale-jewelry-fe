@@ -12,6 +12,7 @@ import {
   GET_FULL_SUPPLIER_INVOICE_LIST_QUERY,
   GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY,
   GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY,
+  GET_SUPPLIER_CREDIT_APPLY_SUMMARY_QUERY,
 } from "@/lib/graphql/query/supplier";
 import {
   SupplierBalanceDueType,
@@ -19,6 +20,7 @@ import {
   SupplierInvoiceType,
   AppliedPaymentType,
 } from "@/types/supplier";
+import { SupplierCreditInfo } from "@/types/supplier";
 
 const useSupplier = () => {
   const dispatch = useAppDispatch();
@@ -32,11 +34,66 @@ const useSupplier = () => {
   const [getFullSupplierInvoiceList] = useLazyQuery(
     GET_FULL_SUPPLIER_INVOICE_LIST_QUERY
   );
+
+  const fetchSupplierCreditApplySummary = useCallback(
+    async (storeId: number, outletId: number, supplierId: number) => {
+      const result = await handleTryCatch(
+        async () => {
+          setLoading(true);
+          const { data } = await getSupplierCreditApplySummary({
+            variables: {
+              storeid: storeId,
+              outletid: outletId,
+              supplierid: supplierId,
+            },
+          });
+          if (data?.getSupplierCreditApplySummary) {
+            
+            const info = data.getSupplierCreditApplySummary as SupplierCreditInfo;
+            setSupplierBalanceDue(info.balanceDueInvoices);
+            // Store the full credit info object in state
+            setSupplierCreditInfo(info);
+            if (!info?.hasCredit || (info.creditInvoices?.length ?? 0) === 0) {
+              dispatch(
+                showNotification({
+                  message: "No credit invoices available for this supplier",
+                  type: NOTIFICATION_TYPES.ERROR,
+                })
+              );
+            }
+            if ((info.balanceDueInvoices?.length ?? 0) === 0) {
+              dispatch(
+                showNotification({
+                  message: "There is no balance due for this supplier",
+                  type: NOTIFICATION_TYPES.ERROR,
+                })
+              );
+            }
+          }
+        },
+        () => {
+          setLoading(false);
+        }
+      );
+      if (result.error) {
+        dispatch(
+          showNotification({
+            message: result.error,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    },
+    []
+  );
   const [getSupplierAppliedAmountList] = useLazyQuery(
     GET_SUPPLIER_APPLIED_AMOUNT_LIST_QUERY
   );
   const [getSupplierInvoiceListByPaymentId] = useLazyQuery(
     GET_SUPPLIER_INVOICE_LIST_BY_PAYMENT_ID_QUERY
+  );
+  const [getSupplierCreditApplySummary] = useLazyQuery(
+    GET_SUPPLIER_CREDIT_APPLY_SUMMARY_QUERY
   );
   const [supplierBalanceDue, setSupplierBalanceDue] = useState<
     SupplierBalanceDueType[]
@@ -47,6 +104,7 @@ const useSupplier = () => {
   const [supplierPaymentInvoices, setSupplierPaymentInvoices] = useState<
     AppliedPaymentType[]
   >([]);
+  const [supplierCreditInfo, setSupplierCreditInfo] = useState<SupplierCreditInfo | null>(null);
 
   const fetchSupplier = useCallback(
     async (storeId: number, supplierId: number) => {
@@ -282,10 +340,12 @@ const useSupplier = () => {
     fetchSupplierInvoices,
     fetchSupplierPaymentInvoices,
     fetchSupplierInvoicesByPaymentId,
+    fetchSupplierCreditApplySummary,
     loading: loading,
     supplierBalanceDue,
     supplierInvoices,
     supplierPaymentInvoices,
+    supplierCreditInfo,
   };
 };
 
