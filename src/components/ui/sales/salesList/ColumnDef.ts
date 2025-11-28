@@ -77,7 +77,9 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
     headerName: "Date",
     field: "saledate",
     cellRenderer: (params: ICellRendererParams) =>
-      dayjs(Number(params.value)).format(TIME_FORMAT),
+      params.node.rowPinned === "bottom" || params.value == null
+        ? ""
+        : dayjs(Number(params.value)).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
 ];

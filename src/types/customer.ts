@@ -235,3 +235,28 @@ export type CheckOnHandType={
   checkpostingdate: string;
   customercheckdetailid?: number | string;
 }
+
+export type CustomerSalesSummary = {
+  customerid: number;
+  custcompanyname: string;
+  year: number;
+  invoice_count: number;
+  total_sales: number;
+  total_balance_due: number;
+  total_profit: number;
+  jan: number;
+  feb: number;
+  mar: number;
+  apr: number;
+  may: number;
+  jun: number;
+  jul: number;
+  aug: number;
+  sep: number;
+  oct: number;
+  nov: number;
+  dec: number;
+  warehousename: string;
+  warehouseid: number;
+  outletid: number;
+};

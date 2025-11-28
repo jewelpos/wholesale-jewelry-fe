@@ -11,6 +11,55 @@ export const GET_PRODUCT_SETTINGS_INFO_QUERY = gql`
   }
 `;
 
+export const GET_PRODUCT_AGING_LIST_QUERY = gql`
+  query GetProductAgingList(
+    $storeid: Int!
+    $outletid: Int!
+    $warehouseid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getProductAgingList(
+      storeid: $storeid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        itemid
+        itembarcodeid
+        itemcode
+        itemdescription
+        supplier
+        warehousename
+        itemquantityinhand
+        unit_cost
+        total_cost
+        last_inbound_date
+        age_days
+        inbound_aging_bucket
+        last_sale_date
+        last_sale_days
+        sales_aging_bucket
+        sale_price
+        total_sale_value
+        warehouseid
+        outletid
+      }
+    }
+  }
+`;
+
 // New simplified queries for categories and subcategories
 export const GET_ITEM_CATEGORIES_QUERY = gql`
   query GetItemCategories($storeid: Int!) {
