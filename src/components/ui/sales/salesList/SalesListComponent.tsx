@@ -33,7 +33,7 @@ const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
-  const gridRef = useRef<AgGridReact>(null);
+  const gridRef = useRef<AgGridReact<SalesInvoiceListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
@@ -61,14 +61,49 @@ const SalesListComponent = () => {
             });
             if (!data.getInvoiceList.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
+              // Clear any existing pinned bottom totals if no rows
+              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
             } else {
               gridRef.current?.api?.hideOverlay();
+              // Compute grand totals for the current loaded set and pin as bottom row
+              const rows = data.getInvoiceList.data as SalesInvoiceListType[];
+              const totals = rows.reduce(
+                (acc, r) => {
+                  acc.numberofitems += Number(r.numberofitems || 0);
+                  acc.totalamount += Number(r.totalamount || 0);
+                  acc.discountamount += Number(r.discountamount || 0);
+                  acc.subtotal += Number(r.subtotal || 0);
+                  acc.salestax += Number(r.salestax || 0);
+                  acc.shipping += Number(r.shipping || 0);
+                  acc.netamount += Number(r.netamount || 0);
+                  acc.amountreceived += Number(r.amountreceived || 0);
+                  acc.balancedue += Number(r.balancedue || 0);
+                  return acc;
+                },
+                {
+                  numberofitems: 0,
+                  totalamount: 0,
+                  discountamount: 0,
+                  subtotal: 0,
+                  salestax: 0,
+                  shipping: 0,
+                  netamount: 0,
+                  amountreceived: 0,
+                  balancedue: 0,
+                }
+              );
+              const pinnedRow: Partial<SalesInvoiceListType> = {
+                invoicenumber: "Grand Total" as unknown as number,
+                ...totals,
+              };
+              gridRef.current?.api?.setGridOption("pinnedBottomRowData", [pinnedRow]);
             }
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
+          gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
           dispatch(
             showNotification({
               message: result.error,
@@ -96,6 +131,9 @@ const SalesListComponent = () => {
         field: "actions",
         width: 120,
         cellRenderer: (params: ICellRendererParams<SalesInvoiceListType>) => {
+          if (params.node.rowPinned) {
+            return null;
+          }
           if (params.data) {
             return (
               <SalesActions
@@ -158,6 +196,11 @@ const SalesListComponent = () => {
                 headerCheckbox: true,
                 suppressRowClickSelection: true,
               }}
+              getRowStyle={(params) =>
+                params.node.rowPinned === "bottom"
+                  ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
+                  : undefined
+              }
             />
           </div>
         </div>

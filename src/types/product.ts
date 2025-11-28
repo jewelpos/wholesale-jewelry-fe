@@ -289,3 +289,25 @@ export interface InventoryItemTransferDetail {
   warehouseid: number;
   lastmodifieddate: string;
 }
+
+export type ItemAgingSummary = {
+  itemid: number;
+  itembarcodeid: number;
+  itemcode: string;
+  itemdescription: string;
+  supplier: string;
+  warehousename: string;
+  itemquantityinhand: number;
+  unit_cost: number;
+  total_cost: number;
+  last_inbound_date: string;
+  age_days: number;
+  inbound_aging_bucket: string;
+  last_sale_date: string;
+  last_sale_days: number;
+  sales_aging_bucket: string;
+  sale_price: number;
+  total_sale_value: number;
+  warehouseid: number;
+  outletid: number;
+};
