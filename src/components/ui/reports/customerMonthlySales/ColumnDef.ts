@@ -4,6 +4,21 @@ import { CustomerSalesSummary } from "@/types/customer";
 
 export const customerMonthlySalesColumnDefs: ColDef<CustomerSalesSummary>[] = [
   {
+    headerName: "Customer ID",
+    field: "customerid",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Company Name",
+    field: "custcompanyname",
+    filter: "agTextColumnFilter",
+  },
+  {
+    headerName: "Year",
+    field: "year",
+    filter: "agNumberColumnFilter",
+  },
+  {
     headerName: "Invoice count",
     field: "invoice_count",
     filter: "agNumberColumnFilter",
