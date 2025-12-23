@@ -9,25 +9,50 @@ const SelectProduct = ({
   value,
   onChange,
   onChangeAdditional,
+  onProductsLoaded,
   valueItemCode,
   onChangeItemCode,
   className,
   trigger,
   storeId,
+  hasWarehouseId,
+  warehouseId,
   disableField,
   ...field
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchProductsByStoreId, products, loading } = useProducts();
+  const {
+    fetchProductsByStoreId,
+    fetchProductsWithStockByStoreAndWarehouseId,
+    products,
+    loading,
+  } = useProducts();
   const portalTarget = typeof window !== "undefined" ? document.body : undefined;
 
   useEffect(() => {
+    if (onProductsLoaded) onProductsLoaded(products);
+  }, [onProductsLoaded, products]);
+
+  useEffect(() => {
     if (storeId) {
+      if (hasWarehouseId) {
+        if (Number.isFinite(warehouseId) && warehouseId > 0) {
+          fetchProductsWithStockByStoreAndWarehouseId(storeId, warehouseId);
+        }
+        return;
+      }
+
       fetchProductsByStoreId(storeId);
     }
-  }, [fetchProductsByStoreId, storeId]);
+  }, [
+    fetchProductsByStoreId,
+    fetchProductsWithStockByStoreAndWarehouseId,
+    storeId,
+    hasWarehouseId,
+    warehouseId,
+  ]);
 
   const productOptions: SelectOption[] = useMemo(
     () =>

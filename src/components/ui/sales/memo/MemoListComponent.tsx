@@ -23,6 +23,7 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "@/components/ui/grid/POSGrid";
 import CustomFilterSections from "@/components/ui/grid/CustomFilterSections";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
+import MemoListHeader from "./MemoListHeader";
 
 const memoColumnDefs: ColDef<MemoSummary>[] = [
   {
@@ -195,25 +196,28 @@ const MemoListComponent = () => {
   );
 
   return (
-    <div className="card table-list-card">
-      <div className="card-body p-2">
-        <CustomFilterSections
-          search={search}
-          setSearch={setSearch}
-          selectedWarehouse={selectedWarehouse}
-          setSelectedWarehouse={setSelectedWarehouse}
-        />
-        <POSGrid
-          ref={gridRef}
-          columnDefs={memoColumnDefs}
-          onGridReady={handleGridReady}
-          defaultColDef={{
-            filter: !debouncedSearch,
-            floatingFilter: !debouncedSearch,
-          }}
-        />
+    <>
+      <MemoListHeader />
+      <div className="card table-list-card">
+        <div className="card-body p-2">
+          <CustomFilterSections
+            search={search}
+            setSearch={setSearch}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
+          />
+          <POSGrid
+            ref={gridRef}
+            columnDefs={memoColumnDefs}
+            onGridReady={handleGridReady}
+            defaultColDef={{
+              filter: !debouncedSearch,
+              floatingFilter: !debouncedSearch,
+            }}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

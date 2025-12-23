@@ -16,7 +16,7 @@ export type PurchaseOrderInput = {
   pofreight?: number;
   posalestax?: number;
   podutypaid?: number;
-  potax?: number;
+  posales?: number;
   pototal?: number;
   termsid?: number;
   pomode?: number;
@@ -38,15 +38,62 @@ export type PurchaseOrderInput = {
   poshiptocountry?: string;
   poshiptophone?: string;
   items: PurchaseOrderItemInput[];
+  pototalwithoutdiscount: number;
+};
+
+export type EditPurchaseOrderInput = {
+  storeid: number;
+  ponumber: number;
+  supplierid: number;
+  warehouseid: number;
+  saveMode: string;
+  podate?: string; // ISO Date string
+  porequestdate?: string; // ISO Date string
+  poconfirmedto?: string;
+  poremarks?: string;
+  poshippingmethod?: string;
+  podiscount?: number;
+  podiscountamt?: number;
+  posubtotal?: number;
+  pofreight?: number;
+  posalestax?: number;
+  podutypaid?: number;
+  posales?: number;
+  pototal?: number;
+  termsid?: number;
+  pomode?: number;
+  rmano?: string;
+  poordtocompanyname?: string;
+  poordtoadd1?: string;
+  poordtoadd2?: string;
+  poordtocity?: string;
+  poordtostate?: string;
+  poordtozip?: string;
+  poordtocountry?: string;
+  poordtophone?: string;
+  poshiptocompanyname?: string;
+  poshiptoadd1?: string;
+  poshiptoadd2?: string;
+  poshiptocity?: string;
+  poshiptostate?: string;
+  poshiptozip?: string;
+  poshiptocountry?: string;
+  poshiptophone?: string;
+  postatus?: number;
+  items: PurchaseOrderItemInput[];
+  removeItemIds?: number[];
+  pototalwithoutdiscount: number;
 };
 
 export type PurchaseOrderItemInput = {
-  itemid: number;
-  itemcode: string;
+  poitemid?: number;
+  itemid?: number; // product itemid
+  itemcode: string | number; // product itemcode
   itemunit: string;
   qtyordered: number;
   orderunitcost: number;
   orddiscount: number;
+  ordextendedprice: number;
 };
 
 // Form-specific type used by react-hook-form, keeps string/number flexibility for inputs
@@ -66,8 +113,9 @@ export type PurchaseOrderFormType = {
   pofreight?: string | number;
   posalestax?: string | number;
   podutypaid?: string | number;
-  potax?: string | number;
+  posales?: string | number;
   pototal?: string | number;
+  pototalwithoutdiscount?: string | number;
   termsid?: number;
   pomode?: number;
   rmano?: string;
@@ -87,6 +135,7 @@ export type PurchaseOrderFormType = {
   poshiptozip?: string;
   poshiptocountry?: string;
   poshiptophone?: string;
+  postatus?: string | number;
   items: PurchaseOrderItemInput[];
 };
 
@@ -95,6 +144,7 @@ export type PurchaseOrder = {
   suppliername?: string;
   podate?: string;
   pototal?: number;
+  pototalwithoutdiscount?: number;
   status?: string;
   terms?: string;
   shippingmethod?: string;

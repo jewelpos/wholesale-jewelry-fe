@@ -54,6 +54,89 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
   }
 `;
 
+export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
+  query GetSinglePurchaseOrder($storeid: Int!, $ponumber: Int!) {
+    getSinglePurchaseOrder(storeid: $storeid, ponumber: $ponumber) {
+      purchaseorder {
+        ponumber
+        supplierid
+        pocreatebyid
+        podate
+        postatus
+        podiscount
+        termsid
+        poremarks
+        poconfirmedto
+        posubtotal
+        podiscountamt
+        pofreight
+        pototal
+        posalestax
+        poshippingmethod
+        warehouseid
+        podutypaid
+        porequestdate
+        poordtocompanyname
+        poordtoadd1
+        poordtoadd2
+        poordtocity
+        poordtostate
+        poordtozip
+        poordtocountry
+        poordtophone
+        poshiptocompanyname
+        poshiptoadd1
+        poshiptoadd2
+        poshiptocity
+        poshiptostate
+        poshiptozip
+        poshiptocountry
+        poshiptophone
+        pomode
+        rmano
+        lastmodifieddate
+        pototalwithoutdiscount
+        posales
+      }
+      items {
+        poitemid
+        ponumber
+        itemcode
+        itemunit
+        qtyordered
+        orderunitcost
+        orddiscount
+        ordextendedprice
+        orderactualcost
+        poposting
+        itemqtybackorder
+        itemqtyreceived
+        pobackorderadjusteddate
+        pobackorderadjustby
+        lastmodifieddate
+        itemid
+      }
+    }
+  }
+`;
+
+export const GET_ALL_PURCHASE_ORDER_ITEMS_BY_PO_QUERY = gql`
+  query GetAllPurchaseOrderItemsByPo($storeid: Int!, $ponumber: Int!) {
+    getSupplierPurchaseOrderItemsList(storeid: $storeid, ponumber: $ponumber, page: 1, perpage: 1000) {
+      total
+      data {
+        poitemid
+        itemid
+        itemcode
+        itemunit
+        qtyordered
+        orderunitcost
+        orddiscount
+      }
+    }
+  }
+`;
+
 export const GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY = gql`
   query GetSupplierPurchaseOrderItemsList(
     $storeid: Int!
