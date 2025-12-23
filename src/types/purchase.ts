@@ -16,7 +16,7 @@ export type PurchaseOrderInput = {
   pofreight?: number;
   posalestax?: number;
   podutypaid?: number;
-  potax?: number;
+  posales?: number;
   pototal?: number;
   termsid?: number;
   pomode?: number;
@@ -58,7 +58,7 @@ export type EditPurchaseOrderInput = {
   pofreight?: number;
   posalestax?: number;
   podutypaid?: number;
-  potax?: number;
+  posales?: number;
   pototal?: number;
   termsid?: number;
   pomode?: number;
@@ -113,7 +113,7 @@ export type PurchaseOrderFormType = {
   pofreight?: string | number;
   posalestax?: string | number;
   podutypaid?: string | number;
-  potax?: string | number;
+  posales?: string | number;
   pototal?: string | number;
   pototalwithoutdiscount?: string | number;
   termsid?: number;

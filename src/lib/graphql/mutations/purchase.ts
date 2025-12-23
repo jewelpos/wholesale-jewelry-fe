@@ -21,3 +21,14 @@ export const EDIT_PURCHASE_ORDER_MUTATION = gql`
     }
   }
 `;
+
+export const DELETE_PURCHASE_ORDER_MUTATION = gql`
+  mutation DeletePurchaseOrder($storeid: Int!, $ponumber: Int!) {
+    deletePurchaseOrder(storeid: $storeid, ponumber: $ponumber) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

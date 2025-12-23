@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import {
+  ColDef,
+  GridReadyEvent,
+  ICellRendererParams,
+  IServerSideGetRowsParams,
+} from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -21,6 +26,7 @@ import { purchaseOrderColumnDefs } from "./ColumnDef";
 import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import PurchaseOrderActions from "./PurchaseOrderActions";
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -105,7 +111,37 @@ const PurchaseOrderListComponent = () => {
     ]
   );
 
-  const columnDefs = useMemo(() => purchaseOrderColumnDefs, []);
+  const handleDeleteSuccess = useCallback(() => {
+    if (parsedStoreId && gridReady) {
+      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    }
+  }, [datasource, gridReady, parsedStoreId]);
+
+  const columnDefs = useMemo<ColDef<PurchaseOrder>[]>(
+    () => [
+      ...purchaseOrderColumnDefs,
+      {
+        headerName: "Actions",
+        colId: "actions",
+        cellRenderer: (params: ICellRendererParams<PurchaseOrder>) =>
+          params.data ? (
+            <PurchaseOrderActions
+              data={params.data}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ) : null,
+        width: 80,
+        sortable: false,
+        filter: false,
+        pinned: "right",
+        suppressSizeToFit: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        enableRowGroup: false,
+      },
+    ],
+    [handleDeleteSuccess]
+  );
 
   useEffect(() => {
     if (parsedStoreId && gridReady) {

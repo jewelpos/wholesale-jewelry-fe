@@ -20,7 +20,6 @@ import {
   EDIT_PURCHASE_ORDER_MUTATION,
 } from "@/lib/graphql/mutations/purchase";
 import {
-  GET_ALL_PURCHASE_ORDER_ITEMS_BY_PO_QUERY,
   GET_SINGLE_PURCHASE_ORDER_QUERY,
 } from "@/lib/graphql/query/purchase";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -46,7 +45,7 @@ const TextEditor = () => {
   return <div />;
 };
 
-const PurchaseOrderForm = () => {
+const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { storeId: storeIdParam, outletId: outletIdParam, ponumber: ponumberParam } = useParams();
@@ -56,6 +55,7 @@ const PurchaseOrderForm = () => {
   const isEdit = Number.isFinite(parsedPoNumber);
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
+  const [removedItemIds, setRemovedItemIds] = useState<number[]>([]);
 
   const [createPurchaseOrder, { loading: creating }] = useMutation(
     CREATE_PURCHASE_ORDER_MUTATION
@@ -67,17 +67,6 @@ const PurchaseOrderForm = () => {
 
   const { data: poData, loading: poLoading } = useQuery(
     GET_SINGLE_PURCHASE_ORDER_QUERY,
-    {
-      variables: {
-        storeid: parsedStoreId,
-        ponumber: parsedPoNumber,
-      },
-      skip: !isEdit || !parsedStoreId,
-    }
-  );
-
-  const { data: poItemsData, loading: poItemsLoading } = useQuery(
-    GET_ALL_PURCHASE_ORDER_ITEMS_BY_PO_QUERY,
     {
       variables: {
         storeid: parsedStoreId,
@@ -114,7 +103,7 @@ const PurchaseOrderForm = () => {
       pofreight: "",
       posalestax: "",
       podutypaid: "",
-      potax: "",
+      posales: "",
       pototal: "",
       pototalwithoutdiscount: "",
       termsid: undefined,
@@ -256,7 +245,7 @@ const PurchaseOrderForm = () => {
   }, [watchedPoDiscount]);
 
   const watchedItems = watch("items");
-  const watchedTaxPct = watch("potax");
+  const watchedTaxPct = watch("posales");
   const watchedFreight = watch("pofreight");
   const watchedDutyPaid = watch("podutypaid");
   useEffect(() => {
@@ -389,16 +378,31 @@ const PurchaseOrderForm = () => {
       setEditingIndex(null);
       resetToolItem();
     }
+
+    if (isEdit) {
+      const currentItem = getValues(`items.${index}`);
+      const poItemId = Number(currentItem?.poitemid);
+      if (Number.isFinite(poItemId) && poItemId > 0) {
+        setRemovedItemIds((prev) =>
+          prev.includes(poItemId) ? prev : [...prev, poItemId]
+        );
+      }
+    }
+
     remove(index);
   };
 
   useEffect(() => {
     if (!isEdit) return;
-    if (!poData?.getSinglePurchaseOrder) return;
 
-    const { __typename, ...po } = poData.getSinglePurchaseOrder;
+    const response = poData?.getSinglePurchaseOrder;
+    if (!response?.purchaseorder) return;
+
+    setRemovedItemIds([]);
+
+    const { __typename, ...po } = response.purchaseorder;
     const items =
-      poItemsData?.getSupplierPurchaseOrderItemsList?.data?.map(
+      response.items?.map(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (row: any, index: number) => ({
           poitemid: row.poitemid,
@@ -408,11 +412,14 @@ const PurchaseOrderForm = () => {
           qtyordered: Number(row.qtyordered || 0),
           orderunitcost: Number(row.orderunitcost || 0),
           orddiscount: row.orddiscount != null ? Number(row.orddiscount) : 0,
-          ordextendedprice: calculateOrdExtendedPrice(
-            Number(row.qtyordered || 0),
-            Number(row.orderunitcost || 0),
-            row.orddiscount != null ? Number(row.orddiscount) : 0
-          ),
+          ordextendedprice:
+            row.ordextendedprice != null
+              ? Number(row.ordextendedprice)
+              : calculateOrdExtendedPrice(
+                  Number(row.qtyordered || 0),
+                  Number(row.orderunitcost || 0),
+                  row.orddiscount != null ? Number(row.orddiscount) : 0
+                ),
         })
       ) || [];
 
@@ -422,8 +429,9 @@ const PurchaseOrderForm = () => {
       supplierid: po.supplierid ?? "",
       warehouseid: po.warehouseid ?? "",
       saveMode: "save",
-      podate: po.podate ? dayjs(po.podate) : dayjs(),
-      porequestdate: po.porequestdate ? dayjs(po.porequestdate) : undefined,
+      podate: po.podate ? dayjs(Number(po.podate)) : dayjs(),
+      porequestdate: po.porequestdate ? dayjs(Number(po.porequestdate)) : undefined,
+      postatus: po.postatus ?? "",
       poconfirmedto: po.poconfirmedto ?? "",
       poremarks: po.poremarks ?? "",
       poshippingmethod: po.poshippingmethod ?? "",
@@ -433,7 +441,7 @@ const PurchaseOrderForm = () => {
       pofreight: po.pofreight ?? "",
       posalestax: po.posalestax ?? "",
       podutypaid: po.podutypaid ?? "",
-      potax: po.potax ?? "",
+      posales: po.posales ?? "",
       pototal: po.pototal ?? "",
       pototalwithoutdiscount: po.pototalwithoutdiscount ?? "",
       termsid: po.termsid ?? undefined,
@@ -462,7 +470,7 @@ const PurchaseOrderForm = () => {
       setSelectedDate(dayjs(po.podate));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, poData, poItemsData, parsedStoreId, reset]);
+  }, [isEdit, poData, parsedStoreId, reset]);
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -477,7 +485,7 @@ const PurchaseOrderForm = () => {
   };
 
   const openSaveModeModalAndSubmit = async () => {
-    if (creating || updating || poLoading || poItemsLoading) return;
+    if (creating || updating || poLoading) return;
 
     const result = await MySwal.fire({
       icon: "question",
@@ -604,7 +612,7 @@ const PurchaseOrderForm = () => {
       pofreight: formData.pofreight !== "" ? Number(formData.pofreight) : undefined,
       posalestax: formData.posalestax !== "" ? Number(formData.posalestax) : undefined,
       podutypaid: formData.podutypaid !== "" ? Number(formData.podutypaid) : undefined,
-      potax: formData.potax !== "" ? Number(formData.potax) : undefined,
+      posales: formData.posales !== "" ? Number(formData.posales) : undefined,
       pototal: formData.pototal !== "" ? Number(formData.pototal) : undefined,
       pototalwithoutdiscount:
         formData.pototalwithoutdiscount !== "" ? Number(formData.pototalwithoutdiscount) : 0,
@@ -645,6 +653,9 @@ const PurchaseOrderForm = () => {
 
     if (isEdit) {
       payload.ponumber = parsedPoNumber;
+      if (removedItemIds.length) {
+        payload.removeItemIds = removedItemIds;
+      }
     }
 
     const result = await handleTryCatch(async () => {
@@ -696,7 +707,7 @@ const PurchaseOrderForm = () => {
         pofreight: "",
         posalestax: "",
         podutypaid: "",
-        potax: "",
+        posales: "",
         pototal: "",
         pototalwithoutdiscount: "",
         termsid: undefined,
@@ -728,9 +739,11 @@ const PurchaseOrderForm = () => {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          if (disableField) return;
           void openSaveModeModalAndSubmit();
         }}
       >
+        <fieldset disabled={disableField}>
         <div className="card">
           <div className="card-body">
             <div className="row g-3 align-items-end">
@@ -752,6 +765,7 @@ const PurchaseOrderForm = () => {
                             format="DD-MM-YYYY"
                             placeholder="Choose Date"
                             allowClear
+                            disabled={disableField}
                           />
                         )}
                       />
@@ -759,6 +773,23 @@ const PurchaseOrderForm = () => {
                   </div>
                 </div>
               </div>
+
+              {disableField && (
+                <div className="col-lg-6 col-md-6 col-sm-12">
+                  <div className="input-blocks mb-0 row align-items-center">
+                    <label className="col-form-label col-md-4">PO Status</label>
+                    <div className="col-md-8">
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={String(watch("postatus") ?? "")}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="row g-3 mt-1">
@@ -773,7 +804,12 @@ const PurchaseOrderForm = () => {
                         control={control}
                         rules={{ required: "Supplier is required" }}
                         render={({ field }) => (
-                          <SelectSupplier trigger={trigger} storeId={parsedStoreId} {...field} />
+                          <SelectSupplier
+                            trigger={trigger}
+                            storeId={parsedStoreId}
+                            disableField={disableField}
+                            {...field}
+                          />
                         )}
                       />
                     </div>
@@ -982,6 +1018,7 @@ const PurchaseOrderForm = () => {
                           {...field}
                           storeId={parsedStoreId}
                           trigger={trigger}
+                          disableField={disableField}
                           value={field.value}
                           onChange={(val: number | undefined) => field.onChange(val)}
                         />
@@ -1003,6 +1040,7 @@ const PurchaseOrderForm = () => {
                           {...field}
                           storeId={parsedStoreId}
                           trigger={trigger}
+                          disableField={disableField}
                           value={field.value === "" ? undefined : field.value}
                           onChange={(val: number | undefined) => field.onChange(val)}
                         />
@@ -1021,7 +1059,8 @@ const PurchaseOrderForm = () => {
                       step="any"
                       min={0}
                       className="form-control"
-                      {...register("potax", { valueAsNumber: true })}
+                      {...register("posales", { valueAsNumber: true })}
+                      disabled={disableField}
                     />
                   </div>
                 </div>
@@ -1038,6 +1077,7 @@ const PurchaseOrderForm = () => {
                       max={100}
                       className="form-control"
                       {...register("podiscount", { valueAsNumber: true })}
+                      disabled={disableField}
                     />
                   </div>
                 </div>
@@ -1081,6 +1121,7 @@ const PurchaseOrderForm = () => {
                               warehouseId={parsedWarehouseId}
                               onProductsLoaded={setProducts}
                               trigger={trigger}
+                              disableField={disableField}
                               value={toolItem.itemid}
                               onChange={(val: number | undefined) =>
                                 setToolItem((prev) => ({ ...prev, itemid: val }))
@@ -1130,6 +1171,7 @@ const PurchaseOrderForm = () => {
                               min={0}
                               className="form-control px-1 text-end" 
                               value={toolItem.qtyordered}
+                              disabled={disableField}
                               onChange={(e) => {
                                 const n = Math.max(0, Number(e.target.value || 0));
                                 const normalized = Math.round(n * 1000) / 1000;
@@ -1151,6 +1193,7 @@ const PurchaseOrderForm = () => {
                               min={0}
                               className="form-control px-1 text-end"
                               value={toolItem.orderunitcost}
+                              disabled={disableField}
                               onChange={(e) => {
                                 const n = Math.max(0, Number(e.target.value || 0));
                                 const normalized = Math.round(n * 1000) / 1000;
@@ -1173,6 +1216,7 @@ const PurchaseOrderForm = () => {
                               max={100}
                               className="form-control px-1 text-end"
                               value={toolItem.orddiscount}
+                              disabled={disableField}
                               onChange={(e) => {
                                 const n = Number(e.target.value || 0);
                                 const clamped = Math.min(100, Math.max(0, n));
@@ -1208,7 +1252,8 @@ const PurchaseOrderForm = () => {
 
                       <div className="col-lg-1 col-md-6 col-sm-12">
                         <div className="input-blocks">
-                            {editingIndex == null ? (
+                            {!disableField &&
+                              (editingIndex == null ? (
                               <button
                                 type="button"
                                 className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
@@ -1413,7 +1458,7 @@ const PurchaseOrderForm = () => {
                                   <X size={16} />
                                 </button>
                               </div>
-                            )}
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -1475,7 +1520,8 @@ const PurchaseOrderForm = () => {
                                   {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
                                 </td>
                                 <td className="text-center">
-                                  <>
+                                  {!disableField && (
+                                    <>
                                     <button
                                       type="button"
                                       className="btn btn-sm btn-primary me-2"
@@ -1502,7 +1548,8 @@ const PurchaseOrderForm = () => {
                                     >
                                       <Trash2 size={16} />
                                     </button>
-                                  </>
+                                    </>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1533,7 +1580,12 @@ const PurchaseOrderForm = () => {
                   <div className="input-blocks mb-0 row align-items-center">
                     <label className="col-form-label col-md-4">Customer Message</label>
                     <div className="col-md-8">
-                      <textarea className="form-control" rows={4} {...register("poremarks")} />
+                      <textarea
+                        className="form-control"
+                        rows={4}
+                        {...register("poremarks")}
+                        disabled={disableField}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1606,6 +1658,7 @@ const PurchaseOrderForm = () => {
                           type="number"
                           className="form-control"
                           {...register("pofreight", { valueAsNumber: true })}
+                          disabled={disableField}
                         />
                       </div>
                     </div>
@@ -1618,6 +1671,7 @@ const PurchaseOrderForm = () => {
                           type="number"
                           className="form-control"
                           {...register("podutypaid", { valueAsNumber: true })}
+                          disabled={disableField}
                         />
                       </div>
                     </div>
@@ -1644,15 +1698,18 @@ const PurchaseOrderForm = () => {
           </div>
         </div>
 
-        <ActionFooter handleCancel={handleCancel}>
-          <ButtonLoader
-            loading={creating || updating || poLoading || poItemsLoading}
-            btnText={isEdit ? "Update" : "Save"}
-            loadingText={isEdit ? "Updating ..." : "Saving ..."}
-            type="button"
-            onClick={() => void openSaveModeModalAndSubmit()}
-          />
-        </ActionFooter>
+        {!disableField && (
+          <ActionFooter handleCancel={handleCancel}>
+            <ButtonLoader
+              loading={creating || updating || poLoading}
+              btnText={isEdit ? "Update" : "Save"}
+              loadingText={isEdit ? "Updating ..." : "Saving ..."}
+              type="button"
+              onClick={() => void openSaveModeModalAndSubmit()}
+            />
+          </ActionFooter>
+        )}
+        </fieldset>
       </form>
     </>
   );
