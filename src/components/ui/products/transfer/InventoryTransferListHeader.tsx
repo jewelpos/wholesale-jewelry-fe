@@ -13,6 +13,25 @@ import FeatherIcon from "../../FeatherIcon";
 
 const InventoryTransferListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
+
+  const sectionPath = `${currentPath}${currentMenu?.menuurl ?? ""}`;
+
+  const resolveHref = (actionName: string) => {
+    if (actionName.includes("add_transfer_recieved")) {
+      return `${sectionPath}/transfer_recieved`;
+    }
+    if (actionName.includes("add_transfer_request")) {
+      return `${sectionPath}/transfer_request`;
+    }
+    if (actionName.includes("add_new_transfer")) {
+      return `${sectionPath}/new_transfer`;
+    }
+    if (actionName.includes("edit_transfer_status")) {
+      return `${sectionPath}/edit_transfer_status`;
+    }
+    return `${sectionPath}/new`;
+  };
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname || "Products"}
@@ -36,7 +55,7 @@ const InventoryTransferListHeader = () => {
                   key={btn.actionname}
                 >
                   <Link
-                    href={`${currentPath}/new`}
+                    href={resolveHref(btn.actionname)}
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}

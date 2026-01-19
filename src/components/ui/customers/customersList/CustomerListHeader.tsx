@@ -10,6 +10,8 @@ import {
   renderActionButtonIconName,
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
+import { paymentModalTypes } from "@/lib/config/constants";
+import { useRouter } from "next/navigation";
 
 interface CustomerListHeaderProps {
   selectedCustomerId?: number;
@@ -21,12 +23,21 @@ const CustomerListHeader = ({
   setShowPrintModal,
 }: CustomerListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
+  const router = useRouter();
 
   const handleAction = (actionName: string) => {
     if (actionName.includes("print")) {
       setShowPrintModal(true);
     } else if (actionName.includes("export")) {
       setShowPrintModal(true);
+    } else if (actionName.includes(paymentModalTypes.add_customer_payment)) {
+      router.push(`${currentPath}/applied_payments?modal=${encodeURIComponent(actionName)}`);
+    } else if (actionName.includes(paymentModalTypes.add_credit_adjustment)) {
+      router.push(`${currentPath}/applied_payments?modal=${encodeURIComponent(actionName)}`);
+    } else if (
+      actionName.includes(paymentModalTypes.add_invoice_credit_payment)
+    ) {
+      router.push(`${currentPath}/applied_payments?modal=${encodeURIComponent(actionName)}`);
     }
   };
 
@@ -47,22 +58,38 @@ const CustomerListHeader = ({
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isModalButton =
-                btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
+              const isPrintExportButton =
+                btn.actionname.includes("print") || btn.actionname.includes("export");
+              const isPaymentButton =
+                btn.actionname.includes(paymentModalTypes.add_customer_payment) ||
+                btn.actionname.includes(paymentModalTypes.add_credit_adjustment) ||
+                btn.actionname.includes(
+                  paymentModalTypes.add_invoice_credit_payment
+                );
               const disabledButton =
                 !selectedCustomerId &&
                 (btn.actionname.includes("print") ||
                   btn.actionname.includes("export"));
+
+              const href = isPrintExportButton
+                ? "#"
+                : isPaymentButton
+                  ? `${currentPath}/applied_payments?modal=${encodeURIComponent(
+                      btn.actionname
+                    )}`
+                  : `${currentPath}/new`;
+
               return (
                 <div
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
                   <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
+                    href={href}
                     onClick={() =>
-                      isModalButton ? handleAction(btn.actionname) : null
+                      isPrintExportButton && !disabledButton
+                        ? handleAction(btn.actionname)
+                        : null
                     }
                     className={`btn btn-added ${btnColor} ${
                       disabledButton ? "disabled" : ""

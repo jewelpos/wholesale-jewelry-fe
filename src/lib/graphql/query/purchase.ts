@@ -54,6 +54,16 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
   }
 `;
 
+export const GET_PURCHASE_ORDER_STATUS_LIST_QUERY = gql`
+  query GetPurchaseOrderStatusList($storeid: Int!) {
+    getPurchaseOrderStatusList(storeid: $storeid) {
+      statusid
+      statusname
+      description
+    }
+  }
+`;
+
 export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
   query GetSinglePurchaseOrder($storeid: Int!, $ponumber: Int!) {
     getSinglePurchaseOrder(storeid: $storeid, ponumber: $ponumber) {

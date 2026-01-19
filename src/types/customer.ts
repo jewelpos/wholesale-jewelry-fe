@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 export type CustomerBalanceAgingType = {
   customerid: number;
   customername: string;
@@ -134,6 +136,21 @@ export type CustomerPaymentListResponseType = {
   data: CustomerPaymentListType[];
 };
 
+export type CustomerCheckAppliedAmount = {
+  customercheckappliedamountid?: number;
+  customerpaymentsid?: number;
+  customerid?: number;
+  custcompanyname?: string;
+  appliedamount?: number;
+  invoicenumber?: string;
+  applieddate?: string;
+  isvoided?: boolean;
+  iscreditinvoice?: boolean;
+  warehousename?: string;
+  warehouseid?: number;
+  lastmodifieddate?: string;
+};
+
 export type CustomersListType = {
   customerid: string;
   custcompanyname: string;
@@ -259,4 +276,78 @@ export type CustomerSalesSummary = {
   warehousename: string;
   warehouseid: number;
   outletid: number;
+};
+
+export type CustomerBalanceDueInvoiceType = {
+  invoicenumber?: number;
+  customerid?: number;
+  saledate?: string;
+  totalamount?: number;
+  amountreceived?: number;
+  balancedue?: number;
+  warehouseid?: number;
+};
+
+export type CustomerCreditApplyInvoice = {
+  invoicenumber?: number;
+  customerid?: number;
+  saledate?: string;
+  totalamount?: number;
+  amountreceived?: number;
+  balancedue?: number;
+  warehouseid?: number;
+  isCreditInvoice: boolean;
+};
+
+export type CustomerCreditApply = {
+  hasCredit: boolean;
+  creditAvailable: number;
+  creditInvoices: CustomerCreditApplyInvoice[];
+  balanceDueInvoices: CustomerCreditApplyInvoice[];
+};
+
+export type CustomerNewPaymentFormType = {
+  customerid: number;
+  postingdate: dayjs.Dayjs;
+  paymentmodeid: number;
+  checkcardno: string;
+  amount: string;
+  invoicenumber: string;
+  reference: string;
+  customercheckdetailid?: number;
+};
+
+export type CustomerPaymentInput = {
+  storeid: number;
+  customerid: number;
+  outletid: number;
+  warehouseid?: number;
+  postingdate?: string;
+  paymentmodeid: number;
+  amount: number;
+  checkcardno?: string;
+  invoicenumbers?: string[];
+  reference?: string;
+  customercheckdetailid?: number;
+};
+
+export type ApplyCustomerCreditInput = {
+  storeid: number;
+  customerid: number;
+  outletid: number;
+  postingdate?: string;
+  creditInvoiceNumber: string;
+  amountToApply?: number;
+  targetInvoiceNumbers?: string[];
+  reference?: string;
+};
+
+export type CustomerCreditAdjustmentFormType = {
+  customerid: number;
+  postingdate: dayjs.Dayjs;
+  paymentmodeid: number;
+  checkcardno: string;
+  amount: string;
+  invoicenumber: string;
+  reference: string;
 };

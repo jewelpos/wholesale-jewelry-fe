@@ -16,7 +16,7 @@ import {
   InventoryTransfer,
   InventoryItemTransferDetail,
 } from "@/types/product";
-import { GET_INVENTORY_TRANSFER_ITEM_QUERY } from "@/lib/graphql/query/products";
+import { GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY } from "@/lib/graphql/query/products";
 import inventoryTransferItemsColumnDefs from "./ColumnDef";
 
 interface Props {
@@ -25,7 +25,7 @@ interface Props {
 
 const InventoryTransferItemsComponent = ({ data }: Props) => {
   const [getInventoryTransferItem] = useLazyQuery(
-    GET_INVENTORY_TRANSFER_ITEM_QUERY
+    GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY
   );
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);

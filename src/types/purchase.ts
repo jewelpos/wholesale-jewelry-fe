@@ -197,3 +197,21 @@ export type PurchaseOrderItemResponseType = {
   total: number;
   data: PurchaseOrderItem[];
 };
+
+export type ReceivePOItemInput = {
+  poitemid: number;
+  qtyToReceive: number;
+};
+
+export type ReceivePurchaseOrderInput = {
+  storeid: number;
+  ponumber: number;
+  postingdate?: string; // DateTime
+  items: ReceivePOItemInput[];
+};
+
+export type Status = {
+  statusid: number;
+  statusname?: string;
+  description?: string;
+};

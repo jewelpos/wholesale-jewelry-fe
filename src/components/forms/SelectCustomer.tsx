@@ -19,6 +19,8 @@ any) => {
   const [input, setInput] = useState("");
   const { fetchCustomersByStoreId, customers, loading } = useCustomers();
 
+  const parsedValue = value ? Number(value) : undefined;
+
   useEffect(() => {
     if (storeId) {
       fetchCustomersByStoreId(storeId);
@@ -29,13 +31,12 @@ any) => {
     () =>
       customers.map(
         (customer: { customerid: number; custcompanyname: string }) => ({
-          value: customer.customerid,
+          value: Number(customer.customerid),
           label: customer.custcompanyname,
         })
       ),
     [customers]
   );
-
   return (
     <Select<SelectOption>
       isLoading={loading}
@@ -45,17 +46,18 @@ any) => {
       isDisabled={disableField}
       className={`form-control p-0 ${className} select-form-custom`}
       value={
-        value
+        parsedValue
           ? {
-              value: value,
+              value: parsedValue,
               label:
-                customerOptions.find((customer) => customer.value === value)
-                  ?.label || "",
+                customerOptions.find(
+                  (customer) => customer.value === parsedValue
+                )?.label || "",
             }
           : null
       }
       onChange={(option) => {
-        onChange(option?.value);
+        onChange(option?.value ? Number(option.value) : undefined);
         trigger(field.name);
       }}
       menuIsOpen={menuIsOpen}

@@ -72,6 +72,9 @@ export const paymentTypes ={
 
 export const paymentModalTypes = {
   add_credit_adjustment:"add_credit_adjustment",
+  add_customer_credit_adjustment:"add_customer_credit_adjustment",
+  add_invoice_credit_payment:"add_invoice_credit_payment",
   add_supplier_payment:"add_supplier_payment",
   add_void_payment:"add_void_payment",
+  add_customer_payment:"add_customer_payment",
 }

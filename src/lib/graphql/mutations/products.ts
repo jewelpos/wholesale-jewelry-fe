@@ -107,3 +107,63 @@ export const ADJUST_PRODUCT_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_INVENTORY_TRANSFER_MUTATION = gql`
+  mutation CreateInventoryTransfer(
+    $createInventoryTransferInput: CreateInventoryTransferInput!
+  ) {
+    createInventoryTransfer(
+      createInventoryTransferInput: $createInventoryTransferInput
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const REQUEST_INVENTORY_TRANSFER_MUTATION = gql`
+  mutation RequestInventoryTransfer(
+    $requestInventoryTransferInput: RequestInventoryTransferInput!
+  ) {
+    requestInventoryTransfer(
+      requestInventoryTransferInput: $requestInventoryTransferInput
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const CHANGE_INVENTORY_TRANSFER_STATUS_MUTATION = gql`
+  mutation ChangeInventoryTransferStatus(
+    $changeInventoryTransferStatusInput: ChangeInventoryTransferStatusInput!
+  ) {
+    changeInventoryTransferStatus(
+      changeInventoryTransferStatusInput: $changeInventoryTransferStatusInput
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const RECEIVE_INVENTORY_TRANSFER_MUTATION = gql`
+  mutation ReceiveInventoryTransfer(
+    $receiveInventoryTransferInput: ReceiveInventoryTransferInput!
+  ) {
+    receiveInventoryTransfer(
+      receiveInventoryTransferInput: $receiveInventoryTransferInput
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
