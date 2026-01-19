@@ -11,6 +11,7 @@ import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectProduct from "@/components/forms/SelectProduct";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
+import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { Controller, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -18,8 +19,10 @@ import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_PURCHASE_ORDER_MUTATION,
   EDIT_PURCHASE_ORDER_MUTATION,
+  RETURN_PURCHASE_ORDER_MUTATION,
 } from "@/lib/graphql/mutations/purchase";
 import {
+  GET_PURCHASE_ORDER_STATUS_LIST_QUERY,
   GET_SINGLE_PURCHASE_ORDER_QUERY,
 } from "@/lib/graphql/query/purchase";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -31,7 +34,7 @@ import useOutlets from "@/hooks/useOutlets";
 import useWarehouse from "@/hooks/useWarehouse";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
-import { PurchaseOrderFormType } from "@/types/purchase";
+import { PurchaseOrderFormType, Status } from "@/types/purchase";
 import { ItemDetails } from "@/hooks/useProducts";
 
 const PURCHASE_ORDER_SAVE_MODE = {
@@ -45,7 +48,13 @@ const TextEditor = () => {
   return <div />;
 };
 
-const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
+const PurchaseOrderForm = ({
+  disableField,
+  isReturnOrder,
+}: {
+  disableField?: boolean;
+  isReturnOrder?: boolean;
+}) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { storeId: storeIdParam, outletId: outletIdParam, ponumber: ponumberParam } = useParams();
@@ -57,12 +66,44 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [removedItemIds, setRemovedItemIds] = useState<number[]>([]);
 
+  const currencyFormatter = useMemo(() => {
+    if (typeof navigator === "undefined") {
+      return {
+        formatFixed: (amount: number) => amount.toFixed(2),
+      };
+    }
+
+    const detected = detectUserCurrency();
+    const userLocale = navigator.language || "en-US";
+    const formatter = new Intl.NumberFormat(userLocale, {
+      style: "currency",
+      currency: detected.code,
+      currencyDisplay: "symbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    return {
+      formatFixed: (amount: number) => formatter.format(amount),
+    };
+  }, []);
+
+  const formatMoney = (raw: unknown) => {
+    const n = typeof raw === "number" ? raw : Number(raw || 0);
+    const safe = Number.isFinite(n) ? n : 0;
+    return currencyFormatter.formatFixed(safe);
+  };
+
   const [createPurchaseOrder, { loading: creating }] = useMutation(
     CREATE_PURCHASE_ORDER_MUTATION
   );
 
   const [editPurchaseOrder, { loading: updating }] = useMutation(
     EDIT_PURCHASE_ORDER_MUTATION
+  );
+
+  const [returnPurchaseOrder, { loading: returning }] = useMutation(
+    RETURN_PURCHASE_ORDER_MUTATION
   );
 
   const { data: poData, loading: poLoading } = useQuery(
@@ -75,6 +116,22 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
       skip: !isEdit || !parsedStoreId,
     }
   );
+
+  const { data: poStatusData } = useQuery(GET_PURCHASE_ORDER_STATUS_LIST_QUERY, {
+    variables: {
+      storeid: parsedStoreId,
+    },
+    skip: !isEdit || !parsedStoreId,
+  });
+
+  const poStatuses = (poStatusData?.getPurchaseOrderStatusList ?? []) as Status[];
+  const poStatusById = useMemo(() => {
+    const map = new Map<number, Status>();
+    for (const s of poStatuses) {
+      if (typeof s?.statusid === "number") map.set(s.statusid, s);
+    }
+    return map;
+  }, [poStatuses]);
 
   const {
     control,
@@ -150,6 +207,18 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     if (!supplier) return;
     if (isEdit) return;
 
+    if (isReturnOrder) {
+      setValue("poshiptocompanyname", supplier.companyname ?? "");
+      setValue("poshiptoadd1", supplier.address1 ?? "");
+      setValue("poshiptoadd2", supplier.address2 ?? "");
+      setValue("poshiptocity", supplier.city ?? "");
+      setValue("poshiptostate", supplier.state ?? "");
+      setValue("poshiptozip", supplier.zipcode ?? "");
+      setValue("poshiptocountry", supplier.country ?? "");
+      setValue("poshiptophone", supplier.phone1 ?? supplier.phone2 ?? "");
+      return;
+    }
+
     setValue("poordtocompanyname", supplier.companyname ?? "");
     setValue("poordtoadd1", supplier.address1 ?? "");
     setValue("poordtoadd2", supplier.address2 ?? "");
@@ -158,7 +227,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     setValue("poordtozip", supplier.zipcode ?? "");
     setValue("poordtocountry", supplier.country ?? "");
     setValue("poordtophone", supplier.phone1 ?? supplier.phone2 ?? "");
-  }, [supplier, setValue, isEdit]);
+  }, [supplier, setValue, isEdit, isReturnOrder]);
 
   const { fetchOutletsList, outlets } = useOutlets();
   useEffect(() => {
@@ -177,6 +246,18 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     if (!currentOutlet) return;
     if (isEdit) return;
 
+    if (isReturnOrder) {
+      setValue("poordtocompanyname", currentOutlet.outletname ?? "");
+      setValue("poordtoadd1", currentOutlet.address ?? "");
+      setValue("poordtoadd2", "");
+      setValue("poordtocity", currentOutlet.city ?? "");
+      setValue("poordtostate", currentOutlet.state ?? "");
+      setValue("poordtozip", currentOutlet.zipcode ?? "");
+      setValue("poordtocountry", currentOutlet.country ?? "");
+      setValue("poordtophone", currentOutlet.storephone ?? "");
+      return;
+    }
+
     setValue("poshiptocompanyname", currentOutlet.outletname ?? "");
     setValue("poshiptoadd1", currentOutlet.address ?? "");
     setValue("poshiptoadd2", "");
@@ -185,7 +266,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     setValue("poshiptozip", currentOutlet.zipcode ?? "");
     setValue("poshiptocountry", currentOutlet.country ?? "");
     setValue("poshiptophone", currentOutlet.storephone ?? "");
-  }, [currentOutlet, setValue, isEdit]);
+  }, [currentOutlet, setValue, isEdit, isReturnOrder]);
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   const currentWarehouse = useMemo(
@@ -282,13 +363,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
 
     const normalizedNetTotal =
       Math.round(
-        (normalizedTotal +
-          normalizedDiscountAmt +
-          normalizedSubTotal +
-          normalizedSalesTax +
-          normalizedFreight +
-          normalizedDutyPaid) *
-          1000
+        (normalizedSubTotal + normalizedSalesTax + normalizedFreight + normalizedDutyPaid) * 1000
       ) / 1000;
 
     const currentGrandTotal = Number(getValues("pototalwithoutdiscount") || 0);
@@ -341,14 +416,14 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     qtyordered: number;
     orderunitcost: number;
     orddiscount: number;
-  }>({
+  }>(() => ({
     itemid: undefined,
     itemcode: undefined,
     itemunit: "",
-    qtyordered: 1,
+    qtyordered: isReturnOrder ? -1 : 1,
     orderunitcost: 0,
     orddiscount: defaultItemDiscount,
-  });
+  }));
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -357,7 +432,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
       itemid: undefined,
       itemcode: undefined,
       itemunit: "",
-      qtyordered: 1,
+      qtyordered: isReturnOrder ? -1 : 1,
       orderunitcost: 0,
       orddiscount: defaultItemDiscount,
     });
@@ -431,7 +506,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
       saveMode: "save",
       podate: po.podate ? dayjs(Number(po.podate)) : dayjs(),
       porequestdate: po.porequestdate ? dayjs(Number(po.porequestdate)) : undefined,
-      postatus: po.postatus ?? "",
+      postatus: po.postatus != null ? String(po.postatus) : "",
       poconfirmedto: po.poconfirmedto ?? "",
       poremarks: po.poremarks ?? "",
       poshippingmethod: po.poshippingmethod ?? "",
@@ -485,7 +560,12 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
   };
 
   const openSaveModeModalAndSubmit = async () => {
-    if (creating || updating || poLoading) return;
+    if (creating || updating || returning || poLoading) return;
+
+    if (isReturnOrder) {
+      await handleSubmit(onSubmit)();
+      return;
+    }
 
     const result = await MySwal.fire({
       icon: "question",
@@ -574,7 +654,10 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
     const hasInvalidItem = formData.items.some((item) => {
       const itemIdOk = Number(item.itemid) > 0;
       const itemCodeOk = item.itemcode != null && String(item.itemcode) !== "";
-      const qtyOk = Number(item.qtyordered) > 0;
+      const qtyNumber = Number(item.qtyordered);
+      const qtyOk = isReturnOrder
+        ? Number.isFinite(qtyNumber) && Math.abs(qtyNumber) > 0
+        : Number.isFinite(qtyNumber) && qtyNumber > 0;
       const priceOk = Number(item.orderunitcost) > 0;
       return !itemIdOk || !itemCodeOk || !qtyOk || !priceOk;
     });
@@ -593,7 +676,6 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
       storeid: parsedStoreId,
       supplierid: supplierIdNumber,
       warehouseid: warehouseIdNumber,
-      saveMode: formData.saveMode,
       podate: selectedDate.format("YYYY-MM-DD"),
       porequestdate: formData.porequestdate
         ? formData.porequestdate.format("YYYY-MM-DD")
@@ -640,16 +722,24 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
         itemid: item.itemid,
         itemcode: item.itemcode != null ? String(item.itemcode) : "",
         itemunit: item.itemunit,
-        qtyordered: item.qtyordered,
+        qtyordered: isReturnOrder
+          ? -Math.abs(Number(item.qtyordered || 0))
+          : Number(item.qtyordered || 0),
         orderunitcost: item.orderunitcost,
         orddiscount: item.orddiscount,
         ordextendedprice: calculateOrdExtendedPrice(
-          item.qtyordered,
+          isReturnOrder
+            ? -Math.abs(Number(item.qtyordered || 0))
+            : Number(item.qtyordered || 0),
           item.orderunitcost,
           item.orddiscount
         ),
       })) || [],
     };
+
+    if (!isReturnOrder) {
+      payload.saveMode = formData.saveMode;
+    }
 
     if (isEdit) {
       payload.ponumber = parsedPoNumber;
@@ -660,7 +750,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
 
     const result = await handleTryCatch(async () => {
       let response;
-      if (isEdit) {
+      if (isReturnOrder) {
+        response = await returnPurchaseOrder({
+          variables: { input: payload },
+        });
+      } else if (isEdit) {
         response = await editPurchaseOrder({
           variables: { input: payload },
         });
@@ -671,7 +765,7 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
       }
 
       const { data } = response;
-      const successData = data?.createPurchaseOrder || data?.editPurchaseOrder;
+      const successData = data?.createPurchaseOrder || data?.editPurchaseOrder || data?.returnPurchaseOrder;
       if (successData) {
         dispatch(
           showNotification({
@@ -746,72 +840,174 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
         <fieldset disabled={disableField}>
         <div className="card">
           <div className="card-body">
-            <div className="row g-3 align-items-end">
-              
-              <div className="col-lg-6 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">PO Request Date</label>
-                  <div className="col-md-8">
-                    <div className="input-groupicon calender-input">
-                      <Calendar className="info-img" />
-                      <Controller
-                        name="porequestdate"
-                        control={control}
-                        render={({ field }) => (
-                          <DatePicker
-                            value={field.value || null}
-                            onChange={(date) => field.onChange(date)}
-                            className="filterdatepicker w-100"
-                            format="DD-MM-YYYY"
-                            placeholder="Choose Date"
-                            allowClear
-                            disabled={disableField}
-                          />
-                        )}
+            {disableField ? (
+              <div className="row g-3">
+                <div className="col-lg-6 col-md-6 col-sm-12">
+                  <div className="input-blocks mb-0 mt-1 row align-items-center">
+                    <label className="col-form-label col-md-4">PO Create Date</label>
+                    <div className="col-md-8">
+                      <div className="input-groupicon calender-input">
+                        <Calendar className="info-img" />
+                        <DatePicker
+                          value={selectedDate || null}
+                          className="filterdatepicker w-100"
+                          format="DD-MM-YYYY"
+                          placeholder="Choose Date"
+                          allowClear
+                          disabled
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="input-blocks mb-0 row align-items-center">
+                    <label className="col-form-label col-md-4">PO Request Date</label>
+                    <div className="col-md-8">
+                      <div className="input-groupicon calender-input">
+                        <Calendar className="info-img" />
+                        <Controller
+                          name="porequestdate"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              value={field.value || null}
+                              onChange={(date) => field.onChange(date)}
+                              className="filterdatepicker w-100"
+                              format="DD-MM-YYYY"
+                              placeholder="Choose Date"
+                              allowClear
+                              disabled
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  
+                </div>
+
+                <div className="col-lg-6 col-md-6 col-sm-12">
+                  <div className="input-blocks mb-0 row align-items-center">
+                    <label className="col-form-label col-md-4">PO Number</label>
+                    <div className="col-md-8">
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={String(ponumberParam ?? "")}
+                        readOnly
+                        disabled
                       />
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {disableField && (
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
+                  <div className="input-blocks mb-0 mt-1 row align-items-center">
                     <label className="col-form-label col-md-4">PO Status</label>
                     <div className="col-md-8">
                       <input
                         type="text"
                         className="form-control"
-                        value={String(watch("postatus") ?? "")}
+                        value={(() => {
+                          const raw = watch("postatus");
+                          const id = typeof raw === "number" ? raw : Number(raw || 0);
+                          const status = Number.isFinite(id) ? poStatusById.get(id) : undefined;
+                          return status?.statusname ?? String(raw ?? "");
+                        })()}
                         readOnly
                         disabled
                       />
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="row g-3 align-items-end">
+                <div className="col-lg-6 col-md-6 col-sm-12">
+                  <div className="input-blocks mb-0 row align-items-center">
+                    <label className="col-form-label col-md-4">PO Request Date</label>
+                    <div className="col-md-8">
+                      <div className="input-groupicon calender-input">
+                        <Calendar className="info-img" />
+                        <Controller
+                          name="porequestdate"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              value={field.value || null}
+                              onChange={(date) => field.onChange(date)}
+                              className="filterdatepicker w-100"
+                              format="DD-MM-YYYY"
+                              placeholder="Choose Date"
+                              allowClear
+                              disabled={disableField}
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isEdit && (
+                  <div className="col-lg-6 col-md-6 col-sm-12">
+                    <div className="input-blocks mb-0 row align-items-center">
+                      <label className="col-form-label col-md-4">PO Status</label>
+                      <div className="col-md-8">
+                        <Controller
+                          name="postatus"
+                          control={control}
+                          render={({ field }) => (
+                            <select
+                              className="form-select"
+                              value={field.value != null ? String(field.value) : ""}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              disabled={disableField}
+                            >
+                              <option value="">Select</option>
+                              {poStatuses.map((s) => (
+                                <option key={s.statusid} value={String(s.statusid)}>
+                                  {s.statusname ?? String(s.statusid)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="row g-3 mt-1">
               <div className="col-lg-6 col-md-12 col-sm-12">
                 <div className="border rounded p-3 h-100">
                   <h5 className="mb-3">Order To</h5>
                   <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">Supplier *</label>
+                    <label className="col-form-label col-md-4">{isReturnOrder ? "Outlet" : "Supplier *"}</label>
                     <div className="col-md-8">
-                      <Controller
-                        name="supplierid"
-                        control={control}
-                        rules={{ required: "Supplier is required" }}
-                        render={({ field }) => (
-                          <SelectSupplier
-                            trigger={trigger}
-                            storeId={parsedStoreId}
-                            disableField={disableField}
-                            {...field}
-                          />
-                        )}
-                      />
+                      {isReturnOrder ? (
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={currentOutlet?.outletname ?? ""}
+                          readOnly
+                          disabled
+                        />
+                      ) : (
+                        <Controller
+                          name="supplierid"
+                          control={control}
+                          rules={{ required: "Supplier is required" }}
+                          render={({ field }) => (
+                            <SelectSupplier
+                              trigger={trigger}
+                              storeId={parsedStoreId}
+                              disableField={disableField}
+                              {...field}
+                            />
+                          )}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -902,16 +1098,34 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                   <div className="row g-2">
                     <div className="col-12">
                       <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">Company</label>
+                        <label className="col-form-label col-md-4">{isReturnOrder ? "Supplier *" : "Company"}</label>
                         <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poshiptocompanyname") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poshiptocompanyname")} />
+                          {isReturnOrder ? (
+                            <Controller
+                              name="supplierid"
+                              control={control}
+                              rules={{ required: "Supplier is required" }}
+                              render={({ field }) => (
+                                <SelectSupplier
+                                  trigger={trigger}
+                                  storeId={parsedStoreId}
+                                  disableField={disableField}
+                                  {...field}
+                                />
+                              )}
+                            />
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                className="form-control"
+                                value={watch("poshiptocompanyname") || ""}
+                                readOnly
+                                disabled
+                              />
+                              <input type="hidden" {...register("poshiptocompanyname")} />
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -999,6 +1213,22 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
             <div className="row g-3 mt-1 align-items-end">
               <div className="col-lg-4 col-md-6 col-sm-12">
                 <div className="input-blocks mb-0 row align-items-center">
+                  <label className="col-form-label col-md-4">
+                    {isReturnOrder ? "Reference number" : "RMA No"}
+                  </label>
+                  <div className="col-md-8">
+                    <input
+                      type="text"
+                      className="form-control"
+                      {...register("rmano")}
+                      disabled={disableField}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div className="input-blocks mb-0 row align-items-center">
                   <label className="col-form-label col-md-4">Confirmed To</label>
                   <div className="col-md-8">
                     <input type="text" className="form-control" {...register("poconfirmedto")} />
@@ -1077,6 +1307,18 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                       max={100}
                       className="form-control"
                       {...register("podiscount", { valueAsNumber: true })}
+                      onInput={(e) => {
+                        const raw = e.currentTarget.value;
+                        if (raw === "") return;
+
+                        const n = Number(raw);
+                        if (!Number.isFinite(n)) return;
+
+                        const clamped = Math.min(100, Math.max(0, n));
+                        if (clamped !== n) {
+                          e.currentTarget.value = String(clamped);
+                        }
+                      }}
                       disabled={disableField}
                     />
                   </div>
@@ -1136,13 +1378,15 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                                   }));
                                   return;
                                 }
+                                const rawQty = Number(selected?.itemreorderqty ?? 0);
+                                const qtyValue = isReturnOrder ? -Math.abs(rawQty) : rawQty;
                                 setToolItem((prev) => ({
                                   ...prev,
                                   itemid: Number(selected?.itemid ?? prev.itemid),
                                   itemcode:
                                     selected?.itemcode != null ? String(selected.itemcode) : prev.itemcode,
                                   itemunit: selected?.itemunit || "",
-                                  qtyordered: Number(selected?.itemreorderqty ?? 0),
+                                  qtyordered: qtyValue,
                                   orderunitcost: Number(selected?.itempurchaseprice ?? 0),
                                 }));
                               }}
@@ -1168,13 +1412,15 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                             <input
                               type="number"
                               step="0.001"
-                              min={0}
+                              min={isReturnOrder ? undefined : 0}
                               className="form-control px-1 text-end" 
                               value={toolItem.qtyordered}
                               disabled={disableField}
                               onChange={(e) => {
-                                const n = Math.max(0, Number(e.target.value || 0));
-                                const normalized = Math.round(n * 1000) / 1000;
+                                const n = Number(e.target.value || 0);
+                                const abs = Math.abs(n);
+                                const normalizedAbs = Math.round(abs * 1000) / 1000;
+                                const normalized = isReturnOrder ? -normalizedAbs : normalizedAbs;
                                 setToolItem((prev) => ({
                                   ...prev,
                                   qtyordered: normalized,
@@ -1310,7 +1556,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                                     return;
                                   }
 
-                                  if (!Number.isFinite(toolItem.qtyordered) || toolItem.qtyordered <= 0) {
+                                  const qtyValue = Number(toolItem.qtyordered);
+                                  if (
+                                    !Number.isFinite(qtyValue) ||
+                                    (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)
+                                  ) {
                                     dispatch(
                                       showNotification({
                                         message: "Quantity is required",
@@ -1330,15 +1580,18 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                                     return;
                                   }
 
+                                  const normalizedQty = isReturnOrder
+                                    ? -Math.abs(Number(toolItem.qtyordered || 0))
+                                    : Number(toolItem.qtyordered || 0);
                                   append({
                                     itemid: toolItem.itemid,
                                     itemcode: toolItem.itemcode ?? "",
                                     itemunit: toolItem.itemunit,
-                                    qtyordered: toolItem.qtyordered,
+                                    qtyordered: normalizedQty,
                                     orderunitcost: toolItem.orderunitcost,
                                     orddiscount: toolItem.orddiscount,
                                     ordextendedprice: calculateOrdExtendedPrice(
-                                      toolItem.qtyordered,
+                                      normalizedQty,
                                       toolItem.orderunitcost,
                                       toolItem.orddiscount
                                     ),
@@ -1407,7 +1660,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                                       return;
                                     }
 
-                                    if (!Number.isFinite(toolItem.qtyordered) || toolItem.qtyordered <= 0) {
+                                    const qtyValue = Number(toolItem.qtyordered);
+                                    if (
+                                      !Number.isFinite(qtyValue) ||
+                                      (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)
+                                    ) {
                                       dispatch(
                                         showNotification({
                                           message: "Quantity is required",
@@ -1427,16 +1684,19 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                                       return;
                                     }
                                     const existing = getValues(`items.${editingIndex}`);
+                                    const normalizedQty = isReturnOrder
+                                      ? -Math.abs(Number(toolItem.qtyordered || 0))
+                                      : Number(toolItem.qtyordered || 0);
                                     update(editingIndex, {
                                       ...existing,
                                       itemid: toolItem.itemid,
                                       itemcode: toolItem.itemcode ?? "",
                                       itemunit: toolItem.itemunit,
-                                      qtyordered: toolItem.qtyordered,
+                                      qtyordered: normalizedQty,
                                       orderunitcost: toolItem.orderunitcost,
                                       orddiscount: toolItem.orddiscount,
                                       ordextendedprice: calculateOrdExtendedPrice(
-                                        toolItem.qtyordered,
+                                        normalizedQty,
                                         toolItem.orderunitcost,
                                         toolItem.orddiscount
                                       ),
@@ -1599,9 +1859,13 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                       <label className="col-form-label col-md-4">Grand Total</label>
                       <div className="col-md-8">
                         <input
-                          type="number"
-                          className="form-control"
+                          type="hidden"
                           {...register("pototalwithoutdiscount", { valueAsNumber: true })}
+                        />
+                        <input
+                          type="text"
+                          className="form-control text-end"
+                          value={formatMoney(watch("pototalwithoutdiscount"))}
                           readOnly
                           disabled
                         />
@@ -1612,10 +1876,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Discount Amount</label>
                       <div className="col-md-8">
+                        <input type="hidden" {...register("podiscountamt", { valueAsNumber: true })} />
                         <input
-                          type="number"
-                          className="form-control"
-                          {...register("podiscountamt", { valueAsNumber: true })}
+                          type="text"
+                          className="form-control text-end"
+                          value={formatMoney(watch("podiscountamt"))}
                           readOnly
                           disabled
                         />
@@ -1626,10 +1891,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Subtotal</label>
                       <div className="col-md-8">
+                        <input type="hidden" {...register("posubtotal", { valueAsNumber: true })} />
                         <input
-                          type="number"
-                          className="form-control"
-                          {...register("posubtotal", { valueAsNumber: true })}
+                          type="text"
+                          className="form-control text-end"
+                          value={formatMoney(watch("posubtotal"))}
                           readOnly
                           disabled
                         />
@@ -1640,10 +1906,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Sales Tax</label>
                       <div className="col-md-8">
+                        <input type="hidden" {...register("posalestax", { valueAsNumber: true })} />
                         <input
-                          type="number"
-                          className="form-control"
-                          {...register("posalestax", { valueAsNumber: true })}
+                          type="text"
+                          className="form-control text-end"
+                          value={formatMoney(watch("posalestax"))}
                           readOnly
                           disabled
                         />
@@ -1654,12 +1921,25 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Shipping</label>
                       <div className="col-md-8">
-                        <input
-                          type="number"
-                          className="form-control"
-                          {...register("pofreight", { valueAsNumber: true })}
-                          disabled={disableField}
-                        />
+                        {disableField ? (
+                          <>
+                            <input type="hidden" {...register("pofreight", { valueAsNumber: true })} />
+                            <input
+                              type="text"
+                              className="form-control text-end"
+                              value={formatMoney(watch("pofreight"))}
+                              readOnly
+                              disabled
+                            />
+                          </>
+                        ) : (
+                          <input
+                            type="number"
+                            className="form-control"
+                            {...register("pofreight", { valueAsNumber: true })}
+                            disabled={disableField}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1667,12 +1947,25 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Duty/Tariff</label>
                       <div className="col-md-8">
-                        <input
-                          type="number"
-                          className="form-control"
-                          {...register("podutypaid", { valueAsNumber: true })}
-                          disabled={disableField}
-                        />
+                        {disableField ? (
+                          <>
+                            <input type="hidden" {...register("podutypaid", { valueAsNumber: true })} />
+                            <input
+                              type="text"
+                              className="form-control text-end"
+                              value={formatMoney(watch("podutypaid"))}
+                              readOnly
+                              disabled
+                            />
+                          </>
+                        ) : (
+                          <input
+                            type="number"
+                            className="form-control"
+                            {...register("podutypaid", { valueAsNumber: true })}
+                            disabled={disableField}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1680,10 +1973,11 @@ const PurchaseOrderForm = ({ disableField }: { disableField?: boolean }) => {
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">Net PO Total</label>
                       <div className="col-md-8">
+                        <input type="hidden" {...register("pototal", { valueAsNumber: true })} />
                         <input
-                          type="number"
-                          className="form-control"
-                          {...register("pototal", { valueAsNumber: true })}
+                          type="text"
+                          className="form-control text-end"
+                          value={formatMoney(watch("pototal"))}
                           readOnly
                           disabled
                         />

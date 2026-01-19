@@ -19,6 +19,19 @@ export default function PurchaseOrderListHeader({
 }) {
   const { currentMenu, currentPath } = useMenu();
 
+  const resolveHref = (actionName: string) => {
+    if (actionName.includes("add_receive_poorder")) {
+      return `${currentPath}/receiveorder_items`;
+    }
+    if (actionName.includes("add_return_order")) {
+      return `${currentPath}/return_order`;
+    }
+    if (actionName.includes("add_new_purchaseorder")) {
+      return `${currentPath}/new_purchase_order`;
+    }
+    return `${currentPath}/new_purchase_order`;
+  };
+
   const handleAction = (actionName: string) => {
     if (actionName.includes("print")) {
       handleExport(selectedPOs, "print");
@@ -57,7 +70,7 @@ export default function PurchaseOrderListHeader({
                   key={btn.actionname}
                 >
                   <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
+                    href={isModalButton ? "#" : resolveHref(btn.actionname)}
                     onClick={() =>
                       isModalButton ? handleAction(btn.actionname) : null
                     }

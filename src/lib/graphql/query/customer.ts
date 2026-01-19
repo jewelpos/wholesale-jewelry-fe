@@ -208,6 +208,28 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
   }
 `;
 
+export const GET_CUSTOMER_APPLIED_AMOUNT_LIST_QUERY = gql`
+  query GetCustomerAppliedAmountList($storeid: Int!, $customerpaymentsid: Int!) {
+    getCustomerAppliedAmountList(
+      storeid: $storeid
+      customerpaymentsid: $customerpaymentsid
+    ) {
+      customercheckappliedamountid
+      customerpaymentsid
+      customerid
+      custcompanyname
+      appliedamount
+      invoicenumber
+      applieddate
+      isvoided
+      iscreditinvoice
+      warehousename
+      warehouseid
+      lastmodifieddate
+    }
+  }
+`;
+
 export const GET_CUSTOMER_LIST_QUERY = gql`
   query GetCustomerList(
     $storeid: Int!
@@ -307,6 +329,69 @@ export const GET_CUSTOMER_QUERY = gql`
       custalertremarks
       custphotopath
       custalert
+    }
+  }
+`;
+
+export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
+  query GetCustomerBalanceDueInvoices(
+    $storeid: Int!
+    $customerid: Int!
+    $outletid: Int!
+    $warehouseid: Int!
+    $isCredit: Boolean!
+  ) {
+    getCustomerBalanceDueInvoices(
+      storeid: $storeid
+      customerid: $customerid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      isCredit: $isCredit
+    ) {
+      invoicenumber
+      customerid
+      saledate
+      totalamount
+      amountreceived
+      balancedue
+      warehouseid
+    }
+  }
+`;
+
+export const GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY = gql`
+  query GetCustomerCreditApplySummary(
+    $storeid: Int!
+    $outletid: Int!
+    $customerid: Int!
+  ) {
+    getCustomerCreditApplySummary(
+      storeid: $storeid
+      customerid: $customerid
+      outletid: $outletid
+    ) {
+      hasCredit
+      creditAvailable
+      creditInvoices {
+        invoicenumber
+        customerid
+        saledate
+        totalamount
+        amountreceived
+        balancedue
+        warehouseid
+        isCreditInvoice
+      }
+      balanceDueInvoices {
+        invoicenumber
+        customerid
+        saledate
+        totalamount
+        amountreceived
+        balancedue
+        warehouseid
+        isCreditInvoice
+      }
     }
   }
 `;

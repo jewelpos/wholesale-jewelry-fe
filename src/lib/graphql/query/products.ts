@@ -11,6 +11,51 @@ export const GET_PRODUCT_SETTINGS_INFO_QUERY = gql`
   }
 `;
 
+export const GET_INVENTORY_TRANSFER_STATUS_LIST_QUERY = gql`
+  query GetInventoryTransferStatusList($storeid: Int!) {
+    getInventoryTransferStatusList(storeid: $storeid) {
+      transferstatusid
+      transferstatusname
+      description
+    }
+  }
+`;
+
+export const GET_TRANSFER_STATUS_LIST_QUERY = gql`
+  query GetTransferStatusList($storeid: Int!) {
+    getTransferStatusList(storeid: $storeid) {
+      transferstatusid
+      statusname
+    }
+  }
+`;
+
+export const GET_INVENTORY_TRANSFER_LIST_BY_STATUS_QUERY = gql`
+  query GetInventoryTransferListByStatus($storeid: Int!, $transferstatusid: Int!) {
+    getInventoryTransferListByStatus(storeid: $storeid, transferstatusid: $transferstatusid) {
+      inventoryitemtransferid
+      transfermode
+      transfersource
+      destination
+      transfertype
+      totalitemtransfered
+      totalquantities
+      username
+      transferdatetime
+      remarks
+      warehousename
+      warehouseid
+      outletid
+      fromoutletid
+      tooutletid
+      fromwarhouse
+      towarehouse
+      transferstatus
+      transferstatusid
+    }
+  }
+`;
+
 export const GET_PRODUCT_AGING_LIST_QUERY = gql`
   query GetProductAgingList(
     $storeid: Int!
@@ -407,12 +452,44 @@ export const GET_INVENTORY_TRANSFER_LIST_QUERY = gql`
         remarks
         warehousename
         warehouseid
+        outletid
+        fromoutletid
+        tooutletid
+        fromwarhouse
+        towarehouse
+        transferstatus
+        transferstatusid
       }
     }
   }
 `;
 
 export const GET_INVENTORY_TRANSFER_ITEM_QUERY = gql`
+  query GetInventoryTransferItemList($storeid: Int!, $inventoryitemtransferid: Int!) {
+    getInventoryTransferItemList(
+      storeid: $storeid
+      inventoryitemtransferid: $inventoryitemtransferid
+    ) {
+      inventoryitemtransferdetailid
+      inventoryitemtransferid
+      itemcode
+      itemdescription
+      transferquantity
+      transferdate
+      username
+      warehousename
+      transferbyid
+      warehouseid
+      lastmodifieddate
+      quantityreceived
+      receiveddate
+      recivedby
+      itemreceived
+    }
+  }
+`;
+
+export const GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY = gql`
   query GetInventoryTransferItem(
     $storeid: Int!
     $inventoryitemtransferid: Int!

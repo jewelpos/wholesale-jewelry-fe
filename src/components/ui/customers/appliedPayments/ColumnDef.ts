@@ -9,6 +9,7 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
     headerName: "Transaction number",
     field: "transactionno",
     filter: "agNumberColumnFilter",
+    cellRenderer: "agGroupCellRenderer",
   },
   {
     headerName: "Company name",

@@ -205,7 +205,83 @@ export interface InventoryTransfer {
   remarks: string;
   warehousename: string;
   warehouseid: number;
+
+  outletid?: number;
+  fromoutletid?: number;
+  tooutletid?: number;
+  fromwarhouse?: number;
+  towarehouse?: number;
+  transferstatus?: string;
+  transferstatusid?: number;
 }
+
+export type InventoryTransferItemInput = {
+  itemid: number;
+  transferquantity: number;
+};
+
+export type InventoryTransferInput = {
+  storeid: number;
+  outletid: number;
+  transfermode: string;
+  fromwarehouse: number;
+  towarehouse: number;
+  remarks?: string;
+  items: InventoryTransferItemInput[];
+};
+
+export type InventoryReceiveInput = {
+  storeid: number;
+  outletid: number;
+  towarehouse: number;
+  remarks?: string;
+  items: InventoryTransferItemInput[];
+};
+
+export type UpdateInventoryTransferStatusInput = {
+  storeid: number;
+  inventoryitemtransferid: number;
+  transferstatusid: number;
+};
+
+export type ReceiveInventoryTransferItemInput = {
+  inventoryitemtransferdetailid: number;
+  quantityreceived: number;
+  itemreceived: boolean;
+};
+
+export type ReceiveInventoryTransferInput = {
+  storeid: number;
+  inventoryitemtransferid: number;
+  items: ReceiveInventoryTransferItemInput[];
+};
+
+export type TransferStatus = {
+  transferstatusid: number;
+  statusname?: string;
+};
+
+export type InventoryItemTransfer = {
+  inventoryitemtransferid?: number;
+  transfermode?: string;
+  transfersource?: string;
+  destination?: string;
+  transfertype?: string;
+  totalitemtransfered?: number;
+  totalquantities?: number;
+  username?: string;
+  transferdatetime?: string;
+  remarks?: string;
+  warehousename?: string;
+  warehouseid?: number;
+  outletid?: number;
+  fromoutletid?: number;
+  tooutletid?: number;
+  fromwarhouse?: number;
+  towarehouse?: number;
+  transferstatus?: string;
+  transferstatusid?: number;
+};
 
 export interface ProductSettingsInfo {
   codechars: {
@@ -277,17 +353,27 @@ export interface AdjustProductInput {
 }
 
 export interface InventoryItemTransferDetail {
-  inventoryitemtransferdetailid: number;
-  inventoryitemtransferid: number;
-  itemcode: string;
-  itemdescription: string;
-  transferquantity: number;
-  transferdate: string;
-  username: string;
-  warehousename: string;
-  transferbyid: number;
-  warehouseid: number;
-  lastmodifieddate: string;
+  inventoryitemtransferdetailid?: number;
+  inventoryitemtransferid?: number;
+
+  itemcode?: string;
+  itemdescription?: string;
+
+  transferquantity?: number;
+  transferdate?: string; // DateTime
+  username?: string;
+
+  warehousename?: string;
+  transferbyid?: number;
+  warehouseid?: number;
+
+  lastmodifieddate?: string; // DateTime
+
+  quantityreceived?: number;
+  receiveddate?: string; // DateTime
+  receivedbyid?: number;
+
+  itemreceived?: boolean;
 }
 
 export type ItemAgingSummary = {

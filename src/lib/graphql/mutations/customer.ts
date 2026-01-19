@@ -22,6 +22,28 @@ export const DELETE_CUSTOMER_MUTATION = gql`
   }
 `;
 
+export const CREATE_CUSTOMER_PAYMENT_MUTATION = gql`
+  mutation CreateCustomerPayment($input: CreateCustomerPaymentInput!) {
+    createCustomerPayment(createCustomerPaymentInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const CREATE_CUSTOMER_CREDIT_APPLY_MUTATION = gql`
+  mutation CreateCustomerCreditApply($input: CreateCustomerCreditApplyInput!) {
+    createCustomerCreditApply(createCustomerCreditApplyInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
 export const ADD_NEW_CHECK_ON_HAND_MUTATION = gql`
   mutation CreateNewCheckOnHand($input: CreateNewCheckOnHandInput!, $storeid: Int!) {
     createNewCheckOnHand(createNewCheckOnHandInput: $input, storeid: $storeid) {
@@ -66,4 +88,13 @@ export const DELETE_CHECK_ON_HAND_MUTATION = gql`
   }
 `;
 
-
+export const VOID_CUSTOMER_PAYMENT_MUTATION = gql`
+  mutation VoidCustomerPayment($input: VoidCustomerPaymentInput!) {
+    voidCustomerPayment(voidCustomerPaymentInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
