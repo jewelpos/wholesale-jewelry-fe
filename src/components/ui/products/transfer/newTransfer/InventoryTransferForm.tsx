@@ -189,6 +189,12 @@ const InventoryTransferForm = () => {
   const fromWarehouseId = watch("fromWarehouseId");
   const toWarehouseId = watch("toWarehouseId");
 
+  const toWarehouseOptionsForDefaultOutlet: SelectOption[] = useMemo(() => {
+    const fromId = Number(fromWarehouseId);
+    if (!Number.isFinite(fromId) || fromId <= 0) return warehouseOptionsForDefaultOutlet;
+    return warehouseOptionsForDefaultOutlet.filter((o) => Number(o.value) !== fromId);
+  }, [warehouseOptionsForDefaultOutlet, fromWarehouseId]);
+
   const fetchWarehouses = async (outletId: number, kind: "DEFAULT") => {
     const result = await handleTryCatch(async () => {
       const { data } = await getWarehousesByOutletId({
@@ -257,12 +263,18 @@ const InventoryTransferForm = () => {
   }, [parsedOutletId]);
 
   useEffect(() => {
-    const n = Number(fromWarehouseId);
-    if (parsedStoreId && Number.isFinite(n) && n > 0) {
-      fetchProductsWithStockByStoreAndWarehouseId(parsedStoreId, n);
+    const fromId = Number(fromWarehouseId);
+    const toId = Number(toWarehouseId);
+    if (
+      Number.isFinite(fromId) &&
+      fromId > 0 &&
+      Number.isFinite(toId) &&
+      toId > 0 &&
+      fromId === toId
+    ) {
+      setValue("toWarehouseId", undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsedStoreId, fromWarehouseId]);
+  }, [fromWarehouseId, toWarehouseId, setValue]);
 
   const resetToolItem = () => {
     setToolItem({
@@ -721,8 +733,8 @@ const InventoryTransferForm = () => {
                         name="toWarehouseId"
                         render={({ field }) => (
                           <Select<SelectOption>
-                            options={warehouseOptionsForDefaultOutlet}
-                            value={warehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
+                            options={toWarehouseOptionsForDefaultOutlet}
+                            value={toWarehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
                             onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
                             isClearable
                             className="form-control p-0 select-form-custom"

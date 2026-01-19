@@ -101,6 +101,11 @@ const InventoryTransferRequestForm = () => {
     return list.map((o) => ({ value: o.outletid, label: o.outletname }));
   }, [store?.outlets, user?.roleid, parsedOutletId]);
 
+  const toOutletOptions: SelectOption[] = useMemo(() => {
+    if (!Number.isFinite(parsedOutletId) || parsedOutletId <= 0) return outletOptions;
+    return outletOptions.filter((o) => Number(o.value) !== parsedOutletId);
+  }, [outletOptions, parsedOutletId]);
+
   const resolveSystemWarehouse = (warehouses: WarehouseType[]) => {
     const sys = warehouses.find((w) => w.issystem);
     return sys;
@@ -133,6 +138,19 @@ const InventoryTransferRequestForm = () => {
   });
 
   const toOutletId = watch("toOutletId");
+
+  useEffect(() => {
+    const toId = Number(toOutletId);
+    if (
+      Number.isFinite(parsedOutletId) &&
+      parsedOutletId > 0 &&
+      Number.isFinite(toId) &&
+      toId > 0 &&
+      toId === parsedOutletId
+    ) {
+      setValue("toOutletId", undefined);
+    }
+  }, [toOutletId, parsedOutletId, setValue]);
 
   const fetchWarehouses = async (outletId: number, kind: "DEFAULT" | "TO") => {
     const result = await handleTryCatch(async () => {
@@ -381,8 +399,8 @@ const InventoryTransferRequestForm = () => {
                     name="toOutletId"
                     render={({ field }) => (
                       <Select<SelectOption>
-                        options={outletOptions}
-                        value={outletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
+                        options={toOutletOptions}
+                        value={toOutletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
                         onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
                         isClearable
                         className="form-control p-0 select-form-custom"
