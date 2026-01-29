@@ -6,7 +6,10 @@ import dayjs from "dayjs";
 import { useLazyQuery } from "@apollo/client";
 
 import { SelectOption } from "@/types/form";
-import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purchase";
+import {
+  GET_SUPPLIER_PURCHASE_ORDER_LIST_BY_STATUS_QUERY,
+  GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY,
+} from "@/lib/graphql/query/purchase";
 import { PurchaseOrder } from "@/types/purchase";
 import { useDebounce } from "@/hooks/useDebounce";
 import { TIME_FORMAT } from "@/lib/config/constants";
@@ -28,6 +31,8 @@ const SelectPurchaseOrder = ({
   className,
   trigger,
   storeId,
+  supplierId,
+  postatus,
   disableField,
   ...field
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,10 +46,44 @@ const SelectPurchaseOrder = ({
     GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY
   );
 
+  const [getPurchaseOrdersByStatus, { loading: loadingByStatus }] = useLazyQuery(
+    GET_SUPPLIER_PURCHASE_ORDER_LIST_BY_STATUS_QUERY
+  );
+
   const portalTarget = typeof window !== "undefined" ? document.body : undefined;
 
   const fetchPurchaseOrders = async (searchText?: string) => {
     if (!storeId) return;
+
+    const statusId = Number(postatus);
+    if (Number.isFinite(statusId) && statusId > 0) {
+      const { data } = await getPurchaseOrdersByStatus({
+        variables: {
+          storeid: Number(storeId),
+          supplierid:
+            supplierId != null && Number.isFinite(Number(supplierId))
+              ? Number(supplierId)
+              : undefined,
+          postatus: statusId,
+        },
+        fetchPolicy: "no-cache",
+      });
+
+      const all: PurchaseOrder[] = data?.getSupplierPurchaseOrderListByStatus || [];
+      const trimmed = String(searchText || "").trim().toLowerCase();
+      if (!trimmed) {
+        setPurchaseOrders(all);
+        return;
+      }
+
+      setPurchaseOrders(
+        all.filter((po) => {
+          const haystack = `${po.ponumber ?? ""} ${po.suppliername ?? ""} ${formatPoDate(po.podate)}`.toLowerCase();
+          return haystack.includes(trimmed);
+        })
+      );
+      return;
+    }
 
     const trimmed = String(searchText || "").trim();
     const filters = trimmed
@@ -65,6 +104,10 @@ const SelectPurchaseOrder = ({
     const { data } = await getPurchaseOrders({
       variables: {
         storeid: Number(storeId),
+        supplierid:
+          supplierId != null && Number.isFinite(Number(supplierId))
+            ? Number(supplierId)
+            : undefined,
         page: 1,
         perpage: 50,
         filters,
@@ -103,7 +146,7 @@ const SelectPurchaseOrder = ({
 
   return (
     <Select<SelectOption>
-      isLoading={loading}
+      isLoading={loading || loadingByStatus}
       options={purchaseOrderOptions}
       placeholder="Select PO"
       isClearable

@@ -171,6 +171,133 @@ export const GET_MONTHLY_DAILY_SALES_PIVOT_QUERY = gql`
   }
 `;
 
+export const GET_MONTHLY_DAILY_PAYMENTS_PIVOT_QUERY = gql`
+  query GetMonthlyDailyPaymentsPivot(
+    $storeid: Int!
+    $outletid: Int!
+    $warehouseid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getMonthlyDailyPaymentsPivot(
+      storeid: $storeid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        year
+        month_display
+        warehouseid
+        warehousename
+        outletid
+        monthly_payment
+        monthly_count
+        day_01
+        day_02
+        day_03
+        day_04
+        day_05
+        day_06
+        day_07
+        day_08
+        day_09
+        day_10
+        day_11
+        day_12
+        day_13
+        day_14
+        day_15
+        day_16
+        day_17
+        day_18
+        day_19
+        day_20
+        day_21
+        day_22
+        day_23
+        day_24
+        day_25
+        day_26
+        day_27
+        day_28
+        day_29
+        day_30
+        day_31
+        payment_mode_totals
+      }
+      totalsRow {
+        monthly_payment
+        monthly_count
+      }
+    }
+  }
+`;
+
+export const GET_MONTHLY_PAYMENT_PIVOT_QUERY = gql`
+  query GetMonthlyPaymentPivot(
+    $storeid: Int!
+    $outletid: Int!
+    $warehouseid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getMonthlyPaymentPivot(
+      storeid: $storeid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        year
+        month_display
+        warehouseid
+        warehousename
+        outletid
+        monthly_payment
+        monthly_count
+        jan_total
+        feb_total
+        mar_total
+        apr_total
+        may_total
+        jun_total
+        jul_total
+        aug_total
+        sep_total
+        oct_total
+        nov_total
+        dec_total
+        payment_mode_totals
+      }
+      totalsRow {
+        monthly_payment
+        monthly_count
+      }
+    }
+  }
+`;
+
 export const GET_MONTHLY_EMPLOYEE_SALES_PIVOT_QUERY = gql`
   query GetMonthlyEmployeeSalesPivot(
     $storeid: Int!

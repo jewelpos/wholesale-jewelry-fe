@@ -8,6 +8,7 @@ import withReactContent from "sweetalert2-react-content";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import SelectSupplier from "@/components/forms/SelectSupplier";
+import SelectPurchaseOrder from "@/components/forms/SelectPurchaseOrder";
 import SelectProduct from "@/components/forms/SelectProduct";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
@@ -65,6 +66,7 @@ const PurchaseOrderForm = ({
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [removedItemIds, setRemovedItemIds] = useState<number[]>([]);
+  const [returnOrderPoNumber, setReturnOrderPoNumber] = useState<number>(0);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -114,6 +116,22 @@ const PurchaseOrderForm = ({
         ponumber: parsedPoNumber,
       },
       skip: !isEdit || !parsedStoreId,
+    }
+  );
+
+  const { data: returnPoData } = useQuery(
+    GET_SINGLE_PURCHASE_ORDER_QUERY,
+    {
+      variables: {
+        storeid: parsedStoreId,
+        ponumber: returnOrderPoNumber,
+      },
+      skip:
+        !isReturnOrder ||
+        !parsedStoreId ||
+        !Number.isFinite(returnOrderPoNumber) ||
+        returnOrderPoNumber <= 0,
+      fetchPolicy: "no-cache",
     }
   );
 
@@ -547,6 +565,72 @@ const PurchaseOrderForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, poData, parsedStoreId, reset]);
 
+  useEffect(() => {
+    if (!isReturnOrder) return;
+    if (isEdit) return;
+    if (!Number.isFinite(returnOrderPoNumber) || returnOrderPoNumber <= 0) return;
+
+    const response = returnPoData?.getSinglePurchaseOrder;
+    if (!response?.purchaseorder) return;
+
+    setRemovedItemIds([]);
+
+    const { __typename, ...po } = response.purchaseorder;
+    const items =
+      response.items?.map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (row: any) => {
+          const absQty = Math.abs(Number(row.qtyordered || 0));
+          const qty = -absQty;
+          const unitCost = Number(row.orderunitcost || 0);
+          const discount = row.orddiscount != null ? Number(row.orddiscount) : 0;
+          return {
+            poitemid: row.poitemid,
+            itemid: row.itemid,
+            itemcode: row.itemcode,
+            itemunit: row.itemunit,
+            qtyordered: qty,
+            orderunitcost: unitCost,
+            orddiscount: discount,
+            ordextendedprice:
+              row.ordextendedprice != null
+                ? Number(row.ordextendedprice)
+                : calculateOrdExtendedPrice(qty, unitCost, discount),
+          };
+        }
+      ) || [];
+
+    reset({
+      ...getValues(),
+      storeid: parsedStoreId,
+      supplierid: po.supplierid ?? "",
+      warehouseid: po.warehouseid ?? "",
+      saveMode: "save",
+      podate: dayjs(),
+      porequestdate: dayjs(),
+      postatus: "",
+      poconfirmedto: "",
+      poremarks: "",
+      poshippingmethod: "",
+      podiscount: "",
+      podiscountamt: "",
+      posubtotal: "",
+      pofreight: "",
+      posalestax: "",
+      podutypaid: "",
+      posales: "",
+      pototal: "",
+      pototalwithoutdiscount: "",
+      termsid: undefined,
+      pomode: undefined,
+      rmano: "",
+      items,
+    });
+
+    setSelectedDate(dayjs());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReturnOrder, isEdit, returnOrderPoNumber, returnPoData, parsedStoreId, reset]);
+
   const { handleCancel } = useUnsavedChanges({
     isDirty,
     onCancel: () => {
@@ -736,6 +820,11 @@ const PurchaseOrderForm = ({
         ),
       })) || [],
     };
+
+    if (isReturnOrder) {
+      payload.ponumber = Number(returnOrderPoNumber);
+      payload.saveMode = "SAVE_AS_RETURN";
+    }
 
     if (!isReturnOrder) {
       payload.saveMode = formData.saveMode;
@@ -946,6 +1035,23 @@ const PurchaseOrderForm = ({
                     </div>
                   </div>
                 </div>
+
+                {isReturnOrder && !isEdit && (
+                  <div className="col-lg-6 col-md-6 col-sm-12">
+                    <div className="input-blocks mb-0 row align-items-center">
+                      <label className="col-form-label col-md-4">Purchase Order *</label>
+                      <div className="col-md-8">
+                        <SelectPurchaseOrder
+                          value={returnOrderPoNumber}
+                          onChange={(v: number) => setReturnOrderPoNumber(Number(v || 0))}
+                          storeId={parsedStoreId}
+                          postatus={4}
+                          disableField={disableField}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {isEdit && (
                   <div className="col-lg-6 col-md-6 col-sm-12">

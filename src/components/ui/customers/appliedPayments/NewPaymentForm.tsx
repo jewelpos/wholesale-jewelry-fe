@@ -145,7 +145,7 @@ const NewPaymentForm = ({
       outletId,
       Number(warehouseId),
       Number(selectedCustomerId),
-      true
+      false
     );
   }, [
     selectedCustomerId,

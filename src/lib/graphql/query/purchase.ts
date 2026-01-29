@@ -39,6 +39,7 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
         pofreight
         podutypaid
         posalestax
+        posales
         poconfirmedto
         porequestdate
         poshiptocompanyname
@@ -50,6 +51,48 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
         warehouseid
         termsid
       }
+    }
+  }
+`;
+
+export const GET_SUPPLIER_PURCHASE_ORDER_LIST_BY_STATUS_QUERY = gql`
+  query GetSupplierPurchaseOrderListByStatus(
+    $storeid: Int!
+    $supplierid: Int
+    $postatus: Int!
+  ) {
+    getSupplierPurchaseOrderListByStatus(
+      storeid: $storeid
+      supplierid: $supplierid
+      postatus: $postatus
+    ) {
+      ponumber
+      suppliername
+      podate
+      pototal
+      status
+      terms
+      shippingmethod
+      warehouse
+      createdby
+      lastmodifieddate
+      podiscount
+      posubtotal
+      podiscountamt
+      pofreight
+      podutypaid
+      posalestax
+      posales
+      poconfirmedto
+      porequestdate
+      poshiptocompanyname
+      pomode
+      rmano
+      supplierid
+      pocreatebyid
+      postatus
+      warehouseid
+      termsid
     }
   }
 `;
@@ -107,6 +150,7 @@ export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
         lastmodifieddate
         pototalwithoutdiscount
         posales
+        statusname
       }
       items {
         poitemid

@@ -296,7 +296,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
   ) {
-    getProductList(
+    getProductListNew(
       outletid: $outletid
       page: $page
       perpage: $perpage
@@ -307,35 +307,42 @@ export const GET_PRODUCT_LIST_QUERY = gql`
     ) {
       total
       data {
-        itemid
-        itembarcodeid
         itemcode
+        itemid
         itemdescription
+        itembarcodeid
         itemsellprice
         categoryname
         subcategoryname
         companyname
         itemquantityinhand
         overall_qty
+        totalsalevalue
+        totalcostvalue
         itemlocation
         itemstatus
         itemimagepath
         warehousename
+        outletid
         createddate
         lastmodifieddate
         itemwarehouseid
-        outletid
         memoqty
         soquantity
         lastsaledate
         lastpurchasedate
+        qtypurchased
+        avgpurchasecost
         availableqty
-        isdeletedat
         totalsoldqty
-        createdby
-        modifiedby
+        pcssold
+        totalsoldvalue
+        totalsoldcost
+        totalsoldprofit
         itemaveragecost
         adjdate
+        createdby
+        modifiedby
         adjustedby
         lasttransferdate
         transferby

@@ -32,7 +32,7 @@ any) => {
       customers.map(
         (customer: { customerid: number; custcompanyname: string }) => ({
           value: Number(customer.customerid),
-          label: customer.custcompanyname,
+          label: `${customer.customerid} - ${customer.custcompanyname}`,
         })
       ),
     [customers]
@@ -45,6 +45,13 @@ any) => {
       isClearable
       isDisabled={disableField}
       className={`form-control p-0 ${className} select-form-custom`}
+      filterOption={(candidate, rawInput) => {
+        const q = String(rawInput || "").trim().toLowerCase();
+        if (!q) return true;
+        const label = String(candidate.label || "").toLowerCase();
+        const value = String(candidate.value || "").toLowerCase();
+        return label.includes(q) || value.includes(q);
+      }}
       value={
         parsedValue
           ? {

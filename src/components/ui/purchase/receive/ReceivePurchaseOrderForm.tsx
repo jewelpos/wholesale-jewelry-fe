@@ -273,6 +273,7 @@ const ReceivePurchaseOrderForm = () => {
                         }}
                         trigger={trigger}
                         storeId={parsedStoreId}
+                        postatus={2}
                         className=""
                       />
                     )}
@@ -344,7 +345,7 @@ const ReceivePurchaseOrderForm = () => {
                   <input
                     type="text"
                     className="form-control"
-                    value={String(header.postatus ?? "")}
+                    value={String(header.statusname ?? "")}
                     disabled
                   />
                 </div>
@@ -493,48 +494,21 @@ const ReceivePurchaseOrderForm = () => {
                 </div>
 
                 <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">City</label>
+                  <label className="col-form-label col-md-4">City/State/Zip/Country</label>
                   <div className="col-md-8">
                     <input
                       type="text"
                       className="form-control"
-                      value={String(header.poordtocity ?? "")}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">State</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={String(header.poordtostate ?? "")}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">ZIP</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={String(header.poordtozip ?? "")}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">Country</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={String(header.poordtocountry ?? "")}
+                      value={
+                        [
+                          String(header.poordtocity ?? ""),
+                          String(header.poordtostate ?? ""),
+                          String(header.poordtozip ?? ""),
+                          String(header.poordtocountry ?? ""),
+                        ]
+                          .filter(Boolean)
+                          .join(", ")
+                      }
                       disabled
                     />
                   </div>
@@ -595,36 +569,21 @@ const ReceivePurchaseOrderForm = () => {
                 </div>
 
                 <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">City</label>
+                  <label className="col-form-label col-md-4">City/State/Zip/Country</label>
                   <div className="col-md-8">
                     <input
                       type="text"
                       className="form-control"
-                      value={String(header.poshiptocity ?? "")}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">State</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={String(header.poshiptostate ?? "")}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div className="input-blocks mb-0 mt-2 row align-items-center">
-                  <label className="col-form-label col-md-4">ZIP</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={String(header.poshiptozip ?? "")}
+                      value={
+                        [
+                          String(header.poshiptocity ?? ""),
+                          String(header.poshiptostate ?? ""),
+                          String(header.poshiptozip ?? ""),
+                          String(header.poshiptocountry ?? ""),
+                        ]
+                          .filter(Boolean)
+                          .join(", ")
+                      }
                       disabled
                     />
                   </div>

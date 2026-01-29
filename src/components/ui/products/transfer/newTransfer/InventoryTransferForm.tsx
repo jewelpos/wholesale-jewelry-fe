@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { PlusCircle, Trash2 } from "react-feather";
 import { Controller, useForm } from "react-hook-form";
 import { useLazyQuery, useMutation } from "@apollo/client";
@@ -189,6 +189,8 @@ const InventoryTransferForm = () => {
   const fromWarehouseId = watch("fromWarehouseId");
   const toWarehouseId = watch("toWarehouseId");
 
+  const prevInternalFromWarehouseIdRef = useRef<number | undefined>(undefined);
+
   const toWarehouseOptionsForDefaultOutlet: SelectOption[] = useMemo(() => {
     const fromId = Number(fromWarehouseId);
     if (!Number.isFinite(fromId) || fromId <= 0) return warehouseOptionsForDefaultOutlet;
@@ -275,6 +277,37 @@ const InventoryTransferForm = () => {
       setValue("toWarehouseId", undefined);
     }
   }, [fromWarehouseId, toWarehouseId, setValue]);
+
+  useEffect(() => {
+    if (transferType !== "INTERNAL") {
+      prevInternalFromWarehouseIdRef.current = undefined;
+      return;
+    }
+
+    const fromId = Number(fromWarehouseId);
+    const normalizedFromId = Number.isFinite(fromId) && fromId > 0 ? fromId : undefined;
+
+    if (prevInternalFromWarehouseIdRef.current !== normalizedFromId) {
+      setRows([]);
+      setToolItem({
+        itemid: undefined,
+        itemcode: undefined,
+        transferquantity: 1,
+      });
+      setProductInput("");
+    }
+
+    prevInternalFromWarehouseIdRef.current = normalizedFromId;
+
+    if (parsedStoreId && normalizedFromId) {
+      fetchProductsWithStockByStoreAndWarehouseId(parsedStoreId, normalizedFromId);
+    }
+  }, [
+    transferType,
+    fromWarehouseId,
+    parsedStoreId,
+    fetchProductsWithStockByStoreAndWarehouseId,
+  ]);
 
   const resetToolItem = () => {
     setToolItem({

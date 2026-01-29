@@ -99,12 +99,12 @@ const ProductsListComponent = () => {
               ...filtersMain,
             },
           });
-          if (data.getProductList) {
+          if (data.getProductListNew) {
             params.success({
-              rowData: data.getProductList.data,
-              rowCount: data.getProductList.total,
+              rowData: data.getProductListNew.data,
+              rowCount: data.getProductListNew.total,
             });
-            if (!data.getProductList.data.length) {
+            if (!data.getProductListNew.data.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
