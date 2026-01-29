@@ -1,0 +1,135 @@
+import { ColDef, ICellRendererParams } from "ag-grid-community";
+import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
+import { MonthlyPaymentsPivotSummary } from "@/types/reports";
+
+export const monthlyPaymentsReportColumnDefs: ColDef<MonthlyPaymentsPivotSummary>[] = [
+  {
+    headerName: "Month",
+    field: "month_display",
+    filter: "agTextColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Monthly Payment",
+    field: "monthly_payment",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Monthly Count",
+    field: "monthly_count",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Jan",
+    field: "jan_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Feb",
+    field: "feb_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Mar",
+    field: "mar_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Apr",
+    field: "apr_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "May",
+    field: "may_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Jun",
+    field: "jun_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Jul",
+    field: "jul_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Aug",
+    field: "aug_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Sep",
+    field: "sep_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Oct",
+    field: "oct_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Nov",
+    field: "nov_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Dec",
+    field: "dec_total",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: false,
+  },
+  {
+    headerName: "Payment Mode Totals",
+    field: "payment_mode_totals",
+    filter: "agTextColumnFilter",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value != null ? JSON.stringify(params.value) : "",
+    hide: false,
+  },
+  {
+    headerName: "Warehouse",
+    field: "warehousename",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Warehouse ID",
+    field: "warehouseid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Outlet ID",
+    field: "outletid",
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+];

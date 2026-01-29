@@ -58,7 +58,7 @@ const SelectProduct = ({
     () =>
       products.map((p) => ({
         value: p.itemid,
-        label: `${p.itemcode} - ${p.itemdescription}`,
+        label: `${p.itembarcodeid ? `${p.itembarcodeid} - ` : ""}${p.itemcode} - ${p.itemdescription}`,
       })),
     [products]
   );
@@ -71,7 +71,11 @@ const SelectProduct = ({
     }
     if (valueItemCode) {
       const product = products.find((p) => p.itemcode === valueItemCode);
-      if (product) return { value: product.itemid, label: `${product.itemcode} - ${product.itemdescription}` };
+      if (product)
+        return {
+          value: product.itemid,
+          label: `${product.itembarcodeid ? `${product.itembarcodeid} - ` : ""}${product.itemcode} - ${product.itemdescription}`,
+        };
     }
     return null;
   }, [value, valueItemCode, productOptions, products]);
@@ -84,6 +88,12 @@ const SelectProduct = ({
       isClearable
       isDisabled={disableField}
       className={`form-control p-0 ${className} select-form-custom`}
+      filterOption={(candidate, rawInput) => {
+        const q = String(rawInput || "").trim().toLowerCase();
+        if (!q) return true;
+        const label = String(candidate.label || "").toLowerCase();
+        return label.includes(q);
+      }}
       menuPortalTarget={portalTarget}
       menuPosition="fixed"
       styles={{
