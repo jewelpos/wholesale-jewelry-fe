@@ -353,7 +353,8 @@ export interface EditSubcategoryInput {
 export interface AdjustProductInput {
   storeid: number;
   warehouseid: number;
-  productid: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  productid: any;
   newquantity?: number;
   newcost?: number;
   updateremarks: string;
