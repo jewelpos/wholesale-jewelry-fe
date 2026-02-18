@@ -24,6 +24,8 @@ import POSGrid from "@/components/ui/grid/POSGrid";
 import CustomFilterSections from "@/components/ui/grid/CustomFilterSections";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
 import MemoListHeader from "./MemoListHeader";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 
 const memoColumnDefs: ColDef<MemoSummary>[] = [
   {
@@ -121,10 +123,13 @@ const MemoListComponent = () => {
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>();
+  const [selectedMemoNumbers, setSelectedMemoNumbers] = useState<number[]>([]);
+  const [printing, setPrinting] = useState(false);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const config = getEnvironmentConfig();
 
   const handleOnGridReady = (params: GridReadyEvent<MemoSummary>) => {
     setGridReady(true);
@@ -195,9 +200,73 @@ const MemoListComponent = () => {
     [datasource]
   );
 
+  const handleSelectionChanged = useCallback(() => {
+    const selected = gridRef.current?.api?.getSelectedRows?.() || [];
+    const memoNumbers = selected
+      .map((r) => Number(r.memonumber))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    setSelectedMemoNumbers(memoNumbers);
+  }, []);
+
+  const handlePrintMemo = useCallback(async () => {
+    if (!parsedStoreId || selectedMemoNumbers.length === 0) return;
+
+    setPrinting(true);
+    const payload = {
+      storeid: parsedStoreId,
+      memonumbers: selectedMemoNumbers,
+    };
+
+    const result = await handleTryCatch(
+      async () => {
+        const response = await api.post(`${config.apiUrl}/store/memo/print`, payload, {
+          responseType: "blob",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const { data } = response;
+        if (data) {
+          const url = window.URL.createObjectURL(data);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "memo.pdf");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          dispatch(
+            showNotification({
+              message: "Memo printed successfully",
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+        }
+        return true;
+      },
+      () => {
+        setPrinting(false);
+      }
+    );
+
+    if (result.error) {
+      setPrinting(false);
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  }, [config.apiUrl, dispatch, parsedStoreId, selectedMemoNumbers]);
+
   return (
     <>
-      <MemoListHeader />
+      <MemoListHeader
+        selectedMemoNumbers={selectedMemoNumbers}
+        onPrintMemo={handlePrintMemo}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -210,10 +279,24 @@ const MemoListComponent = () => {
             ref={gridRef}
             columnDefs={memoColumnDefs}
             onGridReady={handleGridReady}
+            onSelectionChanged={handleSelectionChanged}
             defaultColDef={{
               filter: !debouncedSearch,
               floatingFilter: !debouncedSearch,
             }}
+            rowSelection={{
+              mode: "multiRow",
+              checkboxes: true,
+              headerCheckbox: true,
+              suppressRowClickSelection: true,
+            }}
+            getRowStyle={(params) =>
+              params.node.rowPinned === "bottom"
+                ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
+                : undefined
+            }
+            suppressRowClickSelection
+            suppressCellFocus
           />
         </div>
       </div>

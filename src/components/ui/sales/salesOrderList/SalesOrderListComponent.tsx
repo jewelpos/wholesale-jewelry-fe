@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
@@ -17,6 +17,9 @@ import { salesOrderColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import SalesOrderHeader from "./SalesOrderHeader";
+import { useParams } from "next/navigation";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 
 const SalesOrderListComponent = () => {
   const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
@@ -24,8 +27,15 @@ const SalesOrderListComponent = () => {
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
-  const gridRef = useRef<AgGridReact>(null);
+  const gridRef = useRef<AgGridReact<SalesOrderListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [selectedSalesOrderNumbers, setSelectedSalesOrderNumbers] = useState<
+    number[]
+  >([]);
+
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const config = getEnvironmentConfig();
 
   const handleOnGridReady = (params: GridReadyEvent<SalesOrderListType>) => {
     setGridReady(true);
@@ -81,9 +91,71 @@ const SalesOrderListComponent = () => {
     }
   }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
+  const handleSelectionChanged = useCallback(() => {
+    const selected = gridRef.current?.api?.getSelectedRows?.() || [];
+    const orderNumbers = selected
+      .map((r) => Number(r.salesorderno))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    setSelectedSalesOrderNumbers(orderNumbers);
+  }, []);
+
+  const handlePrintSalesOrder = useCallback(async () => {
+    if (!parsedStoreId || selectedSalesOrderNumbers.length === 0) return;
+
+    const payload = {
+      storeid: parsedStoreId,
+      salesordernumbers: selectedSalesOrderNumbers,
+    };
+
+    const result = await handleTryCatch(async () => {
+      const response = await api.post(
+        `${config.apiUrl}/store/sales-order/print`,
+        payload,
+        {
+          responseType: "blob",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const { data } = response;
+      if (data) {
+        const url = window.URL.createObjectURL(data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "sales-order.pdf");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        dispatch(
+          showNotification({
+            message: "Sales order printed successfully",
+            type: NOTIFICATION_TYPES.SUCCESS,
+          })
+        );
+      }
+
+      return true;
+    });
+
+    if (result.error) {
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  }, [config.apiUrl, dispatch, parsedStoreId, selectedSalesOrderNumbers]);
+
   return (
     <>
-      <SalesOrderHeader />
+      <SalesOrderHeader
+        selectedSalesOrderNumbers={selectedSalesOrderNumbers}
+        onPrintSalesOrder={handlePrintSalesOrder}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -97,10 +169,19 @@ const SalesOrderListComponent = () => {
               ref={gridRef}
               columnDefs={salesOrderColumnDefs}
               onGridReady={handleOnGridReady}
+              onSelectionChanged={handleSelectionChanged}
               defaultColDef={{
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
               }}
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
+              suppressRowClickSelection
+              suppressCellFocus
             />
           </div>
         </div>

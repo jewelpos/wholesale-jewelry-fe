@@ -11,7 +11,15 @@ import {
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
 
-const SalesOrderHeader = () => {
+interface SalesOrderHeaderProps {
+  selectedSalesOrderNumbers: number[];
+  onPrintSalesOrder: () => void;
+}
+
+const SalesOrderHeader = ({
+  selectedSalesOrderNumbers,
+  onPrintSalesOrder,
+}: SalesOrderHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
 
   return (
@@ -31,19 +39,35 @@ const SalesOrderHeader = () => {
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isModalButton =
-                btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
+              const isPrintExportButton =
+                btn.actionname.includes("print") || btn.actionname.includes("export");
+
+              const disabledButton =
+                selectedSalesOrderNumbers.length === 0 &&
+                (btn.actionname.includes("print") || btn.actionname.includes("export"));
+
+              const href = isPrintExportButton ? "#" : `${currentPath}/new`;
+
+              const handleClick = (e: React.MouseEvent) => {
+                if (!isPrintExportButton) return;
+                e.preventDefault();
+                if (disabledButton) return;
+                onPrintSalesOrder();
+              };
+
               return (
                 <div
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
                   <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
-                    className={`btn btn-added ${btnColor}`}
+                    href={href}
+                    onClick={handleClick}
+                    className={`btn btn-added ${btnColor} ${
+                      disabledButton ? "disabled" : ""
+                    }`}
                   >
-                    {iconName && <FeatherIcon icon={iconName} />}{" "}
+                    {iconName && <FeatherIcon icon={iconName} />} {" "}
                     {btn.actiondisplayname}
                   </Link>
                 </div>

@@ -73,6 +73,7 @@ export const inventoryTransferColumnDefs: ColDef<InventoryTransfer>[] = [
     filter: "agTextColumnFilter",
     width: 130,
   },
+  {headerName: "Status", field: "transferstatus", sortable: true, filter: "agTextColumnFilter", width: 130},
   {
     headerName: "Transfer Date",
     field: "transferdatetime",

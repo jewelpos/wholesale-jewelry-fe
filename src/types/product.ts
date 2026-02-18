@@ -44,6 +44,7 @@ export type ProductListType = {
   categoryname?: string;
   subcategoryname?: string;
   companyname?: string;
+  supplier?: string;
   itemquantityinhand?: number;
   overall_qty?: number;
   totalsalevalue?: number;
@@ -60,10 +61,13 @@ export type ProductListType = {
   soquantity?: number;
   lastsaledate?: string;
   lastpurchasedate?: string;
+  totalqtypurchased?: number;
+  calculatedavgcost?: number;
   qtypurchased?: number;
   avgpurchasecost?: number;
   availableqty?: number;
   totalsoldqty?: number;
+  totalsoldpcs?: number;
   pcssold?: number;
   totalsoldvalue?: number;
   totalsoldcost?: number;

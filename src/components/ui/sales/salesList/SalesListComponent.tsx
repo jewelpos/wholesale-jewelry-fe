@@ -10,6 +10,7 @@ import React, {
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import {
+  ColDef,
   GridReadyEvent,
   IServerSideGetRowsParams,
   ICellRendererParams,
@@ -28,15 +29,23 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import SalesListHeader from "./SalesListHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import SalesActions from "./SalesActions";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+import { useParams } from "next/navigation";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
   const dispatch = useAppDispatch();
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const config = getEnvironmentConfig();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact<SalesInvoiceListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
+  const [selectedInvoiceNumbers, setSelectedInvoiceNumbers] = useState<number[]>([]);
+  const [printing, setPrinting] = useState(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -123,7 +132,72 @@ const SalesListComponent = () => {
     }
   }, [datasource, gridReady, selectedOutlet]);
 
-  const columnDefs = useMemo(
+  const handleSelectionChanged = useCallback(() => {
+    const selected = gridRef.current?.api?.getSelectedRows?.() || [];
+    const invoiceNumbers = selected
+      .map((r) => Number(r.invoicenumber))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    setSelectedInvoiceNumbers(invoiceNumbers);
+  }, []);
+
+  const handlePrintInvoice = useCallback(async () => {
+    if (!parsedStoreId || selectedInvoiceNumbers.length === 0) return;
+
+    setPrinting(true);
+    const payload = {
+      storeid: parsedStoreId,
+      invoicenumbers: selectedInvoiceNumbers,
+    };
+
+    const result = await handleTryCatch(
+      async () => {
+        const response = await api.post(
+          `${config.apiUrl}/store/invoice/print`,
+          payload,
+          {
+            responseType: "blob",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const { data } = response;
+        if (data) {
+          const url = window.URL.createObjectURL(data);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "invoice.pdf");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          dispatch(
+            showNotification({
+              message: "Invoice printed successfully",
+              type: NOTIFICATION_TYPES.SUCCESS,
+            })
+          );
+        }
+        return true;
+      },
+      () => {
+        setPrinting(false);
+      }
+    );
+
+    if (result.error) {
+      setPrinting(false);
+      dispatch(
+        showNotification({
+          message: result.error,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+    }
+  }, [config.apiUrl, dispatch, parsedStoreId, selectedInvoiceNumbers]);
+
+  const columnDefs = useMemo<ColDef[]>(
     () => [
       ...salesInvoiceColumnDefs,
       {
@@ -172,7 +246,10 @@ const SalesListComponent = () => {
 
   return (
     <>
-      <SalesListHeader />
+      <SalesListHeader
+        selectedInvoiceNumbers={selectedInvoiceNumbers}
+        onPrintInvoice={handlePrintInvoice}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -186,6 +263,7 @@ const SalesListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              onSelectionChanged={handleSelectionChanged}
               defaultColDef={{
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
@@ -201,6 +279,8 @@ const SalesListComponent = () => {
                   ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
                   : undefined
               }
+              suppressRowClickSelection
+              suppressCellFocus
             />
           </div>
         </div>

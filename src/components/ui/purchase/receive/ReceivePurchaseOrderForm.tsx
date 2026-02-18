@@ -245,7 +245,7 @@ const ReceivePurchaseOrderForm = () => {
       <div className="card">
         <div className="card-body">
           <div className="row g-3">
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">PO Number</label>
                 <div className="col-md-8">
@@ -282,7 +282,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Posting Date</label>
                 <div className="col-md-8">
@@ -306,7 +306,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">PO Date</label>
                 <div className="col-md-8">
@@ -324,7 +324,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Created By</label>
                 <div className="col-md-8">
@@ -338,7 +338,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Status</label>
                 <div className="col-md-8">
@@ -352,7 +352,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">PO Request Date</label>
                 <div className="col-md-8">
@@ -370,7 +370,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">PO Confirmed To</label>
                 <div className="col-md-8">
@@ -384,7 +384,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Order Discount</label>
                 <div className="col-md-8">
@@ -398,7 +398,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Payment Terms</label>
                 <div className="col-md-8">
@@ -412,7 +412,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Shipping Mode</label>
                 <div className="col-md-8">
@@ -426,7 +426,7 @@ const ReceivePurchaseOrderForm = () => {
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-6 col-sm-12">
+            <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">To Outlet (Warehouse)</label>
                 <div className="col-md-8">
