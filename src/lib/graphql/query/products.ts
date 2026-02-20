@@ -314,7 +314,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         itemsellprice
         categoryname
         subcategoryname
-        companyname
+        supplier: companyname
         itemquantityinhand
         overall_qty
         totalsalevalue
@@ -331,11 +331,11 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         soquantity
         lastsaledate
         lastpurchasedate
-        qtypurchased
-        avgpurchasecost
+        totalqtypurchased: qtypurchased
+        calculatedavgcost: avgpurchasecost
         availableqty
         totalsoldqty
-        pcssold
+        totalsoldpcs: pcssold
         totalsoldvalue
         totalsoldcost
         totalsoldprofit

@@ -147,7 +147,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     if (
       productSettings?.saletagkey &&
       itempurchaseprice &&
-      profitpercent &&
+        
       !isEdit // Only auto-calculate for new products, not when editing
     ) {
       const percentageValue = (itempurchaseprice / 100) * profitpercent;

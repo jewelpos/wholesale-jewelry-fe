@@ -189,7 +189,7 @@ const CustomerInputsB = ({
           )}
         </div>
       </div>
-      <div className="col-lg-4 col-md-6">
+      {/* <div className="col-lg-4 col-md-6">
         <div className="mb-3">
           <label className="form-label">Shipping to</label>
           <input
@@ -201,8 +201,8 @@ const CustomerInputsB = ({
             <div className="invalid-feedback">{errors.custshipto.message}</div>
           )}
         </div>
-      </div>
-      <div className="col-lg-4 col-md-6">
+      </div> */}
+      {/* <div className="col-lg-4 col-md-6">
         <div className="mb-3">
           <label className="form-label">Billing to</label>
           <input
@@ -214,7 +214,7 @@ const CustomerInputsB = ({
             <div className="invalid-feedback">{errors.custbillto.message}</div>
           )}
         </div>
-      </div>
+      </div> */}
       <div className="col-lg-4 col-md-6">
         <div className="mb-3">
           <label className="form-label">Status</label>

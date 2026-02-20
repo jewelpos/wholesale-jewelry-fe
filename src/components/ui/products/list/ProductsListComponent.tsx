@@ -30,6 +30,8 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import ProductsListHeader from "./ProductsListHeader";
 import ProductActions from "./ProductActions";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+import { Modal } from "react-bootstrap";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -38,11 +40,43 @@ const ProductsListComponent = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<
     number | undefined
   >(-1);
+  const [selectedProduct, setSelectedProduct] = useState<ProductListType | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const { currentMenu } = useMenu();
+
+  const handleCloseImageModal = useCallback(() => {
+    setIsImageModalOpen(false);
+  }, []);
+
+  const selectedProductImageUrl = useMemo(() => {
+    const raw = String(selectedProduct?.itemimagepath || "").trim();
+    if (!raw) return "";
+
+    const config = getEnvironmentConfig();
+
+    let resolved = raw;
+    if (raw.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          resolved = String(parsed[0] || "");
+        }
+      } catch {
+        resolved = raw;
+      }
+    }
+
+    resolved = String(resolved || "").trim();
+    if (!resolved) return "";
+
+    if (/^https?:\/\//i.test(resolved)) return resolved;
+    if (resolved.startsWith("/")) return `${config.apiUrl}${resolved}`;
+    return `${config.apiUrl}/${resolved}`;
+  }, [selectedProduct?.itemimagepath]);
 
   const handleOnGridReady = (params: GridReadyEvent<ProductListType>) => {
     setGridReady(true);
@@ -196,6 +230,11 @@ const ProductsListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              rowSelection="single"
+              onRowClicked={(event) => {
+                setSelectedProduct(event.data || null);
+                setIsImageModalOpen(true);
+              }}
               defaultColDef={{
                 filter: !debouncedSearch,
                 floatingFilter: !debouncedSearch,
@@ -204,6 +243,38 @@ const ProductsListComponent = () => {
           </div>
         </div>
       </div>
+
+      <Modal show={isImageModalOpen} onHide={handleCloseImageModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Item Image{selectedProduct?.itemcode ? ` - ${selectedProduct.itemcode}` : ""}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {!selectedProduct ? (
+            <div className="text-muted">No item selected</div>
+          ) : !selectedProductImageUrl ? (
+            <div>
+              <div className="text-muted">No image available</div>
+              <div className="small mt-2">{selectedProduct.itemdescription || ""}</div>
+            </div>
+          ) : (
+            <div>
+              <div
+                className="border rounded"
+                style={{ width: "100%", height: 520, overflow: "hidden" }}
+              >
+                <img
+                  src={selectedProductImageUrl}
+                  alt={selectedProduct.itemdescription || "Product image"}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
+              </div>
+              <div className="small mt-2">{selectedProduct.itemdescription || ""}</div>
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
     </>
   );
 };

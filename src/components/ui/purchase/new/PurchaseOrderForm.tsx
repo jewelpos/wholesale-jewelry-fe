@@ -1320,7 +1320,7 @@ const PurchaseOrderForm = ({
               <div className="col-lg-4 col-md-6 col-sm-12">
                 <div className="input-blocks mb-0 row align-items-center">
                   <label className="col-form-label col-md-4">
-                    {isReturnOrder ? "Reference number" : "RMA No"}
+                    {isReturnOrder ? "RMA No" : "Reference number"}
                   </label>
                   <div className="col-md-8">
                     <input
