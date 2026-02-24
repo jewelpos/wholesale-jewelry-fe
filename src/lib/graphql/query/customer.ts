@@ -209,7 +209,7 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
 `;
 
 export const GET_CUSTOMER_APPLIED_AMOUNT_LIST_QUERY = gql`
-  query GetCustomerAppliedAmountList($storeid: Int!, $customerpaymentsid: Int!) {
+  query GetCustomerAppliedAmountList($storeid: Int!, $customerpaymentsid: Float!) {
     getCustomerAppliedAmountList(
       storeid: $storeid
       customerpaymentsid: $customerpaymentsid

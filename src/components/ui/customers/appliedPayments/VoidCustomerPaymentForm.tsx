@@ -212,7 +212,7 @@ const VoidCustomerPaymentForm = ({
               <tbody>
                 {appliedAmounts.map((item) => {
                   const appliedDateValue = item.applieddate
-                    ? dayjs(Number(item.applieddate)).format(TIME_FORMAT)
+                    ? dayjs(item.applieddate).format(TIME_FORMAT)
                     : "";
                   return (
                     <tr key={item.customercheckappliedamountid}>

@@ -19,7 +19,7 @@ export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
     headerName: "Date",
     field: "ledgerdate",
     cellRenderer: (params: ICellRendererParams) =>
-      dayjs(params.value).format(TIME_FORMAT),
+      dayjs(Number(params.value)).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   { headerName: "Activity", field: "ledgercode", filter: "agTextColumnFilter" },

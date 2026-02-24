@@ -165,7 +165,7 @@ type ToolItem = {
   itempcs: number;
   itemquantity: number;
   unitprice: number;
-  discountpercent: number;
+  discountpercent?: number;
 };
 
 const toNum = (v: unknown) => {
@@ -379,7 +379,7 @@ const SalesInvoiceForm = ({
       shippingtrackingno: "",
       shipping: 0,
       remarks: "",
-      amountreceived: 0,
+      amountreceived: 0.0,
       items: [],
     },
     mode: "all",
@@ -493,6 +493,22 @@ const SalesInvoiceForm = ({
   const watchedShipping = useWatch({ control, name: "shipping" });
   const watchedAmountReceived = useWatch({ control, name: "amountreceived" });
 
+  const invoiceDiscountPrefill = useMemo(() => {
+    const n = toNum(watchedDiscountPercent);
+    const clamped = Math.min(100, Math.max(0, n));
+    return Math.round(clamped * 1000) / 1000;
+  }, [watchedDiscountPercent]);
+
+  useEffect(() => {
+    if (editingIndex != null) return;
+
+    setToolItem((prev) => {
+      if (prev.itemid) return prev;
+      if (toNum(prev.discountpercent) === invoiceDiscountPrefill) return prev;
+      return { ...prev, discountpercent: invoiceDiscountPrefill };
+    });
+  }, [editingIndex, invoiceDiscountPrefill]);
+
   const totals = useMemo(() => {
     const items = watchedItems || [];
     const discountPercent = toNum(watchedDiscountPercent);
@@ -556,7 +572,7 @@ const SalesInvoiceForm = ({
       itempcs: 0,
       itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
       unitprice: 0,
-      discountpercent: 0,
+      discountpercent: invoiceDiscountPrefill,
     });
   };
 
@@ -1128,14 +1144,14 @@ const SalesInvoiceForm = ({
                               itemtaxable: toNum(selected.itemtaxable),
                               itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
                               unitprice: Number(selected.itemsellprice || 0),
-                              discountpercent: Number(selected.itemdiscount || 0),
+                              discountpercent: watch("discountpercent") || 0,
                             }));
                           }}
                         />
                       </div>
                     </div>
 
-                    <div className="col-lg-3 col-md-6 col-sm-12">
+                    <div className="col-lg-2 col-md-6 col-sm-12">
                       <div className="input-blocks">
                         <label>Description</label>
                         <input
@@ -1520,6 +1536,8 @@ const SalesInvoiceForm = ({
                           step="0.01"
                           className="form-control text-end"
                           {...register("amountreceived")}
+                          readOnly
+                          disabled
                         />
                       </div>
                     </div>
