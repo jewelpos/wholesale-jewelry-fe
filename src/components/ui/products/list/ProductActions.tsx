@@ -34,7 +34,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
 
-  const handleDelete = async () => {
+  const handleDelete = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     const result = await showConfirmationDialog({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -83,7 +85,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     }
   };
 
-  const handleAdjustment = () => {
+  const handleAdjustment = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setIsAdjustmentModalOpen(true);
   };
 
@@ -103,6 +107,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({
         <Link
           className="me-2 p-2"
           href={`${basePath}/products/${data.itemcode}/edit`}
+          onClick={(e) => e.stopPropagation()}
           scroll={false}
         >
           <Edit className="feather-edit" />
