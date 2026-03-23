@@ -1,6 +1,8 @@
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
 import { ItemAgingSummary } from "@/types/product";
+import dayjs from "dayjs";
+import { TIME_FORMAT } from "@/lib/config/constants";
 
 export const productAgingColumnDefs: ColDef<ItemAgingSummary>[] = [
   { headerName: "Item ID", field: "itemid", filter: "agNumberColumnFilter", hide: true },
@@ -22,7 +24,10 @@ export const productAgingColumnDefs: ColDef<ItemAgingSummary>[] = [
     filter: "agNumberColumnFilter",
     hide: true,
   },
-  { headerName: "Last inbound date", field: "last_inbound_date", filter: "agDateColumnFilter" }, // (V)
+  {
+    headerName: "Last inbound date", field: "last_inbound_date", filter: "agDateColumnFilter", cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : ""
+  }, // (V)
   { headerName: "Purchase age days", field: "age_days", filter: "agNumberColumnFilter" }, // (V)
   { headerName: "Inbound aging bucket", field: "inbound_aging_bucket", filter: "agTextColumnFilter" }, // (V)
   {

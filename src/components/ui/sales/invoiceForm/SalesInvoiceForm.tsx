@@ -8,7 +8,7 @@ import withReactContent from "sweetalert2-react-content";
 import dayjs, { Dayjs } from "dayjs";
 import { Controller, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@apollo/client";
+import { isApolloError, useMutation, useQuery } from "@apollo/client";
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -421,6 +421,7 @@ const SalesInvoiceForm = ({
   }, [watchedWarehouseId]);
 
   const customerId = watch("customerid");
+  const shipSameAsBill = watch("shipSameAsBill");
   const { data: customerData } = useQuery(GET_CUSTOMER_QUERY, {
     variables: { storeid: parsedStoreId, customerid: Number(customerId) },
     skip: !parsedStoreId || !customerId,
@@ -429,8 +430,21 @@ const SalesInvoiceForm = ({
   const shipToCustomerId = watch("shiptocustomerid");
   const { data: shipToCustomerData } = useQuery(GET_CUSTOMER_QUERY, {
     variables: { storeid: parsedStoreId, customerid: Number(shipToCustomerId) },
-    skip: !parsedStoreId || !shipToCustomerId || watch("shipSameAsBill"),
+    skip: !parsedStoreId || !shipToCustomerId || shipSameAsBill,
   });
+
+  useEffect(() => {
+    if (!shipSameAsBill) return;
+    const billId = getValues("customerid");
+    const shipId = getValues("shiptocustomerid");
+    if (!billId || !shipId) return;
+    if (Number(billId) === Number(shipId)) return;
+
+    setValue("shipSameAsBill", false, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [customerId, getValues, setValue, shipSameAsBill, shipToCustomerId]);
 
   useEffect(() => {
     const c = customerData?.getCustomer;
@@ -449,7 +463,11 @@ const SalesInvoiceForm = ({
       if (Number.isFinite(parsed)) setValue("invshippingmethod", parsed);
     }
 
-    if (watch("shipSameAsBill")) {
+    if (shipSameAsBill) {
+      setValue("shiptocustomerid", customerId, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
       setValue("invshiptocompanyname", c.custcompanyname ?? "");
       setValue("invshiptoadd1", c.custadd1 ?? "");
       setValue("invshiptocity", c.custcity ?? "");
@@ -457,9 +475,7 @@ const SalesInvoiceForm = ({
       setValue("invshiptozip", c.custzip ?? "");
       setValue("invshiptophone", c.custphone1 ?? c.custphone2 ?? "");
     }
-  }, [customerData, setValue, watch]);
-
-  const shipSameAsBill = watch("shipSameAsBill");
+  }, [customerData, customerId, setValue, shipSameAsBill]);
   useEffect(() => {
     if (!shipSameAsBill) return;
 
@@ -736,23 +752,51 @@ const SalesInvoiceForm = ({
       Number.isFinite(invoiceId) &&
       invoiceId > 0;
 
-    const result =
-      documentType === "MEMO"
-        ? mode === "CREDIT_INVOICE"
-          ? await createCreditMemo({ variables: { input: payload } })
-          : await createMemo({ variables: { input: payload } })
-        : isEdit
-          ? await editInvoice({
-              variables: {
-                input: {
-                  ...payload,
-                  invoiceid: Number(invoiceId),
+    let result:
+      | Awaited<ReturnType<typeof createCreditMemo>>
+      | Awaited<ReturnType<typeof createMemo>>
+      | Awaited<ReturnType<typeof editInvoice>>
+      | Awaited<ReturnType<typeof createCreditInvoice>>
+      | Awaited<ReturnType<typeof createInvoice>>;
+
+    try {
+      result =
+        documentType === "MEMO"
+          ? mode === "CREDIT_INVOICE"
+            ? await createCreditMemo({ variables: { input: payload } })
+            : await createMemo({ variables: { input: payload } })
+          : isEdit
+            ? await editInvoice({
+                variables: {
+                  input: {
+                    ...payload,
+                    invoiceid: Number(invoiceId),
+                  },
                 },
-              },
-            })
-          : mode === "CREDIT_INVOICE"
-            ? await createCreditInvoice({ variables: { input: payload } })
-            : await createInvoice({ variables: { input: payload } });
+              })
+            : mode === "CREDIT_INVOICE"
+              ? await createCreditInvoice({ variables: { input: payload } })
+              : await createInvoice({ variables: { input: payload } });
+    } catch (err: unknown) {
+      const fallback = documentType === "MEMO" ? "Failed to create memo" : "Failed to create invoice";
+
+      let message = fallback;
+      if (err instanceof Error && isApolloError(err)) {
+        const graphQlMsg = err.graphQLErrors?.map((e) => e.message).filter(Boolean).join("\n");
+        const networkMsg = (err.networkError as { message?: string } | null | undefined)?.message;
+        message = graphQlMsg || networkMsg || err.message || fallback;
+      } else if (err instanceof Error) {
+        message = err.message || fallback;
+      }
+
+      dispatch(
+        showNotification({
+          message,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+      return;
+    }
 
     const response =
       documentType === "MEMO"
@@ -958,7 +1002,6 @@ const SalesInvoiceForm = ({
                             <SelectCustomer
                               trigger={trigger}
                               storeId={parsedStoreId}
-                              disableField={shipSameAsBill}
                               {...field}
                             />
                           )}
@@ -975,7 +1018,6 @@ const SalesInvoiceForm = ({
                           type="text"
                           className="form-control"
                           value={shipToCompanyName}
-                          disabled={shipSameAsBill}
                           onChange={(e) => setValue("invshiptocompanyname", e.target.value)}
                         />
                       </div>
@@ -990,7 +1032,6 @@ const SalesInvoiceForm = ({
                           type="text"
                           className="form-control"
                           value={shipToAddress}
-                          disabled={shipSameAsBill}
                           onChange={(e) => setValue("invshiptoadd1", e.target.value)}
                         />
                       </div>
@@ -1001,16 +1042,35 @@ const SalesInvoiceForm = ({
                     <div className="input-blocks mb-0 row align-items-center">
                       <label className="col-form-label col-md-4">City/State/Zip</label>
                       <div className="col-md-8">
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={`${watch("invshiptocity") || ""}${watch("invshiptostate") ? ", " + watch("invshiptostate") : ""}${watch("invshiptozip") ? " " + watch("invshiptozip") : ""}`}
-                          readOnly
-                          disabled
-                        />
-                        <input type="hidden" {...register("invshiptocity")} />
-                        <input type="hidden" {...register("invshiptostate")} />
-                        <input type="hidden" {...register("invshiptozip")} />
+                        <div className="row g-1">
+                          <div className="col-5">
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={watch("invshiptocity") || ""}
+                              onChange={(e) => setValue("invshiptocity", e.target.value)}
+                              placeholder="City"
+                            />
+                          </div>
+                          <div className="col-4">
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={watch("invshiptostate") || ""}
+                              onChange={(e) => setValue("invshiptostate", e.target.value)}
+                              placeholder="State"
+                            />
+                          </div>
+                          <div className="col-3">
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={watch("invshiptozip") || ""}
+                              onChange={(e) => setValue("invshiptozip", e.target.value)}
+                              placeholder="Zip"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1023,7 +1083,6 @@ const SalesInvoiceForm = ({
                           type="text"
                           className="form-control"
                           value={watch("invshiptophone") || ""}
-                          disabled={shipSameAsBill}
                           onChange={(e) => setValue("invshiptophone", e.target.value)}
                         />
                       </div>
@@ -1144,7 +1203,7 @@ const SalesInvoiceForm = ({
                               itemtaxable: toNum(selected.itemtaxable),
                               itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
                               unitprice: Number(selected.itemsellprice || 0),
-                              discountpercent: watch("discountpercent") || 0,
+                              discountpercent: Number(watch("discountpercent") || 0),
                             }));
                           }}
                         />
@@ -1157,12 +1216,10 @@ const SalesInvoiceForm = ({
                         <input
                           type="text"
                           className="form-control"
-                          value={
-                            toolItem.itemid
-                              ? productById.get(Number(toolItem.itemid))?.itemdescription || ""
-                              : ""
+                          value={toolItem.itemdescription || ""}
+                          onChange={(e) =>
+                            setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))
                           }
-                          readOnly
                         />
                       </div>
                     </div>
@@ -1491,8 +1548,6 @@ const SalesInvoiceForm = ({
                           type="text"
                           className="form-control text-end"
                           value={formatMoney(totals.salesTax)}
-                          readOnly
-                          disabled
                         />
                       </div>
                     </div>

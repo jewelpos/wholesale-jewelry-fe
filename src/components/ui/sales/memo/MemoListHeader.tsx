@@ -58,9 +58,9 @@ const MemoListHeader = ({
               const href = isPrintExportButton
                 ? "#"
                 : isAddNewMemoAction
-                  ? `${basePath}/sales/memo_list/new`
+                  ? `${basePath}/sales/new_memo`
                   : isAddNewMemoReturnAction
-                    ? `${basePath}/sales/memo_list/return`
+                    ? `${basePath}/sales/new_credit_memo`
                     : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
                       ? `${basePath}/sales/memo_list/invoice?memonumber=${selectedMemoNumbers[0]}`
                       : isAddNewMemoInvoiceAction
