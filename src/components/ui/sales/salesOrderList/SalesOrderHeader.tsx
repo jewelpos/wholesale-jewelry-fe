@@ -3,6 +3,7 @@
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import Link from "next/link";
 import { MenuAction } from "@/types/permissions";
 import {
@@ -14,13 +15,16 @@ import FeatherIcon from "../../FeatherIcon";
 interface SalesOrderHeaderProps {
   selectedSalesOrderNumbers: number[];
   onPrintSalesOrder: () => void;
+  onEmailSalesOrder: () => void;
 }
 
 const SalesOrderHeader = ({
   selectedSalesOrderNumbers,
   onPrintSalesOrder,
+  onEmailSalesOrder,
 }: SalesOrderHeaderProps) => {
-  const { currentMenu, currentPath } = useMenu();
+  const { currentMenu } = useMenu();
+  const { basePath } = useDefaultRoute();
 
   return (
     <PageHeader
@@ -39,35 +43,36 @@ const SalesOrderHeader = ({
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
+
               const isPrintExportButton =
                 btn.actionname.includes("print") || btn.actionname.includes("export");
+              const isEmailButton = btn.actionname.toLowerCase().includes("email");
+              const isSelectionButton = isPrintExportButton || isEmailButton;
 
               const disabledButton =
-                selectedSalesOrderNumbers.length === 0 &&
-                (btn.actionname.includes("print") || btn.actionname.includes("export"));
+                selectedSalesOrderNumbers.length === 0 && isSelectionButton;
 
-              const href = isPrintExportButton ? "#" : `${currentPath}/new`;
+              const href = isSelectionButton ? "#" : `${basePath}/sales/new_sales_order`;
 
               const handleClick = (e: React.MouseEvent) => {
-                if (!isPrintExportButton) return;
+                if (!isSelectionButton) return;
                 e.preventDefault();
                 if (disabledButton) return;
-                onPrintSalesOrder();
+                if (isEmailButton) {
+                  onEmailSalesOrder();
+                } else {
+                  onPrintSalesOrder();
+                }
               };
 
               return (
-                <div
-                  className="page-btn d-none d-sm-block"
-                  key={btn.actionname}
-                >
+                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
                   <Link
                     href={href}
                     onClick={handleClick}
-                    className={`btn btn-added ${btnColor} ${
-                      disabledButton ? "disabled" : ""
-                    }`}
+                    className={`btn btn-added ${btnColor} ${disabledButton ? "disabled" : ""}`}
                   >
-                    {iconName && <FeatherIcon icon={iconName} />} {" "}
+                    {iconName && <FeatherIcon icon={iconName} />}{" "}
                     {btn.actiondisplayname}
                   </Link>
                 </div>

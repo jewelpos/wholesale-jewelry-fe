@@ -113,6 +113,59 @@ export const GET_MEMO_LIST_QUERY = gql`
   }
 `;
 
+export const GET_SALES_ORDER_QUERY = gql`
+  query GetSalesOrder($storeid: Int!, $salesorderno: Float!) {
+    getSalesOrder(storeid: $storeid, salesorderno: $salesorderno) {
+      salesorderid
+      salesorderno
+      customerid
+      warehouseid
+      orderdate
+      termsid
+      invshippingmethod
+      discountpercent
+      salestaxrate
+      shipping
+      netamount
+      remarks
+      orderstatusid
+      invbilltocompanyname
+      invbilltoadd1
+      invbilltocity
+      invbilltostate
+      invbilltozip
+      invbilltophone
+      invshiptocompanyname
+      invshiptoadd1
+      invshiptocity
+      invshiptostate
+      invshiptozip
+      invshiptophone
+      items {
+        salesorderitemid
+        itemcode
+        itemdescription
+        itemunit
+        itempcs
+        itemquantity
+        unitprice
+        discountpercent
+        extendedprice
+        warehouseid
+      }
+    }
+  }
+`;
+
+export const GET_SALES_ORDER_STATUS_LIST_QUERY = gql`
+  query GetSalesOrderStatusList($storeid: Int!) {
+    getSalesOrderStatusList(storeid: $storeid) {
+      orderstatusid
+      statusname
+    }
+  }
+`;
+
 export const GET_SALES_ORDER_LIST_QUERY = gql`
   query GetSalesOrderList(
     $outletid: Int!
@@ -144,9 +197,11 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
         warehousename
         statusname
         createdbyid
+        createdbyname
         registerno
         orderprocesseddate
         orderprocessedbyid
+        orderprocessedbyname
         warehouseid
         outletid
       }

@@ -17,6 +17,7 @@ import { salesOrderColumnDefs } from "./ColumnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import SalesOrderHeader from "./SalesOrderHeader";
+import SalesOrderEmailModal from "./SalesOrderEmailModal";
 import { useParams } from "next/navigation";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
@@ -121,17 +122,21 @@ const SalesOrderListComponent = () => {
 
       const { data } = response;
       if (data) {
-        const url = window.URL.createObjectURL(data);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "sales-order.pdf");
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+        const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+        const tab = window.open(url, "_blank");
+        if (!tab) {
+          // Fallback if popup blocked
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "sales-order.pdf");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
         dispatch(
           showNotification({
-            message: "Sales order printed successfully",
+            message: "Sales order preview opened",
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
@@ -150,12 +155,32 @@ const SalesOrderListComponent = () => {
     }
   }, [config.apiUrl, dispatch, parsedStoreId, selectedSalesOrderNumbers]);
 
+  const [showEmailModal, setShowEmailModal] = useState(false);
+
+  const handleEmailSalesOrder = useCallback(() => {
+    if (!parsedStoreId || selectedSalesOrderNumbers.length === 0) return;
+    setShowEmailModal(true);
+  }, [parsedStoreId, selectedSalesOrderNumbers]);
+
   return (
     <>
       <SalesOrderHeader
         selectedSalesOrderNumbers={selectedSalesOrderNumbers}
         onPrintSalesOrder={handlePrintSalesOrder}
+        onEmailSalesOrder={handleEmailSalesOrder}
       />
+      {showEmailModal && (
+        <SalesOrderEmailModal
+          storeId={parsedStoreId}
+          salesOrderNumbers={selectedSalesOrderNumbers}
+          onClose={() => setShowEmailModal(false)}
+          onSent={(msg) => {
+            setShowEmailModal(false);
+            dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS }));
+          }}
+          onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+        />
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
