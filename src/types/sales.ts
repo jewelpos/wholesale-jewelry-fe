@@ -42,9 +42,11 @@ export type SalesOrderListType = {
   warehousename: string;
   statusname: string;
   createdbyid: number;
+  createdbyname: string;
   registerno: string;
   orderprocesseddate: string;
   orderprocessedbyid: number;
+  orderprocessedbyname: string;
   warehouseid: number;
   outletid: number;
 };

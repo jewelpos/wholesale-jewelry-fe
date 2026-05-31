@@ -30,7 +30,9 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     field: "warehousename",
     filter: "agTextColumnFilter",
   },
-  { headerName: "outletid", field: "outletid", filter: "agTextColumnFilter" },
+  { headerName: "Created By", field: "createdbyname", filter: "agTextColumnFilter" },
+  { headerName: "Processed By", field: "orderprocessedbyname", filter: "agTextColumnFilter" },
+  { headerName: "Outlet ID", field: "outletid", filter: "agNumberColumnFilter", hide: true },
   {
     headerName: "Order date",
     field: "orderdate",

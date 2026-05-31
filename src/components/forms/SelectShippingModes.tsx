@@ -25,7 +25,7 @@ any) => {
 
   const options: SelectOption[] = useMemo(
     () =>
-      data?.getShippingModes.map(
+      (data?.getShippingModes ?? []).map(
         (list: { shippingid: number; shippingname: string }) => ({
           value: list.shippingid,
           label: list.shippingname,

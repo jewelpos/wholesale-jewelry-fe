@@ -33,6 +33,38 @@ export const EDIT_INVOICE_MUTATION = gql`
   }
 `;
 
+export const CREATE_SALES_ORDER_MUTATION = gql`
+  mutation CreateSalesOrder($input: CreateSalesOrderInput!) {
+    createSalesOrder(createSalesOrderInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const EDIT_SALES_ORDER_MUTATION = gql`
+  mutation EditSalesOrder($input: EditSalesOrderInput!) {
+    editSalesOrder(editSalesOrderInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const UPDATE_SALES_ORDER_STATUS_MUTATION = gql`
+  mutation UpdateSalesOrderStatus($input: UpdateSalesOrderStatusInput!) {
+    updateSalesOrderStatus(updateSalesOrderStatusInput: $input) {
+      success
+      message
+      error
+    }
+  }
+`;
+
 export const CREATE_MEMO_MUTATION = gql`
   mutation CreateMemo($input: CreateMemoInput!) {
     createMemo(createMemoInput: $input) {
