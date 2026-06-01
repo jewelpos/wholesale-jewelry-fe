@@ -28,7 +28,7 @@ const useWarehouse = () => {
         const { data } = await getWarehousesByStoreId({
           variables: { storeid: storeId },
         });
-        if (data.getWarehousesByStoreId) {
+        if (data?.getWarehousesByStoreId) {
           setWarehouses(data.getWarehousesByStoreId);
         }
         return true;
@@ -54,7 +54,7 @@ const useWarehouse = () => {
         const { data } = await getWarehousesByOutletId({
           variables: { outletid: outletId },
         });
-        if (data.getWarehousesByOutletId) {
+        if (data?.getWarehousesByOutletId) {
           setWarehouses(data.getWarehousesByOutletId);
         }
         return true;
