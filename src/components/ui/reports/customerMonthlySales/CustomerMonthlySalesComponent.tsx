@@ -72,7 +72,7 @@ const CustomerMonthlySalesComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<CustomerSalesSummary> = {
-                  custcompanyname: "Grand Total",
+                  custcompanyname: "Page Total",
                   total_sales: totalsRow.total_sales,
                   total_balance_due: totalsRow.total_balance_due,
                   total_profit: totalsRow.total_profit,

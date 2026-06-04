@@ -62,7 +62,7 @@ const MemoListHeader = ({
                   : isAddNewMemoReturnAction
                     ? `${basePath}/sales/new_credit_memo`
                     : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
-                      ? `${basePath}/sales/memo_list/invoice?memonumber=${selectedMemoNumbers[0]}`
+                      ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}`
                       : isAddNewMemoInvoiceAction
                         ? "#"
                       : `${currentPath}/new`;

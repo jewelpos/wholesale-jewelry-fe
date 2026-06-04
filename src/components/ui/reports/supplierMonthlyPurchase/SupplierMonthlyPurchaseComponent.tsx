@@ -72,7 +72,7 @@ const SupplierMonthlyPurchaseComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<SupplierPurchaseSummary> = {
-                  supplier: "Grand Total",
+                  supplier: "Page Total",
                   total_purchases: totalsRow.total_purchases,
                   total_purchase_amount: totalsRow.total_purchase_amount,
                   total_amount_paid: totalsRow.total_amount_paid,

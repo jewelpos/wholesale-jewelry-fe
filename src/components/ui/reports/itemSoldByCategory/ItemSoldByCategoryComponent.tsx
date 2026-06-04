@@ -72,7 +72,7 @@ const ItemSoldByCategoryComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<CategorySalesSummary> = {
-                  categoryname: "Grand Total",
+                  categoryname: "Page Total",
                   total_quantity: totalsRow.total_quantity,
                   total_sales: totalsRow.total_sales,
                   total_cost: totalsRow.total_cost,

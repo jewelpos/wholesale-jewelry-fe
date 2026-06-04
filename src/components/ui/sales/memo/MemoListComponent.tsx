@@ -24,102 +24,66 @@ import POSGrid from "@/components/ui/grid/POSGrid";
 import CustomFilterSections from "@/components/ui/grid/CustomFilterSections";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
 import MemoListHeader from "./MemoListHeader";
+import MemoActions from "./MemoActions";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 
+const dateRenderer = (params: ICellRendererParams) =>
+  params.node.rowPinned === "bottom" || params.value == null
+    ? ""
+    : dayjs(Number(params.value)).format(TIME_FORMAT);
+
 const memoColumnDefs: ColDef<MemoSummary>[] = [
+  { headerName: "Memo #",   field: "memonumber",  filter: "agNumberColumnFilter" },
   {
-    headerName: "Memo number",
-    field: "memonumber",
-    filter: "agNumberColumnFilter",
-  },
-  { headerName: "Customer", field: "customerid", filter: "agNumberColumnFilter" },
-  { headerName: "Company", field: "companyname", filter: "agTextColumnFilter" },
-  {
-    headerName: "Date",
-    field: "saledate",
-    cellRenderer: (params: ICellRendererParams) =>
-      params.node.rowPinned === "bottom" || params.value == null
-        ? ""
-        : dayjs(Number(params.value)).format(TIME_FORMAT),
-    filter: "agDateColumnFilter",
-  },
-  { headerName: "Mode", field: "salemodename", filter: "agTextColumnFilter" },
-  {
-    headerName: "Total items",
-    field: "numberofitems",
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Total amount",
-    field: "totalamount",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Discount amount",
-    field: "discountamount",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Sub total",
-    field: "subtotal",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Tax",
-    field: "salestax",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Shipping",
-    field: "shipping",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Net amount",
-    field: "netamount",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Received amount",
-    field: "amountreceived",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Due balance",
-    field: "balancedue",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  { headerName: "Terms", field: "termsname", filter: "agTextColumnFilter" },
-  {
-    headerName: "Warehouse name",
-    field: "warehousename",
+    headerName: "Customer",
+    colId: "customerid, companyname",
     filter: "agTextColumnFilter",
+    valueGetter: (params) => {
+      if (!params.data || params.node?.rowPinned) return "";
+      return `${params.data.customerid} - ${params.data.companyname ?? ""}`;
+    },
   },
-  { headerName: "Created by", field: "createby", filter: "agTextColumnFilter" },
-  { headerName: "Last modified by", field: "lastmodifiedby", filter: "agTextColumnFilter" },
+  { headerName: "Status", field: "statusname", filter: "agTextColumnFilter" },
+  { headerName: "Mode",     field: "salemodename", filter: "agTextColumnFilter" },
+  { headerName: "Date",     field: "saledate",    filter: "agDateColumnFilter", cellRenderer: dateRenderer },
+  { headerName: "Items",    field: "numberofitems", filter: "agNumberColumnFilter" },
+  { headerName: "Total",    field: "totalamount",  filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Discount", field: "discountamount", filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Subtotal", field: "subtotal",     filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Tax",      field: "salestax",     filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Shipping", field: "shipping",     filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Net",      field: "netamount",    filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Received", field: "amountreceived", filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Balance",  field: "balancedue",   filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
+  { headerName: "Terms",    field: "termsname",    filter: "agTextColumnFilter" },
+  { headerName: "Warehouse", field: "warehousename", filter: "agTextColumnFilter" },
+  { headerName: "Created By", field: "createby",   filter: "agTextColumnFilter" },
+  { headerName: "Modified By", field: "lastmodifiedby", filter: "agTextColumnFilter" },
   {
-    headerName: "Last modified date",
+    headerName: "Modified Date",
     field: "lastmodifieddate",
     filter: "agDateColumnFilter",
+    cellRenderer: dateRenderer,
   },
-  { headerName: "Warehouse ID", field: "warehouseid", filter: "agNumberColumnFilter" },
-  { headerName: "Outlet ID", field: "outletid", filter: "agNumberColumnFilter" },
+  {
+    headerName: "Actions",
+    cellRenderer: (params: ICellRendererParams<MemoSummary>) => {
+      if (params.node.rowPinned || !params.data) return null;
+      return <MemoActions data={params.data} />;
+    },
+    pinned: "right",
+    maxWidth: 100,
+    sortable: false,
+    filter: false,
+    suppressHeaderMenuButton: true,
+  },
 ];
 
 const MemoListComponent = () => {
-  const [getMemoList] = useLazyQuery(GET_MEMO_LIST_QUERY);
+  const [getMemoList] = useLazyQuery(GET_MEMO_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
   const gridRef = useRef<AgGridReact<MemoSummary>>(null);
-  const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>();
@@ -132,14 +96,13 @@ const MemoListComponent = () => {
   const config = getEnvironmentConfig();
 
   const handleOnGridReady = (params: GridReadyEvent<MemoSummary>) => {
-    setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "companyname");
+        const filters = filterVariables(params, debouncedSearch, "memonumber, customerid, companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getMemoList({
             variables: {
@@ -163,7 +126,7 @@ const MemoListComponent = () => {
               gridRef.current?.api?.hideOverlay();
               const totals: MemoSummaryTotals = data.getMemoList.totalsRow;
               const pinnedRow: Partial<MemoSummary> = {
-                memonumber: "Grand Total" as unknown as number,
+                memonumber: "Page Total" as unknown as number,
                 totalamount: Number(totals?.totalamount ?? 0),
                 subtotal: Number(totals?.subtotal ?? 0),
                 netamount: Number(totals?.netamount ?? 0),
@@ -295,7 +258,6 @@ const MemoListComponent = () => {
                 ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
                 : undefined
             }
-            suppressRowClickSelection
             suppressCellFocus
           />
         </div>

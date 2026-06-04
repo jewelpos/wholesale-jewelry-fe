@@ -72,7 +72,7 @@ const DailySalesReportsComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<DailySalesSummary> = {
-                  year: "Grand Total" as unknown as number,
+                  year: "Page Total" as unknown as number,
                   monthly_total_sales: totalsRow.monthly_total_sales,
                   day_01: totalsRow.day_01,
                   day_02: totalsRow.day_02,

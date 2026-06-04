@@ -54,13 +54,16 @@ any) => {
       }
       onChange={(option) => {
         onChange(option?.value);
-        trigger(field.name);
+        trigger?.(field.name);
       }}
       menuIsOpen={menuIsOpen}
       onMenuOpen={() => setMenuIsOpen(true)}
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+      menuPosition="fixed"
+      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
       {...field}
     />
   );

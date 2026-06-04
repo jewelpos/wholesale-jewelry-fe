@@ -24,6 +24,7 @@ export type SalesInvoiceListType = {
   voiddate: string;
   lastmodifiedbyid: string;
   lastmodifieddate: string;
+  statusname: string;
 };
 
 export type SalesInvoiceListResponseType = {
@@ -33,12 +34,14 @@ export type SalesInvoiceListResponseType = {
 
 export type SalesOrderListType = {
   customerid: number;
+  custcompanyname: string;
   salesorderno: string;
   orderdate: string;
   numberofitems: number;
   netamount: number;
   termsname: string;
   invshippingmethod: string;
+  shippingname: string;
   warehousename: string;
   statusname: string;
   createdbyid: number;
@@ -49,6 +52,10 @@ export type SalesOrderListType = {
   orderprocessedbyname: string;
   warehouseid: number;
   outletid: number;
+  invoicepcs: number;
+  invoiceqty: number;
+  bordpcs: number;
+  bordqty: number;
 };
 
 export type SalesOrderListResponseType = {
@@ -82,6 +89,7 @@ export type MemoSummary = {
   voiddate: string;
   lastmodifiedby: string;
   lastmodifieddate: string;
+  statusname: string;
 };
 
 export type MemoSummaryTotals = {

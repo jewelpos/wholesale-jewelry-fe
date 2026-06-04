@@ -11,19 +11,22 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesOrderListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Trash2, RefreshCw } from "react-feather";
+import { Edit, Eye, Trash2, RefreshCw } from "react-feather";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
+import { GridApi, IRowNode } from "ag-grid-community";
 
 const MySwal = withReactContent(Swal);
 
 interface SalesOrderActionsProps {
   data: SalesOrderListType;
+  node: IRowNode<SalesOrderListType>;
+  api: GridApi<SalesOrderListType>;
 }
 
-const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
+const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }) => {
   const dispatch = useAppDispatch();
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
@@ -39,6 +42,14 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
 
   // Guard: AG Grid may render cell renderers with undefined data during load
   if (!data) return null;
+
+  const ALLOWED_STATUS_NAMES = ["pending", "confirmed", "cancelled", "on hold", "backordered"];
+
+  const currentStatus = data.statusname?.toLowerCase() ?? "";
+  const isPending = currentStatus === "pending";
+  const isInvoiceCreated = !!data.orderprocesseddate;
+  const canEdit = isPending;
+  const canChangeStatus = !isInvoiceCreated;
 
   const handleOpenStatusModal = async () => {
     setSelectedStatusId(null);
@@ -73,7 +84,7 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
       });
       if (res?.deleteSalesOrder?.success) {
         dispatch(showNotification({ message: res.deleteSalesOrder.message, type: NOTIFICATION_TYPES.SUCCESS }));
-        window.location.reload();
+        api.applyServerSideTransaction({ remove: [data] });
       }
       return true;
     });
@@ -96,9 +107,10 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
         },
       });
       if (res?.updateSalesOrderStatus?.success) {
+        const newStatusName = statuses.find((s) => s.orderstatusid === selectedStatusId)?.statusname ?? data.statusname;
+        node.setData({ ...data, statusname: newStatusName });
         dispatch(showNotification({ message: "Status updated successfully", type: NOTIFICATION_TYPES.SUCCESS }));
         setShowStatusModal(false);
-        window.location.reload();
       }
       return true;
     });
@@ -110,33 +122,51 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
   return (
     <>
       <div className="action-table-data">
-        <div className="edit-delete-action">
+        <div className="edit-delete-action" style={{ gap: "2px" }}>
           <Link
-            className="me-2 p-2"
-            href={`${basePath}/sales/new_sales_order/${data.salesorderno}`}
+            className="p-1"
+            href={`${basePath}/sales/view_sales_order/${data.salesorderno}`}
             scroll={false}
-            title="Edit"
+            title="View"
           >
-            <Edit className="feather-edit" />
+            <Eye size={14} />
           </Link>
-          <button
-            type="button"
-            className="me-2 p-2 btn btn-link"
-            style={{ lineHeight: 1 }}
-            onClick={handleOpenStatusModal}
-            title="Change Status"
-          >
-            <RefreshCw size={16} />
-          </button>
-          <button
-            type="button"
-            className="p-2 btn btn-link text-danger"
-            style={{ lineHeight: 1 }}
-            onClick={handleDelete}
-            title="Delete"
-          >
-            <Trash2 className="feather-trash-2" />
-          </button>
+          {canEdit ? (
+            <Link
+              className="p-1"
+              href={`${basePath}/sales/new_sales_order/${data.salesorderno}`}
+              scroll={false}
+              title="Edit"
+            >
+              <Edit size={14} className="feather-edit" />
+            </Link>
+          ) : (
+            <span className="p-1 text-muted" title="Edit not allowed in current status">
+              <Edit size={14} style={{ opacity: 0.35 }} />
+            </span>
+          )}
+          {canChangeStatus && (
+            <button
+              type="button"
+              className="p-1 btn btn-link"
+              style={{ lineHeight: 1 }}
+              onClick={handleOpenStatusModal}
+              title="Change Status"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
+          {isPending && (
+            <button
+              type="button"
+              className="p-1 btn btn-link text-danger"
+              style={{ lineHeight: 1 }}
+              onClick={handleDelete}
+              title="Delete"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -149,21 +179,26 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data }) => {
                 <button type="button" className="btn-close" onClick={() => setShowStatusModal(false)} />
               </div>
               <div className="modal-body">
-                <p className="text-muted small mb-3">Sales Order #{data.salesorderno}</p>
+                <p className="text-muted small mb-3">Sales Order #{data.salesorderno} &mdash; Current: <strong>{data.statusname}</strong></p>
                 {statuses.length === 0 ? (
                   <div className="text-center py-2"><div className="spinner-border spinner-border-sm" /></div>
                 ) : (
                   <div className="d-flex flex-column gap-2">
-                    {statuses.map((s) => (
-                      <button
-                        key={s.orderstatusid}
-                        type="button"
-                        className={`btn btn-sm ${selectedStatusId === s.orderstatusid ? "btn-primary" : "btn-outline-secondary"}`}
-                        onClick={() => setSelectedStatusId(s.orderstatusid)}
-                      >
-                        {s.statusname}
-                      </button>
-                    ))}
+                    {statuses
+                      .filter((s) =>
+                        ALLOWED_STATUS_NAMES.includes(s.statusname.toLowerCase()) &&
+                        s.statusname.toLowerCase() !== currentStatus
+                      )
+                      .map((s) => (
+                        <button
+                          key={s.orderstatusid}
+                          type="button"
+                          className={`btn btn-sm ${selectedStatusId === s.orderstatusid ? "btn-primary" : "btn-outline-secondary"}`}
+                          onClick={() => setSelectedStatusId(s.orderstatusid)}
+                        >
+                          {s.statusname}
+                        </button>
+                      ))}
                   </div>
                 )}
               </div>

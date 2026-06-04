@@ -81,7 +81,7 @@ const DailyPaymentsReportComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<MonthlyPaymentSummary> = {
-                  year: "Grand Total" as unknown as number,
+                  year: "Page Total" as unknown as number,
                   monthly_payment: totalsRow.monthly_payment,
                   monthly_count: totalsRow.monthly_count,
                 };

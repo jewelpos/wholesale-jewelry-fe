@@ -29,8 +29,12 @@ import {
   CREATE_INVOICE_MUTATION,
   CREATE_MEMO_MUTATION,
   EDIT_INVOICE_MUTATION,
+  EDIT_MEMO_MUTATION,
+  UPDATE_SO_AFTER_INVOICING_MUTATION,
+  UPDATE_MEMO_AFTER_INVOICING_MUTATION,
 } from "@/lib/graphql/mutations/sales";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
+import { GET_INVOICE_BY_NUMBER_QUERY, GET_MEMO_DETAIL_QUERY, GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
@@ -45,15 +49,17 @@ export type SalesDocumentType = "INVOICE" | "MEMO";
 const MySwal = withReactContent(Swal);
 
 type SalesInvoiceItemForm = {
+  salesorderitemid?: number;
   itemid?: number;
   itemcode?: string;
   itemdescription?: string;
   itemtaxable?: number;
-
   itempcs?: number;
   itemquantity?: number;
   unitprice?: number;
   discountpercent?: number;
+  maxpcs?: number;
+  maxqty?: number;
 };
 
 const extractMemoNumber = (raw: unknown): number | undefined => {
@@ -197,10 +203,18 @@ const SalesInvoiceForm = ({
   mode,
   invoiceId,
   documentType = "INVOICE",
+  salesorderno: salesordernoFromSO,
+  memonumber,
+  viewInvoicenumber,
+  readOnly = false,
 }: {
   mode: SalesInvoiceFormMode;
   invoiceId?: number;
   documentType?: SalesDocumentType;
+  salesorderno?: number;
+  memonumber?: number;
+  viewInvoicenumber?: number;
+  readOnly?: boolean;
 }) => {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -333,11 +347,15 @@ const SalesInvoiceForm = ({
     CREATE_CREDIT_MEMO_MUTATION
   );
   const [editInvoice, { loading: savingEditInvoice }] = useMutation(EDIT_INVOICE_MUTATION);
+  const [editMemo, { loading: savingEditMemo }] = useMutation(EDIT_MEMO_MUTATION);
+  const [updateSOAfterInvoicing] = useMutation(UPDATE_SO_AFTER_INVOICING_MUTATION);
+  const [updateMemoAfterInvoicing] = useMutation(UPDATE_MEMO_AFTER_INVOICING_MUTATION);
 
   const saving =
     savingInvoice ||
     savingCreditInvoice ||
     savingEditInvoice ||
+    savingEditMemo ||
     savingMemo ||
     savingCreditMemo;
 
@@ -413,6 +431,246 @@ const SalesInvoiceForm = ({
       });
     }
   }, [currentWarehouse, getValues, setValue, warehouses]);
+
+  // Load sales order data for pre-population when creating invoice from SO
+  const { data: soQueryData, error: soQueryError, loading: soQueryLoading, refetch: refetchSO } = useQuery(GET_SALES_ORDER_QUERY, {
+    variables: { storeid: parsedStoreId, salesorderno: salesordernoFromSO },
+    skip: !salesordernoFromSO || !parsedStoreId,
+    fetchPolicy: "network-only",
+  });
+
+  // Auto-retry on transient connection errors (race condition during navigation)
+  useEffect(() => {
+    if (!soQueryError || !salesordernoFromSO) return;
+    const t = setTimeout(() => refetchSO(), 600);
+    return () => clearTimeout(t);
+  }, [soQueryError, salesordernoFromSO, refetchSO]);
+
+  // Load memo data for pre-population when creating invoice from memo
+  const { data: memoQueryData, error: memoQueryError, loading: memoQueryLoading, refetch: refetchMemo } = useQuery(GET_MEMO_DETAIL_QUERY, {
+    variables: { storeid: parsedStoreId, memonumber },
+    skip: !memonumber || !parsedStoreId,
+    fetchPolicy: "network-only",
+  });
+
+  // Load invoice data for view/edit mode
+  const { data: viewInvoiceQueryData, loading: viewInvoiceQueryLoading } = useQuery(GET_INVOICE_BY_NUMBER_QUERY, {
+    variables: { storeid: parsedStoreId, invoicenumber: viewInvoicenumber },
+    skip: !viewInvoicenumber || !parsedStoreId || documentType === "MEMO",
+    fetchPolicy: "network-only",
+  });
+
+  // Load memo data for view/edit mode
+  const { data: viewMemoQueryData, loading: viewMemoQueryLoading } = useQuery(GET_MEMO_DETAIL_QUERY, {
+    variables: { storeid: parsedStoreId, memonumber: viewInvoicenumber },
+    skip: !viewInvoicenumber || !parsedStoreId || documentType === "INVOICE",
+    fetchPolicy: "network-only",
+  });
+
+  const viewQueryLoading = documentType === "MEMO" ? viewMemoQueryLoading : viewInvoiceQueryLoading;
+
+  // Auto-retry on transient connection errors (race condition during navigation)
+  useEffect(() => {
+    if (!memoQueryError || !memonumber) return;
+    const t = setTimeout(() => refetchMemo(), 600);
+    return () => clearTimeout(t);
+  }, [memoQueryError, memonumber, refetchMemo]);
+
+  useEffect(() => {
+    const so = soQueryData?.getSalesOrder;
+    if (!so) return;
+    const toNum = (v: unknown) => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
+    reset({
+      storeid: parsedStoreId,
+      customerid: so.customerid ? Number(so.customerid) : undefined,
+      warehouseid: so.warehouseid ?? undefined,
+      saledate: dayjs(),
+      termsid: so.termsid ?? undefined,
+      invshippingmethod: so.invshippingmethod ? Number(so.invshippingmethod) : undefined,
+      discountpercent: toNum(so.discountpercent),
+      invoicereference: so.salesorderno ? String(so.salesorderno) : "",
+      orderedby: so.orderedby ?? "",
+      shipSameAsBill: false,
+      invbilltocompanyname: so.invbilltocompanyname ?? "",
+      invbilltoadd1: so.invbilltoadd1 ?? "",
+      invbilltocity: so.invbilltocity ?? "",
+      invbilltostate: so.invbilltostate ?? "",
+      invbilltozip: so.invbilltozip ?? "",
+      invbilltophone: so.invbilltophone ?? "",
+      invshiptocompanyname: so.invshiptocompanyname ?? "",
+      invshiptoadd1: so.invshiptoadd1 ?? "",
+      invshiptocity: so.invshiptocity ?? "",
+      invshiptostate: so.invshiptostate ?? "",
+      invshiptozip: so.invshiptozip ?? "",
+      invshiptophone: so.invshiptophone ?? "",
+      shippingdate: undefined,
+      shippingtrackingno: "",
+      shipping: toNum(so.shipping),
+      remarks: so.remarks ?? "",
+      amountreceived: 0,
+      items: (so.items ?? [])
+        .map((it: any) => {
+          const availQty = toNum(it.bordqty) > 0 ? toNum(it.bordqty) : Math.max(0, toNum(it.itemquantity) - toNum(it.invoiceqty));
+          const availPcs = toNum(it.bordpcs) > 0 ? toNum(it.bordpcs) : Math.max(0, toNum(it.itempcs) - toNum(it.invoicepcs));
+          return {
+            salesorderitemid: it.salesorderitemid,
+            itemid: it.itemid ? Number(it.itemid) : undefined,
+            itemcode: it.itemcode,
+            itemdescription: it.itemdescription,
+            itemtaxable: toNum(it.itemtaxable),
+            itempcs: availPcs,
+            itemquantity: availQty,
+            unitprice: toNum(it.unitprice),
+            discountpercent: toNum(it.discountpercent),
+            maxpcs: availPcs,
+            maxqty: availQty,
+          };
+        })
+        .filter((it: SalesInvoiceItemForm) => (it.maxqty ?? 0) > 0 || (it.maxpcs ?? 0) > 0),
+    });
+  }, [soQueryData, parsedStoreId, reset]);
+
+  useEffect(() => {
+    const memo = memoQueryData?.getMemoDetail;
+    if (!memo) return;
+    const toNum = (v: unknown) => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
+    reset({
+      storeid: parsedStoreId,
+      customerid: memo.customerid ? Number(memo.customerid) : undefined,
+      warehouseid: memo.warehouseid ?? undefined,
+      saledate: dayjs(),
+      termsid: memo.termsid ?? undefined,
+      invshippingmethod: memo.invshippingmethod ? Number(memo.invshippingmethod) : undefined,
+      discountpercent: toNum(memo.discountpercent),
+      invoicereference: memo.memonumber ? String(memo.memonumber) : "",
+      orderedby: "",
+      shipSameAsBill: false,
+      invbilltocompanyname: memo.invbilltocompanyname ?? "",
+      invbilltoadd1: memo.invbilltoadd1 ?? "",
+      invbilltocity: memo.invbilltocity ?? "",
+      invbilltostate: memo.invbilltostate ?? "",
+      invbilltozip: memo.invbilltozip ?? "",
+      invbilltophone: memo.invbilltophone ?? "",
+      invshiptocompanyname: memo.invshiptocompanyname ?? "",
+      invshiptoadd1: memo.invshiptoadd1 ?? "",
+      invshiptocity: memo.invshiptocity ?? "",
+      invshiptostate: memo.invshiptostate ?? "",
+      invshiptozip: memo.invshiptozip ?? "",
+      invshiptophone: memo.invshiptophone ?? "",
+      shippingdate: undefined,
+      shippingtrackingno: "",
+      shipping: toNum(memo.shipping),
+      remarks: memo.remarks ?? "",
+      amountreceived: 0,
+      items: (memo.items ?? [])
+        .map((it: any) => ({
+          salesorderitemid: it.invoiceitemid,
+          itemid: it.itemid ? Number(it.itemid) : undefined,
+          itemcode: it.itemcode,
+          itemdescription: it.itemdescription,
+          itemtaxable: toNum(it.itemtaxable),
+          itempcs: toNum(it.memopcsremain),
+          itemquantity: toNum(it.memoqtyremain),
+          unitprice: toNum(it.unitprice),
+          discountpercent: toNum(it.discountpercent),
+          maxpcs: toNum(it.memopcsremain),
+          maxqty: toNum(it.memoqtyremain),
+        }))
+        .filter((it: any) => (it.maxqty ?? 0) > 0 || (it.maxpcs ?? 0) > 0),
+    });
+  }, [memoQueryData, parsedStoreId, reset]);
+
+  // Pre-populate form when viewing/editing an existing invoice
+  useEffect(() => {
+    const doc = viewInvoiceQueryData?.getInvoiceByNumber;
+    if (!doc) return;
+    const toNum = (v: unknown) => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
+    reset({
+      storeid: parsedStoreId,
+      customerid: doc.customerid ? Number(doc.customerid) : undefined,
+      warehouseid: doc.warehouseid ?? undefined,
+      saledate: dayjs(),
+      termsid: doc.termsid ?? undefined,
+      invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
+      discountpercent: toNum(doc.discountpercent),
+      invoicereference: "",
+      orderedby: "",
+      shipSameAsBill: false,
+      invbilltocompanyname: doc.invbilltocompanyname ?? "",
+      invbilltoadd1: doc.invbilltoadd1 ?? "",
+      invbilltocity: doc.invbilltocity ?? "",
+      invbilltostate: doc.invbilltostate ?? "",
+      invbilltozip: doc.invbilltozip ?? "",
+      invbilltophone: doc.invbilltophone ?? "",
+      invshiptocompanyname: doc.invshiptocompanyname ?? "",
+      invshiptoadd1: doc.invshiptoadd1 ?? "",
+      invshiptocity: doc.invshiptocity ?? "",
+      invshiptostate: doc.invshiptostate ?? "",
+      invshiptozip: doc.invshiptozip ?? "",
+      invshiptophone: doc.invshiptophone ?? "",
+      shippingdate: undefined,
+      shippingtrackingno: "",
+      shipping: toNum(doc.shipping),
+      remarks: doc.remarks ?? "",
+      amountreceived: 0,
+      items: (doc.items ?? []).map((it: any) => ({
+        itemid: it.itemid ? Number(it.itemid) : undefined,
+        itemcode: it.itemcode,
+        itemdescription: it.itemdescription,
+        itemtaxable: toNum(it.itemtaxable),
+        itempcs: toNum(it.itempcs),
+        itemquantity: toNum(it.itemquantity),
+        unitprice: toNum(it.unitprice),
+        discountpercent: toNum(it.discountpercent),
+      })),
+    });
+  }, [viewInvoiceQueryData, parsedStoreId, reset]);
+
+  // Pre-populate form when viewing/editing an existing memo
+  useEffect(() => {
+    const doc = viewMemoQueryData?.getMemoDetail;
+    if (!doc) return;
+    const toNum = (v: unknown) => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
+    reset({
+      storeid: parsedStoreId,
+      customerid: doc.customerid ? Number(doc.customerid) : undefined,
+      warehouseid: doc.warehouseid ?? undefined,
+      saledate: dayjs(),
+      termsid: doc.termsid ?? undefined,
+      invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
+      discountpercent: toNum(doc.discountpercent),
+      invoicereference: "",
+      orderedby: "",
+      shipSameAsBill: false,
+      invbilltocompanyname: doc.invbilltocompanyname ?? "",
+      invbilltoadd1: doc.invbilltoadd1 ?? "",
+      invbilltocity: doc.invbilltocity ?? "",
+      invbilltostate: doc.invbilltostate ?? "",
+      invbilltozip: doc.invbilltozip ?? "",
+      invbilltophone: doc.invbilltophone ?? "",
+      invshiptocompanyname: doc.invshiptocompanyname ?? "",
+      invshiptoadd1: doc.invshiptoadd1 ?? "",
+      invshiptocity: doc.invshiptocity ?? "",
+      invshiptostate: doc.invshiptostate ?? "",
+      invshiptozip: doc.invshiptozip ?? "",
+      invshiptophone: doc.invshiptophone ?? "",
+      shippingdate: undefined,
+      shippingtrackingno: "",
+      shipping: toNum(doc.shipping),
+      remarks: doc.remarks ?? "",
+      amountreceived: 0,
+      items: (doc.items ?? []).map((it: any) => ({
+        itemid: it.itemid ? Number(it.itemid) : undefined,
+        itemcode: it.itemcode,
+        itemdescription: it.itemdescription,
+        itemtaxable: toNum(it.itemtaxable),
+        itempcs: toNum(it.itempcs),
+        itemquantity: toNum(it.itemquantity),
+        unitprice: toNum(it.unitprice),
+        discountpercent: toNum(it.discountpercent),
+      })),
+    });
+  }, [viewMemoQueryData, parsedStoreId, reset]);
 
   const watchedWarehouseId = watch("warehouseid");
   const parsedWarehouseId = useMemo(() => {
@@ -665,7 +923,13 @@ const SalesInvoiceForm = ({
     if (editingIndex == null) {
       append(nextItem);
     } else {
-      update(editingIndex, nextItem);
+      const existingItem = getValues(`items.${editingIndex}`);
+      update(editingIndex, {
+        ...nextItem,
+        salesorderitemid: (existingItem as any)?.salesorderitemid,
+        maxpcs: (existingItem as any)?.maxpcs,
+        maxqty: (existingItem as any)?.maxqty,
+      });
       setEditingIndex(null);
     }
 
@@ -752,19 +1016,36 @@ const SalesInvoiceForm = ({
       Number.isFinite(invoiceId) &&
       invoiceId > 0;
 
+    const isMemoEdit =
+      documentType === "MEMO" &&
+      typeof viewInvoicenumber === "number" &&
+      Number.isFinite(viewInvoicenumber) &&
+      viewInvoicenumber > 0 &&
+      !readOnly;
+
     let result:
       | Awaited<ReturnType<typeof createCreditMemo>>
       | Awaited<ReturnType<typeof createMemo>>
       | Awaited<ReturnType<typeof editInvoice>>
+      | Awaited<ReturnType<typeof editMemo>>
       | Awaited<ReturnType<typeof createCreditInvoice>>
       | Awaited<ReturnType<typeof createInvoice>>;
 
     try {
       result =
         documentType === "MEMO"
-          ? mode === "CREDIT_INVOICE"
-            ? await createCreditMemo({ variables: { input: payload } })
-            : await createMemo({ variables: { input: payload } })
+          ? isMemoEdit
+            ? await editMemo({
+                variables: {
+                  input: {
+                    ...payload,
+                    memoid: Number(viewInvoicenumber),
+                  },
+                },
+              })
+            : mode === "CREDIT_INVOICE"
+              ? await createCreditMemo({ variables: { input: payload } })
+              : await createMemo({ variables: { input: payload } })
           : isEdit
             ? await editInvoice({
                 variables: {
@@ -778,7 +1059,7 @@ const SalesInvoiceForm = ({
               ? await createCreditInvoice({ variables: { input: payload } })
               : await createInvoice({ variables: { input: payload } });
     } catch (err: unknown) {
-      const fallback = documentType === "MEMO" ? "Failed to create memo" : "Failed to create invoice";
+      const fallback = isEdit || isMemoEdit ? "Failed to save changes" : documentType === "MEMO" ? "Failed to create memo" : "Failed to create invoice";
 
       let message = fallback;
       if (err instanceof Error && isApolloError(err)) {
@@ -800,9 +1081,11 @@ const SalesInvoiceForm = ({
 
     const response =
       documentType === "MEMO"
-        ? mode === "CREDIT_INVOICE"
-          ? result?.data?.createCreditMemo
-          : result?.data?.createMemo
+        ? isMemoEdit
+          ? result?.data?.editMemo
+          : mode === "CREDIT_INVOICE"
+            ? result?.data?.createCreditMemo
+            : result?.data?.createMemo
         : isEdit
           ? result?.data?.editInvoice
           : mode === "CREDIT_INVOICE"
@@ -810,6 +1093,58 @@ const SalesInvoiceForm = ({
             : result?.data?.createInvoice;
 
     if (response?.success) {
+      // Update SO items and status after successful invoice creation from SO
+      if (salesordernoFromSO && documentType === "INVOICE" && !isEdit) {
+        const soItems = formData.items
+          .filter((it) => (it as any).salesorderitemid)
+          .map((it) => ({
+            salesorderitemid: (it as any).salesorderitemid as number,
+            invoicedpcs: Math.abs(toNum(it.itempcs)),
+            invoicedqty: Math.abs(toNum(it.itemquantity)),
+          }));
+        if (soItems.length > 0) {
+          try {
+            await updateSOAfterInvoicing({
+              variables: {
+                input: {
+                  storeid: parsedStoreId,
+                  salesorderno: salesordernoFromSO,
+                  items: soItems,
+                },
+              },
+            });
+          } catch (_) {
+            // Non-fatal — invoice was already created
+          }
+        }
+      }
+
+      // Update memo item quantities after successful invoice creation from memo
+      if (memonumber && documentType === "INVOICE" && !isEdit) {
+        const memoItems = formData.items
+          .filter((it) => (it as any).salesorderitemid)
+          .map((it) => ({
+            invoiceitemid: (it as any).salesorderitemid as number,
+            invoicedpcs: Math.abs(toNum(it.itempcs)),
+            invoicedqty: Math.abs(toNum(it.itemquantity)),
+          }));
+        if (memoItems.length > 0) {
+          try {
+            await updateMemoAfterInvoicing({
+              variables: {
+                input: {
+                  storeid: parsedStoreId,
+                  memonumber,
+                  items: memoItems,
+                },
+              },
+            });
+          } catch (_) {
+            // Non-fatal — invoice was already created
+          }
+        }
+      }
+
       const documentNumber =
         documentType === "MEMO"
           ? extractMemoNumber(response?.data)
@@ -869,8 +1204,33 @@ const SalesInvoiceForm = ({
   const billToAddress = watch("invbilltoadd1") || "";
   const shipToAddress = watch("invshiptoadd1") || "";
 
+  // Show loader while SO data is being fetched / retrying
+  if (salesordernoFromSO && (soQueryLoading || (soQueryError && !soQueryData))) {
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <div className="spinner-border text-primary me-3" />
+        <span className="text-muted">Loading sales order details...</span>
+      </div>
+    );
+  }
+
+  if (viewInvoicenumber && viewQueryLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <div className="spinner-border text-primary me-3" />
+        <span className="text-muted">Loading details...</span>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      {readOnly && (
+        <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2">
+          <strong>View Only</strong> — this record is displayed in read-only mode.
+        </div>
+      )}
+      <fieldset disabled={readOnly} style={readOnly ? { opacity: 0.85 } : undefined}>
       <div className="card">
         <div className="card-body">
           <div className="row g-3 align-items-end">
@@ -1096,7 +1456,7 @@ const SalesInvoiceForm = ({
           <div className="row g-3 mt-1">
             <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0">
-                <label>PO #</label>
+                <label>{salesordernoFromSO ? "SO #" : "PO #"}</label>
                 <input type="text" className="form-control" {...register("invoicereference")} />
               </div>
             </div>
@@ -1169,10 +1529,11 @@ const SalesInvoiceForm = ({
             <div className="col-lg-12">
               <div className="border rounded p-3">
                 <div className="table-responsive">
+                  {((!salesordernoFromSO && !memonumber) || editingIndex != null) && (
                   <div className="row g-3 align-items-end">
                     <div className="col-lg-4 col-md-6 col-sm-12">
                       <div className="input-blocks">
-                        <label>Search/Scan Item/Barcode *</label>
+                        <label>{salesordernoFromSO ? "Item" : "Search/Scan Item/Barcode *"}</label>
                         <SelectProduct
                           storeId={parsedStoreId}
                           hasWarehouseId={true}
@@ -1180,6 +1541,7 @@ const SalesInvoiceForm = ({
                           onProductsLoaded={setProducts}
                           trigger={trigger}
                           value={toolItem.itemid}
+                          disableField={!!salesordernoFromSO || !!memonumber}
                           onChange={(val: number | undefined) =>
                             setToolItem((prev) => ({ ...prev, itemid: val }))
                           }
@@ -1226,7 +1588,7 @@ const SalesInvoiceForm = ({
 
                     <div className="col-lg-1 col-md-6 col-sm-12">
                       <div className="input-blocks">
-                        <label>Pcs</label>
+                        <label>Pc</label>
                         <input
                           type="number"
                           className="form-control px-1 text-end"
@@ -1351,6 +1713,7 @@ const SalesInvoiceForm = ({
                       </div>
                     </div>
                   </div>
+                  )}
 
                   <div style={{ maxHeight: 480, overflowY: "auto" }}>
                     <table className="table datanew mt-3 mb-0">
@@ -1360,8 +1723,19 @@ const SalesInvoiceForm = ({
                           <th className="text-nowrap">Item Code</th>
                           <th>Description</th>
                           <th className="text-center text-nowrap">Tax</th>
-                          <th className="text-end text-nowrap">Pcs</th>
-                          <th className="text-end text-nowrap">Qty</th>
+                          {(readOnly && documentType === "MEMO") ? (<>
+                            <th className="text-end text-nowrap" title="Item Ordered Pcs">O.Pcs</th>
+                            <th className="text-end text-nowrap" title="Memo Invoiced Pcs">I.Pcs</th>
+                            <th className="text-end text-nowrap" title="Memo Returned Pcs">R.Pcs</th>
+                            <th className="text-end text-nowrap" title="Memo Remaining Pcs">Rem.Pcs</th>
+                            <th className="text-end text-nowrap" title="Item Ordered Qty">O.Qty</th>
+                            <th className="text-end text-nowrap" title="Memo Invoiced Qty">I.Qty</th>
+                            <th className="text-end text-nowrap" title="Memo Returned Qty">R.Qty</th>
+                            <th className="text-end text-nowrap" title="Memo Remaining Qty">Rem.Qty</th>
+                          </>) : (<>
+                            <th className="text-end text-nowrap">Pcs</th>
+                            <th className="text-end text-nowrap">Qty</th>
+                          </>)}
                           <th className="text-end text-nowrap">Unit Price</th>
                           <th className="text-end text-nowrap">Discount %</th>
                           <th className="text-end text-nowrap">Ext. Price</th>
@@ -1380,8 +1754,19 @@ const SalesInvoiceForm = ({
                               <td className="text-center">
                                 {toNum(item?.itemtaxable) === 1 ? "Y" : "N"}
                               </td>
-                              <td className="text-end">{toNum(item?.itempcs) || 0}</td>
-                              <td className="text-end">{line.qty}</td>
+                              {(readOnly && documentType === "MEMO") ? (<>
+                                <td className="text-end">{toNum((item as any)?.itempcs)}</td>
+                                <td className="text-end">{toNum((item as any)?.memopcinvoice)}</td>
+                                <td className="text-end">{toNum((item as any)?.memopcsreturn)}</td>
+                                <td className="text-end">{toNum((item as any)?.memopcsremain)}</td>
+                                <td className="text-end">{toNum((item as any)?.itemquantity)}</td>
+                                <td className="text-end">{toNum((item as any)?.memoqtyinvoice)}</td>
+                                <td className="text-end">{toNum((item as any)?.memoqtyreturn)}</td>
+                                <td className="text-end">{toNum((item as any)?.memoqtyremain)}</td>
+                              </>) : (<>
+                                <td className="text-end">{toNum(item?.itempcs) || 0}</td>
+                                <td className="text-end">{line.qty}</td>
+                              </>)}
                               <td className="text-end">{formatMoney(line.unit)}</td>
                               <td className="text-end">{line.disc}</td>
                               <td className="text-end">{formatMoney(line.net)}</td>
@@ -1548,6 +1933,8 @@ const SalesInvoiceForm = ({
                           type="text"
                           className="form-control text-end"
                           value={formatMoney(totals.salesTax)}
+                          readOnly
+                          disabled
                         />
                       </div>
                     </div>
@@ -1619,9 +2006,22 @@ const SalesInvoiceForm = ({
         </div>
       </div>
 
-      <ActionFooter handleCancel={handleCancel}>
-        <ButtonLoader loading={saving} btnText="Save" loadingText="Saving ..." />
-      </ActionFooter>
+      </fieldset>
+      {readOnly ? (
+        <div className="card sticky-footer">
+          <div className="card-body">
+            <div className="text-end">
+              <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ActionFooter handleCancel={handleCancel}>
+          <ButtonLoader loading={saving} btnText="Save" loadingText="Saving ..." />
+        </ActionFooter>
+      )}
     </form>
   );
 };

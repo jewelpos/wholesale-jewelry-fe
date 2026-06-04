@@ -46,6 +46,7 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         voiddate
         lastmodifiedbyid
         lastmodifieddate
+        statusname
       }
     }
   }
@@ -101,6 +102,7 @@ export const GET_MEMO_LIST_QUERY = gql`
         voiddate
         lastmodifiedby
         lastmodifieddate
+        statusname
       }
       totalsRow {
         totalamount
@@ -128,6 +130,7 @@ export const GET_SALES_ORDER_QUERY = gql`
       shipping
       netamount
       remarks
+      orderedby
       orderstatusid
       invbilltocompanyname
       invbilltoadd1
@@ -143,6 +146,7 @@ export const GET_SALES_ORDER_QUERY = gql`
       invshiptophone
       items {
         salesorderitemid
+        itemid
         itemcode
         itemdescription
         itemunit
@@ -152,6 +156,98 @@ export const GET_SALES_ORDER_QUERY = gql`
         discountpercent
         extendedprice
         warehouseid
+        invoicepcs
+        invoiceqty
+        bordpcs
+        bordqty
+      }
+    }
+  }
+`;
+
+export const GET_INVOICE_BY_NUMBER_QUERY = gql`
+  query GetInvoiceByNumber($storeid: Int!, $invoicenumber: Float!) {
+    getInvoiceByNumber(storeid: $storeid, invoicenumber: $invoicenumber) {
+      memonumber
+      customerid
+      warehouseid
+      termsid
+      invshippingmethod
+      discountpercent
+      shipping
+      remarks
+      invbilltocompanyname
+      invbilltoadd1
+      invbilltocity
+      invbilltostate
+      invbilltozip
+      invbilltophone
+      invshiptocompanyname
+      invshiptoadd1
+      invshiptocity
+      invshiptostate
+      invshiptozip
+      invshiptophone
+      items {
+        invoiceitemid
+        itemid
+        itemcode
+        itemdescription
+        itemtaxable
+        itempcs
+        memopcinvoice
+        memopcsreturn
+        memopcsremain
+        itemquantity
+        memoqtyinvoice
+        memoqtyreturn
+        memoqtyremain
+        unitprice
+        discountpercent
+      }
+    }
+  }
+`;
+
+export const GET_MEMO_DETAIL_QUERY = gql`
+  query GetMemoDetail($storeid: Int!, $memonumber: Float!) {
+    getMemoDetail(storeid: $storeid, memonumber: $memonumber) {
+      memonumber
+      customerid
+      warehouseid
+      termsid
+      invshippingmethod
+      discountpercent
+      shipping
+      remarks
+      invbilltocompanyname
+      invbilltoadd1
+      invbilltocity
+      invbilltostate
+      invbilltozip
+      invbilltophone
+      invshiptocompanyname
+      invshiptoadd1
+      invshiptocity
+      invshiptostate
+      invshiptozip
+      invshiptophone
+      items {
+        invoiceitemid
+        itemid
+        itemcode
+        itemdescription
+        itemtaxable
+        itempcs
+        memopcinvoice
+        memopcsreturn
+        memopcsremain
+        itemquantity
+        memoqtyinvoice
+        memoqtyreturn
+        memoqtyremain
+        unitprice
+        discountpercent
       }
     }
   }
@@ -188,12 +284,14 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
       total
       data {
         customerid
+        custcompanyname
         salesorderno
         orderdate
         numberofitems
         netamount
         termsname
         invshippingmethod
+        shippingname
         warehousename
         statusname
         createdbyid
@@ -204,6 +302,10 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
         orderprocessedbyname
         warehouseid
         outletid
+        invoicepcs
+        invoiceqty
+        bordpcs
+        bordqty
       }
     }
   }

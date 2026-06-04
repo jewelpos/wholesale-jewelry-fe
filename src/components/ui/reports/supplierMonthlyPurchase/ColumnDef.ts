@@ -8,7 +8,7 @@ export const supplierMonthlyPurchaseColumnDefs: ColDef<SupplierPurchaseSummary>[
     field: "supplier",
     filter: "agTextColumnFilter",
     cellRenderer: (params: ICellRendererParams) =>
-      params.node.rowPinned === "bottom" ? "Grand Total" : params.value,
+      params.node.rowPinned === "bottom" ? "Page Total" : params.value,
   }, // (V)
   {
     headerName: "Year",

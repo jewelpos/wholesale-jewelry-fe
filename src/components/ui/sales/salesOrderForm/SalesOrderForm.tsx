@@ -43,6 +43,10 @@ type SalesOrderItemForm = {
   itemquantity?: number;
   unitprice?: number;
   discountpercent?: number;
+  invoicepcs?: number;
+  invoiceqty?: number;
+  bordpcs?: number;
+  bordqty?: number;
 };
 
 type ToolItem = {
@@ -64,6 +68,7 @@ type SalesOrderFormType = {
   orderdate: Dayjs;
   termsid?: number;
   invshippingmethod?: number;
+  orderedby?: string;
   discountpercent?: number;
   shipping?: number;
   remarks?: string;
@@ -98,13 +103,14 @@ const computeLine = (item: SalesOrderItemForm) => {
   return { qty, unit, disc, gross, discountAmt, net };
 };
 
-const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: number }) => {
+const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { salesorderno?: number; readOnly?: boolean }) => {
   const isEdit = salesordernoEdit != null;
   const router = useRouter();
   const dispatch = useDispatch();
   const { basePath } = useDefaultRoute();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") return { formatFixed: (n: number) => n.toFixed(2) };
@@ -171,6 +177,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
       orderdate: dayjs(),
       termsid: undefined,
       invshippingmethod: undefined,
+      orderedby: "",
       discountpercent: 0,
       shipping: 0,
       remarks: "",
@@ -194,21 +201,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
 
   const { fields: itemFields, append, remove, update } = useFieldArray({ control, name: "items" });
 
-  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
-    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
-  }, [fetchWarehouseByStoreId, parsedStoreId]);
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [fetchWarehouseByOutletId, parsedOutletId]);
 
   const currentWarehouse = useMemo(() => warehouses.find((w) => w.issystem) ?? warehouses[0], [warehouses]);
 
   useEffect(() => {
-    if (!warehouses?.length) return;
-    const current = getValues("warehouseid");
-    if (Number.isFinite(Number(current)) && Number(current) > 0) return;
-    if (currentWarehouse?.warehouseid) {
-      setValue("warehouseid", Number(currentWarehouse.warehouseid), { shouldDirty: false, shouldTouch: false });
-    }
-  }, [currentWarehouse, getValues, setValue, warehouses]);
+    if (!warehouses?.length || !currentWarehouse?.warehouseid) return;
+    setValue("warehouseid", Number(currentWarehouse.warehouseid), { shouldDirty: false, shouldTouch: false });
+  }, [currentWarehouse, setValue, warehouses]);
 
   // Populate form when loading existing SO for edit
   useEffect(() => {
@@ -221,6 +224,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
       orderdate: so.orderdate ? dayjs(so.orderdate) : dayjs(),
       termsid: so.termsid ?? undefined,
       invshippingmethod: so.invshippingmethod ? Number(so.invshippingmethod) : undefined,
+      orderedby: so.orderedby ?? "",
       discountpercent: so.discountpercent ?? 0,
       shipping: so.shipping ?? 0,
       remarks: so.remarks ?? "",
@@ -238,12 +242,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
       invshiptozip: so.invshiptozip ?? "",
       invshiptophone: so.invshiptophone ?? "",
       items: (so.items ?? []).map((it: any) => ({
+        itemid: it.itemid ? Number(it.itemid) : undefined,
         itemcode: it.itemcode,
         itemdescription: it.itemdescription,
         itempcs: toNum(it.itempcs),
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        invoicepcs: toNum(it.invoicepcs),
+        invoiceqty: toNum(it.invoiceqty),
+        bordpcs: toNum(it.bordpcs),
+        bordqty: toNum(it.bordqty),
       })),
     });
   }, [editData, parsedStoreId, reset]);
@@ -425,6 +434,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
       orderdate: values.orderdate?.toISOString(),
       termsid: values.termsid ?? null,
       invshippingmethod: values.invshippingmethod ? String(values.invshippingmethod) : null,
+      orderedby: values.orderedby || null,
       discountpercent: toNum(values.discountpercent),
       shipping: toNum(values.shipping),
       remarks: values.remarks || null,
@@ -441,6 +451,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
       invshiptozip: values.invshiptozip || null,
       invshiptophone: values.invshiptophone || null,
       items: values.items.map((it) => ({
+        ...(it.itemid != null ? { itemid: it.itemid } : {}),
         itemcode: it.itemcode ?? null,
         itemdescription: it.itemdescription ?? null,
         itempcs: toNum(it.itempcs),
@@ -491,49 +502,144 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      {/* Header */}
+      {readOnly && (
+        <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2">
+          <strong>View Only</strong> — this sales order cannot be edited in its current status.
+        </div>
+      )}
+      <fieldset disabled={readOnly} style={readOnly ? { opacity: 0.85 } : undefined}>
+      {/* Header + Bill To / Ship To */}
       <div className="card mb-3">
         <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-4">
-              <label className="form-label">Customer <span className="text-danger">*</span></label>
-              <Controller
-                control={control}
-                name="customerid"
-                rules={{ required: "Customer is required" }}
-                render={({ field, fieldState }) => (
-                  <>
-                    <SelectCustomer
-                      storeId={parsedStoreId}
-                      value={field.value}
-                      onChange={(val: number | undefined) => field.onChange(val)}
-                      trigger={trigger}
-                    />
-                    {fieldState.error && <div className="text-danger small">{fieldState.error.message}</div>}
-                  </>
-                )}
-              />
-            </div>
 
-            <div className="col-md-2">
-              <label className="form-label">Order Date</label>
-              <Controller
-                control={control}
-                name="orderdate"
-                render={({ field }) => (
-                  <DatePicker
-                    className="form-control"
-                    value={field.value}
-                    onChange={(date) => field.onChange(date)}
-                    suffixIcon={<Calendar size={14} />}
-                    format="MM/DD/YYYY"
-                    allowClear={false}
+          {/* Row 1: Order Date + SO Number */}
+          <div className="row g-3 mb-3">
+            <div className="col-lg-6 col-md-6">
+              <div className="input-blocks mb-0 row align-items-center">
+                <label className="col-form-label col-md-4">Order Date</label>
+                <div className="col-md-8">
+                  <Controller
+                    control={control}
+                    name="orderdate"
+                    render={({ field }) => (
+                      <DatePicker
+                        className="form-control w-100"
+                        value={field.value}
+                        onChange={(date) => field.onChange(date)}
+                        suffixIcon={<Calendar size={14} />}
+                        format="MM/DD/YYYY"
+                        allowClear={false}
+                      />
+                    )}
                   />
-                )}
-              />
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-6 col-md-6">
+              <div className="input-blocks mb-0 row align-items-center">
+                <label className="col-form-label col-md-4">SO Number</label>
+                <div className="col-md-8">
+                  <input type="text" className="form-control" value={salesordernoEdit ?? ""} readOnly disabled />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Bill To / Ship To */}
+          <div className="row g-3 mb-3">
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <h5 className="mb-3">Bill To</h5>
+                <div className="input-blocks mb-2 row align-items-center">
+                  <label className="col-form-label col-md-4">Customer <span className="text-danger">*</span></label>
+                  <div className="col-md-8">
+                    <Controller
+                      control={control}
+                      name="customerid"
+                      rules={{ required: "Customer is required" }}
+                      render={({ field, fieldState }) => (
+                        <>
+                          <SelectCustomer
+                            storeId={parsedStoreId}
+                            value={field.value}
+                            onChange={(val: number | undefined) => field.onChange(val)}
+                            trigger={trigger}
+                          />
+                          {fieldState.error && <div className="text-danger small">{fieldState.error.message}</div>}
+                        </>
+                      )}
+                    />
+                  </div>
+                </div>
+                <div className="row g-2 mt-1">
+                  <div className="col-12">
+                    <input className="form-control" placeholder="Address" {...register("invbilltoadd1")} />
+                  </div>
+                  <div className="col-5"><input className="form-control" placeholder="City" {...register("invbilltocity")} /></div>
+                  <div className="col-3"><input className="form-control" placeholder="State" {...register("invbilltostate")} /></div>
+                  <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invbilltozip")} /></div>
+                  <div className="col-12">
+                    <input className="form-control" placeholder="Phone" {...register("invbilltophone")} />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="col-md-3">
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h5 className="mb-0">Ship To</h5>
+                  <label className="d-flex align-items-center gap-2 m-0">
+                    <input className="form-check-input" type="checkbox" id="shipSameAsBill" {...register("shipSameAsBill")} />
+                    <span className="small">Same as Bill To</span>
+                  </label>
+                </div>
+                {!shipSameAsBill && (
+                  <div className="input-blocks mb-2 row align-items-center">
+                    <label className="col-form-label col-md-4">Customer</label>
+                    <div className="col-md-8">
+                      <Controller
+                        control={control}
+                        name="shiptocustomerid"
+                        render={({ field }) => (
+                          <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="row g-2 mt-1">
+                  <div className="col-12">
+                    <input className="form-control" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
+                  </div>
+                  <div className="col-12">
+                    <input className="form-control" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
+                  </div>
+                  <div className="col-5"><input className="form-control" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
+                  <div className="col-3"><input className="form-control" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
+                  <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
+                  <div className="col-12">
+                    <input className="form-control" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Warehouse, Terms, Shipping Method, Discount, Shipping, Remarks */}
+          <div className="row g-3">
+            <div className="col-lg-2 col-md-4 col-6">
+              <label className="form-label">Warehouse</label>
+              <input
+                type="text"
+                className="form-control"
+                value={currentWarehouse?.warehousename || ""}
+                readOnly
+                disabled
+              />
+              <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+            </div>
+            <div className="col-lg-2 col-md-4 col-6">
               <label className="form-label">Terms</label>
               <Controller
                 control={control}
@@ -547,8 +653,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
                 )}
               />
             </div>
-
-            <div className="col-md-3">
+            <div className="col-lg-2 col-md-4 col-6">
               <label className="form-label">Shipping Method</label>
               <Controller
                 control={control}
@@ -562,8 +667,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
                 )}
               />
             </div>
-
-            <div className="col-md-2">
+            <div className="col-lg-2 col-md-4 col-6">
               <label className="form-label">Discount %</label>
               <input
                 type="number"
@@ -574,8 +678,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
                 {...register("discountpercent", { valueAsNumber: true })}
               />
             </div>
-
-            <div className="col-md-2">
+            <div className="col-lg-2 col-md-4 col-6">
               <label className="form-label">Shipping</label>
               <input
                 type="number"
@@ -585,226 +688,250 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
                 {...register("shipping", { valueAsNumber: true })}
               />
             </div>
-
-            <div className="col-md-8">
-              <label className="form-label">Remarks</label>
-              <input type="text" className="form-control" {...register("remarks")} />
+            <div className="col-lg-2 col-md-4 col-6">
+              <label className="form-label">Ordered By</label>
+              <input type="text" className="form-control" {...register("orderedby")} />
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Bill To / Ship To */}
+      {/* Item Entry Tool + Line Items */}
       <div className="card mb-3">
         <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <h6 className="fw-semibold mb-2">Bill To</h6>
-              <input className="form-control mb-2" placeholder="Company" {...register("invbilltocompanyname")} />
-              <input className="form-control mb-2" placeholder="Address" {...register("invbilltoadd1")} />
-              <div className="row g-2">
-                <div className="col-5"><input className="form-control" placeholder="City" {...register("invbilltocity")} /></div>
-                <div className="col-3"><input className="form-control" placeholder="State" {...register("invbilltostate")} /></div>
-                <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invbilltozip")} /></div>
-              </div>
-              <input className="form-control mt-2" placeholder="Phone" {...register("invbilltophone")} />
-            </div>
-
-            <div className="col-md-6">
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <h6 className="fw-semibold mb-0">Ship To</h6>
-                <div className="form-check mb-0">
-                  <input className="form-check-input" type="checkbox" id="shipSameAsBill" {...register("shipSameAsBill")} />
-                  <label className="form-check-label small" htmlFor="shipSameAsBill">Same as Bill To</label>
+          <div className="border rounded p-3">
+            <div className="table-responsive">
+              <div className="row g-3 align-items-end">
+                <div className="col-lg-4 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    <label>Search/Scan Item/Barcode</label>
+                    <SelectProduct
+                      storeId={parsedStoreId}
+                      hasWarehouseId={true}
+                      warehouseId={watch("warehouseid")}
+                      onProductsLoaded={(items: ItemDetails[]) => setProducts(items)}
+                      trigger={trigger}
+                      value={toolItem.itemid}
+                      onChange={(val: number | undefined) =>
+                        setToolItem((prev) => ({ ...prev, itemid: val }))
+                      }
+                      onChangeAdditional={(selected: ItemDetails) => {
+                        if (!selected) {
+                          setToolItem((prev) => ({
+                            ...prev,
+                            itemid: undefined,
+                            itemcode: undefined,
+                            itemdescription: undefined,
+                            itemtaxable: undefined,
+                            unitprice: 0,
+                          }));
+                          return;
+                        }
+                        setToolItem((prev) => ({
+                          ...prev,
+                          itemid: Number(selected.itemid),
+                          itemcode: selected.itemcode,
+                          itemdescription: selected.itemdescription,
+                          itemtaxable: toNum(selected.itemtaxable),
+                          itemquantity: 1,
+                          unitprice: Number(selected.itemsellprice || 0),
+                          discountpercent: toNum(watch("discountpercent")),
+                        }));
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-              {!shipSameAsBill && (
-                <div className="mb-2">
-                  <label className="form-label small">Ship To Customer</label>
-                  <Controller
-                    control={control}
-                    name="shiptocustomerid"
-                    render={({ field }) => (
-                      <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+
+                <div className="col-lg-2 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    <label>Description</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={toolItem.itemdescription || ""}
+                      onChange={(e) => setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    <label>Pc</label>
+                    <input
+                      type="number"
+                      className="form-control px-1 text-end"
+                      min={0}
+                      step="1"
+                      value={toolItem.itempcs}
+                      onChange={(e) => setToolItem((p) => ({ ...p, itempcs: toNum(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12 p-0">
+                  <div className="input-blocks">
+                    <label>Quantity *</label>
+                    <input
+                      type="number"
+                      className="form-control px-1 text-end"
+                      min={1}
+                      step="0.001"
+                      value={toolItem.itemquantity}
+                      onChange={(e) => setToolItem((p) => ({ ...p, itemquantity: toNum(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    <label>Unit Price *</label>
+                    <input
+                      type="number"
+                      className="form-control px-1 text-end"
+                      min={0}
+                      step="0.001"
+                      value={toolItem.unitprice}
+                      onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    <label>Discount %</label>
+                    <input
+                      type="number"
+                      className="form-control px-1 text-end"
+                      min={0}
+                      max={100}
+                      step="0.001"
+                      value={toolItem.discountpercent ?? 0}
+                      onChange={(e) => setToolItem((p) => ({ ...p, discountpercent: toNum(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12 p-0">
+                  <div className="input-blocks">
+                    <label>Ext Price</label>
+                    <input
+                      type="text"
+                      className="form-control px-1 text-end"
+                      readOnly
+                      value={formatMoney(toolLine.net)}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-lg-1 col-md-6 col-sm-12">
+                  <div className="input-blocks">
+                    {editingIndex == null ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
+                        onClick={handleSaveToolItem}
+                      >
+                        <PlusCircle />
+                      </button>
+                    ) : (
+                      <div className="btn-group w-100" role="group">
+                        <button
+                          type="button"
+                          className="btn btn-success d-flex align-items-center justify-content-center"
+                          onClick={handleSaveToolItem}
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary d-flex align-items-center justify-content-center"
+                          onClick={() => { setEditingIndex(null); resetToolItem(); }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
                     )}
-                  />
+                  </div>
                 </div>
-              )}
-              <input className="form-control mb-2" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
-              <input className="form-control mb-2" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
-              <div className="row g-2">
-                <div className="col-5"><input className="form-control" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
-                <div className="col-3"><input className="form-control" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
-                <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
               </div>
-              <input className="form-control mt-2" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+
+              <div style={{ maxHeight: 480, overflowY: "auto" }}>
+                <table className="table datanew mt-3 mb-0">
+                  <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
+                    <tr>
+                      <th className="text-nowrap">#</th>
+                      <th className="text-nowrap">Item Code</th>
+                      <th>Description</th>
+                      <th className="text-center text-nowrap">Tax</th>
+                      <th className="text-end text-nowrap">Ord Pcs</th>
+                      {readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
+                      {readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
+                      <th className="text-end text-nowrap">Ord Qty</th>
+                      {readOnly && <th className="text-end text-nowrap">Inv Qty</th>}
+                      {readOnly && <th className="text-end text-nowrap">Bord Qty</th>}
+                      <th className="text-end text-nowrap">Unit Price</th>
+                      <th className="text-end text-nowrap">Discount %</th>
+                      <th className="text-end text-nowrap">Ext. Price</th>
+                      <th className="text-center text-nowrap">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemFields.length === 0 ? (
+                      <tr><td colSpan={readOnly ? 14 : 10} className="text-center text-muted py-4">No items added yet</td></tr>
+                    ) : (
+                      itemFields.map((field, index) => {
+                        const item = field;
+                        const line = computeLine(item);
+                        return (
+                          <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
+                            <td>{index + 1}</td>
+                            <td className="text-nowrap">{item.itemcode || ""}</td>
+                            <td>{item.itemdescription || ""}</td>
+                            <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
+                            <td className="text-end">{toNum(item.itempcs)}</td>
+                            {readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
+                            {readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
+                            <td className="text-end">{toNum(item.itemquantity)}</td>
+                            {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
+                            {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
+                            <td className="text-end">{formatMoney(item.unitprice)}</td>
+                            <td className="text-end">{toNum(item.discountpercent).toFixed(1)}%</td>
+                            <td className="text-end">{formatMoney(line.net)}</td>
+                            <td className="text-center">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-primary me-2"
+                                onClick={() => handleEditItem(index)}
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleRemoveItem(index)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Item Entry Tool */}
-      <div className="card mb-3">
-        <div className="card-body">
-          <h6 className="fw-semibold mb-3">{editingIndex != null ? "Edit Item" : "Add Item"}</h6>
-          <div className="row g-2 align-items-end">
-            <div className="col-md-4">
-              <label className="form-label small">Product</label>
-              <SelectProduct
-                storeId={parsedStoreId}
-                hasWarehouseId={true}
-                warehouseId={watch("warehouseid")}
-                onProductsLoaded={(items: ItemDetails[]) => setProducts(items)}
-                trigger={trigger}
-                value={toolItem.itemid}
-                onChange={(val: number | undefined) =>
-                  setToolItem((prev) => ({ ...prev, itemid: val }))
-                }
-                onChangeAdditional={(selected: ItemDetails) => {
-                  if (!selected) {
-                    setToolItem((prev) => ({
-                      ...prev,
-                      itemid: undefined,
-                      itemcode: undefined,
-                      itemdescription: undefined,
-                      itemtaxable: undefined,
-                      unitprice: 0,
-                    }));
-                    return;
-                  }
-                  setToolItem((prev) => ({
-                    ...prev,
-                    itemid: Number(selected.itemid),
-                    itemcode: selected.itemcode,
-                    itemdescription: selected.itemdescription,
-                    itemtaxable: toNum(selected.itemtaxable),
-                    itemquantity: 1,
-                    unitprice: Number(selected.itemsellprice || 0),
-                    discountpercent: toNum(watch("discountpercent")),
-                  }));
-                }}
-              />
-            </div>
-            <div className="col-md-1">
-              <label className="form-label small">Pcs</label>
-              <input
-                type="number"
-                className="form-control form-control-sm"
-                min={0}
-                step="1"
-                value={toolItem.itempcs}
-                onChange={(e) => setToolItem((p) => ({ ...p, itempcs: toNum(e.target.value) }))}
-              />
-            </div>
-            <div className="col-md-1">
-              <label className="form-label small">Qty <span className="text-danger">*</span></label>
-              <input
-                type="number"
-                className="form-control form-control-sm"
-                min={1}
-                step="1"
-                value={toolItem.itemquantity}
-                onChange={(e) => setToolItem((p) => ({ ...p, itemquantity: toNum(e.target.value) }))}
-              />
-            </div>
-            <div className="col-md-2">
-              <label className="form-label small">Unit Price</label>
-              <input
-                type="number"
-                className="form-control form-control-sm"
-                min={0}
-                step="0.01"
-                value={toolItem.unitprice}
-                onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
-              />
-            </div>
-            <div className="col-md-1">
-              <label className="form-label small">Disc %</label>
-              <input
-                type="number"
-                className="form-control form-control-sm"
-                min={0}
-                max={100}
-                step="0.1"
-                value={toolItem.discountpercent ?? 0}
-                onChange={(e) => setToolItem((p) => ({ ...p, discountpercent: toNum(e.target.value) }))}
-              />
-            </div>
-            <div className="col-md-2">
-              <label className="form-label small">Extended</label>
-              <input type="text" className="form-control form-control-sm bg-light" readOnly value={formatMoney(toolLine.net)} />
-            </div>
-            <div className="col-md-1 d-flex gap-1">
-              <button type="button" className="btn btn-success btn-sm" onClick={handleSaveToolItem}>
-                {editingIndex != null ? <Check size={14} /> : <PlusCircle size={14} />}
-              </button>
-              {editingIndex != null && (
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditingIndex(null); resetToolItem(); }}>
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
+      {/* Remarks + Totals */}
+      <div className="row mb-4">
+        <div className="col-md-8">
+          <label className="form-label">Remarks</label>
+          <textarea className="form-control" rows={5} {...register("remarks")} />
         </div>
-      </div>
-
-      {/* Line Items Table */}
-      <div className="card mb-3">
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-sm table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>#</th>
-                  <th>Code</th>
-                  <th>Description</th>
-                  <th className="text-end">Pcs</th>
-                  <th className="text-end">Qty</th>
-                  <th className="text-end">Unit Price</th>
-                  <th className="text-end">Disc %</th>
-                  <th className="text-end">Extended</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {itemFields.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center text-muted py-4">No items added yet</td></tr>
-                ) : (
-                  itemFields.map((field, index) => {
-                    const line = computeLine(field);
-                    const prod = productById.get(Number(field.itemid));
-                    return (
-                      <tr key={field.id} className={editingIndex === index ? "table-warning" : ""}>
-                        <td>{index + 1}</td>
-                        <td>{field.itemcode ?? prod?.itemcode ?? "—"}</td>
-                        <td>{field.itemdescription ?? prod?.itemdescription ?? "—"}</td>
-                        <td className="text-end">{toNum(field.itempcs)}</td>
-                        <td className="text-end">{toNum(field.itemquantity)}</td>
-                        <td className="text-end">{formatMoney(field.unitprice)}</td>
-                        <td className="text-end">{toNum(field.discountpercent).toFixed(1)}%</td>
-                        <td className="text-end">{formatMoney(line.net)}</td>
-                        <td>
-                          <div className="d-flex gap-1 justify-content-end">
-                            <button type="button" className="btn btn-outline-primary btn-xs p-1" onClick={() => handleEditItem(index)}>
-                              <Edit2 size={12} />
-                            </button>
-                            <button type="button" className="btn btn-outline-danger btn-xs p-1" onClick={() => handleRemoveItem(index)}>
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Totals */}
-      <div className="row justify-content-end mb-4">
         <div className="col-md-4">
           <table className="table table-sm">
             <tbody>
@@ -819,15 +946,28 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit }: { salesorderno?: num
         </div>
       </div>
 
-      <ActionFooter handleCancel={handleDeleteConfirm}>
-        <ButtonLoader
-          loading={saving}
-          btnText="Save Sales Order"
-          loadingText="Saving..."
-          type="submit"
-          className="btn btn-primary"
-        />
-      </ActionFooter>
+      </fieldset>
+      {readOnly ? (
+        <div className="card sticky-footer">
+          <div className="card-body">
+            <div className="text-end">
+              <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ActionFooter handleCancel={handleDeleteConfirm}>
+          <ButtonLoader
+            loading={saving}
+            btnText="Save Sales Order"
+            loadingText="Saving..."
+            type="submit"
+            className="btn btn-primary"
+          />
+        </ActionFooter>
+      )}
     </form>
   );
 };

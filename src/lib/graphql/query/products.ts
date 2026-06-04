@@ -331,11 +331,11 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         soquantity
         lastsaledate
         lastpurchasedate
-        totalqtypurchased: qtypurchased
-        calculatedavgcost: avgpurchasecost
+        qtypurchased
+        avgpurchasecost
         availableqty
         totalsoldqty
-        totalsoldpcs: pcssold
+        pcssold
         totalsoldvalue
         totalsoldcost
         totalsoldprofit

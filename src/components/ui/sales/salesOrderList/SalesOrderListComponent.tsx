@@ -18,21 +18,23 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import SalesOrderHeader from "./SalesOrderHeader";
 import SalesOrderEmailModal from "./SalesOrderEmailModal";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 
 const SalesOrderListComponent = () => {
   const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { basePath } = useDefaultRoute();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact<SalesOrderListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
-  const [selectedSalesOrderNumbers, setSelectedSalesOrderNumbers] = useState<
-    number[]
-  >([]);
+  const [selectedSalesOrderNumbers, setSelectedSalesOrderNumbers] = useState<number[]>([]);
+  const [selectedSalesOrders, setSelectedSalesOrders] = useState<SalesOrderListType[]>([]);
 
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -49,7 +51,7 @@ const SalesOrderListComponent = () => {
         const filters = filterVariables(
           params,
           debouncedSearch,
-          "salesorderno, customerid, warehousename, statusname"
+          "salesorderno, customerid, custcompanyname, warehousename, statusname"
         );
         const result = await handleTryCatch(async () => {
           const { data } = await getSalesOrderList({
@@ -93,11 +95,12 @@ const SalesOrderListComponent = () => {
   }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
 
   const handleSelectionChanged = useCallback(() => {
-    const selected = gridRef.current?.api?.getSelectedRows?.() || [];
+    const selected: SalesOrderListType[] = gridRef.current?.api?.getSelectedRows?.() || [];
     const orderNumbers = selected
       .map((r) => Number(r.salesorderno))
       .filter((n) => Number.isFinite(n) && n > 0);
     setSelectedSalesOrderNumbers(orderNumbers);
+    setSelectedSalesOrders(selected);
   }, []);
 
   const handlePrintSalesOrder = useCallback(async () => {
@@ -162,12 +165,28 @@ const SalesOrderListComponent = () => {
     setShowEmailModal(true);
   }, [parsedStoreId, selectedSalesOrderNumbers]);
 
+  const handleCreateInvoiceFromOrder = useCallback(() => {
+    const salesorderno = selectedSalesOrders[0]?.salesorderno;
+    if (!salesorderno) return;
+    router.push(`${basePath}/sales/invoice_from_order/${salesorderno}`);
+  }, [selectedSalesOrders, router, basePath]);
+
   return (
     <>
       <SalesOrderHeader
         selectedSalesOrderNumbers={selectedSalesOrderNumbers}
+        canCreateInvoice={(() => {
+          if (selectedSalesOrders.length !== 1) return false;
+          const so = selectedSalesOrders[0];
+          const status = so?.statusname?.toLowerCase() ?? "";
+          const isFullyInvoiced = status.includes("fully invoiced") || status.includes("fully");
+          const isCancelled = status.includes("cancel");
+          const isPending = status === "pending";
+          return !isFullyInvoiced && !isCancelled && !isPending;
+        })()}
         onPrintSalesOrder={handlePrintSalesOrder}
         onEmailSalesOrder={handleEmailSalesOrder}
+        onCreateInvoiceFromOrder={handleCreateInvoiceFromOrder}
       />
       {showEmailModal && (
         <SalesOrderEmailModal

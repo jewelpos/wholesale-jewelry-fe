@@ -839,3 +839,8 @@ div.rc-slider-handle-dragging.rc-slider-handle-dragging.rc-slider-handle-draggin
   padding: 0 !important;
 }
 
+input:not([readonly]):not([disabled]):focus,
+textarea:not([readonly]):not([disabled]):focus {
+  background-color: #fffde7 !important;
+}
+

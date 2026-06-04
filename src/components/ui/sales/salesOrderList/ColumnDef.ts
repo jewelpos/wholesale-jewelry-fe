@@ -11,6 +11,13 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     field: "salesorderno",
     filter: "agNumberColumnFilter",
   },
+  {
+    headerName: "Customer",
+    colId: "customerid, custcompanyname",
+    filter: "agTextColumnFilter",
+    valueGetter: (params) =>
+      params.data ? `${params.data.customerid} - ${params.data.custcompanyname ?? ""}` : "",
+  },
   { headerName: "Items", field: "numberofitems", filter: "agTextColumnFilter" },
   {
     headerName: "Net amount",
@@ -20,10 +27,14 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
   },
   {
     headerName: "Shipping method",
-    field: "invshippingmethod",
+    field: "shippingname",
     filter: "agTextColumnFilter",
   },
   { headerName: "Status", field: "statusname", filter: "agTextColumnFilter" },
+  { headerName: "Invoice Pcs", field: "invoicepcs", filter: "agNumberColumnFilter" },
+  { headerName: "Invoice Qty", field: "invoiceqty", filter: "agNumberColumnFilter" },
+  { headerName: "Bord Pcs", field: "bordpcs", filter: "agNumberColumnFilter" },
+  { headerName: "Bord Qty", field: "bordqty", filter: "agNumberColumnFilter" },
   { headerName: "Terms", field: "termsname", filter: "agTextColumnFilter" },
   {
     headerName: "Warehouse name",
@@ -50,7 +61,8 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
   {
     headerName: "Actions",
     cellRenderer: SalesOrderActions,
-    maxWidth: 150,
+    maxWidth: 130,
+    minWidth: 110,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,

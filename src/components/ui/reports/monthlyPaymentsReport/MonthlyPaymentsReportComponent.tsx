@@ -78,7 +78,7 @@ const MonthlyPaymentsReportComponent = () => {
               gridRef.current?.api?.hideOverlay();
               if (totalsRow) {
                 const pinnedRow: Partial<MonthlyPaymentsPivotSummary> = {
-                  month_display: "Grand Total" as unknown as string,
+                  month_display: "Page Total" as unknown as string,
                   monthly_payment: totalsRow.monthly_payment,
                   monthly_count: totalsRow.monthly_count,
                 };

@@ -34,7 +34,7 @@ import { getEnvironmentConfig } from "@/lib/config/environment";
 import { useParams } from "next/navigation";
 
 const SalesListComponent = () => {
-  const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY);
+  const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -55,7 +55,7 @@ const SalesListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "companyname");
+        const filters = filterVariables(params, debouncedSearch, "invoicenumber, customerid, companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getInvoiceList({
             variables: {
@@ -102,7 +102,7 @@ const SalesListComponent = () => {
                 }
               );
               const pinnedRow: Partial<SalesInvoiceListType> = {
-                invoicenumber: "Grand Total" as unknown as number,
+                invoicenumber: "Page Total" as unknown as number,
                 ...totals,
               };
               gridRef.current?.api?.setGridOption("pinnedBottomRowData", [pinnedRow]);

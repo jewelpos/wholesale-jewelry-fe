@@ -14,14 +14,18 @@ import FeatherIcon from "../../FeatherIcon";
 
 interface SalesOrderHeaderProps {
   selectedSalesOrderNumbers: number[];
+  canCreateInvoice: boolean;
   onPrintSalesOrder: () => void;
   onEmailSalesOrder: () => void;
+  onCreateInvoiceFromOrder: () => void;
 }
 
 const SalesOrderHeader = ({
   selectedSalesOrderNumbers,
+  canCreateInvoice,
   onPrintSalesOrder,
   onEmailSalesOrder,
+  onCreateInvoiceFromOrder,
 }: SalesOrderHeaderProps) => {
   const { currentMenu } = useMenu();
   const { basePath } = useDefaultRoute();
@@ -47,18 +51,24 @@ const SalesOrderHeader = ({
               const isPrintExportButton =
                 btn.actionname.includes("print") || btn.actionname.includes("export");
               const isEmailButton = btn.actionname.toLowerCase().includes("email");
+              const isCreateInvoiceButton =
+                btn.actionname.toLowerCase().includes("invoice") &&
+                btn.actionname.toLowerCase().includes("order");
               const isSelectionButton = isPrintExportButton || isEmailButton;
 
               const disabledButton =
-                selectedSalesOrderNumbers.length === 0 && isSelectionButton;
+                (isSelectionButton && selectedSalesOrderNumbers.length === 0) ||
+                (isCreateInvoiceButton && !canCreateInvoice);
 
-              const href = isSelectionButton ? "#" : `${basePath}/sales/new_sales_order`;
+              const href = isSelectionButton || isCreateInvoiceButton ? "#" : `${basePath}/sales/new_sales_order`;
 
               const handleClick = (e: React.MouseEvent) => {
-                if (!isSelectionButton) return;
+                if (!isSelectionButton && !isCreateInvoiceButton) return;
                 e.preventDefault();
                 if (disabledButton) return;
-                if (isEmailButton) {
+                if (isCreateInvoiceButton) {
+                  onCreateInvoiceFromOrder();
+                } else if (isEmailButton) {
                   onEmailSalesOrder();
                 } else {
                   onPrintSalesOrder();

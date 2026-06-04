@@ -24,7 +24,7 @@ export const customerMonthlySalesColumnDefs: ColDef<CustomerSalesSummary>[] = [
     filter: "agNumberColumnFilter",
     cellRenderer: (params: ICellRendererParams) =>
       params.node.rowPinned === "bottom"
-        ? "Grand Total"
+        ? "Page Total"
         : params.value,
   },
   {

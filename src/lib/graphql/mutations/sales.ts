@@ -65,6 +65,17 @@ export const UPDATE_SALES_ORDER_STATUS_MUTATION = gql`
   }
 `;
 
+export const EDIT_MEMO_MUTATION = gql`
+  mutation EditMemo($input: EditMemoInput!) {
+    editMemo(editMemoInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
 export const CREATE_MEMO_MUTATION = gql`
   mutation CreateMemo($input: CreateMemoInput!) {
     createMemo(createMemoInput: $input) {
@@ -94,6 +105,26 @@ export const CREATE_INVOICE_FROM_MEMO_MUTATION = gql`
       message
       error
       data
+    }
+  }
+`;
+
+export const UPDATE_SO_AFTER_INVOICING_MUTATION = gql`
+  mutation UpdateSOAfterInvoicing($input: UpdateSOAfterInvoicingInput!) {
+    updateSOAfterInvoicing(updateSOAfterInvoicingInput: $input) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+export const UPDATE_MEMO_AFTER_INVOICING_MUTATION = gql`
+  mutation UpdateMemoAfterInvoicing($input: UpdateMemoAfterInvoicingInput!) {
+    updateMemoAfterInvoicing(updateMemoAfterInvoicingInput: $input) {
+      success
+      message
+      error
     }
   }
 `;
