@@ -7,6 +7,8 @@ export const GET_PRODUCT_SETTINGS_INFO_QUERY = gql`
       codechars
       saletagkey
       tagpricekey
+      allowpcsentry
+      allowcarriage
     }
   }
 `;

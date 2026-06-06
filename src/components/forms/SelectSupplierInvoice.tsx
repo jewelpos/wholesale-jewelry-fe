@@ -5,6 +5,7 @@ import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import useSupplier from "@/hooks/useSupplier";
 import { UseFormTrigger } from "react-hook-form";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 interface SelectSupplierInvoiceProps {
   value: number | string | null;
@@ -87,6 +88,7 @@ const SelectSupplierInvoice = ({
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

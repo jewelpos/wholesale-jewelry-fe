@@ -5,6 +5,7 @@ import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { useQuery } from "@apollo/client";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectShippingModes = ({
   value,
@@ -61,7 +62,7 @@ any) => {
       onInputChange={setInput}
       menuPortalTarget={typeof document !== "undefined" ? document.body : null}
       menuPosition="fixed"
-      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+      styles={selectStyles}
       {...field}
     />
   );

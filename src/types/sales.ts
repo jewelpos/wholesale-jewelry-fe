@@ -3,6 +3,7 @@ export type SalesInvoiceListType = {
   customerid: string;
   companyname: string;
   saledate: string;
+  salemodeid: number | null;
   salemodename: string;
   numberofitems: number;
   totalamount: number;
@@ -25,6 +26,7 @@ export type SalesInvoiceListType = {
   lastmodifiedbyid: string;
   lastmodifieddate: string;
   statusname: string;
+  custcrediapplied: number | null;
 };
 
 export type SalesInvoiceListResponseType = {
@@ -90,6 +92,7 @@ export type MemoSummary = {
   lastmodifiedby: string;
   lastmodifieddate: string;
   statusname: string;
+  custcrediapplied: number | null;
 };
 
 export type MemoSummaryTotals = {

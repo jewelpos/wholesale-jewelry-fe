@@ -16,11 +16,13 @@ import { useRouter } from "next/navigation";
 interface CustomerListHeaderProps {
   selectedCustomerId?: number;
   setShowPrintModal: (value: boolean) => void;
+  onExport: () => void;
 }
 
 const CustomerListHeader = ({
   selectedCustomerId,
   setShowPrintModal,
+  onExport,
 }: CustomerListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
   const router = useRouter();
@@ -29,7 +31,7 @@ const CustomerListHeader = ({
     if (actionName.includes("print")) {
       setShowPrintModal(true);
     } else if (actionName.includes("export")) {
-      setShowPrintModal(true);
+      onExport();
     } else if (actionName.includes(paymentModalTypes.add_customer_payment)) {
       router.push(`${currentPath}/applied_payments?modal=${encodeURIComponent(actionName)}`);
     } else if (actionName.includes(paymentModalTypes.add_credit_adjustment)) {
@@ -66,10 +68,9 @@ const CustomerListHeader = ({
                 btn.actionname.includes(
                   paymentModalTypes.add_invoice_credit_payment
                 );
+              // Print requires a selected customer; export is always enabled
               const disabledButton =
-                !selectedCustomerId &&
-                (btn.actionname.includes("print") ||
-                  btn.actionname.includes("export"));
+                !selectedCustomerId && btn.actionname.includes("print");
 
               const href = isPrintExportButton
                 ? "#"

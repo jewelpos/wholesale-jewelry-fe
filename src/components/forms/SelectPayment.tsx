@@ -8,6 +8,7 @@ import { paymentTypes, TIME_FORMAT } from "@/lib/config/constants";
 import { components } from "react-select";
 import dayjs from "dayjs";
 import { Divider } from "antd";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomOption = (props: any) => {
@@ -110,6 +111,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

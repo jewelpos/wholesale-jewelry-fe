@@ -27,6 +27,7 @@ import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import PurchaseOrderActions from "./PurchaseOrderActions";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -224,6 +225,7 @@ const PurchaseOrderListComponent = () => {
       <PurchaseOrderListHeader
         selectedPOs={selectedPOs}
         handleExport={handleExport}
+        onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "purchase-orders", sheetName: "Purchase Orders" })}
       />
       <div className="card table-list-card">
         <div className="card-body p-2">

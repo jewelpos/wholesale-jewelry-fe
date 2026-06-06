@@ -13,6 +13,7 @@ import {
 import { PurchaseOrder } from "@/types/purchase";
 import { useDebounce } from "@/hooks/useDebounce";
 import { TIME_FORMAT } from "@/lib/config/constants";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const formatPoDate = (raw: unknown) => {
   if (!raw) return "";
@@ -154,10 +155,7 @@ const SelectPurchaseOrder = ({
       className={`form-control p-0 ${className} select-form-custom`}
       menuPortalTarget={portalTarget}
       menuPosition="fixed"
-      styles={{
-        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-        menu: (base) => ({ ...base, zIndex: 9999 }),
-      }}
+      styles={selectStyles}
       value={selectedOption}
       onChange={(option) => {
         const selected = purchaseOrders.find(

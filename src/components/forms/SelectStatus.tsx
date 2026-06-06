@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectStatus = ({
   value,
@@ -63,6 +64,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

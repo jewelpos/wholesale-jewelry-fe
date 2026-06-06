@@ -18,6 +18,7 @@ interface SalesOrderHeaderProps {
   onPrintSalesOrder: () => void;
   onEmailSalesOrder: () => void;
   onCreateInvoiceFromOrder: () => void;
+  onExport: () => void;
 }
 
 const SalesOrderHeader = ({
@@ -26,6 +27,7 @@ const SalesOrderHeader = ({
   onPrintSalesOrder,
   onEmailSalesOrder,
   onCreateInvoiceFromOrder,
+  onExport,
 }: SalesOrderHeaderProps) => {
   const { currentMenu } = useMenu();
   const { basePath } = useDefaultRoute();
@@ -48,28 +50,31 @@ const SalesOrderHeader = ({
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
 
-              const isPrintExportButton =
-                btn.actionname.includes("print") || btn.actionname.includes("export");
+              const isPrintButton = btn.actionname.includes("print");
+              const isExportButton = btn.actionname.includes("export");
               const isEmailButton = btn.actionname.toLowerCase().includes("email");
               const isCreateInvoiceButton =
                 btn.actionname.toLowerCase().includes("invoice") &&
                 btn.actionname.toLowerCase().includes("order");
-              const isSelectionButton = isPrintExportButton || isEmailButton;
+              const isActionButton = isPrintButton || isExportButton || isEmailButton || isCreateInvoiceButton;
 
+              // Export is always enabled; print, email, create-invoice require selection
               const disabledButton =
-                (isSelectionButton && selectedSalesOrderNumbers.length === 0) ||
+                ((isPrintButton || isEmailButton) && selectedSalesOrderNumbers.length === 0) ||
                 (isCreateInvoiceButton && !canCreateInvoice);
 
-              const href = isSelectionButton || isCreateInvoiceButton ? "#" : `${basePath}/sales/new_sales_order`;
+              const href = isActionButton ? "#" : `${basePath}/sales/new_sales_order`;
 
               const handleClick = (e: React.MouseEvent) => {
-                if (!isSelectionButton && !isCreateInvoiceButton) return;
+                if (!isActionButton) return;
                 e.preventDefault();
                 if (disabledButton) return;
                 if (isCreateInvoiceButton) {
                   onCreateInvoiceFromOrder();
                 } else if (isEmailButton) {
                   onEmailSalesOrder();
+                } else if (isExportButton) {
+                  onExport();
                 } else {
                   onPrintSalesOrder();
                 }

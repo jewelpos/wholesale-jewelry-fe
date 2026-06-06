@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import usePaymentMode from "@/hooks/usePaymentMode";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectPaymentMode = ({
   value,
@@ -65,6 +66,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

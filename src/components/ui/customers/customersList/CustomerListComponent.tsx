@@ -38,6 +38,7 @@ import PrintModal, { PrintPayload } from "../../PrintModal";
 import CustomerPrintDetails from "./CustomerPrintDetails";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const CustomerListComponent = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<
@@ -237,6 +238,7 @@ const CustomerListComponent = () => {
       <CustomerListHeader
         selectedCustomerId={selectedCustomerId}
         setShowPrintModal={setShowPrintModal}
+        onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "customers", sheetName: "Customers" })}
       />
       <div className="card table-list-card">
         <div className="card-body p-2">

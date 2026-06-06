@@ -15,11 +15,15 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 interface SalesListHeaderProps {
   selectedInvoiceNumbers: number[];
   onPrintInvoice: () => void;
+  onEmailInvoice: () => void;
+  onExport: () => void;
 }
 
 const SalesListHeader = ({
   selectedInvoiceNumbers,
   onPrintInvoice,
+  onEmailInvoice,
+  onExport,
 }: SalesListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
   const { basePath } = useDefaultRoute();
@@ -33,24 +37,32 @@ const SalesListHeader = ({
         {!!currentMenu?.action?.length &&
           [...currentMenu.action]
             .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
+              const rank = (name: string) => {
+                if (name === "add_new_invoice") return 0;
+                if (name === "add_new_return")  return 1;
+                if (name.includes("print"))     return 2;
+                if (name.includes("email"))     return 3;
+                if (name.includes("export"))    return 4;
+                return 5;
+              };
+              return rank(a.actionname) - rank(b.actionname);
             })
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isPrintExportButton =
-                btn.actionname.includes("print") || btn.actionname.includes("export");
+              const isPrintButton = btn.actionname.includes("print");
+              const isExportButton = btn.actionname.includes("export");
+              const isEmailButton = btn.actionname.includes("email");
+              const isActionButton = isPrintButton || isExportButton || isEmailButton;
 
               const isAddNewInvoiceAction = btn.actionname === "add_new_invoice";
               const isAddNewReturnAction = btn.actionname === "add_new_return";
 
+              // Export is always enabled; print and email require a selection
               const disabledButton =
-                selectedInvoiceNumbers.length === 0 &&
-                (btn.actionname.includes("print") || btn.actionname.includes("export"));
+                selectedInvoiceNumbers.length === 0 && (isPrintButton || isEmailButton);
 
-              const href = isPrintExportButton
+              const href = isActionButton
                 ? "#"
                 : isAddNewInvoiceAction
                   ? `${basePath}/sales/new_invoice`
@@ -59,9 +71,11 @@ const SalesListHeader = ({
                   : `${currentPath}/new`;
 
               const handleClick = (e: React.MouseEvent) => {
-                if (!isPrintExportButton) return;
+                if (!isActionButton) return;
                 e.preventDefault();
                 if (disabledButton) return;
+                if (isEmailButton) { onEmailInvoice(); return; }
+                if (isExportButton) { onExport(); return; }
                 onPrintInvoice();
               };
 

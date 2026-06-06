@@ -5,6 +5,7 @@ import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { useQuery } from "@apollo/client";
 import { GET_PAYMENT_TERMS_QUERY } from "@/lib/graphql/query/payment";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectPaymentTerms = ({
   value,
@@ -63,7 +64,7 @@ any) => {
       onInputChange={setInput}
       menuPortalTarget={typeof document !== "undefined" ? document.body : null}
       menuPosition="fixed"
-      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+      styles={selectStyles}
       {...field}
     />
   );

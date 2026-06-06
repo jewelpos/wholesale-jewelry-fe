@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import {
@@ -26,6 +26,7 @@ import { useParams } from "next/navigation";
 import SupplierAppliedPaymentComponent from "../appliedPayments/SupplierAppliedPaymentComponent";
 import SupplierPaymentActions from "./SupplierPaymentActions";
 import VoidPaymentModal from "../appliedPayments/VoidPaymentModal";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const SupplierPaymentsComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -162,9 +163,13 @@ const SupplierPaymentsComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "supplier-payments", sheetName: "Supplier Payments" });
+  }, []);
+
   return (
     <>
-      <SupplierPaymentsHeader />
+      <SupplierPaymentsHeader onExport={handleExport} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections

@@ -300,6 +300,8 @@ export interface ProductSettingsInfo {
   };
   saletagkey: number;
   tagpricekey: number;
+  allowpcsentry: boolean;
+  allowcarriage: boolean;
 }
 
 export interface Category {

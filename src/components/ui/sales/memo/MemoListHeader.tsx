@@ -15,11 +15,15 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 interface MemoListHeaderProps {
   selectedMemoNumbers: number[];
   onPrintMemo: () => void;
+  onEmailMemo: () => void;
+  onExport: () => void;
 }
 
 const MemoListHeader = ({
   selectedMemoNumbers,
   onPrintMemo,
+  onEmailMemo,
+  onExport,
 }: MemoListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
   const { basePath } = useDefaultRoute();
@@ -33,39 +37,50 @@ const MemoListHeader = ({
         {!!currentMenu?.action?.length &&
           [...currentMenu.action]
             .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
+              // print/email/export are always last in that order;
+              // all other buttons (create actions) keep their DB actionorder
+              const rank = (btn: MenuAction): number => {
+                if (btn.actionname === "add_new_memo")   return 0;
+                if (btn.actionname.includes("print"))    return 10000;
+                if (btn.actionname.includes("email"))    return 10001;
+                if (btn.actionname.includes("export"))   return 10002;
+                return btn.actionorder;
+              };
+              return rank(a) - rank(b);
             })
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isPrintExportButton =
-                btn.actionname.includes("print") || btn.actionname.includes("export");
+              const isPrintButton = btn.actionname.includes("print");
+              const isExportButton = btn.actionname.includes("export");
+              const isEmailButton = btn.actionname.includes("email");
+              const isActionButton = isPrintButton || isExportButton || isEmailButton;
 
               const isAddNewMemoAction = btn.actionname === "add_new_memo";
-              const isAddNewMemoReturnAction = btn.actionname === "add_new_memo_return";
               const isAddNewMemoInvoiceAction = btn.actionname === "add_new_memo_invoice";
 
-              const printExportDisabled = selectedMemoNumbers.length === 0 && isPrintExportButton;
+              // Any unrecognised create button (e.g. Credit Invoice from Memo) requires ≥1 selection
+              const isKnownButton =
+                isAddNewMemoAction || isAddNewMemoInvoiceAction || isActionButton;
+              const unknownCreateDisabled = !isKnownButton && selectedMemoNumbers.length === 0;
+
+              // Export is always enabled; print and email require a selection
+              const selectionDisabled =
+                selectedMemoNumbers.length === 0 && (isPrintButton || isEmailButton);
               const canCreateInvoiceFromMemo = selectedMemoNumbers.length === 1;
               const createInvoiceDisabled = isAddNewMemoInvoiceAction && !canCreateInvoiceFromMemo;
 
-              const disabledButton =
-                printExportDisabled ||
-                createInvoiceDisabled;
+              const disabledButton = selectionDisabled || createInvoiceDisabled || unknownCreateDisabled;
 
-              const href = isPrintExportButton
+              const href = isActionButton
                 ? "#"
                 : isAddNewMemoAction
                   ? `${basePath}/sales/new_memo`
-                  : isAddNewMemoReturnAction
-                    ? `${basePath}/sales/new_credit_memo`
-                    : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
-                      ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}`
-                      : isAddNewMemoInvoiceAction
-                        ? "#"
-                      : `${currentPath}/new`;
+                  : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
+                    ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}`
+                    : isAddNewMemoInvoiceAction
+                      ? "#"
+                    : `${currentPath}/new`;
 
               const handleClick = (e: React.MouseEvent) => {
                 if (disabledButton) {
@@ -73,10 +88,11 @@ const MemoListHeader = ({
                   return;
                 }
 
-                if (isPrintExportButton) {
+                if (isActionButton) {
                   e.preventDefault();
+                  if (isExportButton) { onExport(); return; }
+                  if (isEmailButton) { onEmailMemo(); return; }
                   onPrintMemo();
-                  return;
                 }
               };
 

@@ -32,6 +32,8 @@ import SalesActions from "./SalesActions";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { useParams } from "next/navigation";
+import DocumentEmailModal from "../DocumentEmailModal";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
@@ -46,6 +48,7 @@ const SalesListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const [selectedInvoiceNumbers, setSelectedInvoiceNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -164,14 +167,17 @@ const SalesListComponent = () => {
 
         const { data } = response;
         if (data) {
-          const url = window.URL.createObjectURL(data);
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", "invoice.pdf");
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
+          const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+          const tab = window.open(url, "_blank");
+          if (!tab) {
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "invoice.pdf");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+          setTimeout(() => window.URL.revokeObjectURL(url), 10000);
           dispatch(
             showNotification({
               message: "Invoice printed successfully",
@@ -212,7 +218,7 @@ const SalesListComponent = () => {
             return (
               <SalesActions
                 data={params.data}
-                onDeleteSuccess={handleDeleteSuccess}
+                node={params.node}
               />
             );
           }
@@ -244,12 +250,37 @@ const SalesListComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const handleEmailInvoice = useCallback(() => {
+    if (selectedInvoiceNumbers.length > 0) setEmailModalOpen(true);
+  }, [selectedInvoiceNumbers]);
+
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "invoices", sheetName: "Invoices" });
+  }, []);
+
   return (
     <>
       <SalesListHeader
         selectedInvoiceNumbers={selectedInvoiceNumbers}
         onPrintInvoice={handlePrintInvoice}
+        onEmailInvoice={handleEmailInvoice}
+        onExport={handleExport}
       />
+      {emailModalOpen && (
+        <DocumentEmailModal
+          storeId={parsedStoreId}
+          documentType="INVOICE"
+          documentNumbers={selectedInvoiceNumbers}
+          onClose={() => setEmailModalOpen(false)}
+          onSent={(message) => {
+            setEmailModalOpen(false);
+            dispatch(showNotification({ message, type: NOTIFICATION_TYPES.SUCCESS }));
+          }}
+          onError={(message) => {
+            dispatch(showNotification({ message, type: NOTIFICATION_TYPES.ERROR }));
+          }}
+        />
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections

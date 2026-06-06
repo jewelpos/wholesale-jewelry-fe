@@ -1,3 +1,4 @@
+import React from "react";
 import useMenu from "@/hooks/useMenu";
 import PageHeader from "../../PageHeader";
 import { MenuAction } from "@/types/permissions";
@@ -8,7 +9,7 @@ import {
 import FeatherIcon from "../../FeatherIcon";
 import Link from "next/link";
 
-export default function SupplierPaymentsHeader() {
+export default function SupplierPaymentsHeader({ onExport }: { onExport: () => void }) {
   const { currentMenu, currentPath } = useMenu();
 
   return (
@@ -28,9 +29,16 @@ export default function SupplierPaymentsHeader() {
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
+              const isExportButton = btn.actionname.includes("export");
               const isModalButton =
-                btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
+                btn.actionname.includes("print") || isExportButton;
+
+              const handleClick = (e: React.MouseEvent) => {
+                if (!isModalButton) return;
+                e.preventDefault();
+                if (isExportButton) onExport();
+              };
+
               return (
                 <div
                   className="page-btn d-none d-sm-block"
@@ -38,6 +46,7 @@ export default function SupplierPaymentsHeader() {
                 >
                   <Link
                     href={isModalButton ? "#" : `${currentPath}/new`}
+                    onClick={handleClick}
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}

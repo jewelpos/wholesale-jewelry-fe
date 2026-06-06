@@ -7,11 +7,11 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import { ProductFormType, ProductSettingsInfo } from "@/types/product";
+import { ProductFormType } from "@/types/product";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import {
@@ -33,14 +33,9 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
   const [activeTab, setActiveTab] = useState("information");
   const [productImages, setProductImages] = useState<File[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [productData, setProductData] = useState<any>(null);
-  const [productSettings, setProductSettings] =
-    useState<ProductSettingsInfo | null>(null);
   const [getProductByItemCode] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY);
-  const [getProductSettingsInfo] = useLazyQuery(
-    GET_PRODUCT_SETTINGS_INFO_QUERY
-  );
   const [saveLoading, setSaveLoading] = useState(false);
 
   const {
@@ -48,7 +43,6 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     handleSubmit,
     formState: { errors, isDirty },
     control,
-    getValues,
     trigger,
     reset,
     setValue,
@@ -116,31 +110,13 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     "profitpercent",
     "itemtagprice",
   ]);
-  const [itempurchaseprice, profitpercent, itemtagprice] = watchedValues;
+  const [itempurchaseprice, profitpercent] = watchedValues;
 
-  // Fetch product settings on component mount
-  useEffect(() => {
-    const fetchProductSettings = async () => {
-      try {
-        const { data } = await getProductSettingsInfo({
-          variables: {
-            storeid: parsedStoreId,
-            warehouiseid: 1, // Default warehouse ID - you may need to get this from context
-          },
-        });
-
-        if (data?.getProductSettingsInfo?.[0]) {
-          setProductSettings(data.getProductSettingsInfo[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching product settings:", error);
-      }
-    };
-
-    if (parsedStoreId) {
-      fetchProductSettings();
-    }
-  }, [parsedStoreId, getProductSettingsInfo]);
+  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: 0 },
+    skip: !parsedStoreId,
+  });
+  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
 
   // Auto-calculate itemtagprice when purchase price, profit percent, or settings change
   useEffect(() => {

@@ -8,7 +8,7 @@ import withReactContent from "sweetalert2-react-content";
 import dayjs, { Dayjs } from "dayjs";
 import { Controller, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -22,15 +22,20 @@ import ButtonLoader from "@/components/ui/ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import useWarehouse from "@/hooks/useWarehouse";
 import type { ItemDetails } from "@/hooks/useProducts";
+import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
+import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
+import type { ProductSettingsInfo } from "@/types/product";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 
 const MySwal = withReactContent(Swal);
 
@@ -70,6 +75,7 @@ type SalesOrderFormType = {
   invshippingmethod?: number;
   orderedby?: string;
   discountpercent?: number;
+  salestaxrate?: number;
   shipping?: number;
   remarks?: string;
   shipSameAsBill: boolean;
@@ -111,6 +117,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const config = getEnvironmentConfig();
+  const [emailModalSONumber, setEmailModalSONumber] = useState<number | null>(null);
+
+  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: 0 },
+    skip: !parsedStoreId,
+  });
+  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
+  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
+  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
+  const [productClearKey, setProductClearKey] = useState(0);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") return { formatFixed: (n: number) => n.toFixed(2) };
@@ -179,6 +196,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: undefined,
       orderedby: "",
       discountpercent: 0,
+      salestaxrate: 0,
       shipping: 0,
       remarks: "",
       shipSameAsBill: true,
@@ -199,7 +217,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     mode: "all",
   });
 
-  const { fields: itemFields, append, remove, update } = useFieldArray({ control, name: "items" });
+  const { fields: itemFields, append, remove, update, replace } = useFieldArray({ control, name: "items" });
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
@@ -226,6 +244,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: so.invshippingmethod ? Number(so.invshippingmethod) : undefined,
       orderedby: so.orderedby ?? "",
       discountpercent: so.discountpercent ?? 0,
+      salestaxrate: toNum(so.salestaxrate),
       shipping: so.shipping ?? 0,
       remarks: so.remarks ?? "",
       shipSameAsBill: false,
@@ -365,6 +384,30 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     });
   };
 
+  const autoAddItem = (selected: ItemDetails) => {
+    const itemid = Number(selected.itemid);
+    const discountPct = Math.min(100, Math.max(0, Number(watch("discountpercent") || 0)));
+    const currentItems: SalesOrderItemForm[] = getValues("items") || [];
+    const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    if (dupIndex >= 0) {
+      const existing = currentItems[dupIndex];
+      update(dupIndex, { ...existing, itemquantity: Number(existing.itemquantity || 0) + 1 });
+    } else {
+      append({
+        itemid,
+        itemcode: selected.itemcode,
+        itemdescription: selected.itemdescription,
+        itemtaxable: toNum(selected.itemtaxable),
+        itempcs: 0,
+        itemquantity: 1,
+        unitprice: Number(selected.itemsellprice || 0),
+        discountpercent: discountPct,
+      });
+    }
+    resetToolItem();
+    setProductClearKey((k) => k + 1);
+  };
+
   const handleSaveToolItem = () => {
     const customerIdNumber = Number(getValues("customerid"));
     if (!Number.isFinite(customerIdNumber) || customerIdNumber <= 0) {
@@ -436,6 +479,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: values.invshippingmethod ? String(values.invshippingmethod) : null,
       orderedby: values.orderedby || null,
       discountpercent: toNum(values.discountpercent),
+      salestaxrate: toNum(values.salestaxrate),
       shipping: toNum(values.shipping),
       remarks: values.remarks || null,
       invbilltocompanyname: values.invbilltocompanyname || null,
@@ -473,6 +517,44 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
       if (!responseData?.success) throw new Error(responseData?.error || `Failed to ${isEdit ? "update" : "create"} sales order`);
 
+      const soNumber = responseData.data ? Number(responseData.data) : (salesordernoEdit ? Number(salesordernoEdit) : null);
+
+      const popupResult = await MySwal.fire({
+        icon: "success",
+        title: "Sales Order Saved",
+        html: `<div class="text-muted" style="font-size:0.95rem">Sales Order${soNumber ? ` #${soNumber}` : ""} saved successfully.</div>`,
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: "Print",
+        denyButtonText: "Email",
+        cancelButtonText: "Close",
+        showCloseButton: true,
+      });
+
+      if (popupResult.isConfirmed && soNumber) {
+        await handleTryCatch(async () => {
+          const response = await api.post(`${config.apiUrl}/store/sales-order/print`, { storeid: parsedStoreId, salesordernumbers: [soNumber] }, { responseType: "blob" });
+          if (response.data) {
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+            const tab = window.open(url, "_blank");
+            if (!tab) {
+              const link = document.createElement("a");
+              link.href = url;
+              link.setAttribute("download", `sales-order-${soNumber}.pdf`);
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+            }
+            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+          }
+          return true;
+        });
+      }
+
+      if (popupResult.isDenied && soNumber) {
+        setEmailModalSONumber(soNumber);
+      }
+
       dispatch(showNotification({ message: responseData.message, type: NOTIFICATION_TYPES.SUCCESS }));
       reset();
       router.push(`${basePath}/sales/sales_order_list`);
@@ -501,6 +583,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   if (isEdit && editLoading) return <div className="text-center py-5"><div className="spinner-border" /></div>;
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)}>
       {readOnly && (
         <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2">
@@ -676,6 +759,26 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                 min={0}
                 max={100}
                 {...register("discountpercent", { valueAsNumber: true })}
+                onChange={(e) => {
+                  const n = Number(e.target.value || 0);
+                  const clamped = Math.min(100, Math.max(0, n));
+                  setValue("discountpercent", clamped, { shouldDirty: true });
+                  const currentItems = getValues("items");
+                  if (currentItems?.length) {
+                    replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
+                  }
+                }}
+              />
+            </div>
+            <div className="col-lg-2 col-md-4 col-6">
+              <label className="form-label">Sales Tax %</label>
+              <input
+                type="number"
+                className="form-control"
+                step="0.001"
+                min={0}
+                max={100}
+                {...register("salestaxrate", { valueAsNumber: true })}
               />
             </div>
             <div className="col-lg-2 col-md-4 col-6">
@@ -713,6 +816,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       onProductsLoaded={(items: ItemDetails[]) => setProducts(items)}
                       trigger={trigger}
                       value={toolItem.itemid}
+                      initialLabel={
+                        toolItem.itemid != null && toolItem.itemcode
+                          ? `${toolItem.itemcode} - ${toolItem.itemdescription || ""}`
+                          : undefined
+                      }
+                      clearKey={productClearKey}
                       onChange={(val: number | undefined) =>
                         setToolItem((prev) => ({ ...prev, itemid: val }))
                       }
@@ -728,6 +837,10 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           }));
                           return;
                         }
+                        if (allowCarriage) {
+                          autoAddItem(selected);
+                          return;
+                        }
                         setToolItem((prev) => ({
                           ...prev,
                           itemid: Number(selected.itemid),
@@ -739,11 +852,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           discountpercent: toNum(watch("discountpercent")),
                         }));
                       }}
+                      onNotFound={() =>
+                        dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))
+                      }
                     />
                   </div>
                 </div>
 
-                <div className="col-lg-2 col-md-6 col-sm-12">
+                <div className={`${allowPcsEntry ? "col-lg-2" : "col-lg-3"} col-md-6 col-sm-12`}>
                   <div className="input-blocks">
                     <label>Description</label>
                     <input
@@ -755,6 +871,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   </div>
                 </div>
 
+                {allowPcsEntry && (
                 <div className="col-lg-1 col-md-6 col-sm-12">
                   <div className="input-blocks">
                     <label>Pc</label>
@@ -768,6 +885,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     />
                   </div>
                 </div>
+                )}
 
                 <div className="col-lg-1 col-md-6 col-sm-12 p-0">
                   <div className="input-blocks">
@@ -862,11 +980,11 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     <tr>
                       <th className="text-nowrap">#</th>
                       <th className="text-nowrap">Item Code</th>
-                      <th>Description</th>
+                      <th style={{ minWidth: readOnly ? (allowPcsEntry ? "160px" : "320px") : (allowPcsEntry ? "180px" : "220px") }}>Description</th>
                       <th className="text-center text-nowrap">Tax</th>
-                      <th className="text-end text-nowrap">Ord Pcs</th>
-                      {readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
-                      {readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
+                      {allowPcsEntry && <th className="text-end text-nowrap">Ord Pcs</th>}
+                      {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
+                      {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
                       <th className="text-end text-nowrap">Ord Qty</th>
                       {readOnly && <th className="text-end text-nowrap">Inv Qty</th>}
                       {readOnly && <th className="text-end text-nowrap">Bord Qty</th>}
@@ -878,7 +996,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   </thead>
                   <tbody>
                     {itemFields.length === 0 ? (
-                      <tr><td colSpan={readOnly ? 14 : 10} className="text-center text-muted py-4">No items added yet</td></tr>
+                      <tr><td colSpan={(readOnly ? 14 : 10) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-4">No items added yet</td></tr>
                     ) : (
                       itemFields.map((field, index) => {
                         const item = field;
@@ -889,9 +1007,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                             <td className="text-nowrap">{item.itemcode || ""}</td>
                             <td>{item.itemdescription || ""}</td>
                             <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
-                            <td className="text-end">{toNum(item.itempcs)}</td>
-                            {readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
-                            {readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
+                            {allowPcsEntry && <td className="text-end">{toNum(item.itempcs)}</td>}
+                            {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
+                            {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
                             <td className="text-end">{toNum(item.itemquantity)}</td>
                             {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
                             {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
@@ -969,6 +1087,20 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         </ActionFooter>
       )}
     </form>
+    {emailModalSONumber && (
+      <DocumentEmailModal
+        storeId={parsedStoreId}
+        documentType="SALES_ORDER"
+        documentNumbers={[emailModalSONumber]}
+        onClose={() => setEmailModalSONumber(null)}
+        onSent={(msg) => {
+          setEmailModalSONumber(null);
+          dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS }));
+        }}
+        onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+      />
+    )}
+    </>
   );
 };
 

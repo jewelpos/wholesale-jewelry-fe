@@ -8,6 +8,7 @@ import { useLazyQuery } from "@apollo/client";
 import { SelectOption } from "@/types/form";
 import { GET_TRANSFER_STATUS_LIST_QUERY } from "@/lib/graphql/query/products";
 import { TransferStatus } from "@/types/product";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 type Props = {
   value?: number;
@@ -85,10 +86,7 @@ const SelectInventoryStatus = ({
       className={`form-control p-0 ${className || ""} select-form-custom`}
       menuPortalTarget={portalTarget}
       menuPosition="fixed"
-      styles={{
-        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-        menu: (base) => ({ ...base, zIndex: 9999 }),
-      }}
+      styles={selectStyles}
       value={selectedOption}
       onChange={(option) => {
         const v = option?.value ? Number(option.value) : undefined;

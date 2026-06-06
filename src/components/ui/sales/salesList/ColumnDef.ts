@@ -14,6 +14,7 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
     headerName: "Invoice #",
     field: "invoicenumber",
     filter: "agNumberColumnFilter",
+    sort: "desc",
   },
   {
     headerName: "Customer",
@@ -39,4 +40,14 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
   { headerName: "Warehouse", field: "warehousename", filter: "agTextColumnFilter" },
   { headerName: "Date",      field: "saledate",      filter: "agDateColumnFilter",   cellRenderer: dateRenderer },
   { headerName: "Modified",  field: "lastmodifieddate", filter: "agDateColumnFilter", cellRenderer: dateRenderer, hide: true },
+  {
+    headerName: "Credit Applied",
+    field: "custcrediapplied",
+    filter: "agTextColumnFilter",
+    valueGetter: (params) => {
+      if (!params.data || params.node?.rowPinned) return "";
+      if (Number(params.data.salemodeid) !== 5) return "";
+      return Number(params.data.custcrediapplied) === 1 ? "Yes" : "No";
+    },
+  },
 ];

@@ -22,6 +22,7 @@ import { useParams, useRouter } from "next/navigation";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const SalesOrderListComponent = () => {
   const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
@@ -165,6 +166,10 @@ const SalesOrderListComponent = () => {
     setShowEmailModal(true);
   }, [parsedStoreId, selectedSalesOrderNumbers]);
 
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "sales-orders", sheetName: "Sales Orders" });
+  }, []);
+
   const handleCreateInvoiceFromOrder = useCallback(() => {
     const salesorderno = selectedSalesOrders[0]?.salesorderno;
     if (!salesorderno) return;
@@ -187,6 +192,7 @@ const SalesOrderListComponent = () => {
         onPrintSalesOrder={handlePrintSalesOrder}
         onEmailSalesOrder={handleEmailSalesOrder}
         onCreateInvoiceFromOrder={handleCreateInvoiceFromOrder}
+        onExport={handleExport}
       />
       {showEmailModal && (
         <SalesOrderEmailModal

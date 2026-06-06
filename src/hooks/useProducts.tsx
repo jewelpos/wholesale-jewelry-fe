@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import {
   GET_ALL_INVENTORY_ITEMS_QUERY,
   GET_ALL_INVENTORY_ITEMS_WITH_STOCK_QUERY,
+  SEARCH_INVENTORY_ITEMS_QUERY,
 } from "@/lib/graphql/query/product";
 
 export type ItemDetails = {
@@ -135,6 +136,7 @@ const useProducts = () => {
   const [getAllInventoryItemsWithStock] = useLazyQuery(
     GET_ALL_INVENTORY_ITEMS_WITH_STOCK_QUERY
   );
+  const [searchItems] = useLazyQuery(SEARCH_INVENTORY_ITEMS_QUERY);
 
   const fetchProductsByStoreId = useCallback(async (storeId: number) => {
     const result = await handleTryCatch(
@@ -183,11 +185,23 @@ const useProducts = () => {
     []
   );
 
+  const searchInventoryItems = useCallback(
+    async (storeId: number, warehouseId: number | null, search: string): Promise<ItemDetails[]> => {
+      const { data } = await searchItems({
+        variables: { storeid: storeId, warehouseid: warehouseId, search, limit: 20 },
+        fetchPolicy: "network-only",
+      });
+      return (data?.searchInventoryItems ?? []) as ItemDetails[];
+    },
+    [searchItems]
+  );
+
   return {
     products,
     loading,
     fetchProductsByStoreId,
     fetchProductsWithStockByStoreAndWarehouseId,
+    searchInventoryItems,
   };
 };
 

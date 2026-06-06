@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { countries } from "@/lib/utils/countryData";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectCountry = ({
   value,
@@ -61,6 +62,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={handleInputChange}
+      styles={selectStyles}
       {...field}
     />
   );

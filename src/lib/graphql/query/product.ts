@@ -97,6 +97,29 @@ export const GET_ALL_INVENTORY_ITEMS_QUERY = gql`
   }
 `;
 
+export const SEARCH_INVENTORY_ITEMS_QUERY = gql`
+  query SearchInventoryItems($storeid: Int!, $search: String!, $warehouseid: Int, $limit: Int) {
+    searchInventoryItems(storeid: $storeid, search: $search, warehouseid: $warehouseid, limit: $limit) {
+      itemid
+      itembarcodeid
+      itemcode
+      itemdescription
+      itemsellprice
+      itemtaxable
+      itemdiscount
+      itempurchaseprice
+      itemaveragecost
+      itemalertwarning
+      itemwarningmessage
+      itemstatus
+      itemtagpricecode
+      itemtagprice
+      supplierid
+      trackinventory
+    }
+  }
+`;
+
 export const GET_ALL_INVENTORY_ITEMS_WITH_STOCK_QUERY = gql`
   query GetAllInventoryItemsWithStock($storeid: Int!, $warehouseid: Int!) {
     getAllInventoryItemsWithStock(storeid: $storeid, warehouseid: $warehouseid) {

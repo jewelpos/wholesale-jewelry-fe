@@ -25,6 +25,7 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         customerid
         companyname
         saledate
+        salemodeid
         salemodename
         numberofitems
         totalamount
@@ -47,6 +48,7 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         lastmodifiedbyid
         lastmodifieddate
         statusname
+        custcrediapplied
       }
     }
   }
@@ -103,6 +105,7 @@ export const GET_MEMO_LIST_QUERY = gql`
         lastmodifiedby
         lastmodifieddate
         statusname
+        custcrediapplied
       }
       totalsRow {
         totalamount
@@ -168,13 +171,17 @@ export const GET_SALES_ORDER_QUERY = gql`
 export const GET_INVOICE_BY_NUMBER_QUERY = gql`
   query GetInvoiceByNumber($storeid: Int!, $invoicenumber: Float!) {
     getInvoiceByNumber(storeid: $storeid, invoicenumber: $invoicenumber) {
+      invoiceid
       memonumber
       customerid
       warehouseid
       termsid
       invshippingmethod
       discountpercent
+      salestaxrate
       shipping
+      amountreceived
+      balancedue
       remarks
       invbilltocompanyname
       invbilltoadd1
@@ -218,7 +225,10 @@ export const GET_MEMO_DETAIL_QUERY = gql`
       termsid
       invshippingmethod
       discountpercent
+      salestaxrate
       shipping
+      amountreceived
+      balancedue
       remarks
       invbilltocompanyname
       invbilltoadd1

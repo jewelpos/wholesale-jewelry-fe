@@ -13,9 +13,11 @@ import FeatherIcon from "../FeatherIcon";
 export default function PurchaseOrderListHeader({
   selectedPOs,
   handleExport,
+  onExport,
 }: {
   selectedPOs: number[];
   handleExport: (ids: number[], type: string) => void;
+  onExport: () => void;
 }) {
   const { currentMenu, currentPath } = useMenu();
 
@@ -36,7 +38,7 @@ export default function PurchaseOrderListHeader({
     if (actionName.includes("print")) {
       handleExport(selectedPOs, "print");
     } else if (actionName.includes("export")) {
-      handleExport(selectedPOs, "export");
+      onExport();
     }
   };
 
@@ -60,10 +62,9 @@ export default function PurchaseOrderListHeader({
               const isModalButton =
                 btn.actionname.includes("print") ||
                 btn.actionname.includes("export");
+              // Export is always enabled; print requires a selection
               const disabledButton =
-                !selectedPOs.length &&
-                (btn.actionname.includes("print") ||
-                  btn.actionname.includes("export"));
+                !selectedPOs.length && btn.actionname.includes("print");
               return (
                 <div
                   className="page-btn d-none d-sm-block"

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import useSupplier from "@/hooks/useSupplier";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectSupplier = ({
   value,
@@ -67,6 +68,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

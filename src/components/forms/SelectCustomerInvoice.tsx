@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { UseFormTrigger } from "react-hook-form";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 interface SelectCustomerInvoiceProps {
   value: number | string | null;
@@ -65,6 +66,7 @@ const SelectCustomerInvoice = ({
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

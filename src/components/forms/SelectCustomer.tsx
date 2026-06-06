@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import useCustomers from "@/hooks/useCustomers";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectCustomer = ({
   value,
@@ -74,7 +75,7 @@ any) => {
       onInputChange={setInput}
       menuPortalTarget={typeof document !== "undefined" ? document.body : null}
       menuPosition="fixed"
-      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+      styles={selectStyles}
       {...field}
     />
   );

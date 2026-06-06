@@ -5,6 +5,7 @@ import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { useQuery } from "@apollo/client";
 import { GET_BANK_LIST_QUERY } from "@/lib/graphql/query/payment";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectBankList = ({
   value,
@@ -55,6 +56,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

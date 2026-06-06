@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectYear = ({
   value,
@@ -51,6 +52,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

@@ -6,6 +6,7 @@ import { SelectOption } from "@/types/form";
 import { useParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store/hook";
 import useStores from "@/hooks/useStores";
+import { selectStyles } from "@/lib/styles/selectStyles";
 
 const SelectStore = ({
   value,
@@ -79,6 +80,7 @@ any) => {
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
+      styles={selectStyles}
       {...field}
     />
   );

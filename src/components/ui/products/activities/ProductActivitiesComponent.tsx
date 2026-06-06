@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
@@ -18,6 +18,7 @@ import { useParams } from "next/navigation";
 import { GET_PRODUCT_ACTIVITY_LIST_QUERY } from "@/lib/graphql/query/products";
 import productActivityColumnDefs from "./ColumnDef";
 import ProductActivitiesHeader from "./ProductActivitiesHeader";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const ProductActivitiesComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -144,9 +145,13 @@ const ProductActivitiesComponent = () => {
     selectedWarehouse,
   ]);
 
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "product-activities", sheetName: "Product Activities" });
+  }, []);
+
   return (
     <>
-      <ProductActivitiesHeader />
+      <ProductActivitiesHeader onExport={handleExport} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections

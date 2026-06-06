@@ -27,6 +27,8 @@ import MemoListHeader from "./MemoListHeader";
 import MemoActions from "./MemoActions";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import DocumentEmailModal from "../DocumentEmailModal";
 
 const dateRenderer = (params: ICellRendererParams) =>
   params.node.rowPinned === "bottom" || params.value == null
@@ -67,6 +69,16 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
     cellRenderer: dateRenderer,
   },
   {
+    headerName: "Credit Applied",
+    field: "custcrediapplied",
+    filter: "agTextColumnFilter",
+    valueGetter: (params) => {
+      if (!params.data || params.node?.rowPinned) return "";
+      if (params.data.salemodename !== "Memo Credit") return "";
+      return Number(params.data.custcrediapplied) === 1 ? "Yes" : "No";
+    },
+  },
+  {
     headerName: "Actions",
     cellRenderer: (params: ICellRendererParams<MemoSummary>) => {
       if (params.node.rowPinned || !params.data) return null;
@@ -89,6 +101,7 @@ const MemoListComponent = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>();
   const [selectedMemoNumbers, setSelectedMemoNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -171,6 +184,14 @@ const MemoListComponent = () => {
     setSelectedMemoNumbers(memoNumbers);
   }, []);
 
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "memos", sheetName: "Memos" });
+  }, []);
+
+  const handleEmailMemo = useCallback(() => {
+    if (selectedMemoNumbers.length > 0) setEmailModalOpen(true);
+  }, [selectedMemoNumbers]);
+
   const handlePrintMemo = useCallback(async () => {
     if (!parsedStoreId || selectedMemoNumbers.length === 0) return;
 
@@ -191,14 +212,17 @@ const MemoListComponent = () => {
 
         const { data } = response;
         if (data) {
-          const url = window.URL.createObjectURL(data);
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", "memo.pdf");
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
+          const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+          const tab = window.open(url, "_blank");
+          if (!tab) {
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "memo.pdf");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+          setTimeout(() => window.URL.revokeObjectURL(url), 10000);
           dispatch(
             showNotification({
               message: "Memo printed successfully",
@@ -229,7 +253,24 @@ const MemoListComponent = () => {
       <MemoListHeader
         selectedMemoNumbers={selectedMemoNumbers}
         onPrintMemo={handlePrintMemo}
+        onEmailMemo={handleEmailMemo}
+        onExport={handleExport}
       />
+      {emailModalOpen && (
+        <DocumentEmailModal
+          storeId={parsedStoreId}
+          documentType="MEMO"
+          documentNumbers={selectedMemoNumbers}
+          onClose={() => setEmailModalOpen(false)}
+          onSent={(message) => {
+            setEmailModalOpen(false);
+            dispatch(showNotification({ message, type: NOTIFICATION_TYPES.SUCCESS }));
+          }}
+          onError={(message) => {
+            dispatch(showNotification({ message, type: NOTIFICATION_TYPES.ERROR }));
+          }}
+        />
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections

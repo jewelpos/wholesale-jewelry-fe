@@ -140,9 +140,9 @@ export const DELETE_SALES_ORDER_MUTATION = gql`
   }
 `;
 
-export const DELETE_SALE_MUTATION = gql`
-  mutation DeleteSalesOrder($salesorderno: String!, $outletid: Int!) {
-    deleteSalesOrder(salesorderno: $salesorderno, outletid: $outletid) {
+export const CANCEL_INVOICE_MUTATION = gql`
+  mutation CancelInvoice($input: CancelInvoiceInput!) {
+    cancelInvoice(cancelInvoiceInput: $input) {
       success
       message
       error
