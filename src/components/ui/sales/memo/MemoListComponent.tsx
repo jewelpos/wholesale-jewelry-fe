@@ -236,7 +236,7 @@ const MemoListComponent = () => {
       );
 
       if (invoiceNumber) {
-        router.push(`${basePath}/sales/${invoiceNumber}/edit`);
+        router.push(`${basePath}/sales/${invoiceNumber}/edit?credit=1`);
       }
       return true;
     });
