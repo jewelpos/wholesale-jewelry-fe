@@ -58,17 +58,18 @@ const MemoListHeader = ({
 
               const isAddNewMemoAction = btn.actionname === "add_new_memo";
               const isAddNewMemoInvoiceAction = btn.actionname === "add_new_memo_invoice";
+              const isAddCreditInvoiceAction = btn.actionname === "add_new_credit_memo_invoice";
 
-              // Any unrecognised create button (e.g. Credit Invoice from Memo) requires ≥1 selection
+              // Any unrecognised create button requires ≥1 selection
               const isKnownButton =
-                isAddNewMemoAction || isAddNewMemoInvoiceAction || isActionButton;
+                isAddNewMemoAction || isAddNewMemoInvoiceAction || isAddCreditInvoiceAction || isActionButton;
               const unknownCreateDisabled = !isKnownButton && selectedMemoNumbers.length === 0;
 
               // Export is always enabled; print and email require a selection
               const selectionDisabled =
                 selectedMemoNumbers.length === 0 && (isPrintButton || isEmailButton);
               const canCreateInvoiceFromMemo = selectedMemoNumbers.length === 1;
-              const createInvoiceDisabled = isAddNewMemoInvoiceAction && !canCreateInvoiceFromMemo;
+              const createInvoiceDisabled = (isAddNewMemoInvoiceAction || isAddCreditInvoiceAction) && !canCreateInvoiceFromMemo;
 
               const disabledButton = selectionDisabled || createInvoiceDisabled || unknownCreateDisabled;
 
@@ -78,9 +79,11 @@ const MemoListHeader = ({
                   ? `${basePath}/sales/new_memo`
                   : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
                     ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}`
-                    : isAddNewMemoInvoiceAction
-                      ? "#"
-                    : `${currentPath}/new`;
+                    : isAddCreditInvoiceAction && canCreateInvoiceFromMemo
+                      ? `${basePath}/sales/memo_list/credit_invoice?memonumber=${selectedMemoNumbers[0]}`
+                      : (isAddNewMemoInvoiceAction || isAddCreditInvoiceAction)
+                        ? "#"
+                      : `${currentPath}/new`;
 
               const handleClick = (e: React.MouseEvent) => {
                 if (disabledButton) {
@@ -114,17 +117,6 @@ const MemoListHeader = ({
                 </div>
               );
             })}
-        {selectedMemoNumbers.length === 1 && (
-          <div className="page-btn d-none d-sm-block">
-            <Link
-              href={`${basePath}/sales/memo_list/credit_invoice?memonumber=${selectedMemoNumbers[0]}`}
-              className="btn btn-added btn-warning"
-            >
-              <FeatherIcon icon="rotate-ccw" />
-              Credit Invoice
-            </Link>
-          </div>
-        )}
       </div>
     </PageHeader>
   );
