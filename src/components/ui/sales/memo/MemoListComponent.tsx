@@ -229,7 +229,7 @@ const MemoListComponent = () => {
       dispatch(
         showNotification({
           message: invoiceNumber
-            ? `Credit Invoice #${invoiceNumber} created successfully`
+            ? `Create Credit Invoice from Memo #${invoiceNumber}`
             : "Credit Invoice created successfully",
           type: NOTIFICATION_TYPES.SUCCESS,
         })
