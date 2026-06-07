@@ -213,6 +213,7 @@ const SalesInvoiceForm = ({
   memonumber,
   viewInvoicenumber,
   readOnly = false,
+  creditFromMemo = false,
 }: {
   mode: SalesInvoiceFormMode;
   invoiceId?: number;
@@ -221,6 +222,7 @@ const SalesInvoiceForm = ({
   memonumber?: number;
   viewInvoicenumber?: number;
   readOnly?: boolean;
+  creditFromMemo?: boolean;
 }) => {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -1562,7 +1564,7 @@ const SalesInvoiceForm = ({
           <div className="row g-3 mt-1">
             <div className="col-lg-4 col-md-6 col-sm-12">
               <div className="input-blocks mb-0">
-                <label>{salesordernoFromSO ? "SO #" : "PO #"}</label>
+                <label>{salesordernoFromSO ? "SO #" : creditFromMemo ? "Memo #" : "PO #"}</label>
                 <input type="text" className="form-control" {...register("invoicereference")} />
               </div>
             </div>

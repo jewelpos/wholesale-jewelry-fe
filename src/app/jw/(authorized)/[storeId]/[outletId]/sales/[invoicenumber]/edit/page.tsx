@@ -18,7 +18,7 @@ const EditInvoicePage = async ({
   return (
     <Content>
       <PageHeader title={title} showBreadcrumb />
-      <SalesInvoiceForm mode="NEW_INVOICE" documentType="INVOICE" viewInvoicenumber={invoicenumber} invoiceId={invoicenumber} />
+      <SalesInvoiceForm mode="NEW_INVOICE" documentType="INVOICE" viewInvoicenumber={invoicenumber} invoiceId={invoicenumber} creditFromMemo={credit === "1"} />
     </Content>
   );
 };
