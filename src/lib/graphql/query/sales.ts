@@ -195,6 +195,9 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
       invshiptostate
       invshiptozip
       invshiptophone
+      invoicereference
+      createdfrommemo
+      frommemonumber
       items {
         invoiceitemid
         itemid

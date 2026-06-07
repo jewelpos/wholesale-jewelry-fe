@@ -616,7 +616,7 @@ const SalesInvoiceForm = ({
       invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
       discountpercent: toNum(doc.discountpercent),
       salestaxrate: toNum(doc.salestaxrate),
-      invoicereference: "",
+      invoicereference: doc.invoicereference ?? "",
       orderedby: "",
       shipSameAsBill: false,
       invbilltocompanyname: doc.invbilltocompanyname ?? "",
@@ -648,6 +648,11 @@ const SalesInvoiceForm = ({
       })),
     });
   }, [viewInvoiceQueryData, parsedStoreId, reset]);
+
+  // When viewing an invoice that was created from a memo, track the source memo number for label display
+  const viewedFromMemoNumber = viewInvoiceQueryData?.getInvoiceByNumber?.frommemonumber
+    ? Number(viewInvoiceQueryData.getInvoiceByNumber.frommemonumber)
+    : null;
 
   // Pre-populate form when viewing/editing an existing memo
   useEffect(() => {
@@ -1484,7 +1489,7 @@ const SalesInvoiceForm = ({
                 <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Reference</div>
                 <div className="row g-2">
                   <div className="col-6">
-                    <label className="form-label small text-muted mb-1">{salesordernoFromSO ? "SO #" : creditFromMemo ? "Memo #" : "Customer PO#"}</label>
+                    <label className="form-label small text-muted mb-1">{salesordernoFromSO ? "SO #" : (creditFromMemo || memonumber || viewedFromMemoNumber) ? "Memo #" : "Customer PO#"}</label>
                     <input type="text" className="form-control form-control-sm" {...register("invoicereference")} />
                   </div>
                   <div className="col-6">
