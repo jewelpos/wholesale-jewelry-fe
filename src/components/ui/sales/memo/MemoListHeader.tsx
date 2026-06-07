@@ -114,6 +114,17 @@ const MemoListHeader = ({
                 </div>
               );
             })}
+        {selectedMemoNumbers.length === 1 && (
+          <div className="page-btn d-none d-sm-block">
+            <Link
+              href={`${basePath}/sales/memo_list/credit_invoice?memonumber=${selectedMemoNumbers[0]}`}
+              className="btn btn-added btn-warning"
+            >
+              <FeatherIcon icon="rotate-ccw" />
+              Credit Invoice
+            </Link>
+          </div>
+        )}
       </div>
     </PageHeader>
   );
