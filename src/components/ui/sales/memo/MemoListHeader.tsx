@@ -17,8 +17,6 @@ interface MemoListHeaderProps {
   onPrintMemo: () => void;
   onEmailMemo: () => void;
   onExport: () => void;
-  onCreateCreditInvoice: () => void;
-  creditInvoiceLoading: boolean;
 }
 
 const MemoListHeader = ({
@@ -26,8 +24,6 @@ const MemoListHeader = ({
   onPrintMemo,
   onEmailMemo,
   onExport,
-  onCreateCreditInvoice,
-  creditInvoiceLoading,
 }: MemoListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
   const { basePath } = useDefaultRoute();
@@ -74,29 +70,24 @@ const MemoListHeader = ({
                 selectedMemoNumbers.length === 0 && (isPrintButton || isEmailButton);
               const canCreateInvoiceFromMemo = selectedMemoNumbers.length === 1;
               const createInvoiceDisabled = (isAddNewMemoInvoiceAction || isAddCreditInvoiceAction) && !canCreateInvoiceFromMemo;
-              const creditInvoiceDisabled = isAddCreditInvoiceAction && creditInvoiceLoading;
 
-              const disabledButton = selectionDisabled || createInvoiceDisabled || unknownCreateDisabled || creditInvoiceDisabled;
+              const disabledButton = selectionDisabled || createInvoiceDisabled || unknownCreateDisabled;
 
-              const href = isActionButton || isAddCreditInvoiceAction
+              const href = isActionButton
                 ? "#"
                 : isAddNewMemoAction
                   ? `${basePath}/sales/new_memo`
                   : isAddNewMemoInvoiceAction && canCreateInvoiceFromMemo
                     ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}`
-                    : isAddNewMemoInvoiceAction
-                      ? "#"
-                      : `${currentPath}/new`;
+                    : isAddCreditInvoiceAction && canCreateInvoiceFromMemo
+                      ? `${basePath}/sales/invoice_from_memo/${selectedMemoNumbers[0]}?credit=1`
+                      : (isAddNewMemoInvoiceAction || isAddCreditInvoiceAction)
+                        ? "#"
+                        : `${currentPath}/new`;
 
               const handleClick = (e: React.MouseEvent) => {
                 if (disabledButton) {
                   e.preventDefault();
-                  return;
-                }
-
-                if (isAddCreditInvoiceAction) {
-                  e.preventDefault();
-                  onCreateCreditInvoice();
                   return;
                 }
 

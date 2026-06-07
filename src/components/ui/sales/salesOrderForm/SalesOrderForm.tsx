@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
+import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import dayjs, { Dayjs } from "dayjs";
 import { Controller, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
-import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -27,7 +27,6 @@ import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
-import type { ProductSettingsInfo } from "@/types/product";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -148,11 +147,6 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   };
 
   const [products, setProducts] = useState<ItemDetails[]>([]);
-  const productById = useMemo(() => {
-    const map = new Map<number, ItemDetails>();
-    products.forEach((p) => map.set(Number(p.itemid), p));
-    return map;
-  }, [products]);
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [toolItem, setToolItem] = useState<ToolItem>({
@@ -591,290 +585,382 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         </div>
       )}
       <fieldset disabled={readOnly} style={readOnly ? { opacity: 0.85 } : undefined}>
-      {/* Header + Bill To / Ship To */}
+
+      {/* HEADER STRIP */}
+      <div className="card mb-3">
+        <div className="card-body py-3">
+          <div className="d-flex flex-wrap gap-4 align-items-start">
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Order Date</div>
+              <Controller
+                control={control}
+                name="orderdate"
+                render={({ field }) => (
+                  <DatePicker
+                    className="filterdatepicker"
+                    style={{ width: 160 }}
+                    value={field.value}
+                    onChange={(date) => field.onChange(date)}
+                    format="DD-MM-YYYY"
+                    allowClear={false}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="vr align-self-stretch" />
+
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Warehouse</div>
+              <div className="fw-semibold">{currentWarehouse?.warehousename || <span className="text-muted">&mdash;</span>}</div>
+              <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+            </div>
+
+            <div className="vr align-self-stretch" />
+
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>SO #</div>
+              {salesordernoEdit ? (
+                <div className="fw-semibold">{salesordernoEdit}</div>
+              ) : (
+                <div className="text-muted fst-italic">Auto-assigned</div>
+              )}
+            </div>
+
+            {watch("invbilltocity") && (
+              <>
+                <div className="vr align-self-stretch" />
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To</div>
+                  <div className="text-muted small">
+                    {watch("invbilltocity")}{watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* CUSTOMERS + ADDRESS */}
       <div className="card mb-3">
         <div className="card-body">
 
-          {/* Row 1: Order Date + SO Number */}
-          <div className="row g-3 mb-3">
-            <div className="col-lg-6 col-md-6">
-              <div className="input-blocks mb-0 row align-items-center">
-                <label className="col-form-label col-md-4">Order Date</label>
-                <div className="col-md-8">
+          {/* Bill To / Ship To */}
+          <div className="row g-3">
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To <span className="text-danger">*</span></div>
+                <div className="mb-2">
                   <Controller
                     control={control}
-                    name="orderdate"
-                    render={({ field }) => (
-                      <DatePicker
-                        className="form-control w-100"
-                        value={field.value}
-                        onChange={(date) => field.onChange(date)}
-                        suffixIcon={<Calendar size={14} />}
-                        format="MM/DD/YYYY"
-                        allowClear={false}
-                      />
+                    name="customerid"
+                    rules={{ required: "Customer is required" }}
+                    render={({ field, fieldState }) => (
+                      <>
+                        <SelectCustomer
+                          storeId={parsedStoreId}
+                          value={field.value}
+                          onChange={(val: number | undefined) => field.onChange(val)}
+                          trigger={trigger}
+                        />
+                        {fieldState.error && <div className="text-danger small mt-1">{fieldState.error.message}</div>}
+                      </>
                     )}
                   />
                 </div>
+                <div className="row g-1 mt-1">
+                  <div className="col-12">
+                    <input className="form-control form-control-sm" placeholder="Address" {...register("invbilltoadd1")} />
+                  </div>
+                  <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invbilltocity")} /></div>
+                  <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invbilltostate")} /></div>
+                  <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invbilltozip")} /></div>
+                  <div className="col-12">
+                    <input className="form-control form-control-sm" placeholder="Phone" {...register("invbilltophone")} />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="col-lg-6 col-md-6">
-              <div className="input-blocks mb-0 row align-items-center">
-                <label className="col-form-label col-md-4">SO Number</label>
-                <div className="col-md-8">
-                  <input type="text" className="form-control" value={salesordernoEdit ?? ""} readOnly disabled />
+
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
+                  <label className="d-flex align-items-center gap-2 m-0 small text-muted" style={{ cursor: "pointer" }}>
+                    <input type="checkbox" {...register("shipSameAsBill")} />
+                    Same as Bill To
+                  </label>
+                </div>
+                {!shipSameAsBill && (
+                  <div className="mb-2">
+                    <Controller
+                      control={control}
+                      name="shiptocustomerid"
+                      render={({ field }) => (
+                        <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+                      )}
+                    />
+                  </div>
+                )}
+                <div className="row g-1 mt-1">
+                  <div className="col-12">
+                    <input className="form-control form-control-sm" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
+                  </div>
+                  <div className="col-12">
+                    <input className="form-control form-control-sm" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
+                  </div>
+                  <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
+                  <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
+                  <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
+                  <div className="col-12">
+                    <input className="form-control form-control-sm" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Row 2: Bill To / Ship To */}
-          <div className="row g-3 mb-3">
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <h5 className="mb-3">Bill To</h5>
-                <div className="input-blocks mb-2 row align-items-center">
-                  <label className="col-form-label col-md-4">Customer <span className="text-danger">*</span></label>
-                  <div className="col-md-8">
+          {/* ORDER DETAILS */}
+          <div className="row g-2 mt-3">
+            {/* Reference */}
+            <div className="col-lg-4 col-md-12">
+              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Reference</div>
+                <div className="row g-2">
+                  <div className="col-12">
+                    <label className="form-label small text-muted mb-1">Ordered By</label>
+                    <input type="text" className="form-control form-control-sm" {...register("orderedby")} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fulfillment */}
+            <div className="col-lg-4 col-md-12">
+              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Fulfillment</div>
+                <div className="row g-2">
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Terms</label>
                     <Controller
                       control={control}
-                      name="customerid"
-                      rules={{ required: "Customer is required" }}
-                      render={({ field, fieldState }) => (
-                        <>
-                          <SelectCustomer
-                            storeId={parsedStoreId}
-                            value={field.value}
-                            onChange={(val: number | undefined) => field.onChange(val)}
-                            trigger={trigger}
-                          />
-                          {fieldState.error && <div className="text-danger small">{fieldState.error.message}</div>}
-                        </>
+                      name="termsid"
+                      render={({ field }) => (
+                        <SelectPaymentTerms
+                          storeId={parsedStoreId}
+                          value={field.value}
+                          onChange={(val: number | undefined) => field.onChange(val)}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Shipping Method</label>
+                    <Controller
+                      control={control}
+                      name="invshippingmethod"
+                      render={({ field }) => (
+                        <SelectShippingModes
+                          storeId={parsedStoreId}
+                          value={field.value}
+                          onChange={(val: number | undefined) => field.onChange(val)}
+                        />
                       )}
                     />
                   </div>
                 </div>
-                <div className="row g-2 mt-1">
-                  <div className="col-12">
-                    <input className="form-control" placeholder="Address" {...register("invbilltoadd1")} />
-                  </div>
-                  <div className="col-5"><input className="form-control" placeholder="City" {...register("invbilltocity")} /></div>
-                  <div className="col-3"><input className="form-control" placeholder="State" {...register("invbilltostate")} /></div>
-                  <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invbilltozip")} /></div>
-                  <div className="col-12">
-                    <input className="form-control" placeholder="Phone" {...register("invbilltophone")} />
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <div className="d-flex align-items-center justify-content-between mb-3">
-                  <h5 className="mb-0">Ship To</h5>
-                  <label className="d-flex align-items-center gap-2 m-0">
-                    <input className="form-check-input" type="checkbox" id="shipSameAsBill" {...register("shipSameAsBill")} />
-                    <span className="small">Same as Bill To</span>
-                  </label>
-                </div>
-                {!shipSameAsBill && (
-                  <div className="input-blocks mb-2 row align-items-center">
-                    <label className="col-form-label col-md-4">Customer</label>
-                    <div className="col-md-8">
-                      <Controller
-                        control={control}
-                        name="shiptocustomerid"
-                        render={({ field }) => (
-                          <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
-                        )}
-                      />
-                    </div>
+            {/* Pricing */}
+            <div className="col-lg-4 col-md-12">
+              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Pricing</div>
+                <div className="row g-2">
+                  <div className="col-4">
+                    <label className="form-label small text-muted mb-1">Discount %</label>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      step="0.001"
+                      min={0}
+                      max={100}
+                      {...register("discountpercent", { valueAsNumber: true })}
+                      onChange={(e) => {
+                        const n = Number(e.target.value || 0);
+                        const clamped = Math.min(100, Math.max(0, n));
+                        setValue("discountpercent", clamped, { shouldDirty: true });
+                        const currentItems = getValues("items");
+                        if (currentItems?.length) {
+                          replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
+                        }
+                      }}
+                    />
                   </div>
-                )}
-                <div className="row g-2 mt-1">
-                  <div className="col-12">
-                    <input className="form-control" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
+                  <div className="col-4">
+                    <label className="form-label small text-muted mb-1">Sales Tax %</label>
+                    <input type="number" className="form-control form-control-sm" step="0.001" min={0} max={100}
+                      {...register("salestaxrate", { valueAsNumber: true })} />
                   </div>
-                  <div className="col-12">
-                    <input className="form-control" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
-                  </div>
-                  <div className="col-5"><input className="form-control" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
-                  <div className="col-3"><input className="form-control" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
-                  <div className="col-4"><input className="form-control" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
-                  <div className="col-12">
-                    <input className="form-control" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+                  <div className="col-4">
+                    <label className="form-label small text-muted mb-1">Shipping</label>
+                    <input type="number" className="form-control form-control-sm" step="0.01" min={0}
+                      {...register("shipping", { valueAsNumber: true })} />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Row 3: Warehouse, Terms, Shipping Method, Discount, Shipping, Remarks */}
-          <div className="row g-3">
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Warehouse</label>
-              <input
-                type="text"
-                className="form-control"
-                value={currentWarehouse?.warehousename || ""}
-                readOnly
-                disabled
-              />
-              <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Terms</label>
-              <Controller
-                control={control}
-                name="termsid"
-                render={({ field }) => (
-                  <SelectPaymentTerms
-                    storeId={parsedStoreId}
-                    value={field.value}
-                    onChange={(val: number | undefined) => field.onChange(val)}
-                  />
-                )}
-              />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Shipping Method</label>
-              <Controller
-                control={control}
-                name="invshippingmethod"
-                render={({ field }) => (
-                  <SelectShippingModes
-                    storeId={parsedStoreId}
-                    value={field.value}
-                    onChange={(val: number | undefined) => field.onChange(val)}
-                  />
-                )}
-              />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Discount %</label>
-              <input
-                type="number"
-                className="form-control"
-                step="0.001"
-                min={0}
-                max={100}
-                {...register("discountpercent", { valueAsNumber: true })}
-                onChange={(e) => {
-                  const n = Number(e.target.value || 0);
-                  const clamped = Math.min(100, Math.max(0, n));
-                  setValue("discountpercent", clamped, { shouldDirty: true });
-                  const currentItems = getValues("items");
-                  if (currentItems?.length) {
-                    replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
-                  }
-                }}
-              />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Sales Tax %</label>
-              <input
-                type="number"
-                className="form-control"
-                step="0.001"
-                min={0}
-                max={100}
-                {...register("salestaxrate", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Shipping</label>
-              <input
-                type="number"
-                className="form-control"
-                step="0.01"
-                min={0}
-                {...register("shipping", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="col-lg-2 col-md-4 col-6">
-              <label className="form-label">Ordered By</label>
-              <input type="text" className="form-control" {...register("orderedby")} />
-            </div>
-          </div>
-
         </div>
       </div>
 
-      {/* Item Entry Tool + Line Items */}
+      {/* LINE ITEMS */}
       <div className="card mb-3">
         <div className="card-body">
-          <div className="border rounded p-3">
-            <div className="table-responsive">
-              <div className="row g-3 align-items-end">
+
+          {/* Scrollable items table */}
+          <div style={{ maxHeight: 480, overflowY: "auto" }}>
+            <table className="table datanew mb-0">
+              <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
+                <tr>
+                  <th className="text-nowrap">#</th>
+                  <th className="text-nowrap">Item Code</th>
+                  <th style={{ minWidth: readOnly ? (allowPcsEntry ? "160px" : "320px") : (allowPcsEntry ? "180px" : "220px") }}>Description</th>
+                  <th className="text-center text-nowrap">Tax</th>
+                  {allowPcsEntry && <th className="text-end text-nowrap">Ord Pcs</th>}
+                  {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
+                  {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
+                  <th className="text-end text-nowrap">Ord Qty</th>
+                  {readOnly && <th className="text-end text-nowrap">Inv Qty</th>}
+                  {readOnly && <th className="text-end text-nowrap">Bord Qty</th>}
+                  <th className="text-end text-nowrap">Unit Price</th>
+                  <th className="text-end text-nowrap">Discount %</th>
+                  <th className="text-end text-nowrap">Ext. Price</th>
+                  <th className="text-center text-nowrap">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itemFields.length === 0 ? (
+                  <tr>
+                    <td colSpan={(readOnly ? 14 : 10) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-5 fst-italic">
+                      No items yet — use the form below to add line items
+                    </td>
+                  </tr>
+                ) : (
+                  itemFields.map((field, index) => {
+                    const item = field;
+                    const line = computeLine(item);
+                    return (
+                      <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
+                        <td>{index + 1}</td>
+                        <td className="text-nowrap">{item.itemcode || ""}</td>
+                        <td>{item.itemdescription || ""}</td>
+                        <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
+                        {allowPcsEntry && <td className="text-end">{toNum(item.itempcs)}</td>}
+                        {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
+                        {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
+                        <td className="text-end">{toNum(item.itemquantity)}</td>
+                        {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
+                        {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
+                        <td className="text-end">{formatMoney(item.unitprice)}</td>
+                        <td className="text-end">{toNum(item.discountpercent).toFixed(1)}%</td>
+                        <td className="text-end">{formatMoney(line.net)}</td>
+                        <td className="text-center">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary me-1"
+                            onClick={() => handleEditItem(index)}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ADD / EDIT LINE ROW */}
+          {!readOnly && (
+            <div className="border-top pt-3 mt-1">
+              <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
+              </div>
+              <div className="row g-2 align-items-end">
                 <div className="col-lg-4 col-md-6 col-sm-12">
-                  <div className="input-blocks">
-                    <label>Search/Scan Item/Barcode</label>
-                    <SelectProduct
-                      storeId={parsedStoreId}
-                      hasWarehouseId={true}
-                      warehouseId={watch("warehouseid")}
-                      onProductsLoaded={(items: ItemDetails[]) => setProducts(items)}
-                      trigger={trigger}
-                      value={toolItem.itemid}
-                      initialLabel={
-                        toolItem.itemid != null && toolItem.itemcode
-                          ? `${toolItem.itemcode} - ${toolItem.itemdescription || ""}`
-                          : undefined
-                      }
-                      clearKey={productClearKey}
-                      onChange={(val: number | undefined) =>
-                        setToolItem((prev) => ({ ...prev, itemid: val }))
-                      }
-                      onChangeAdditional={(selected: ItemDetails) => {
-                        if (!selected) {
-                          setToolItem((prev) => ({
-                            ...prev,
-                            itemid: undefined,
-                            itemcode: undefined,
-                            itemdescription: undefined,
-                            itemtaxable: undefined,
-                            unitprice: 0,
-                          }));
-                          return;
-                        }
-                        if (allowCarriage) {
-                          autoAddItem(selected);
-                          return;
-                        }
+                  <label className="form-label small text-muted mb-1">Search/Scan Item/Barcode</label>
+                  <SelectProduct
+                    storeId={parsedStoreId}
+                    hasWarehouseId={true}
+                    warehouseId={watch("warehouseid")}
+                    onProductsLoaded={setProducts}
+                    trigger={trigger}
+                    value={toolItem.itemid}
+                    initialLabel={
+                      toolItem.itemid != null && toolItem.itemcode
+                        ? `${toolItem.itemcode} - ${toolItem.itemdescription || ""}`
+                        : undefined
+                    }
+                    clearKey={productClearKey}
+                    onChange={(val: number | undefined) =>
+                      setToolItem((prev) => ({ ...prev, itemid: val }))
+                    }
+                    onChangeAdditional={(selected: ItemDetails) => {
+                      if (!selected) {
                         setToolItem((prev) => ({
                           ...prev,
-                          itemid: Number(selected.itemid),
-                          itemcode: selected.itemcode,
-                          itemdescription: selected.itemdescription,
-                          itemtaxable: toNum(selected.itemtaxable),
-                          itemquantity: 1,
-                          unitprice: Number(selected.itemsellprice || 0),
-                          discountpercent: toNum(watch("discountpercent")),
+                          itemid: undefined,
+                          itemcode: undefined,
+                          itemdescription: undefined,
+                          itemtaxable: undefined,
+                          unitprice: 0,
                         }));
-                      }}
-                      onNotFound={() =>
-                        dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))
+                        return;
                       }
-                    />
-                  </div>
+                      if (allowCarriage) {
+                        autoAddItem(selected);
+                        return;
+                      }
+                      setToolItem((prev) => ({
+                        ...prev,
+                        itemid: Number(selected.itemid),
+                        itemcode: selected.itemcode,
+                        itemdescription: selected.itemdescription,
+                        itemtaxable: toNum(selected.itemtaxable),
+                        itemquantity: 1,
+                        unitprice: Number(selected.itemsellprice || 0),
+                        discountpercent: toNum(watch("discountpercent")),
+                      }));
+                    }}
+                    onNotFound={() =>
+                      dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))
+                    }
+                  />
                 </div>
 
                 <div className={`${allowPcsEntry ? "col-lg-2" : "col-lg-3"} col-md-6 col-sm-12`}>
-                  <div className="input-blocks">
-                    <label>Description</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={toolItem.itemdescription || ""}
-                      onChange={(e) => setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))}
-                    />
-                  </div>
+                  <label className="form-label small text-muted mb-1">Description</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={toolItem.itemdescription || ""}
+                    onChange={(e) => setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))}
+                  />
                 </div>
 
                 {allowPcsEntry && (
-                <div className="col-lg-1 col-md-6 col-sm-12">
-                  <div className="input-blocks">
-                    <label>Pc</label>
+                  <div className="col-lg-1 col-md-6 col-sm-12">
+                    <label className="form-label small text-muted mb-1">Pcs</label>
                     <input
                       type="number"
                       className="form-control px-1 text-end"
@@ -884,183 +970,146 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       onChange={(e) => setToolItem((p) => ({ ...p, itempcs: toNum(e.target.value) }))}
                     />
                   </div>
-                </div>
                 )}
 
                 <div className="col-lg-1 col-md-6 col-sm-12 p-0">
-                  <div className="input-blocks">
-                    <label>Quantity *</label>
-                    <input
-                      type="number"
-                      className="form-control px-1 text-end"
-                      min={1}
-                      step="0.001"
-                      value={toolItem.itemquantity}
-                      onChange={(e) => setToolItem((p) => ({ ...p, itemquantity: toNum(e.target.value) }))}
-                    />
-                  </div>
+                  <label className="form-label small text-muted mb-1">Quantity *</label>
+                  <input
+                    type="number"
+                    className="form-control px-1 text-end"
+                    min={1}
+                    step="0.001"
+                    value={toolItem.itemquantity}
+                    onChange={(e) => setToolItem((p) => ({ ...p, itemquantity: toNum(e.target.value) }))}
+                  />
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">
-                  <div className="input-blocks">
-                    <label>Unit Price *</label>
-                    <input
-                      type="number"
-                      className="form-control px-1 text-end"
-                      min={0}
-                      step="0.001"
-                      value={toolItem.unitprice}
-                      onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
-                    />
-                  </div>
+                  <label className="form-label small text-muted mb-1">Unit Price *</label>
+                  <input
+                    type="number"
+                    className="form-control px-1 text-end"
+                    min={0}
+                    step="0.001"
+                    value={toolItem.unitprice}
+                    onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
+                  />
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">
-                  <div className="input-blocks">
-                    <label>Discount %</label>
-                    <input
-                      type="number"
-                      className="form-control px-1 text-end"
-                      min={0}
-                      max={100}
-                      step="0.001"
-                      value={toolItem.discountpercent ?? 0}
-                      onChange={(e) => setToolItem((p) => ({ ...p, discountpercent: toNum(e.target.value) }))}
-                    />
-                  </div>
+                  <label className="form-label small text-muted mb-1">Disc %</label>
+                  <input
+                    type="number"
+                    className="form-control px-1 text-end"
+                    min={0}
+                    max={100}
+                    step="0.001"
+                    value={toolItem.discountpercent ?? 0}
+                    onChange={(e) => setToolItem((p) => ({ ...p, discountpercent: toNum(e.target.value) }))}
+                  />
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12 p-0">
-                  <div className="input-blocks">
-                    <label>Ext Price</label>
-                    <input
-                      type="text"
-                      className="form-control px-1 text-end"
-                      readOnly
-                      value={formatMoney(toolLine.net)}
-                    />
-                  </div>
+                  <label className="form-label small text-muted mb-1">Ext Price</label>
+                  <input
+                    type="text"
+                    className="form-control px-1 text-end"
+                    readOnly
+                    value={formatMoney(toolLine.net)}
+                  />
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">
-                  <div className="input-blocks">
-                    {editingIndex == null ? (
+                  {editingIndex == null ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
+                      onClick={handleSaveToolItem}
+                    >
+                      <PlusCircle size={16} />
+                    </button>
+                  ) : (
+                    <div className="btn-group w-100" role="group">
                       <button
                         type="button"
-                        className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
+                        className="btn btn-success d-flex align-items-center justify-content-center"
                         onClick={handleSaveToolItem}
                       >
-                        <PlusCircle />
+                        <Check size={16} />
                       </button>
-                    ) : (
-                      <div className="btn-group w-100" role="group">
-                        <button
-                          type="button"
-                          className="btn btn-success d-flex align-items-center justify-content-center"
-                          onClick={handleSaveToolItem}
-                        >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary d-flex align-items-center justify-content-center"
-                          onClick={() => { setEditingIndex(null); resetToolItem(); }}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary d-flex align-items-center justify-content-center"
+                        onClick={() => { setEditingIndex(null); resetToolItem(); }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div style={{ maxHeight: 480, overflowY: "auto" }}>
-                <table className="table datanew mt-3 mb-0">
-                  <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
-                    <tr>
-                      <th className="text-nowrap">#</th>
-                      <th className="text-nowrap">Item Code</th>
-                      <th style={{ minWidth: readOnly ? (allowPcsEntry ? "160px" : "320px") : (allowPcsEntry ? "180px" : "220px") }}>Description</th>
-                      <th className="text-center text-nowrap">Tax</th>
-                      {allowPcsEntry && <th className="text-end text-nowrap">Ord Pcs</th>}
-                      {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
-                      {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
-                      <th className="text-end text-nowrap">Ord Qty</th>
-                      {readOnly && <th className="text-end text-nowrap">Inv Qty</th>}
-                      {readOnly && <th className="text-end text-nowrap">Bord Qty</th>}
-                      <th className="text-end text-nowrap">Unit Price</th>
-                      <th className="text-end text-nowrap">Discount %</th>
-                      <th className="text-end text-nowrap">Ext. Price</th>
-                      <th className="text-center text-nowrap">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itemFields.length === 0 ? (
-                      <tr><td colSpan={(readOnly ? 14 : 10) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-4">No items added yet</td></tr>
-                    ) : (
-                      itemFields.map((field, index) => {
-                        const item = field;
-                        const line = computeLine(item);
-                        return (
-                          <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
-                            <td>{index + 1}</td>
-                            <td className="text-nowrap">{item.itemcode || ""}</td>
-                            <td>{item.itemdescription || ""}</td>
-                            <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
-                            {allowPcsEntry && <td className="text-end">{toNum(item.itempcs)}</td>}
-                            {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
-                            {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
-                            <td className="text-end">{toNum(item.itemquantity)}</td>
-                            {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
-                            {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
-                            <td className="text-end">{formatMoney(item.unitprice)}</td>
-                            <td className="text-end">{toNum(item.discountpercent).toFixed(1)}%</td>
-                            <td className="text-end">{formatMoney(line.net)}</td>
-                            <td className="text-center">
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-primary me-2"
-                                onClick={() => handleEditItem(index)}
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleRemoveItem(index)}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Remarks + Totals */}
-      <div className="row mb-4">
-        <div className="col-md-8">
-          <label className="form-label">Remarks</label>
-          <textarea className="form-control" rows={5} {...register("remarks")} />
+      {/* NOTES + TOTALS */}
+      <div className="row g-3 mb-3">
+
+        {/* Left - customer message */}
+        <div className="col-lg-6 col-md-12">
+          <div className="card h-100">
+            <div className="card-body">
+              <label className="form-label small text-muted mb-1">Customer Message / Remarks</label>
+              <textarea className="form-control" rows={6} {...register("remarks")} />
+            </div>
+          </div>
         </div>
-        <div className="col-md-4">
-          <table className="table table-sm">
-            <tbody>
-              <tr><td>Items</td><td className="text-end">{totals.totalItems}</td></tr>
-              <tr><td>Gross Total</td><td className="text-end">{formatMoney(totals.grossTotal)}</td></tr>
-              <tr><td>Discount</td><td className="text-end text-danger">-{formatMoney(totals.discountAmount)}</td></tr>
-              <tr><td>Subtotal</td><td className="text-end">{formatMoney(totals.subtotal)}</td></tr>
-              <tr><td>Shipping</td><td className="text-end">{formatMoney(totals.shipping)}</td></tr>
-              <tr className="fw-bold"><td>Order Total</td><td className="text-end">{formatMoney(totals.orderTotal)}</td></tr>
-            </tbody>
-          </table>
+
+        {/* Right - summary table */}
+        <div className="col-lg-6 col-md-12">
+          <div className="card h-100">
+            <div className="card-body">
+              <div className="d-flex justify-content-between mb-3 text-muted small">
+                <span>{itemFields.length} item{itemFields.length !== 1 ? "s" : ""}</span>
+                {totals.totalPcs > 0 && <span>{totals.totalPcs} pcs</span>}
+              </div>
+              <table className="table table-sm table-borderless mb-0">
+                <tbody>
+                  <tr>
+                    <td className="ps-0 text-muted">Gross Total</td>
+                    <td className="pe-0 text-end fw-semibold">{formatMoney(totals.grossTotal)}</td>
+                  </tr>
+                  {totals.discountAmount > 0 && (
+                    <tr>
+                      <td className="ps-0 text-muted">Discount</td>
+                      <td className="pe-0 text-end text-danger">-{formatMoney(totals.discountAmount)}</td>
+                    </tr>
+                  )}
+                  <tr className="border-top">
+                    <td className="ps-0 text-muted">Subtotal</td>
+                    <td className="pe-0 text-end">{formatMoney(totals.subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td className="ps-0 text-muted">Shipping</td>
+                    <td className="pe-0 text-end">
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="form-control form-control-sm text-end d-inline-block"
+                        style={{ width: 120 }}
+                        {...register("shipping")}
+                      />
+                    </td>
+                  </tr>
+                  <tr className="border-top border-2">
+                    <td className="ps-0 fw-bold" style={{ fontSize: "1rem" }}>Order Total</td>
+                    <td className="pe-0 text-end fw-bold" style={{ fontSize: "1rem" }}>{formatMoney(totals.orderTotal)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 

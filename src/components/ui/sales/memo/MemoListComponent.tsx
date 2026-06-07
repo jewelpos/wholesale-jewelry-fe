@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery, useMutation } from "@apollo/client";
+import { useLazyQuery } from "@apollo/client";
 import {
   GridReadyEvent,
   IServerSideGetRowsParams,
@@ -18,9 +18,6 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { GET_MEMO_LIST_QUERY } from "@/lib/graphql/query/sales";
-import { CREATE_INVOICE_FROM_MEMO_MUTATION } from "@/lib/graphql/mutations/sales";
-import useDefaultRoute from "@/hooks/useDefaultRoute";
-import { useRouter } from "next/navigation";
 import { MemoSummary, MemoSummaryTotals } from "@/types/sales";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "@/components/ui/grid/POSGrid";
@@ -97,10 +94,7 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
 
 const MemoListComponent = () => {
   const [getMemoList] = useLazyQuery(GET_MEMO_LIST_QUERY, { fetchPolicy: "network-only" });
-  const [createInvoiceFromMemo, { loading: creditInvoiceLoading }] = useMutation(CREATE_INVOICE_FROM_MEMO_MUTATION);
   const dispatch = useAppDispatch();
-  const router = useRouter();
-  const { basePath } = useDefaultRoute();
   const gridRef = useRef<AgGridReact<MemoSummary>>(null);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
@@ -198,54 +192,6 @@ const MemoListComponent = () => {
     if (selectedMemoNumbers.length > 0) setEmailModalOpen(true);
   }, [selectedMemoNumbers]);
 
-  const handleCreateCreditInvoice = useCallback(async () => {
-    if (!parsedStoreId || selectedMemoNumbers.length !== 1) return;
-
-    const result = await handleTryCatch(async () => {
-      const { data } = await createInvoiceFromMemo({
-        variables: {
-          input: {
-            storeid: parsedStoreId,
-            memonumber: selectedMemoNumbers[0],
-            creditreturn: true,
-          },
-        },
-      });
-
-      const response = data?.createInvoiceFromMemo;
-      if (!response?.success) {
-        throw new Error(response?.error || response?.message || "Failed to create credit invoice");
-      }
-
-      let invoiceNumber: number | undefined;
-      const raw = response?.data;
-      try {
-        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-        invoiceNumber = Number(parsed?.invoicenumber ?? parsed ?? 0) || undefined;
-      } catch {
-        invoiceNumber = typeof raw === "number" ? raw : undefined;
-      }
-
-      dispatch(
-        showNotification({
-          message: invoiceNumber
-            ? `Create Credit Invoice from Memo #${invoiceNumber}`
-            : "Credit Invoice created successfully",
-          type: NOTIFICATION_TYPES.SUCCESS,
-        })
-      );
-
-      if (invoiceNumber) {
-        router.push(`${basePath}/sales/${invoiceNumber}/edit?credit=1`);
-      }
-      return true;
-    });
-
-    if (result.error) {
-      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
-    }
-  }, [basePath, createInvoiceFromMemo, dispatch, parsedStoreId, router, selectedMemoNumbers]);
-
   const handlePrintMemo = useCallback(async () => {
     if (!parsedStoreId || selectedMemoNumbers.length === 0) return;
 
@@ -309,8 +255,6 @@ const MemoListComponent = () => {
         onPrintMemo={handlePrintMemo}
         onEmailMemo={handleEmailMemo}
         onExport={handleExport}
-        onCreateCreditInvoice={handleCreateCreditInvoice}
-        creditInvoiceLoading={creditInvoiceLoading}
       />
       {emailModalOpen && (
         <DocumentEmailModal
