@@ -326,7 +326,7 @@ const SalesInvoiceForm = ({
     return currencyFormatter.formatFixed(safe);
   };
 
-  const [products, setProducts] = useState<ItemDetails[]>([]);
+  const [, setProducts] = useState<ItemDetails[]>([]);
   const [fetchedInvoiceId, setFetchedInvoiceId] = useState<number | undefined>(undefined);
   const [fetchedBalanceDue, setFetchedBalanceDue] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1133,13 +1133,13 @@ const SalesInvoiceForm = ({
                   },
                 },
               })
-            : creditFromMemo && memonumber
+            : memonumber
               ? await createInvoiceFromMemo({
                   variables: {
                     input: {
                       storeid: parsedStoreId,
                       memonumber,
-                      creditreturn: true,
+                      creditreturn: creditFromMemo,
                     },
                   },
                 })
@@ -1176,7 +1176,7 @@ const SalesInvoiceForm = ({
             : result?.data?.createMemo
         : isEdit
           ? result?.data?.editInvoice
-          : creditFromMemo && memonumber
+          : memonumber
             ? (result?.data as any)?.createInvoiceFromMemo
             : mode === "CREDIT_INVOICE"
               ? result?.data?.createCreditInvoice
@@ -1209,32 +1209,6 @@ const SalesInvoiceForm = ({
         }
       }
 
-      // Update memo item quantities after successful invoice creation from memo
-      // Skip for credit returns â€” createInvoiceFromMemo already handles memo tracking
-      if (memonumber && !creditFromMemo && documentType === "INVOICE" && !isEdit) {
-        const memoItems = formData.items
-          .filter((it) => (it as any).salesorderitemid)
-          .map((it) => ({
-            invoiceitemid: (it as any).salesorderitemid as number,
-            invoicedpcs: Math.abs(toNum(it.itempcs)),
-            invoicedqty: Math.abs(toNum(it.itemquantity)),
-          }));
-        if (memoItems.length > 0) {
-          try {
-            await updateMemoAfterInvoicing({
-              variables: {
-                input: {
-                  storeid: parsedStoreId,
-                  memonumber,
-                  items: memoItems,
-                },
-              },
-            });
-          } catch (_) {
-            // Non-fatal â€” invoice was already created
-          }
-        }
-      }
 
       const documentNumber =
         documentType === "MEMO"
@@ -1295,7 +1269,6 @@ const SalesInvoiceForm = ({
   };
 
   const shipToCompanyName = watch("invshiptocompanyname") || "";
-  const billToAddress = watch("invbilltoadd1") || "";
   const shipToAddress = watch("invshiptoadd1") || "";
 
   // Show loader while SO data is being fetched / retrying
