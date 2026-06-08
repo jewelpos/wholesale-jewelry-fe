@@ -184,37 +184,71 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <fieldset disabled={disableField}>
-        <div className="card">
-          <div className="card-body">
-            {customerLoading ? (
-              [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
-            ) : (
-              <div className="new-employee-field">
-                <CustomerInputsA
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  setValue={setValue}
-                  photoPath={photoPath}
-                  customerId={customerid}
-                  disableField={disableField}
-                />
-                <CustomerInputsB
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  setValue={setValue}
-                  storeId={storeId}
-                  warehouseId={warehouseId}
-                  status={status}
-                  disableField={disableField}
-                />
-              </div>
-            )}
+        {customerLoading ? (
+          <div className="card">
+            <div className="card-body">
+              {[1, 2, 3, 4, 5, 6, 7].map((item) => (
+                <PlaceHolder key={item} />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="row g-3 align-items-start">
+            {/* Left card — profile & contact */}
+            <div className="col-lg-6 col-md-12">
+              <div className="card h-100" style={{ border: "1px solid #e9ecef" }}>
+                <div
+                  className="card-header py-3"
+                  style={{ background: "#f8f9fa", borderBottom: "1px solid #e9ecef" }}
+                >
+                  <h6 className="mb-0 fw-semibold" style={{ fontSize: 13, color: "#495057" }}>
+                    Customer Profile
+                  </h6>
+                </div>
+                <div className="card-body">
+                  <CustomerInputsA
+                    register={register}
+                    errors={errors}
+                    control={control}
+                    trigger={trigger}
+                    setValue={setValue}
+                    photoPath={photoPath}
+                    customerId={customerid}
+                    disableField={disableField}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right card — account settings */}
+            <div className="col-lg-6 col-md-12">
+              <div className="card h-100" style={{ border: "1px solid #e9ecef" }}>
+                <div
+                  className="card-header py-3"
+                  style={{ background: "#f8f9fa", borderBottom: "1px solid #e9ecef" }}
+                >
+                  <h6 className="mb-0 fw-semibold" style={{ fontSize: 13, color: "#495057" }}>
+                    Account Settings
+                  </h6>
+                </div>
+                <div className="card-body">
+                  <CustomerInputsB
+                    register={register}
+                    errors={errors}
+                    control={control}
+                    trigger={trigger}
+                    setValue={setValue}
+                    storeId={storeId}
+                    warehouseId={warehouseId}
+                    status={status}
+                    disableField={disableField}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!disableField && !customerLoading && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader

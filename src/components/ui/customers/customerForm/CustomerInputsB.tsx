@@ -27,6 +27,15 @@ interface Props {
   disableField?: boolean;
 }
 
+const SectionLabel = ({ label }: { label: string }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "18px 0 14px" }}>
+    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#adb5bd", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+      {label}
+    </span>
+    <div style={{ flex: 1, height: 1, backgroundColor: "#e9ecef" }} />
+  </div>
+);
+
 const CustomerInputsB = ({
   register,
   errors,
@@ -39,9 +48,11 @@ const CustomerInputsB = ({
   disableField,
 }: Props) => {
   return (
-    <div className="row">
-      <div className="col-lg-6 col-md-6">
-        <div className="mb-3">
+    <>
+      {/* Warehouse */}
+      <SectionLabel label="Warehouse" />
+      <div className="row">
+        <div className="col-6 mb-3">
           <label className="form-label">Store</label>
           <Controller
             name="storeid"
@@ -49,7 +60,7 @@ const CustomerInputsB = ({
             rules={{ required: "Store is required" }}
             render={({ field }) => (
               <SelectStore
-                className={`${errors.storeid && "is-invalid"} `}
+                className={errors.storeid ? "is-invalid" : ""}
                 trigger={trigger}
                 setValue={setValue}
                 storeId={storeId}
@@ -62,9 +73,7 @@ const CustomerInputsB = ({
             <div className="invalid-feedback">{errors.storeid.message}</div>
           )}
         </div>
-      </div>
-      <div className="col-lg-6 col-md-6">
-        <div className="mb-3">
+        <div className="col-6 mb-3">
           <label className="form-label">Warehouse</label>
           <Controller
             name="warehouseid"
@@ -72,7 +81,7 @@ const CustomerInputsB = ({
             rules={{ required: "Warehouse is required" }}
             render={({ field }) => (
               <SelectWarehouse
-                className={`${errors.warehouseid && "is-invalid"} `}
+                className={errors.warehouseid ? "is-invalid" : ""}
                 trigger={trigger}
                 setValue={setValue}
                 warehouseId={warehouseId}
@@ -87,9 +96,12 @@ const CustomerInputsB = ({
           )}
         </div>
       </div>
-      <div className="col-lg-6 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Terms</label>
+
+      {/* Terms */}
+      <SectionLabel label="Terms" />
+      <div className="row">
+        <div className="col-6 mb-3">
+          <label className="form-label">Payment Terms</label>
           <Controller
             name="termsid"
             control={control}
@@ -105,10 +117,8 @@ const CustomerInputsB = ({
             )}
           />
         </div>
-      </div>
-      <div className="col-lg-6 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Shipping mode</label>
+        <div className="col-6 mb-3">
+          <label className="form-label">Shipping Mode</label>
           <Controller
             name="custshippingmethod"
             control={control}
@@ -125,157 +135,121 @@ const CustomerInputsB = ({
           />
         </div>
       </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Credit limit</label>
+
+      {/* Financials */}
+      <SectionLabel label="Financials" />
+      <div className="row">
+        <div className="col-6 mb-3">
+          <label className="form-label">Credit Limit</label>
           <input
             type="text"
-            className={`${
-              errors.custcreditlimit && "is-invalid"
-            }  form-control`}
-            {...register("custcreditlimit", {
-              required: "Credit limit is required",
-            })}
+            className={`form-control${errors.custcreditlimit ? " is-invalid" : ""}`}
+            {...register("custcreditlimit", { required: "Credit limit is required" })}
           />
           {errors.custcreditlimit && (
-            <div className="invalid-feedback">
-              {errors.custcreditlimit.message}
-            </div>
+            <div className="invalid-feedback">{errors.custcreditlimit.message}</div>
           )}
         </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="mb-3">
+        <div className="col-6 mb-3">
           <label className="form-label">Discount %</label>
           <input
             type="text"
-            className={`${errors.custdiscount && "is-invalid"}  form-control`}
-            {...register("custdiscount", {
-              required: "Discount is required",
-            })}
+            className={`form-control${errors.custdiscount ? " is-invalid" : ""}`}
+            {...register("custdiscount", { required: "Discount is required" })}
           />
           {errors.custdiscount && (
-            <div className="invalid-feedback">
-              {errors.custdiscount.message}
-            </div>
+            <div className="invalid-feedback">{errors.custdiscount.message}</div>
           )}
         </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="mb-3">
+        <div className="col-6 mb-3">
           <label className="form-label">Tax ID</label>
           <input
             type="text"
-            className={`${errors.custtaxid && "is-invalid"}  form-control`}
+            className={`form-control${errors.custtaxid ? " is-invalid" : ""}`}
             {...register("custtaxid")}
           />
-          {errors.custtaxid && (
-            <div className="invalid-feedback">{errors.custtaxid.message}</div>
-          )}
         </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Sale tax</label>
+        <div className="col-6 mb-3">
+          <label className="form-label">Sales Tax %</label>
           <input
             type="text"
-            className={`${errors.custsalestax && "is-invalid"}  form-control`}
+            className={`form-control${errors.custsalestax ? " is-invalid" : ""}`}
             {...register("custsalestax")}
           />
-          {errors.custsalestax && (
-            <div className="invalid-feedback">
-              {errors.custsalestax.message}
+        </div>
+      </div>
+
+      {/* Status */}
+      <SectionLabel label="Status" />
+      <div className="row">
+        <div className="col-6 mb-3">
+          <label className="form-label d-block">Account Status</label>
+          <div className="d-flex align-items-center gap-3">
+            <div className="form-check form-switch mb-0">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                {...register("status", { required: true })}
+                onChange={(e) => {
+                  setValue("status", e.target.checked ? 1 : 0);
+                  trigger("status");
+                }}
+              />
             </div>
-          )}
-        </div>
-      </div>
-      {/* <div className="col-lg-4 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Shipping to</label>
-          <input
-            type="text"
-            className={`${errors.custshipto && "is-invalid"}  form-control`}
-            {...register("custshipto")}
-          />
-          {errors.custshipto && (
-            <div className="invalid-feedback">{errors.custshipto.message}</div>
-          )}
-        </div>
-      </div> */}
-      {/* <div className="col-lg-4 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Billing to</label>
-          <input
-            type="text"
-            className={`${errors.custbillto && "is-invalid"}  form-control`}
-            {...register("custbillto")}
-          />
-          {errors.custbillto && (
-            <div className="invalid-feedback">{errors.custbillto.message}</div>
-          )}
-        </div>
-      </div> */}
-      <div className="col-lg-4 col-md-6">
-        <div className="mb-3">
-          <label className="form-label">Status</label>
-          <div className="form-check form-check-md form-switch">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              role="switch"
-              {...register("status", { required: true })}
-              onChange={(e) => {
-                setValue("status", e.target.checked ? 1 : 0);
-                trigger("status");
-              }}
-            />
-            <label
-              className="form-check-label"
-              htmlFor="flexSwitchCheckDefault"
+            <span
+              className={`badge ${status === 1 ? "bg-success" : "bg-secondary"}`}
+              style={{ fontSize: 12 }}
             >
-              {status === 0 ? "Inactive" : "Active"}
-            </label>
+              {status === 1 ? "Active" : "Inactive"}
+            </span>
           </div>
         </div>
       </div>
-      <div className="col-lg-12 col-md-6">
-        <div className="mb-3">
-          <div className="form-check form-check-md form-switch">
-            <label className="form-label">Alert warning</label>
-            <input
-              className="form-check-input"
-              type="checkbox"
-              role="switch"
-              {...register("custalert")}
-              onChange={(e) => {
-                setValue("custalert", e.target.checked ? 1 : 0);
-                trigger("custalert");
-              }}
-            />
+
+      {/* Alerts */}
+      <SectionLabel label="Alerts" />
+      <div className="row">
+        <div className="col-12 mb-3">
+          <div className="d-flex align-items-center gap-3">
+            <div className="form-check form-switch mb-0">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                {...register("custalert")}
+                onChange={(e) => {
+                  setValue("custalert", e.target.checked ? 1 : 0);
+                  trigger("custalert");
+                }}
+              />
+            </div>
+            <label className="form-label mb-0">Enable Alert Warning</label>
           </div>
         </div>
-      </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
-          <label className="form-label">Alert remarks</label>
+        <div className="col-12 mb-3">
+          <label className="form-label">Alert Message</label>
           <textarea
-            className={`${
-              errors.custalertremarks && "is-invalid"
-            }  form-control`}
+            rows={2}
+            className={`form-control${errors.custalertremarks ? " is-invalid" : ""}`}
+            placeholder="Warning message shown on this customer's transactions..."
             {...register("custalertremarks")}
           />
           {errors.custalertremarks && (
-            <div className="invalid-feedback">
-              {errors.custalertremarks.message}
-            </div>
+            <div className="invalid-feedback">{errors.custalertremarks.message}</div>
           )}
         </div>
       </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
+
+      {/* Notes */}
+      <SectionLabel label="Notes" />
+      <div className="row">
+        <div className="col-12 mb-3">
           <label className="form-label">Remarks</label>
           <textarea
-            className={`${errors.custremarks && "is-invalid"}  form-control`}
+            rows={3}
+            className={`form-control${errors.custremarks ? " is-invalid" : ""}`}
+            placeholder="Internal notes about this customer..."
             {...register("custremarks")}
           />
           {errors.custremarks && (
@@ -283,7 +257,7 @@ const CustomerInputsB = ({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
