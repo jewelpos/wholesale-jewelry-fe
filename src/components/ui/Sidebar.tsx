@@ -16,7 +16,7 @@ const LS_KEY = "sidebar-open-section";
 const getIcon = (name?: string): LucideIcon | null => {
   if (!name) return null;
   const icon = (LucideIcons as Record<string, unknown>)[name];
-  return (typeof icon === "function" ? icon : null) as LucideIcon | null;
+  return icon != null ? (icon as LucideIcon) : null;
 };
 
 const Sidebar = ({ menus }: Props) => {
