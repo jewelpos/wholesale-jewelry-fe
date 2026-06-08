@@ -116,51 +116,50 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
 
   return (
     <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists"></div>
+      <div className="edit-delete-action" style={{ gap: "2px" }}>
         <Link
-          className="me-2 p-2"
+          className="p-1"
           href={`${basePath}/sales/${data.invoicenumber}/view`}
           scroll={false}
           title="View"
         >
-          <Eye className="feather-view" />
+          <Eye size={14} />
         </Link>
         {canEdit ? (
           <Link
-            className="me-2 p-2"
+            className="p-1"
             href={`${basePath}/sales/${data.invoicenumber}/edit`}
             scroll={false}
             title="Edit"
           >
-            <Edit className="feather-edit" />
+            <Edit size={14} />
           </Link>
         ) : (
           <span
-            className="me-2 p-2"
+            className="p-1"
             title={editReason}
             style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
           >
-            <Edit className="feather-edit" style={{ opacity: 0.35 }} />
+            <Edit size={14} style={{ opacity: 0.35 }} />
           </span>
         )}
         {canCancel ? (
           <button
             type="button"
-            className="confirm-text p-2 btn btn-link"
+            className="confirm-text p-1 btn btn-link"
             style={{ lineHeight: 1 }}
             onClick={handleDelete}
             title="Cancel Invoice"
           >
-            <Trash2 className="feather-trash-2" />
+            <Trash2 size={14} />
           </button>
         ) : (
           <span
-            className="p-2"
+            className="p-1"
             title={cancelReason}
             style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
           >
-            <Trash2 className="feather-trash-2" style={{ opacity: 0.35 }} />
+            <Trash2 size={14} style={{ opacity: 0.35 }} />
           </span>
         )}
       </div>
