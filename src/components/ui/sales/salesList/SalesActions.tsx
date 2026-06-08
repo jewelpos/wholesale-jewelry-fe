@@ -68,15 +68,51 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     }
   };
 
-  const isCreditInvoiceNotApplied = Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
-  const isReturnedWithCredit = data.statusname === "Returned" && Number(data.custcrediapplied) === 1;
-  const canEdit = isCreditInvoiceNotApplied || (data.statusname === "Ready" && Number(data.amountreceived) === 0 && !isReturnedWithCredit);
+  const isCreditInvoiceNotApplied =
+    Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
+  const isReturnedWithCredit =
+    data.statusname === "Returned" && Number(data.custcrediapplied) === 1;
+  const canEdit =
+    isCreditInvoiceNotApplied ||
+    (data.statusname === "Ready" &&
+      Number(data.amountreceived) === 0 &&
+      !isReturnedWithCredit);
   const canCancel =
     !isCreditInvoiceNotApplied &&
     Number(data.amountreceived) === 0 &&
     data.statusname !== "Shipped" &&
     data.statusname !== "Picked up" &&
     data.statusname !== "Cancelled";
+
+  let editReason = "";
+  if (!canEdit) {
+    if (Number(data.amountreceived) > 0)
+      editReason = "Cannot edit: payment already received";
+    else if (data.statusname === "Cancelled")
+      editReason = "Cannot edit: invoice is cancelled";
+    else if (data.statusname === "Shipped")
+      editReason = "Cannot edit: invoice has been shipped";
+    else if (data.statusname === "Picked up")
+      editReason = "Cannot edit: invoice has been picked up";
+    else if (Number(data.custcrediapplied) === 1)
+      editReason = "Cannot edit: credit already applied";
+    else editReason = "Cannot edit in current status";
+  }
+
+  let cancelReason = "";
+  if (!canCancel) {
+    if (isCreditInvoiceNotApplied)
+      cancelReason = "Cannot cancel: this is an unapplied credit invoice";
+    else if (Number(data.amountreceived) > 0)
+      cancelReason = "Cannot cancel: payment already received";
+    else if (data.statusname === "Shipped")
+      cancelReason = "Cannot cancel: invoice has been shipped";
+    else if (data.statusname === "Picked up")
+      cancelReason = "Cannot cancel: invoice has been picked up";
+    else if (data.statusname === "Cancelled")
+      cancelReason = "Invoice is already cancelled";
+    else cancelReason = "Cannot cancel in current status";
+  }
 
   return (
     <div className="action-table-data">
@@ -86,27 +122,46 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
           className="me-2 p-2"
           href={`${basePath}/sales/${data.invoicenumber}/view`}
           scroll={false}
+          title="View"
         >
           <Eye className="feather-view" />
         </Link>
-        {canEdit && (
+        {canEdit ? (
           <Link
             className="me-2 p-2"
             href={`${basePath}/sales/${data.invoicenumber}/edit`}
             scroll={false}
+            title="Edit"
           >
             <Edit className="feather-edit" />
           </Link>
+        ) : (
+          <span
+            className="me-2 p-2"
+            title={editReason}
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <Edit className="feather-edit" style={{ opacity: 0.35 }} />
+          </span>
         )}
-        {canCancel && (
-          <Link
-            className="confirm-text p-2"
-            href="#"
+        {canCancel ? (
+          <button
+            type="button"
+            className="confirm-text p-2 btn btn-link"
+            style={{ lineHeight: 1 }}
             onClick={handleDelete}
-            scroll={false}
+            title="Cancel Invoice"
           >
             <Trash2 className="feather-trash-2" />
-          </Link>
+          </button>
+        ) : (
+          <span
+            className="p-2"
+            title={cancelReason}
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <Trash2 className="feather-trash-2" style={{ opacity: 0.35 }} />
+          </span>
         )}
       </div>
     </div>

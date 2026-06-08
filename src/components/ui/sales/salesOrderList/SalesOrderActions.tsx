@@ -49,7 +49,16 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
   const isPending = currentStatus === "pending";
   const isInvoiceCreated = !!data.orderprocesseddate;
   const canEdit = isPending;
+  const canDelete = isPending;
   const canChangeStatus = !isInvoiceCreated;
+
+  const editReason = isInvoiceCreated
+    ? "Cannot edit: invoice already created from this order"
+    : "Cannot edit: only Pending orders can be edited";
+  const deleteReason = isInvoiceCreated
+    ? "Cannot delete: invoice already created from this order"
+    : "Cannot delete: only Pending orders can be deleted";
+  const statusReason = "Cannot change status: invoice already created from this order";
 
   const handleOpenStatusModal = async () => {
     setSelectedStatusId(null);
@@ -141,11 +150,15 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
               <Edit size={14} className="feather-edit" />
             </Link>
           ) : (
-            <span className="p-1 text-muted" title="Edit not allowed in current status">
+            <span
+              className="p-1"
+              title={editReason}
+              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+            >
               <Edit size={14} style={{ opacity: 0.35 }} />
             </span>
           )}
-          {canChangeStatus && (
+          {canChangeStatus ? (
             <button
               type="button"
               className="p-1 btn btn-link"
@@ -155,8 +168,16 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
             >
               <RefreshCw size={14} />
             </button>
+          ) : (
+            <span
+              className="p-1"
+              title={statusReason}
+              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+            >
+              <RefreshCw size={14} style={{ opacity: 0.35 }} />
+            </span>
           )}
-          {isPending && (
+          {canDelete ? (
             <button
               type="button"
               className="p-1 btn btn-link text-danger"
@@ -166,6 +187,14 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
             >
               <Trash2 size={14} />
             </button>
+          ) : (
+            <span
+              className="p-1"
+              title={deleteReason}
+              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+            >
+              <Trash2 size={14} style={{ opacity: 0.35 }} />
+            </span>
           )}
         </div>
       </div>

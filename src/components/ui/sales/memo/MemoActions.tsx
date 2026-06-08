@@ -15,13 +15,24 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
 
   if (!data) return null;
 
-  const isCreditMemoNotApplied = data.salemodename === "Memo Credit" && Number(data.custcrediapplied) === 0;
   const canEdit =
     data.statusname !== "Shipped" &&
     data.statusname !== "Cancelled" &&
     Number(data.custcrediapplied) !== 1 &&
     Number(data.amountreceived) === 0;
-  // canDelete = !isCreditMemoNotApplied — wire up when delete mutation is added
+
+  let editReason = "";
+  if (!canEdit) {
+    if (data.statusname === "Shipped")
+      editReason = "Cannot edit: memo has been shipped";
+    else if (data.statusname === "Cancelled")
+      editReason = "Cannot edit: memo is cancelled";
+    else if (Number(data.custcrediapplied) === 1)
+      editReason = "Cannot edit: credit already applied";
+    else if (Number(data.amountreceived) > 0)
+      editReason = "Cannot edit: payment already received";
+    else editReason = "Cannot edit in current status";
+  }
 
   return (
     <div className="action-table-data">
@@ -34,7 +45,7 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
         >
           <Eye size={14} />
         </Link>
-        {canEdit && (
+        {canEdit ? (
           <Link
             className="p-1"
             href={`${basePath}/sales/memo/${data.memonumber}/edit`}
@@ -43,6 +54,14 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
           >
             <Edit size={14} className="feather-edit" />
           </Link>
+        ) : (
+          <span
+            className="p-1"
+            title={editReason}
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <Edit size={14} style={{ opacity: 0.35 }} />
+          </span>
         )}
       </div>
     </div>
