@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -89,6 +89,7 @@ const BalanceAgingComponent = () => {
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -101,7 +102,6 @@ const BalanceAgingComponent = () => {
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
             />
           </div>

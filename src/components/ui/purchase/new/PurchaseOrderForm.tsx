@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -33,8 +33,10 @@ import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import useSupplier from "@/hooks/useSupplier";
 import useOutlets from "@/hooks/useOutlets";
 import useWarehouse from "@/hooks/useWarehouse";
+import useMenu from "@/hooks/useMenu";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
+import PageHeader from "@/components/ui/PageHeader";
 import { PurchaseOrderFormType, Status } from "@/types/purchase";
 import { ItemDetails } from "@/hooks/useProducts";
 
@@ -347,6 +349,7 @@ const PurchaseOrderForm = ({
   const watchedTaxPct = watch("posales");
   const watchedFreight = watch("pofreight");
   const watchedDutyPaid = watch("podutypaid");
+
   useEffect(() => {
     const totals = (watchedItems || []).reduce(
       (acc, item) => {
@@ -426,10 +429,12 @@ const PurchaseOrderForm = ({
   }, [watchedItems, watchedTaxPct, watchedFreight, watchedDutyPaid, getValues, setValue]);
 
   const [isToolDiscountTouched, setIsToolDiscountTouched] = useState(false);
+  const discountMountRef = useRef(true);
 
   const [toolItem, setToolItem] = useState<{
     itemid?: number;
     itemcode?: string;
+    itemdescription: string;
     itemunit: string;
     qtyordered: number;
     orderunitcost: number;
@@ -437,6 +442,7 @@ const PurchaseOrderForm = ({
   }>(() => ({
     itemid: undefined,
     itemcode: undefined,
+    itemdescription: "",
     itemunit: "",
     qtyordered: isReturnOrder ? -1 : 1,
     orderunitcost: 0,
@@ -449,6 +455,7 @@ const PurchaseOrderForm = ({
     setToolItem({
       itemid: undefined,
       itemcode: undefined,
+      itemdescription: "",
       itemunit: "",
       qtyordered: isReturnOrder ? -1 : 1,
       orderunitcost: 0,
@@ -465,6 +472,27 @@ const PurchaseOrderForm = ({
       orddiscount: defaultItemDiscount,
     }));
   }, [defaultItemDiscount, editingIndex, isToolDiscountTouched]);
+
+  // Propagate header discount to all existing line items when user changes it.
+  // Skips the first render so edit-mode items keep their saved discounts on load.
+  useEffect(() => {
+    if (discountMountRef.current) {
+      discountMountRef.current = false;
+      return;
+    }
+    const items = getValues("items");
+    if (!items?.length) return;
+    items.forEach((item, index) => {
+      const qty = Number(item.qtyordered || 0);
+      const unitCost = Number(item.orderunitcost || 0);
+      update(index, {
+        ...item,
+        orddiscount: defaultItemDiscount,
+        ordextendedprice: calculateOrdExtendedPrice(qty, unitCost, defaultItemDiscount),
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultItemDiscount]);
 
   const handleRemoveItemRow = (index: number) => {
     if (editingIndex != null) {
@@ -501,6 +529,7 @@ const PurchaseOrderForm = ({
           poitemid: row.poitemid,
           itemid: row.itemid,
           itemcode: row.itemcode,
+          itemdescription: row.itemdescription ?? "",
           itemunit: row.itemunit,
           qtyordered: Number(row.qtyordered || 0),
           orderunitcost: Number(row.orderunitcost || 0),
@@ -588,6 +617,7 @@ const PurchaseOrderForm = ({
             poitemid: row.poitemid,
             itemid: row.itemid,
             itemcode: row.itemcode,
+            itemdescription: row.itemdescription ?? "",
             itemunit: row.itemunit,
             qtyordered: qty,
             orderunitcost: unitCost,
@@ -917,8 +947,22 @@ const PurchaseOrderForm = ({
     }
   };
 
+  // ─── JSX ──────────────────────────────────────────────────────────────────
+
+  const { currentMenu } = useMenu();
+
+  const sectionLabel = {
+    fontSize: "0.65rem",
+    letterSpacing: "0.06em",
+  } as const;
+
+  const supplierName = isReturnOrder
+    ? watch("poshiptocompanyname")
+    : watch("poordtocompanyname");
+
   return (
     <>
+      <PageHeader title={currentMenu?.permissiondisplayname ?? ""} subtitle={currentMenu?.permissiondescription} showBreadcrumb />
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -927,146 +971,114 @@ const PurchaseOrderForm = ({
         }}
       >
         <fieldset disabled={disableField}>
-        <div className="card">
-          <div className="card-body">
-            {disableField ? (
-              <div className="row g-3">
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 mt-1 row align-items-center">
-                    <label className="col-form-label col-md-4">PO Create Date</label>
-                    <div className="col-md-8">
-                      <div className="input-groupicon calender-input">
-                        <Calendar className="info-img" />
-                        <DatePicker
-                          value={selectedDate || null}
-                          className="filterdatepicker w-100"
-                          format="DD-MM-YYYY"
-                          placeholder="Choose Date"
-                          allowClear
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">PO Request Date</label>
-                    <div className="col-md-8">
-                      <div className="input-groupicon calender-input">
-                        <Calendar className="info-img" />
-                        <Controller
-                          name="porequestdate"
-                          control={control}
-                          render={({ field }) => (
-                            <DatePicker
-                              value={field.value || null}
-                              onChange={(date) => field.onChange(date)}
-                              className="filterdatepicker w-100"
-                              format="DD-MM-YYYY"
-                              placeholder="Choose Date"
-                              allowClear
-                              disabled
-                            />
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  
+          {/* ── HEADER STRIP ─────────────────────────────── */}
+          <div className="card mb-3">
+            <div className="card-body py-3">
+              <div className="d-flex flex-wrap gap-4 align-items-start">
+
+                {/* PO Date */}
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>PO Date</div>
+                  <DatePicker
+                    value={selectedDate || null}
+                    onChange={handleDateChange}
+                    className="filterdatepicker"
+                    format="DD-MM-YYYY"
+                    placeholder="Choose Date"
+                    allowClear={false}
+                    disabled={disableField}
+                    style={{ width: 140 }}
+                  />
                 </div>
+                <div className="vr align-self-stretch" />
 
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">PO Number</label>
-                    <div className="col-md-8">
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={String(ponumberParam ?? "")}
-                        readOnly
-                        disabled
+                {/* Request Date */}
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Request Date</div>
+                  <Controller
+                    name="porequestdate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value || null}
+                        onChange={(date) => field.onChange(date)}
+                        className="filterdatepicker"
+                        format="DD-MM-YYYY"
+                        placeholder="Choose Date"
+                        allowClear
+                        disabled={disableField}
+                        style={{ width: 140 }}
                       />
-                    </div>
-                  </div>
-
-                  <div className="input-blocks mb-0 mt-1 row align-items-center">
-                    <label className="col-form-label col-md-4">PO Status</label>
-                    <div className="col-md-8">
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={(() => {
-                          const raw = watch("postatus");
-                          const id = typeof raw === "number" ? raw : Number(raw || 0);
-                          const status = Number.isFinite(id) ? poStatusById.get(id) : undefined;
-                          return status?.statusname ?? String(raw ?? "");
-                        })()}
-                        readOnly
-                        disabled
-                      />
-                    </div>
-                  </div>
+                    )}
+                  />
                 </div>
-              </div>
-            ) : (
-              <div className="row g-3 align-items-end">
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">PO Request Date</label>
-                    <div className="col-md-8">
-                      <div className="input-groupicon calender-input">
-                        <Calendar className="info-img" />
-                        <Controller
-                          name="porequestdate"
-                          control={control}
-                          render={({ field }) => (
-                            <DatePicker
-                              value={field.value || null}
-                              onChange={(date) => field.onChange(date)}
-                              className="filterdatepicker w-100"
-                              format="DD-MM-YYYY"
-                              placeholder="Choose Date"
-                              allowClear
-                              disabled={disableField}
-                            />
-                          )}
-                        />
-                      </div>
-                    </div>
+                <div className="vr align-self-stretch" />
+
+                {/* Warehouse */}
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Warehouse</div>
+                  <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
+                    {currentWarehouse?.warehousename || "—"}
                   </div>
+                  <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
                 </div>
 
+                {/* Return order: source PO selector */}
                 {isReturnOrder && !isEdit && (
-                  <div className="col-lg-6 col-md-6 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Purchase Order *</label>
-                      <div className="col-md-8">
-                        <SelectPurchaseOrder
-                          value={returnOrderPoNumber}
-                          onChange={(v: number) => setReturnOrderPoNumber(Number(v || 0))}
-                          storeId={parsedStoreId}
-                          postatus={4}
-                          disableField={disableField}
-                        />
-                      </div>
+                  <>
+                    <div className="vr align-self-stretch" />
+                    <div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Return for PO *</div>
+                      <SelectPurchaseOrder
+                        value={returnOrderPoNumber}
+                        onChange={(v: number) => setReturnOrderPoNumber(Number(v || 0))}
+                        storeId={parsedStoreId}
+                        postatus={4}
+                        disableField={disableField}
+                      />
                     </div>
-                  </div>
+                  </>
                 )}
 
+                {/* PO# — only in edit/view */}
+                {(isEdit || disableField) && (
+                  <>
+                    <div className="vr align-self-stretch" />
+                    <div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>PO #</div>
+                      <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
+                        {ponumberParam || "—"}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Status — only in edit */}
                 {isEdit && (
-                  <div className="col-lg-6 col-md-6 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">PO Status</label>
-                      <div className="col-md-8">
+                  <>
+                    <div className="vr align-self-stretch" />
+                    <div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Status</div>
+                      {disableField ? (
+                        <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
+                          {(() => {
+                            const raw = watch("postatus");
+                            const id = typeof raw === "number" ? raw : Number(raw || 0);
+                            const status = Number.isFinite(id) ? poStatusById.get(id) : undefined;
+                            return status?.statusname ?? String(raw ?? "");
+                          })()}
+                        </div>
+                      ) : (
                         <Controller
                           name="postatus"
                           control={control}
                           render={({ field }) => (
                             <select
-                              className="form-select"
+                              className="form-select form-select-sm"
+                              style={{ width: 160 }}
                               value={field.value != null ? String(field.value) : ""}
                               onChange={(e) => field.onChange(e.target.value)}
-                              disabled={disableField}
                             >
                               <option value="">Select</option>
                               {poStatuses.map((s) => (
@@ -1077,1031 +1089,737 @@ const PurchaseOrderForm = ({
                             </select>
                           )}
                         />
-                      </div>
+                      )}
                     </div>
-                  </div>
+                  </>
                 )}
-              </div>
-            )}
 
-            <div className="row g-3 mt-1">
-              <div className="col-lg-6 col-md-12 col-sm-12">
-                <div className="border rounded p-3 h-100">
-                  <h5 className="mb-3">Order To</h5>
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">{isReturnOrder ? "Outlet" : "Supplier *"}</label>
-                    <div className="col-md-8">
+                {/* Supplier summary chip */}
+                {supplierName && (
+                  <>
+                    <div className="vr align-self-stretch" />
+                    <div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Supplier</div>
+                      <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>{supplierName}</div>
+                    </div>
+                  </>
+                )}
+
+              </div>
+            </div>
+          </div>
+
+          {/* ── ORDER TO / SHIP TO + ORDER DETAILS ──────── */}
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="row g-3">
+
+                {/* Order To */}
+                <div className="col-lg-6 col-md-12">
+                  <div className="border rounded p-3 h-100">
+                    <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                      {isReturnOrder ? "Order From" : "Order To"}
+                    </div>
+
+                    {!isReturnOrder && (
+                      <Controller
+                        name="supplierid"
+                        control={control}
+                        rules={{ required: "Supplier is required" }}
+                        render={({ field }) => (
+                          <SelectSupplier
+                            trigger={trigger}
+                            storeId={parsedStoreId}
+                            disableField={disableField || isEdit}
+                            {...field}
+                          />
+                        )}
+                      />
+                    )}
+
+                    <div className="text-muted small lh-lg mt-2">
                       {isReturnOrder ? (
+                        <>
+                          {currentOutlet?.outletname && <div className="fw-semibold text-dark">{currentOutlet.outletname}</div>}
+                          {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
+                          {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
+                          {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
+                            <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
+                          )}
+                          {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
+                        </>
+                      ) : (
+                        <>
+                          {watch("poordtocompanyname") && <div className="fw-semibold text-dark">{watch("poordtocompanyname")}</div>}
+                          {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
+                          {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
+                          {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
+                            <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
+                          )}
+                          {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
+                        </>
+                      )}
+                    </div>
+
+                    <input type="hidden" {...register("poordtocompanyname")} />
+                    <input type="hidden" {...register("poordtoadd1")} />
+                    <input type="hidden" {...register("poordtoadd2")} />
+                    <input type="hidden" {...register("poordtocity")} />
+                    <input type="hidden" {...register("poordtostate")} />
+                    <input type="hidden" {...register("poordtozip")} />
+                    <input type="hidden" {...register("poordtocountry")} />
+                    <input type="hidden" {...register("poordtophone")} />
+                  </div>
+                </div>
+
+                {/* Ship To */}
+                <div className="col-lg-6 col-md-12">
+                  <div className="border rounded p-3 h-100">
+                    <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                      {isReturnOrder ? "Ship To (Supplier)" : "Ship To"}
+                    </div>
+
+                    {isReturnOrder && (
+                      <Controller
+                        name="supplierid"
+                        control={control}
+                        rules={{ required: "Supplier is required" }}
+                        render={({ field }) => (
+                          <SelectSupplier
+                            trigger={trigger}
+                            storeId={parsedStoreId}
+                            disableField={disableField || isEdit}
+                            {...field}
+                          />
+                        )}
+                      />
+                    )}
+
+                    <div className="text-muted small lh-lg mt-2">
+                      {watch("poshiptocompanyname") && <div className="fw-semibold text-dark">{watch("poshiptocompanyname")}</div>}
+                      {watch("poshiptoadd1") && <div>{watch("poshiptoadd1")}</div>}
+                      {watch("poshiptoadd2") && <div>{watch("poshiptoadd2")}</div>}
+                      {[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).length > 0 && (
+                        <div>{[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).join(", ")}</div>
+                      )}
+                      {watch("poshiptophone") && <div>{watch("poshiptophone")}</div>}
+                    </div>
+
+                    <input type="hidden" {...register("poshiptocompanyname")} />
+                    <input type="hidden" {...register("poshiptoadd1")} />
+                    <input type="hidden" {...register("poshiptoadd2")} />
+                    <input type="hidden" {...register("poshiptocity")} />
+                    <input type="hidden" {...register("poshiptostate")} />
+                    <input type="hidden" {...register("poshiptozip")} />
+                    <input type="hidden" {...register("poshiptocountry")} />
+                    <input type="hidden" {...register("poshiptophone")} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── ORDER DETAILS GROUPS ─────────────────── */}
+              <div className="row g-2 mt-3">
+
+                {/* Reference */}
+                <div className="col-lg-4 col-md-12">
+                  <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                    <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Reference</div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">{isReturnOrder ? "RMA No" : "Ref No"}</label>
                         <input
                           type="text"
-                          className="form-control"
-                          value={currentOutlet?.outletname ?? ""}
-                          readOnly
-                          disabled
+                          className="form-control form-control-sm"
+                          {...register("rmano")}
+                          disabled={disableField}
                         />
-                      ) : (
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">Confirmed To</label>
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          {...register("poconfirmedto")}
+                          disabled={disableField}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fulfillment */}
+                <div className="col-lg-4 col-md-12">
+                  <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                    <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Fulfillment</div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">Terms</label>
                         <Controller
-                          name="supplierid"
+                          name="termsid"
                           control={control}
-                          rules={{ required: "Supplier is required" }}
                           render={({ field }) => (
-                            <SelectSupplier
-                              trigger={trigger}
-                              storeId={parsedStoreId}
-                              disableField={disableField}
+                            <SelectPaymentTerms
                               {...field}
-                            />
-                          )}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="row g-2 mt-1">
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">Address</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poordtoadd1") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poordtoadd1")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">&nbsp;</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poordtoadd2") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poordtoadd2")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">City/State/Zip/Country</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={
-                              [
-                                watch("poordtocity") || "",
-                                watch("poordtostate") || "",
-                                watch("poordtozip") || "",
-                                watch("poordtocountry") || "",
-                              ]
-                                .filter(Boolean)
-                                .join(", ")
-                            }
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poordtocity")} />
-                          <input type="hidden" {...register("poordtostate")} />
-                          <input type="hidden" {...register("poordtozip")} />
-                          <input type="hidden" {...register("poordtocountry")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">Phone</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poordtophone") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poordtophone")} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-6 col-md-12 col-sm-12">
-                <div className="border rounded p-3 h-100">
-                  <h5 className="mb-3">Ship To</h5>
-                  <div className="row g-2">
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">{isReturnOrder ? "Supplier *" : "Company"}</label>
-                        <div className="col-md-8">
-                          {isReturnOrder ? (
-                            <Controller
-                              name="supplierid"
-                              control={control}
-                              rules={{ required: "Supplier is required" }}
-                              render={({ field }) => (
-                                <SelectSupplier
-                                  trigger={trigger}
-                                  storeId={parsedStoreId}
-                                  disableField={disableField}
-                                  {...field}
-                                />
-                              )}
-                            />
-                          ) : (
-                            <>
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={watch("poshiptocompanyname") || ""}
-                                readOnly
-                                disabled
-                              />
-                              <input type="hidden" {...register("poshiptocompanyname")} />
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">Address</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poshiptoadd1") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poshiptoadd1")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">&nbsp;</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poshiptoadd2") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poshiptoadd2")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">City/State/Zip/Country</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={
-                              [
-                                watch("poshiptocity") || "",
-                                watch("poshiptostate") || "",
-                                watch("poshiptozip") || "",
-                                watch("poshiptocountry") || "",
-                              ]
-                                .filter(Boolean)
-                                .join(", ")
-                            }
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poshiptocity")} />
-                          <input type="hidden" {...register("poshiptostate")} />
-                          <input type="hidden" {...register("poshiptozip")} />
-                          <input type="hidden" {...register("poshiptocountry")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <div className="input-blocks mb-0 row align-items-center">
-                        <label className="col-form-label col-md-4">Phone</label>
-                        <div className="col-md-8">
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={watch("poshiptophone") || ""}
-                            readOnly
-                            disabled
-                          />
-                          <input type="hidden" {...register("poshiptophone")} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="row g-3 mt-1 align-items-end">
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">
-                    {isReturnOrder ? "RMA No" : "Reference number"}
-                  </label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      {...register("rmano")}
-                      disabled={disableField}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Confirmed To</label>
-                  <div className="col-md-8">
-                    <input type="text" className="form-control" {...register("poconfirmedto")} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Term</label>
-                  <div className="col-md-8">
-                    <Controller
-                      name="termsid"
-                      control={control}
-                      render={({ field }) => (
-                        <SelectPaymentTerms
-                          {...field}
-                          storeId={parsedStoreId}
-                          trigger={trigger}
-                          disableField={disableField}
-                          value={field.value}
-                          onChange={(val: number | undefined) => field.onChange(val)}
-                        />
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Shipping Method</label>
-                  <div className="col-md-8">
-                    <Controller
-                      name="poshippingmethod"
-                      control={control}
-                      render={({ field }) => (
-                        <SelectShippingModes
-                          {...field}
-                          storeId={parsedStoreId}
-                          trigger={trigger}
-                          disableField={disableField}
-                          value={field.value === "" ? undefined : field.value}
-                          onChange={(val: number | undefined) => field.onChange(val)}
-                        />
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Sales Tax%</label>
-                  <div className="col-md-8">
-                    <input
-                      type="number"
-                      step="any"
-                      min={0}
-                      className="form-control"
-                      {...register("posales", { valueAsNumber: true })}
-                      disabled={disableField}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Discount %</label>
-                  <div className="col-md-8">
-                    <input
-                      type="number"
-                      step="any"
-                      min={0}
-                      max={100}
-                      className="form-control"
-                      {...register("podiscount", { valueAsNumber: true })}
-                      onInput={(e) => {
-                        const raw = e.currentTarget.value;
-                        if (raw === "") return;
-
-                        const n = Number(raw);
-                        if (!Number.isFinite(n)) return;
-
-                        const clamped = Math.min(100, Math.max(0, n));
-                        if (clamped !== n) {
-                          e.currentTarget.value = String(clamped);
-                        }
-                      }}
-                      disabled={disableField}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-4 col-md-6 col-sm-12">
-                <div className="input-blocks mb-0 row align-items-center">
-                  <label className="col-form-label col-md-4">Warehouse *</label>
-                  <div className="col-md-8">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={currentWarehouse?.warehousename || ""}
-                      readOnly
-                      disabled
-                    />
-                    <input
-                      type="hidden"
-                      {...register("warehouseid", {
-                        valueAsNumber: true,
-                        required: true,
-                        min: 1,
-                      })}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="row g-3 mt-1">
-              <div className="col-lg-12">
-                <div className="border rounded p-3">
-                  <div className="table-responsive">
-                    <div className="row g-3 align-items-end">
-                      <div className="col-lg-4 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Search/Scan Item/Barcode *</label>
-                            <SelectProduct
                               storeId={parsedStoreId}
-                              hasWarehouseId={true}
-                              warehouseId={parsedWarehouseId}
-                              onProductsLoaded={setProducts}
                               trigger={trigger}
                               disableField={disableField}
-                              value={toolItem.itemid}
-                              onChange={(val: number | undefined) =>
-                                setToolItem((prev) => ({ ...prev, itemid: val }))
-                              }
-                              onChangeAdditional={(selected: any) => {
-                                if (!selected) {
-                                  setToolItem((prev) => ({
-                                    ...prev,
-                                    itemid: undefined,
-                                    itemcode: undefined,
-                                    itemunit: "",
-                                  }));
-                                  return;
-                                }
-                                const rawQty = Number(selected?.itemreorderqty ?? 0);
-                                const qtyValue = isReturnOrder ? -Math.abs(rawQty) : rawQty;
-                                setToolItem((prev) => ({
-                                  ...prev,
-                                  itemid: Number(selected?.itemid ?? prev.itemid),
-                                  itemcode:
-                                    selected?.itemcode != null ? String(selected.itemcode) : prev.itemcode,
-                                  itemunit: selected?.itemunit || "",
-                                  qtyordered: qtyValue,
-                                  orderunitcost: Number(selected?.itempurchaseprice ?? 0),
-                                }));
-                              }}
+                              value={field.value}
+                              onChange={(val: number | undefined) => field.onChange(val)}
                             />
-                        </div>
+                          )}
+                        />
                       </div>
-
-                      <div className="col-lg-3 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Description</label>
-                            <input
-                              type="text"
-                              className="form-control"
-                              value={productById.get(Number(toolItem.itemid || 0))?.itemdescription || ""}
-                              readOnly
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">Ship Via</label>
+                        <Controller
+                          name="poshippingmethod"
+                          control={control}
+                          render={({ field }) => (
+                            <SelectShippingModes
+                              {...field}
+                              storeId={parsedStoreId}
+                              trigger={trigger}
+                              disableField={disableField}
+                              value={field.value === "" ? undefined : field.value}
+                              onChange={(val: number | undefined) => field.onChange(val)}
                             />
-                        </div>
+                          )}
+                        />
                       </div>
-
-                      <div className="col-lg-1 col-md-6 col-sm-12 p-0">
-                        <div className="input-blocks">
-                          <label>Quantity *</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min={isReturnOrder ? undefined : 0}
-                              className="form-control px-1 text-end" 
-                              value={toolItem.qtyordered}
-                              disabled={disableField}
-                              onChange={(e) => {
-                                const n = Number(e.target.value || 0);
-                                const abs = Math.abs(n);
-                                const normalizedAbs = Math.round(abs * 1000) / 1000;
-                                const normalized = isReturnOrder ? -normalizedAbs : normalizedAbs;
-                                setToolItem((prev) => ({
-                                  ...prev,
-                                  qtyordered: normalized,
-                                }));
-                              }}
-                            />
-                        </div>
-                      </div>
-
-                      <div className="col-lg-1 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Unit Price *</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min={0}
-                              className="form-control px-1 text-end"
-                              value={toolItem.orderunitcost}
-                              disabled={disableField}
-                              onChange={(e) => {
-                                const n = Math.max(0, Number(e.target.value || 0));
-                                const normalized = Math.round(n * 1000) / 1000;
-                                setToolItem((prev) => ({
-                                  ...prev,
-                                  orderunitcost: normalized,
-                                }));
-                              }}
-                            />
-                        </div>
-                      </div>
-
-                      <div className="col-lg-1 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Discount %</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min={0}
-                              max={100}
-                              className="form-control px-1 text-end"
-                              value={toolItem.orddiscount}
-                              disabled={disableField}
-                              onChange={(e) => {
-                                const n = Number(e.target.value || 0);
-                                const clamped = Math.min(100, Math.max(0, n));
-                                const normalized = Math.round(clamped * 1000) / 1000;
-                                setIsToolDiscountTouched(true);
-                                setToolItem((prev) => ({
-                                  ...prev,
-                                  orddiscount: normalized,
-                                }));
-                              }}
-                            />
-                        </div>
-                      </div>
-
-                      <div className="col-lg-1 col-md-6 col-sm-12 p-0">
-                        <div className="input-blocks">
-                          <label>Ext Price</label>
-                            <input
-                              type="text"
-                              className="form-control px-1 text-end"
-                              value={(() => {
-                                const v = calculateOrdExtendedPrice(
-                                  toolItem.qtyordered,
-                                  toolItem.orderunitcost,
-                                  toolItem.orddiscount
-                                );
-                                return Number.isFinite(v) ? v.toFixed(3) : "";
-                              })()}
-                              readOnly
-                            />
-                        </div>
-                      </div>
-
-                      <div className="col-lg-1 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                            {!disableField &&
-                              (editingIndex == null ? (
-                              <button
-                                type="button"
-                                className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
-                                onClick={() => {
-                                  const supplierIdNumber = Number(getValues("supplierid"));
-                                  if (!Number.isFinite(supplierIdNumber) || supplierIdNumber <= 0) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Supplier is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  const warehouseIdNumber = Number(getValues("warehouseid"));
-                                  if (!Number.isFinite(warehouseIdNumber) || warehouseIdNumber <= 0) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Warehouse is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  if (!Number.isFinite(parsedOutletId) || !currentOutlet) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Outlet is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  if (!toolItem.itemid) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Product is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  if (!toolItem.itemcode || String(toolItem.itemcode).trim() === "") {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Product is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  const qtyValue = Number(toolItem.qtyordered);
-                                  if (
-                                    !Number.isFinite(qtyValue) ||
-                                    (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)
-                                  ) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Quantity is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  if (!Number.isFinite(toolItem.orderunitcost) || toolItem.orderunitcost <= 0) {
-                                    dispatch(
-                                      showNotification({
-                                        message: "Unit Price is required",
-                                        type: NOTIFICATION_TYPES.ERROR,
-                                      })
-                                    );
-                                    return;
-                                  }
-
-                                  const normalizedQty = isReturnOrder
-                                    ? -Math.abs(Number(toolItem.qtyordered || 0))
-                                    : Number(toolItem.qtyordered || 0);
-                                  append({
-                                    itemid: toolItem.itemid,
-                                    itemcode: toolItem.itemcode ?? "",
-                                    itemunit: toolItem.itemunit,
-                                    qtyordered: normalizedQty,
-                                    orderunitcost: toolItem.orderunitcost,
-                                    orddiscount: toolItem.orddiscount,
-                                    ordextendedprice: calculateOrdExtendedPrice(
-                                      normalizedQty,
-                                      toolItem.orderunitcost,
-                                      toolItem.orddiscount
-                                    ),
-                                  });
-
-                                  resetToolItem();
-                                }}
-                              >
-                                <PlusCircle />
-                              </button>
-                            ) : (
-                              <div className="btn-group w-100" role="group">
-                                <button
-                                  type="button"
-                                  className="btn btn-success d-flex align-items-center justify-content-center"
-                                  onClick={() => {
-                                    const supplierIdNumber = Number(getValues("supplierid"));
-                                    if (!Number.isFinite(supplierIdNumber) || supplierIdNumber <= 0) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Supplier is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    const warehouseIdNumber = Number(getValues("warehouseid"));
-                                    if (!Number.isFinite(warehouseIdNumber) || warehouseIdNumber <= 0) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Warehouse is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    if (!Number.isFinite(parsedOutletId) || !currentOutlet) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Outlet is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    if (!toolItem.itemid) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Product is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    if (!toolItem.itemcode || String(toolItem.itemcode).trim() === "") {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Product is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    const qtyValue = Number(toolItem.qtyordered);
-                                    if (
-                                      !Number.isFinite(qtyValue) ||
-                                      (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)
-                                    ) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Quantity is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-
-                                    if (!Number.isFinite(toolItem.orderunitcost) || toolItem.orderunitcost <= 0) {
-                                      dispatch(
-                                        showNotification({
-                                          message: "Unit Price is required",
-                                          type: NOTIFICATION_TYPES.ERROR,
-                                        })
-                                      );
-                                      return;
-                                    }
-                                    const existing = getValues(`items.${editingIndex}`);
-                                    const normalizedQty = isReturnOrder
-                                      ? -Math.abs(Number(toolItem.qtyordered || 0))
-                                      : Number(toolItem.qtyordered || 0);
-                                    update(editingIndex, {
-                                      ...existing,
-                                      itemid: toolItem.itemid,
-                                      itemcode: toolItem.itemcode ?? "",
-                                      itemunit: toolItem.itemunit,
-                                      qtyordered: normalizedQty,
-                                      orderunitcost: toolItem.orderunitcost,
-                                      orddiscount: toolItem.orddiscount,
-                                      ordextendedprice: calculateOrdExtendedPrice(
-                                        normalizedQty,
-                                        toolItem.orderunitcost,
-                                        toolItem.orddiscount
-                                      ),
-                                    });
-                                    setEditingIndex(null);
-                                    resetToolItem();
-                                  }}
-                                >
-                                  <Check size={16} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary d-flex align-items-center justify-content-center"
-                                  onClick={() => {
-                                    setEditingIndex(null);
-                                    resetToolItem();
-                                  }}
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ maxHeight: 480, overflowY: "auto" }}>
-                      <table className="table datanew mt-3 mb-0">
-                        <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
-                          <tr>
-                            <th className="text-nowrap">#</th>
-                            <th className="text-nowrap">Item Code</th>
-                            <th>Description</th>
-                            <th className="text-end text-nowrap">Qty</th>
-                            <th className="text-end text-nowrap">Unit Price</th>
-                            <th className="text-end text-nowrap">Discount %</th>
-                            <th className="text-end text-nowrap">Ext. Price</th>
-                            <th className="text-center text-nowrap">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {itemFields.map((field, index) => {
-                            const itemId = Number(getValues(`items.${index}.itemid`) || 0);
-                            const product = productById.get(itemId);
-                            const displayItemCode =
-                              String(getValues(`items.${index}.itemcode`) || "") || product?.itemcode || "";
-                            const description = product?.itemdescription ?? "";
-                            const qty = Number(getValues(`items.${index}.qtyordered`) || 0);
-                            const unitPrice = Number(getValues(`items.${index}.orderunitcost`) || 0);
-                            const discountPct = Number(getValues(`items.${index}.orddiscount`) || 0);
-                            const savedExtPrice = Number(
-                              getValues(`items.${index}.ordextendedprice`) as unknown as number
-                            );
-                            const extPrice = Number.isFinite(savedExtPrice)
-                              ? savedExtPrice
-                              : calculateOrdExtendedPrice(qty, unitPrice, discountPct);
-                            return (
-                              <tr key={field.id} className="align-middle">
-                                <td>
-                                  {index + 1}
-                                  <input
-                                    type="hidden"
-                                    {...register(`items.${index}.poitemid` as const, {
-                                      valueAsNumber: true,
-                                    })}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    {...register(`items.${index}.itemid` as const, {
-                                      valueAsNumber: true,
-                                    })}
-                                  />
-                                  <input type="hidden" {...register(`items.${index}.itemcode` as const)} />
-                                </td>
-                                <td className="text-nowrap">{displayItemCode}</td>
-                                <td>{description}</td>
-                                <td className="text-end">{qty}</td>
-                                <td className="text-end">{unitPrice}</td>
-                                <td className="text-end">{discountPct}</td>
-                                <td className="text-end">
-                                  {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
-                                </td>
-                                <td className="text-center">
-                                  {!disableField && (
-                                    <>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-primary me-2"
-                                      onClick={() => {
-                                        setEditingIndex(index);
-                                        setToolItem({
-                                          itemid:
-                                            (getValues(`items.${index}.itemid`) as unknown as number) ??
-                                            undefined,
-                                          itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
-                                          itemunit: getValues(`items.${index}.itemunit`) || "",
-                                          qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
-                                          orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
-                                          orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
-                                        });
-                                      }}
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-danger"
-                                      onClick={() => handleRemoveItemRow(index)}
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                    </>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 </div>
+
+                {/* Pricing */}
+                <div className="col-lg-4 col-md-12">
+                  <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                    <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Pricing</div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">Discount %</label>
+                        <input
+                          type="number"
+                          step="any"
+                          min={0}
+                          max={100}
+                          className="form-control form-control-sm"
+                          {...register("podiscount", { valueAsNumber: true })}
+                          disabled={disableField}
+                          onInput={(e) => {
+                            const raw = e.currentTarget.value;
+                            if (raw === "") return;
+                            const n = Number(raw);
+                            if (!Number.isFinite(n)) return;
+                            const clamped = Math.min(100, Math.max(0, n));
+                            if (clamped !== n) e.currentTarget.value = String(clamped);
+                          }}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label small text-muted mb-1">Sales Tax %</label>
+                        <input
+                          type="number"
+                          step="any"
+                          min={0}
+                          className="form-control form-control-sm"
+                          {...register("posales", { valueAsNumber: true })}
+                          disabled={disableField}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
+          </div>
 
-            <div className="row g-3 mt-1">
-              <div className="col-lg-6 col-md-12 col-sm-12">
-                <div className="border rounded p-3 h-100">
-                  <div className="input-blocks mb-3 row align-items-center">
-                    <label className="col-form-label col-md-4">Total Items</label>
-                    <div className="col-md-8">
+          {/* ── LINE ITEMS ───────────────────────────────── */}
+          <div className="card mb-3">
+            <div className="card-body">
+
+              {/* Items table */}
+              <div style={{ maxHeight: 480, overflowY: "auto" }}>
+                <table className="table datanew mb-0">
+                  <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
+                    <tr>
+                      <th className="text-nowrap">#</th>
+                      <th className="text-nowrap">Item Code</th>
+                      <th>Description</th>
+                      <th className="text-end text-nowrap">Qty</th>
+                      <th className="text-end text-nowrap">Unit Price</th>
+                      <th className="text-end text-nowrap">Disc %</th>
+                      <th className="text-end text-nowrap">Ext. Price</th>
+                      <th className="text-center text-nowrap">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemFields.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center text-muted py-5 fst-italic">
+                          No items yet — use the form above to add line items
+                        </td>
+                      </tr>
+                    ) : (
+                      itemFields.map((field, index) => {
+                        const displayItemCode =
+                          String(getValues(`items.${index}.itemcode`) || "");
+                        const description = String(getValues(`items.${index}.itemdescription`) || "");
+                        const qty = Number(getValues(`items.${index}.qtyordered`) || 0);
+                        const unitPrice = Number(getValues(`items.${index}.orderunitcost`) || 0);
+                        const discountPct = Number(getValues(`items.${index}.orddiscount`) || 0);
+                        const savedExtPrice = Number(
+                          getValues(`items.${index}.ordextendedprice`) as unknown as number
+                        );
+                        const extPrice = Number.isFinite(savedExtPrice)
+                          ? savedExtPrice
+                          : calculateOrdExtendedPrice(qty, unitPrice, discountPct);
+                        return (
+                          <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
+                            <td>
+                              {index + 1}
+                              <input
+                                type="hidden"
+                                {...register(`items.${index}.poitemid` as const, { valueAsNumber: true })}
+                              />
+                              <input
+                                type="hidden"
+                                {...register(`items.${index}.itemid` as const, { valueAsNumber: true })}
+                              />
+                              <input type="hidden" {...register(`items.${index}.itemcode` as const)} />
+                            </td>
+                            <td className="text-nowrap">{displayItemCode}</td>
+                            <td>{description}</td>
+                            <td className="text-end">{qty}</td>
+                            <td className="text-end">{unitPrice}</td>
+                            <td className="text-end">{discountPct}</td>
+                            <td className="text-end">
+                              {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
+                            </td>
+                            <td className="text-center">
+                              {!disableField && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary me-1"
+                                    onClick={() => {
+                                      setEditingIndex(index);
+                                      setToolItem({
+                                        itemid:
+                                          (getValues(`items.${index}.itemid`) as unknown as number) ??
+                                          undefined,
+                                        itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
+                                        itemdescription: String(getValues(`items.${index}.itemdescription`) || ""),
+                                        itemunit: getValues(`items.${index}.itemunit`) || "",
+                                        qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
+                                        orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
+                                        orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
+                                      });
+                                    }}
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => handleRemoveItemRow(index)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add / Edit item row */}
+              {!disableField && (
+                <div className="border-top pt-3 mt-1">
+                  <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                    {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
+                  </div>
+                  <div className="row g-2 align-items-end">
+                    <div className="col-lg-4 col-md-6 col-sm-12">
+                      <label className="form-label small text-muted mb-1">Item *</label>
+                      <SelectProduct
+                        storeId={parsedStoreId}
+                        hasWarehouseId={true}
+                        warehouseId={parsedWarehouseId}
+                        onProductsLoaded={setProducts}
+                        trigger={trigger}
+                        disableField={disableField}
+                        value={toolItem.itemid}
+                        onChange={(val: number | undefined) =>
+                          setToolItem((prev) => ({ ...prev, itemid: val }))
+                        }
+                        onChangeAdditional={(selected: any) => {
+                          if (!selected) {
+                            setToolItem((prev) => ({
+                              ...prev,
+                              itemid: undefined,
+                              itemcode: undefined,
+                              itemdescription: "",
+                              itemunit: "",
+                            }));
+                            return;
+                          }
+                          const rawQty = Number(selected?.itemreorderqty ?? 0);
+                          const qtyValue = isReturnOrder ? -Math.abs(rawQty) : rawQty;
+                          setToolItem((prev) => ({
+                            ...prev,
+                            itemid: Number(selected?.itemid ?? prev.itemid),
+                            itemcode:
+                              selected?.itemcode != null ? String(selected.itemcode) : prev.itemcode,
+                            itemdescription: selected?.itemdescription || "",
+                            itemunit: selected?.itemunit || "",
+                            qtyordered: qtyValue,
+                            orderunitcost: Number(selected?.itempurchaseprice ?? 0),
+                          }));
+                        }}
+                      />
+                    </div>
+
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <label className="form-label small text-muted mb-1">Description</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={toolItem.itemdescription}
+                        readOnly
+                      />
+                    </div>
+
+                    <div className="col-lg-1 col-md-3 col-sm-6">
+                      <label className="form-label small text-muted mb-1">Qty *</label>
                       <input
                         type="number"
-                        className="form-control"
-                        value={itemFields.length}
-                        readOnly
-                        disabled
+                        step="0.001"
+                        min={isReturnOrder ? undefined : 0}
+                        className="form-control text-end"
+                        value={toolItem.qtyordered}
+                        disabled={disableField}
+                        onChange={(e) => {
+                          const n = Number(e.target.value || 0);
+                          const abs = Math.abs(n);
+                          const normalizedAbs = Math.round(abs * 1000) / 1000;
+                          const normalized = isReturnOrder ? -normalizedAbs : normalizedAbs;
+                          setToolItem((prev) => ({ ...prev, qtyordered: normalized }));
+                        }}
                       />
                     </div>
-                  </div>
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">Customer Message</label>
-                    <div className="col-md-8">
-                      <textarea
-                        className="form-control"
-                        rows={4}
-                        {...register("poremarks")}
+
+                    <div className="col-lg-1 col-md-3 col-sm-6">
+                      <label className="form-label small text-muted mb-1">Unit Price *</label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min={0}
+                        className="form-control text-end"
+                        value={toolItem.orderunitcost}
                         disabled={disableField}
+                        onChange={(e) => {
+                          const n = Math.max(0, Number(e.target.value || 0));
+                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.round(n * 1000) / 1000 }));
+                        }}
                       />
+                    </div>
+
+                    <div className="col-lg-1 col-md-3 col-sm-6">
+                      <label className="form-label small text-muted mb-1">Disc %</label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min={0}
+                        max={100}
+                        className="form-control text-end"
+                        value={toolItem.orddiscount}
+                        disabled={disableField}
+                        onChange={(e) => {
+                          const n = Number(e.target.value || 0);
+                          const clamped = Math.min(100, Math.max(0, n));
+                          setIsToolDiscountTouched(true);
+                          setToolItem((prev) => ({ ...prev, orddiscount: Math.round(clamped * 1000) / 1000 }));
+                        }}
+                      />
+                    </div>
+
+                    <div className="col-lg-1 col-md-3 col-sm-6">
+                      <label className="form-label small text-muted mb-1">Ext Price</label>
+                      <input
+                        type="text"
+                        className="form-control text-end"
+                        value={(() => {
+                          const v = calculateOrdExtendedPrice(
+                            toolItem.qtyordered,
+                            toolItem.orderunitcost,
+                            toolItem.orddiscount
+                          );
+                          return Number.isFinite(v) ? v.toFixed(3) : "";
+                        })()}
+                        readOnly
+                      />
+                    </div>
+
+                    <div className="col-lg-1 col-md-3 col-sm-6">
+                      {editingIndex == null ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
+                          onClick={() => {
+                            const supplierIdNumber = Number(getValues("supplierid"));
+                            if (!Number.isFinite(supplierIdNumber) || supplierIdNumber <= 0) {
+                              dispatch(showNotification({ message: "Supplier is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            const warehouseIdNumber = Number(getValues("warehouseid"));
+                            if (!Number.isFinite(warehouseIdNumber) || warehouseIdNumber <= 0) {
+                              dispatch(showNotification({ message: "Warehouse is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            if (!Number.isFinite(parsedOutletId) || !currentOutlet) {
+                              dispatch(showNotification({ message: "Outlet is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            if (!toolItem.itemid) {
+                              dispatch(showNotification({ message: "Product is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            if (!toolItem.itemcode || String(toolItem.itemcode).trim() === "") {
+                              dispatch(showNotification({ message: "Product is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            const qtyValue = Number(toolItem.qtyordered);
+                            if (!Number.isFinite(qtyValue) || (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)) {
+                              dispatch(showNotification({ message: "Quantity is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            if (!Number.isFinite(toolItem.orderunitcost) || toolItem.orderunitcost <= 0) {
+                              dispatch(showNotification({ message: "Unit Price is required", type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
+                            const normalizedQty = isReturnOrder
+                              ? -Math.abs(Number(toolItem.qtyordered || 0))
+                              : Number(toolItem.qtyordered || 0);
+                            append({
+                              itemid: toolItem.itemid,
+                              itemcode: toolItem.itemcode ?? "",
+                              itemdescription: toolItem.itemdescription,
+                              itemunit: toolItem.itemunit,
+                              qtyordered: normalizedQty,
+                              orderunitcost: toolItem.orderunitcost,
+                              orddiscount: toolItem.orddiscount,
+                              ordextendedprice: calculateOrdExtendedPrice(
+                                normalizedQty,
+                                toolItem.orderunitcost,
+                                toolItem.orddiscount
+                              ),
+                            });
+                            resetToolItem();
+                          }}
+                        >
+                          <PlusCircle size={16} />
+                        </button>
+                      ) : (
+                        <div className="btn-group w-100" role="group">
+                          <button
+                            type="button"
+                            className="btn btn-success d-flex align-items-center justify-content-center"
+                            onClick={() => {
+                              const supplierIdNumber = Number(getValues("supplierid"));
+                              if (!Number.isFinite(supplierIdNumber) || supplierIdNumber <= 0) {
+                                dispatch(showNotification({ message: "Supplier is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              const warehouseIdNumber = Number(getValues("warehouseid"));
+                              if (!Number.isFinite(warehouseIdNumber) || warehouseIdNumber <= 0) {
+                                dispatch(showNotification({ message: "Warehouse is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              if (!Number.isFinite(parsedOutletId) || !currentOutlet) {
+                                dispatch(showNotification({ message: "Outlet is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              if (!toolItem.itemid) {
+                                dispatch(showNotification({ message: "Product is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              if (!toolItem.itemcode || String(toolItem.itemcode).trim() === "") {
+                                dispatch(showNotification({ message: "Product is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              const qtyValue = Number(toolItem.qtyordered);
+                              if (!Number.isFinite(qtyValue) || (isReturnOrder ? Math.abs(qtyValue) <= 0 : qtyValue <= 0)) {
+                                dispatch(showNotification({ message: "Quantity is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              if (!Number.isFinite(toolItem.orderunitcost) || toolItem.orderunitcost <= 0) {
+                                dispatch(showNotification({ message: "Unit Price is required", type: NOTIFICATION_TYPES.ERROR }));
+                                return;
+                              }
+                              const existing = getValues(`items.${editingIndex}`);
+                              const normalizedQty = isReturnOrder
+                                ? -Math.abs(Number(toolItem.qtyordered || 0))
+                                : Number(toolItem.qtyordered || 0);
+                              update(editingIndex, {
+                                ...existing,
+                                itemid: toolItem.itemid,
+                                itemcode: toolItem.itemcode ?? "",
+                                itemdescription: toolItem.itemdescription,
+                                itemunit: toolItem.itemunit,
+                                qtyordered: normalizedQty,
+                                orderunitcost: toolItem.orderunitcost,
+                                orddiscount: toolItem.orddiscount,
+                                ordextendedprice: calculateOrdExtendedPrice(
+                                  normalizedQty,
+                                  toolItem.orderunitcost,
+                                  toolItem.orddiscount
+                                ),
+                              });
+                              setEditingIndex(null);
+                              resetToolItem();
+                            }}
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary d-flex align-items-center justify-content-center"
+                            onClick={() => {
+                              setEditingIndex(null);
+                              resetToolItem();
+                            }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="col-lg-6 col-md-12 col-sm-12">
-                <div className="border rounded p-3 h-100">
-                  <div className="row g-3">
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Grand Total</label>
-                      <div className="col-md-8">
-                        <input
-                          type="hidden"
-                          {...register("pototalwithoutdiscount", { valueAsNumber: true })}
-                        />
-                        <input
-                          type="text"
-                          className="form-control text-end"
-                          value={formatMoney(watch("pototalwithoutdiscount"))}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                    </div>
+            </div>
+          </div>
+
+          {/* ── NOTES + TOTALS ───────────────────────────── */}
+          <div className="row g-3 mb-3">
+
+            {/* Left — remarks */}
+            <div className="col-lg-6 col-md-12">
+              <div className="card h-100">
+                <div className="card-body">
+                  <label className="form-label small text-muted mb-1">Remarks</label>
+                  <textarea
+                    className="form-control"
+                    rows={5}
+                    {...register("poremarks")}
+                    disabled={disableField}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right — summary table */}
+            <div className="col-lg-6 col-md-12">
+              <div className="card h-100">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between mb-3 text-muted small">
+                    <span>{itemFields.length} item{itemFields.length !== 1 ? "s" : ""}</span>
                   </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Discount Amount</label>
-                      <div className="col-md-8">
-                        <input type="hidden" {...register("podiscountamt", { valueAsNumber: true })} />
-                        <input
-                          type="text"
-                          className="form-control text-end"
-                          value={formatMoney(watch("podiscountamt"))}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Subtotal</label>
-                      <div className="col-md-8">
-                        <input type="hidden" {...register("posubtotal", { valueAsNumber: true })} />
-                        <input
-                          type="text"
-                          className="form-control text-end"
-                          value={formatMoney(watch("posubtotal"))}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Sales Tax</label>
-                      <div className="col-md-8">
-                        <input type="hidden" {...register("posalestax", { valueAsNumber: true })} />
-                        <input
-                          type="text"
-                          className="form-control text-end"
-                          value={formatMoney(watch("posalestax"))}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Shipping</label>
-                      <div className="col-md-8">
-                        {disableField ? (
-                          <>
-                            <input type="hidden" {...register("pofreight", { valueAsNumber: true })} />
+                  <table className="table table-sm table-borderless mb-0">
+                    <tbody>
+                      <tr>
+                        <td className="ps-0 text-muted">Gross Total</td>
+                        <td className="pe-0 text-end fw-semibold">{formatMoney(watch("pototalwithoutdiscount"))}</td>
+                      </tr>
+                      {Number(watch("podiscountamt") || 0) > 0 && (
+                        <tr>
+                          <td className="ps-0 text-muted">Discount</td>
+                          <td className="pe-0 text-end text-danger">-{formatMoney(watch("podiscountamt"))}</td>
+                        </tr>
+                      )}
+                      <tr className="border-top">
+                        <td className="ps-0 text-muted">Subtotal</td>
+                        <td className="pe-0 text-end">{formatMoney(watch("posubtotal"))}</td>
+                      </tr>
+                      {Number(watch("posales") || 0) > 0 && (
+                        <tr>
+                          <td className="ps-0 text-muted">
+                            Sales Tax ({Number(watch("posales"))}%)
+                          </td>
+                          <td className="pe-0 text-end">{formatMoney(watch("posalestax"))}</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td className="ps-0 text-muted">Freight / Shipping</td>
+                        <td className="pe-0 text-end">
+                          {disableField ? (
+                            <span>{formatMoney(watch("pofreight"))}</span>
+                          ) : (
                             <input
-                              type="text"
-                              className="form-control text-end"
-                              value={formatMoney(watch("pofreight"))}
-                              readOnly
-                              disabled
+                              type="number"
+                              className="form-control form-control-sm text-end d-inline-block"
+                              style={{ width: 120 }}
+                              {...register("pofreight", { valueAsNumber: true })}
                             />
-                          </>
-                        ) : (
-                          <input
-                            type="number"
-                            className="form-control"
-                            {...register("pofreight", { valueAsNumber: true })}
-                            disabled={disableField}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Duty/Tariff</label>
-                      <div className="col-md-8">
-                        {disableField ? (
-                          <>
-                            <input type="hidden" {...register("podutypaid", { valueAsNumber: true })} />
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="ps-0 text-muted">Duty / Tariff</td>
+                        <td className="pe-0 text-end">
+                          {disableField ? (
+                            <span>{formatMoney(watch("podutypaid"))}</span>
+                          ) : (
                             <input
-                              type="text"
-                              className="form-control text-end"
-                              value={formatMoney(watch("podutypaid"))}
-                              readOnly
-                              disabled
+                              type="number"
+                              className="form-control form-control-sm text-end d-inline-block"
+                              style={{ width: 120 }}
+                              {...register("podutypaid", { valueAsNumber: true })}
                             />
-                          </>
-                        ) : (
-                          <input
-                            type="number"
-                            className="form-control"
-                            {...register("podutypaid", { valueAsNumber: true })}
-                            disabled={disableField}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-12 col-md-12 col-sm-12">
-                    <div className="input-blocks mb-0 row align-items-center">
-                      <label className="col-form-label col-md-4">Net PO Total</label>
-                      <div className="col-md-8">
-                        <input type="hidden" {...register("pototal", { valueAsNumber: true })} />
-                        <input
-                          type="text"
-                          className="form-control text-end"
-                          value={formatMoney(watch("pototal"))}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  </div>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="border-top border-2">
+                        <td className="ps-0 fw-bold" style={{ fontSize: "1rem" }}>PO Total</td>
+                        <td className="pe-0 text-end fw-bold" style={{ fontSize: "1rem" }}>
+                          {formatMoney(watch("pototal"))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <input type="hidden" {...register("pototalwithoutdiscount", { valueAsNumber: true })} />
+                  <input type="hidden" {...register("podiscountamt", { valueAsNumber: true })} />
+                  <input type="hidden" {...register("posubtotal", { valueAsNumber: true })} />
+                  <input type="hidden" {...register("posalestax", { valueAsNumber: true })} />
+                  <input type="hidden" {...register("pototal", { valueAsNumber: true })} />
                 </div>
               </div>
             </div>
 
           </div>
-        </div>
 
-        {!disableField && (
+        </fieldset>
+
+        {disableField ? (
+          <div className="card sticky-footer">
+            <div className="card-body">
+              <div className="text-end">
+                <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
-              loading={creating || updating || poLoading}
+              loading={creating || updating || returning || poLoading}
               btnText={isEdit ? "Update" : "Save"}
               loadingText={isEdit ? "Updating ..." : "Saving ..."}
               type="button"
@@ -2109,7 +1827,6 @@ const PurchaseOrderForm = ({
             />
           </ActionFooter>
         )}
-        </fieldset>
       </form>
     </>
   );

@@ -804,3 +804,69 @@ export const GET_SUPPLIER_MONTHLY_SALES_PIVOT_QUERY = gql`
     }
   }
 `;
+
+export const GET_ITEM_QTY_SOLD_PIVOT_QUERY = gql`
+  query GetMonthlyItemQtySoldPivot(
+    $storeid: Int!
+    $outletid: Int!
+    $warehouseid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getMonthlyItemQtySoldPivot(
+      storeid: $storeid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        itemcode
+        itemdescription
+        supplier
+        categoryname
+        sales_year
+        total_year_qty
+        jan
+        feb
+        mar
+        apr
+        may
+        jun
+        jul
+        aug
+        sep
+        oct
+        nov
+        dec
+        warehousename
+        warehouseid
+        outletid
+      }
+      totalsRow {
+        total_year_qty
+        jan
+        feb
+        mar
+        apr
+        may
+        jun
+        jul
+        aug
+        sep
+        oct
+        nov
+        dec
+      }
+    }
+  }
+`;

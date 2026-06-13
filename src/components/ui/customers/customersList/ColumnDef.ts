@@ -3,20 +3,12 @@ import { CustomersListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
-import ViewLink from "../../grid/ViewLink";
-
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
     headerName: "Customer id",
     field: "customerid",
     filter: "agNumberColumnFilter",
-    cellRenderer: ViewLink,
-    cellRendererParams: (params: ICellRendererParams<CustomersListType>) => ({
-      link: params.data
-        ? `/customers/${params.data.customerid}/view`
-        : "/customers",
-    }),
-    enableRowGroup: false
+    enableRowGroup: false,
   },
   {
     headerName: "Name",

@@ -10,15 +10,11 @@ import {
   UseFormSetValue,
   UseFormTrigger,
 } from "react-hook-form";
-import SelectWarehouse from "@/components/forms/SelectWarehouse";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
-import useSupplier from "@/hooks/useSupplier";
-import { Calendar } from "react-feather";
-import { DatePicker } from "antd";
-import dayjs from "dayjs";
 import useWarehouse from "@/hooks/useWarehouse";
 import { useParams } from "next/navigation";
+import { DatePicker } from "antd";
 
 interface Props {
   register: UseFormRegister<SupplierInvoiceFormType>;
@@ -34,13 +30,17 @@ interface Props {
   setValue: UseFormSetValue<SupplierInvoiceFormType>;
 }
 
+const sectionLabel = {
+  fontSize: "0.65rem",
+  letterSpacing: "0.06em",
+} as const;
+
 const SupplierInvoiceFormInputA = ({
   register,
   errors,
   control,
   trigger,
   storeId,
-  warehouseId,
   disableField,
   supplier,
   supplierLoading,
@@ -49,7 +49,7 @@ const SupplierInvoiceFormInputA = ({
 }: Props) => {
   const { outletId } = useParams();
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
-  const warehouse = warehouses.find((warehouse) => warehouse.issystem);
+  const warehouse = warehouses.find((w) => w.issystem);
 
   useEffect(() => {
     if (outletId) {
@@ -65,68 +65,102 @@ const SupplierInvoiceFormInputA = ({
 
   return (
     <>
-      <div className="row">
-        <div className="col-lg-5 col-sm-12 col-md-6">
-          <div className="mb-3">
-            <label className="form-label">Vendor Invoice #</label>
-            <input
-              type="text"
-              className={`${errors.veninvoiceno && "is-invalid"}  form-control`}
-              {...register("veninvoiceno", {
-                required: "Vendor invoice number is required",
-              })}
-              disabled={disableField}
-            />
-            {errors.veninvoiceno && (
-              <div className="invalid-feedback">
-                {errors.veninvoiceno.message}
+      {/* ── HEADER STRIP ──────────────────────────────────── */}
+      <div className="card mb-3">
+        <div className="card-body py-3">
+          <div className="d-flex flex-wrap gap-4 align-items-start">
+
+            {/* Invoice Date */}
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>
+                Invoice Date
               </div>
-            )}
+              <Controller
+                name="veninvoicedate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={(date) => field.onChange(date)}
+                    format="DD-MM-YYYY"
+                    allowClear={false}
+                    disabled={disableField}
+                    style={{ width: 140 }}
+                  />
+                )}
+              />
+            </div>
+            <div className="vr align-self-stretch" />
+
+            {/* Warehouse */}
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>
+                Warehouse
+              </div>
+              <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
+                {warehouse?.warehousename || "—"}
+              </div>
+              <input type="hidden" {...register("warehouseid", { required: "Warehouse is required" })} />
+            </div>
+            <div className="vr align-self-stretch" />
+
+            {/* Vendor Invoice # */}
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>
+                Vendor Invoice #
+              </div>
+              <input
+                type="text"
+                className={`form-control form-control-sm${errors.veninvoiceno ? " is-invalid" : ""}`}
+                style={{ width: 150 }}
+                {...register("veninvoiceno", { required: "Vendor invoice number is required" })}
+                disabled={disableField}
+              />
+              {errors.veninvoiceno && (
+                <div className="invalid-feedback">{errors.veninvoiceno.message}</div>
+              )}
+            </div>
+            <div className="vr align-self-stretch" />
+
+            {/* Ref PO # */}
+            <div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>
+                Ref PO #
+              </div>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                style={{ width: 120 }}
+                {...register("refponumber")}
+              />
+            </div>
+
           </div>
         </div>
       </div>
-      <div className="row">
-        <div className="col-lg-7 col-sm-12 col-md-6">
-          <div className="row">
-            <div className="col-lg-6 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Warehouse</label>
-                <input
-                  type="text"
-                  className={`${
-                    errors.warehouseid && "is-invalid"
-                  } form-control`}
-                  {...register("warehouseid", {
-                    required: "Warehouse is required",
-                  })}
-                  disabled
-                  hidden
-                />
-                <input
-                  type="text"
-                  className={`${
-                    errors.warehouseid && "is-invalid"
-                  } form-control`}
-                  value={warehouse?.warehousename || ""}
-                  disabled
-                />
-                {errors.warehouseid && (
-                  <div className="invalid-feedback">
-                    {errors.warehouseid.message}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="col-lg-6 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Supplier</label>
+
+      {/* ── SUPPLIER + ADDRESS ────────────────────────────── */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <div className="row g-3">
+
+            {/* Left: supplier selector + financial fields */}
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <div
+                  className="text-uppercase fw-semibold text-muted mb-2"
+                  style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}
+                >
+                  Supplier
+                </div>
+
                 <Controller
                   name="supplierid"
                   control={control}
                   rules={{ required: "Supplier is required" }}
                   render={({ field }) => (
                     <SelectSupplier
-                      className={`${errors.supplierid && "is-invalid"} `}
+                      className={errors.supplierid ? "is-invalid" : ""}
                       trigger={trigger}
                       storeId={storeId}
                       disableField={disableField}
@@ -135,168 +169,79 @@ const SupplierInvoiceFormInputA = ({
                   )}
                 />
                 {errors.supplierid && (
-                  <div className="invalid-feedback">
-                    {errors.supplierid.message}
-                  </div>
+                  <div className="invalid-feedback d-block">{errors.supplierid.message}</div>
                 )}
-              </div>
-            </div>
-            <div className="col-lg-4 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Invoice amount</label>
-                <input
-                  type="text"
-                  className={`${
-                    errors.veninvoicetotal && "is-invalid"
-                  }  form-control`}
-                  {...register("veninvoicetotal", {
-                    required: "Invoice amount is required",
-                    validate: (value) =>
-                      disableField && savedAmount && Number(value) < savedAmount
-                        ? "Invoice amount should be greater than saved amount"
-                        : undefined,
-                  })}
-                />
-                {errors.veninvoicetotal && (
-                  <div className="invalid-feedback">
-                    {errors.veninvoicetotal.message}
+
+                <div className="row g-2 mt-2">
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Invoice Amount *</label>
+                    <input
+                      type="text"
+                      className={`form-control form-control-sm${errors.veninvoicetotal ? " is-invalid" : ""}`}
+                      {...register("veninvoicetotal", {
+                        required: "Invoice amount is required",
+                        validate: (value) =>
+                          disableField && savedAmount && Number(value) < savedAmount
+                            ? "Amount must be ≥ saved amount"
+                            : undefined,
+                      })}
+                    />
+                    {errors.veninvoicetotal && (
+                      <div className="invalid-feedback">{errors.veninvoicetotal.message}</div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="col-lg-4 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Invoice Date</label>
-                <div className="input-blocks">
-                  <div className="input-groupicon calender-input">
-                    <Calendar className="info-img" />
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Payment Terms</label>
                     <Controller
-                      name="veninvoicedate"
+                      name="termsid"
                       control={control}
+                      rules={{ required: "Payment terms is required" }}
                       render={({ field }) => (
-                        <DatePicker
+                        <SelectPaymentTerms
+                          className={errors.termsid ? "is-invalid" : ""}
+                          trigger={trigger}
+                          storeId={storeId}
                           {...field}
-                          onChange={(date) => field.onChange(date)}
-                          value={field.value}
-                          format="YYYY-MM-DD"
-                          allowClear={false}
                         />
                       )}
                     />
+                    {errors.termsid && (
+                      <div className="invalid-feedback d-block">{errors.termsid.message}</div>
+                    )}
                   </div>
                 </div>
-                {errors.veninvoicedate && (
-                  <div className="invalid-feedback">
-                    {errors.veninvoicedate.message}
+              </div>
+            </div>
+
+            {/* Right: supplier address (auto-populated) */}
+            <div className="col-lg-6 col-md-12">
+              <div className="border rounded p-3 h-100">
+                <div
+                  className="text-uppercase fw-semibold text-muted mb-2"
+                  style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}
+                >
+                  Supplier Details
+                </div>
+                {supplierLoading ? (
+                  <div className="text-muted small fst-italic">Loading…</div>
+                ) : supplier ? (
+                  <div className="text-muted small lh-lg">
+                    {supplier.companyname && (
+                      <div className="fw-semibold text-dark">{supplier.companyname}</div>
+                    )}
+                    {supplier.address1 && <div>{supplier.address1}</div>}
+                    {[supplier.city, supplier.state, supplier.zipcode].filter(Boolean).length > 0 && (
+                      <div>
+                        {[supplier.city, supplier.state, supplier.zipcode].filter(Boolean).join(", ")}
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <div className="text-muted small fst-italic">Select a supplier to see details</div>
                 )}
               </div>
             </div>
-            <div className="col-lg-4 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Payment terms</label>
-                <Controller
-                  name="termsid"
-                  control={control}
-                  rules={{ required: "Payment terms is required" }}
-                  render={({ field }) => (
-                    <SelectPaymentTerms
-                      className={`${errors.termsid && "is-invalid"} `}
-                      trigger={trigger}
-                      storeId={storeId}
-                      {...field}
-                    />
-                  )}
-                />
-                {errors.termsid && (
-                  <div className="invalid-feedback">
-                    {errors.termsid.message}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="col-lg-4 col-sm-12 col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Reference PO #</label>
-                <input
-                  type="text"
-                  className={`${
-                    errors.refponumber && "is-invalid"
-                  } form-control`}
-                  {...register("refponumber")}
-                />
-                {errors.refponumber && (
-                  <div className="invalid-feedback">
-                    {errors.refponumber.message}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-5 col-sm-12 col-md-6">
-          <div className="border p-3 rounded shadow-sm">
-            <div className="row">
-              <div className="col-lg-8 col-md-6 col-sm-12">
-                <div className="mb-3">
-                  <label className="form-label">Company name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    disabled
-                    value={supplierLoading ? "" : supplier?.companyname || ""}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-lg-8 col-md-6 col-sm-12">
-                <div className="mb-3">
-                  <label className="form-label">Address</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    disabled
-                    value={supplierLoading ? "" : supplier?.address1 || ""}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-lg-4 col-md-4 col-sm-12">
-                <div className="mb-3">
-                  <label className="form-label">City</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    disabled
-                    value={supplierLoading ? "" : supplier?.city || ""}
-                  />
-                </div>
-              </div>
-              <div className="col-lg-4 col-md-4 col-sm-12">
-                <div className="mb-3">
-                  <label className="form-label">State</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    disabled
-                    value={supplierLoading ? "" : supplier?.state || ""}
-                  />
-                </div>
-              </div>
-              <div className="col-lg-4 col-md-4 col-sm-12">
-                <div className="mb-3">
-                  <label className="form-label">Zipcode</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    disabled
-                    value={supplierLoading ? "" : supplier?.zipcode || ""}
-                  />
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>

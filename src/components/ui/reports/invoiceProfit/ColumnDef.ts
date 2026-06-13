@@ -1,6 +1,7 @@
 import { ColDef } from "ag-grid-community";
 import { InvoiceItem, InvoiceSummary } from "@/types/reports";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
+import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 
 export const invoiceProfitColumnDefs: ColDef<InvoiceSummary>[] = [
   { headerName: "Invoice #", field: "invoicenumber", filter: "agTextColumnFilter", cellRenderer: "agGroupCellRenderer", }, // (V)
@@ -107,7 +108,7 @@ export const invoiceProfitColumnDefs: ColDef<InvoiceSummary>[] = [
     cellRenderer: currencyFormattedCellRenderer,
     hide: true,
   },
-  { headerName: "Status", field: "statusname", filter: "agTextColumnFilter", hide: true },
+  { headerName: "Status", field: "statusname", filter: "agTextColumnFilter", hide: true, cellRenderer: StatusPillRenderer },
   { headerName: "Terms", field: "termsname", filter: "agTextColumnFilter", hide: true },
   { headerName: "Warehouse ID", field: "warehouseid", filter: "agNumberColumnFilter", hide: true },
   { headerName: "Outlet ID", field: "outletid", filter: "agNumberColumnFilter", hide: true },

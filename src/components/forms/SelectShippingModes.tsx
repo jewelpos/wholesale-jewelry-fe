@@ -44,10 +44,12 @@ any) => {
       isDisabled={disableField}
       className={`form-control p-0 ${className} select-form-custom`}
       value={
-        value
+        value != null && value !== ""
           ? {
               value: value,
-              label: options.find((list) => list.value === value)?.label || "",
+              label:
+                options.find((list) => String(list.value) === String(value))
+                  ?.label || "",
             }
           : null
       }

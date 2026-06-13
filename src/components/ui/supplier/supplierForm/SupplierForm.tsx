@@ -20,6 +20,8 @@ import { GET_SUPPLIER_QUERY } from "@/lib/graphql/query/supplier";
 import SupplierInputsA from "./SupplierInputsA";
 import SupplierInputsB from "./SupplierInputsB";
 import PlaceHolder from "../../PlaceHolder";
+import { Truck, Settings } from "lucide-react";
+import useWarehouse from "@/hooks/useWarehouse";
 
 const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   const { supplierId } = useParams();
@@ -37,13 +39,8 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
     }
   );
 
-  const [createSupplier, { loading: createLoading }] = useMutation(
-    ADD_SUPPLIER_MUTATION
-  );
-
-  const [editSupplier, { loading: updateLoading }] = useMutation(
-    UPDATE_SUPPLIER_MUTATION
-  );
+  const [createSupplier, { loading: createLoading }] = useMutation(ADD_SUPPLIER_MUTATION);
+  const [editSupplier, { loading: updateLoading }] = useMutation(UPDATE_SUPPLIER_MUTATION);
 
   const {
     register,
@@ -51,6 +48,7 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
     formState: { errors, isDirty },
     control,
     getValues,
+    watch,
     trigger,
     reset,
     setValue,
@@ -80,8 +78,22 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
 
   const storeId = getValues("storeid");
   const warehouseId = getValues("warehouseid");
-  const status = getValues("supplierstatus");
+  const status = watch("supplierstatus");
   const supplierid = getValues("supplierid");
+  const [loading, setLoading] = useState(false);
+
+  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+
+  useEffect(() => {
+    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
+  }, [parsedStoreId, fetchWarehouseByStoreId]);
+
+  // Pre-select default warehouse on new supplier only
+  useEffect(() => {
+    if (supplierId || warehouses.length === 0) return;
+    const defaultWarehouse = warehouses.find((w) => w.issystem) ?? warehouses[0];
+    if (defaultWarehouse) setValue("warehouseid", String(defaultWarehouse.warehouseid));
+  }, [warehouses, supplierId, setValue]);
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -92,15 +104,13 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   });
 
   const onSubmit: SubmitHandler<SupplierFormType> = async ({
-    supplierid,
+    supplierid: sid,
     ...formData
   }) => {
+    setLoading(true);
     let editPayload = {};
     if (supplierId) {
-      editPayload = {
-        ...editPayload,
-        supplierid: supplierId ? Number(supplierid) : null,
-      };
+      editPayload = { supplierid: supplierId ? Number(sid) : null };
     }
     const payload = {
       ...formData,
@@ -111,35 +121,25 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
     const result = await handleTryCatch(async () => {
       let response;
       if (supplierId) {
-        response = await editSupplier({
-          variables: { input: payload },
-        });
+        response = await editSupplier({ variables: { input: payload } });
       } else {
-        response = await createSupplier({
-          variables: { input: payload },
-        });
+        response = await createSupplier({ variables: { input: payload } });
       }
-
       const { data } = response;
       if (data?.createSupplier || data?.editSupplier) {
         const successData = data.createSupplier || data.editSupplier;
         dispatch(
-          showNotification({
-            message: successData.message,
-            type: NOTIFICATION_TYPES.SUCCESS,
-          })
+          showNotification({ message: successData.message, type: NOTIFICATION_TYPES.SUCCESS })
         );
         router.back();
       }
       return true;
     });
 
+    setLoading(false);
     if (result.error) {
       dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
+        showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR })
       );
     } else {
       reset();
@@ -149,50 +149,116 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   useEffect(() => {
     if (supplierData?.getSupplierBySupplierId) {
       const { __typename, ...supplier } = supplierData.getSupplierBySupplierId;
-      reset({
-        ...supplier,
-        storeid: parsedStoreId,
-        supplierid: supplierId,
-      });
+      reset({ ...supplier, storeid: parsedStoreId, supplierid: supplierId });
     }
   }, [supplierData, parsedStoreId, supplierId, reset]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <fieldset disabled={disableField}>
-        <div className="card">
-          <div className="card-body">
-            {supplierLoading ? (
-              [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
-            ) : (
-              <div className="new-employee-field">
-                <SupplierInputsA
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  supplierId={supplierid}
-                  disableField={disableField}
-                />
-                <SupplierInputsB
-                  register={register}
-                  errors={errors}
-                  control={control}
-                  trigger={trigger}
-                  setValue={setValue}
-                  storeId={storeId}
-                  warehouseId={warehouseId}
-                  status={status}
-                  disableField={disableField}
-                />
-              </div>
-            )}
+        {supplierLoading ? (
+          <div className="card">
+            <div className="card-body">
+              {[1, 2, 3, 4, 5, 6, 7].map((item) => (
+                <PlaceHolder key={item} />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            style={{
+              background: "#f5f6f8",
+              borderRadius: 10,
+              padding: "20px 20px 8px",
+            }}
+          >
+            <div className="row g-3">
+              {/* Left card — supplier profile & contact */}
+              <div className="col-lg-6 col-md-12">
+                <div
+                  className="card h-100 w-100"
+                  style={{
+                    border: "1px solid #e9ecef",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  }}
+                >
+                  <div
+                    className="card-header py-3"
+                    style={{
+                      background: "#fff",
+                      borderBottom: "1px solid #e9ecef",
+                      borderLeft: "3px solid #0d6efd",
+                    }}
+                  >
+                    <h6
+                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
+                      style={{ fontSize: 13, color: "#495057" }}
+                    >
+                      <Truck size={14} strokeWidth={2} color="#0d6efd" />
+                      Supplier Profile
+                    </h6>
+                  </div>
+                  <div className="card-body">
+                    <SupplierInputsA
+                      register={register}
+                      errors={errors}
+                      control={control}
+                      trigger={trigger}
+                      supplierId={supplierid}
+                      disableField={disableField}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right card — account settings */}
+              <div className="col-lg-6 col-md-12">
+                <div
+                  className="card h-100 w-100"
+                  style={{
+                    border: "1px solid #e9ecef",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  }}
+                >
+                  <div
+                    className="card-header py-3"
+                    style={{
+                      background: "#fff",
+                      borderBottom: "1px solid #e9ecef",
+                      borderLeft: "3px solid #0d6efd",
+                    }}
+                  >
+                    <h6
+                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
+                      style={{ fontSize: 13, color: "#495057" }}
+                    >
+                      <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                      Account Settings
+                    </h6>
+                  </div>
+                  <div className="card-body">
+                    <SupplierInputsB
+                      register={register}
+                      errors={errors}
+                      control={control}
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      warehouseId={warehouseId}
+                      status={status}
+                      disableField={disableField}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!disableField && !supplierLoading && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
-              loading={createLoading || updateLoading}
+              loading={loading || createLoading || updateLoading}
               btnText="Save"
               loadingText="Saving ..."
             />

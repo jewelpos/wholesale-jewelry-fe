@@ -17,6 +17,10 @@ interface POSGridProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rowSelection?: any;
   domLayout?: "autoHeight" | "normal";
+  /** Additional px to subtract from 100vh. Default 300. Use higher values when summary cards/charts are above the grid. */
+  heightOffset?: number;
+  /** When true, grid height is 100% (use inside a flex-fill container). Overrides heightOffset. */
+  fillHeight?: boolean;
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
@@ -25,9 +29,11 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       columnDefs,
       gridOptions,
       onGridReady,
-      defaultColDef = { filter: true, floatingFilter: true },
+      defaultColDef = { filter: true, floatingFilter: false },
       rowSelection,
       domLayout = "normal",
+      heightOffset = 300,
+      fillHeight = false,
       ...props
     },
     ref
@@ -37,7 +43,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       <div
         className="ag-theme-quartz custom-theme"
         style={{
-          height: domLayout === "autoHeight" ? "auto" : "calc(100vh - 300px)",
+          height: fillHeight ? "100%" : domLayout === "autoHeight" ? "auto" : `calc(100vh - ${heightOffset}px)`,
           width: "100%",
         }}
       >
@@ -50,15 +56,14 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
             minWidth: 200,
             ...defaultColDef,
           }}
+          rowHeight={28}
+          headerHeight={32}
           gridOptions={{
-            rowHeight: 42,
-            headerHeight: 50,
             suppressServerSideFullWidthLoadingRow: true,
-            // sideBar: true,
             ...gridOptions,
           }}
           rowSelection={rowSelection}
-          rowGroupPanelShow="always"
+          rowGroupPanelShow="onlyWhenGrouping"
           domLayout={domLayout}
           rowModelType="serverSide"
           pagination={true}

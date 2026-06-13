@@ -89,6 +89,9 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
 export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
   query GetCustomerLedgerReport(
     $outletid: Int!
+    $customerid: Int
+    $fromdate: String
+    $todate: String
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -98,6 +101,9 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
   ) {
     getCustomerLedgerReport(
       outletid: $outletid
+      customerid: $customerid
+      fromdate: $fromdate
+      todate: $todate
       page: $page
       perpage: $perpage
       filters: $filters
@@ -106,6 +112,7 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
       groupKeys: $groupKeys
     ) {
       total
+      openingBalance
       data {
         ledgercustid
         custcompanyname
@@ -226,6 +233,17 @@ export const GET_CUSTOMER_APPLIED_AMOUNT_LIST_QUERY = gql`
       warehousename
       warehouseid
       lastmodifieddate
+    }
+  }
+`;
+
+export const GET_CUSTOMER_LIST_SUMMARY_QUERY = gql`
+  query GetCustomerListSummary($storeid: Int!) {
+    getCustomerListSummary(storeid: $storeid) {
+      total_customers
+      total_balance_due
+      total_sales
+      customers_with_balance
     }
   }
 `;

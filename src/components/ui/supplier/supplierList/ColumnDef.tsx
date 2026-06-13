@@ -1,5 +1,8 @@
+import { TIME_FORMAT } from "@/lib/config/constants";
 import { SupplierListType } from "@/types/supplier";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
+import dayjs from "dayjs";
+import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
 export const supplierListcolumnDefs: ColDef<SupplierListType>[] = [
   {
@@ -12,77 +15,75 @@ export const supplierListcolumnDefs: ColDef<SupplierListType>[] = [
     headerName: "Company Name",
     field: "companyname",
     filter: "agTextColumnFilter",
-    hide: false,
   },
   {
-    headerName: "Phone 1",
+    headerName: "Store Phone",
     field: "phone1",
     filter: "agTextColumnFilter",
-    hide: false,
   },
   {
     headerName: "Cell Phone",
     field: "cellphone",
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
     headerName: "Contact Name",
     field: "contactname",
     filter: "agTextColumnFilter",
-    hide: false,
   },
   {
-    headerName: "Number of Purchase",
+    headerName: "# Purchases",
     field: "numberofpurchase",
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
     headerName: "Total Purchase",
     field: "totalpurchase",
+    cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
     headerName: "Balance Due",
     field: "balancedue",
+    cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
     headerName: "Open Credit",
     field: "opencredit",
+    cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
     headerName: "Total Sale Value",
     field: "totalsalevalue",
+    cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
-    hide: false,
   },
   {
-    headerName: "Last Purchase Date",
+    headerName: "Last Purchase",
     field: "lastpurchasedate",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(params.value).format(TIME_FORMAT) : "",
     filter: "agDateColumnFilter",
-    hide: false,
   },
   {
-    headerName: "Last Payment Date",
+    headerName: "Last Payment",
     field: "lastpaymentdate",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(params.value).format(TIME_FORMAT) : "",
     filter: "agDateColumnFilter",
-    hide: false,
   },
   {
     headerName: "Days Since Last Purchase",
     field: "days_since_last_purchase",
     filter: "agNumberColumnFilter",
-    hide: false,
+    hide: true,
   },
   {
     headerName: "Post Check Amount",
     field: "postchkamount",
+    cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
     hide: true,
   },
@@ -95,7 +96,7 @@ export const supplierListcolumnDefs: ColDef<SupplierListType>[] = [
   {
     headerName: "Terms Name",
     field: "termsname",
-    filter: "agNumberColumnFilter",
+    filter: "agTextColumnFilter",
     hide: true,
   },
   {
@@ -141,8 +142,10 @@ export const supplierListcolumnDefs: ColDef<SupplierListType>[] = [
     hide: true,
   },
   {
-    headerName: "Last Modified Date",
+    headerName: "Last Modified",
     field: "lastmodifieddate",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.value ? dayjs(params.value).format(TIME_FORMAT) : "",
     filter: "agDateColumnFilter",
     hide: true,
   },

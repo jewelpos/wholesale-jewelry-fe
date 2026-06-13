@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -225,6 +225,7 @@ const InventoryTransferListComponent = () => {
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedWarehouse={selectedWarehouse}
@@ -237,7 +238,6 @@ const InventoryTransferListComponent = () => {
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               masterDetail
               detailCellRenderer={InventoryTransferItemsComponent}

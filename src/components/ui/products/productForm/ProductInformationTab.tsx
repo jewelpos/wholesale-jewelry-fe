@@ -8,21 +8,83 @@ import {
   UseFormRegister,
   UseFormSetValue,
   UseFormTrigger,
+  useWatch,
 } from "react-hook-form";
 import { ProductFormType } from "@/types/product";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectItemCategory from "@/components/forms/SelectItemCategory";
 import SelectSubCategory from "@/components/forms/SelectSubCategory";
 import SelectMetalType from "@/components/forms/SelectMetalType";
-import SelectWarehouse from "@/components/forms/SelectWarehouse";
 import ProductImageUpload from "@/components/ui/products/ProductImageUpload";
 import useWarehouse from "@/hooks/useWarehouse";
 import { useParams } from "next/navigation";
-import { WarehouseType } from "@/types/warehouse";
+import {
+  ChevronRight,
+  DollarSign,
+  FileText,
+  Package,
+  Tag,
+  TrendingUp,
+} from "react-feather";
 
-interface ProductInformationTabProps {
+/* ── helpers ───────────────────────────────────────────── */
+
+const ACCENT_MAP = {
+  indigo: "#6366f1",
+  green:  "#059669",
+  amber:  "#f59e0b",
+  violet: "#8b5cf6",
+} as const;
+
+type AccentKey = keyof typeof ACCENT_MAP;
+
+const SectionCard = ({
+  icon: Icon,
+  title,
+  accent = "indigo",
+  children,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: any;
+  title: string;
+  accent?: AccentKey;
+  children: React.ReactNode;
+}) => {
+  const color = ACCENT_MAP[accent];
+  return (
+    <div
+      className="card mb-3"
+      style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #e8ecf0" }}
+    >
+      <div
+        className="card-header d-flex align-items-center gap-2 py-2"
+        style={{ background: "#f8f9ff", borderLeft: `3px solid ${color}`, borderBottom: "1px solid #f1f5f9" }}
+      >
+        <Icon size={14} color={color} />
+        <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {title}
+        </span>
+      </div>
+      <div className="card-body py-3">{children}</div>
+    </div>
+  );
+};
+
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>
+    {children}
+  </label>
+);
+
+const FieldWrap = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`mb-2 ${className}`}>{children}</div>
+);
+
+/* ── component ─────────────────────────────────────────── */
+
+export interface ProductInformationTabProps {
   register: UseFormRegister<ProductFormType>;
-  errors: any;
+  errors: FieldErrors<ProductFormType>;
   control: Control<ProductFormType>;
   trigger: UseFormTrigger<ProductFormType>;
   setValue: UseFormSetValue<ProductFormType>;
@@ -32,6 +94,7 @@ interface ProductInformationTabProps {
   onImagesChange: (images: File[]) => void;
   isEdit?: boolean;
   barcodeId?: string;
+  marginAmount?: number;
 }
 
 const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
@@ -46,645 +109,520 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   onImagesChange,
   isEdit,
   barcodeId,
+  marginAmount = 0,
 }) => {
   const { outletId } = useParams();
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
-  const warehouse = warehouses.find((warehouse) => warehouse.issystem);
+  const warehouse = warehouses.find(w => w.issystem);
+
+  const itemStatus      = useWatch({ control, name: "itemstatus" });
+  const itemAlert       = useWatch({ control, name: "itemalertwarning" });
+  const profitpercent   = useWatch({ control, name: "profitpercent" });
 
   useEffect(() => {
-    if (outletId) {
-      fetchWarehouseByOutletId(Number(outletId));
-    }
+    if (outletId) fetchWarehouseByOutletId(Number(outletId));
   }, [fetchWarehouseByOutletId, outletId]);
 
   useEffect(() => {
-    if (warehouse) {
-      setValue("itemwarehouseid", warehouse.warehouseid);
-    }
+    if (warehouse) setValue("itemwarehouseid", warehouse.warehouseid);
   }, [warehouse, setValue]);
 
+  const statusStyle =
+    itemStatus === "Active"
+      ? { bg: "#dcfce7", text: "#166534", border: "#86efac" }
+      : { bg: "#f1f5f9", text: "#64748b", border: "#cbd5e1" };
+
   return (
-    <div className="new-employee-field">
-      {/* Item Code/SKU Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">Item Code/SKU</h5>
-        <div className="row">
+    <div>
+      {/* ════════════════════════════════════════════════════
+          CARD 1 — PRODUCT IDENTITY
+      ════════════════════════════════════════════════════ */}
+      <SectionCard icon={Tag} title="Product Identity" accent="indigo">
+        <div className="row g-3">
+
+          {/* ── Image only ── */}
+          <div className="col-lg-3 col-md-12">
+            <ProductImageUpload
+              images={productImages}
+              onChange={onImagesChange}
+              maxImages={1}
+              disabled={disableField}
+            />
+            {/* hidden warehouse id for form submission */}
+            <input type="hidden" {...register("itemwarehouseid", { required: "Warehouse is required" })} />
+          </div>
+
+          {/* ── Identity fields ── */}
           <div className="col-lg-9 col-md-12">
-            <div className="row">
-              <div className="col-lg-4 col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">Barcode ID </label>
+
+            {/* Row 1: Barcode ID · Item Code · Description · Status */}
+            <div className="row g-2">
+              <div className="col-lg-3 col-md-6">
+                <FieldWrap>
+                  <Label>Barcode ID</Label>
                   <input
                     type="text"
-                    className="form-control"
+                    className="form-control form-control-sm"
+                    value={barcodeId || ""}
                     disabled
                     readOnly
-                    value={barcodeId || ""}
+                    style={{ fontFamily: "monospace", background: "#f8fafc", color: "#64748b" }}
                   />
-                </div>
+                </FieldWrap>
               </div>
-              <div className="col-lg-4 col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">Item Code *</label>
+              <div className="col-lg-3 col-md-6">
+                <FieldWrap>
+                  <Label>Item Code *</Label>
                   <input
                     type="text"
-                    className={`${
-                      errors.itemcode && "is-invalid"
-                    } form-control`}
-                    {...register("itemcode", {
-                      required: "Item code is required",
-                    })}
+                    className={`form-control form-control-sm ${errors.itemcode ? "is-invalid" : ""}`}
+                    {...register("itemcode", { required: "Item code is required" })}
                     disabled={isEdit}
                   />
-                  {errors.itemcode && (
-                    <div className="invalid-feedback">
-                      {errors.itemcode.message}
-                    </div>
-                  )}
-                </div>
+                  {errors.itemcode && <div className="invalid-feedback">{errors.itemcode.message}</div>}
+                </FieldWrap>
               </div>
-              <div className="col-lg-4 col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">Item Description *</label>
+              <div className="col-lg-3 col-md-6">
+                <FieldWrap>
+                  <Label>Description *</Label>
                   <input
                     type="text"
-                    className={`${
-                      errors.itemdescription && "is-invalid"
-                    } form-control`}
-                    {...register("itemdescription", {
-                      required: "Item description is required",
-                    })}
-                    disabled={disableField}
+                    className={`form-control form-control-sm ${errors.itemdescription ? "is-invalid" : ""}`}
+                    {...register("itemdescription", { required: "Item description is required" })}
                   />
-                  {errors.itemdescription && (
-                    <div className="invalid-feedback">
-                      {errors.itemdescription.message}
+                  {errors.itemdescription && <div className="invalid-feedback">{errors.itemdescription.message}</div>}
+                </FieldWrap>
+              </div>
+              <div className="col-lg-3 col-md-6">
+                <FieldWrap>
+                  <Label>Status *</Label>
+                  {disableField ? (
+                    <div>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          padding: "4px 14px",
+                          borderRadius: 20,
+                          background: statusStyle.bg,
+                          color: statusStyle.text,
+                          border: `1px solid ${statusStyle.border}`,
+                        }}
+                      >
+                        {itemStatus || "Active"}
+                      </span>
                     </div>
+                  ) : (
+                    <Controller
+                      name="itemstatus"
+                      control={control}
+                      rules={{ required: "Status is required" }}
+                      render={({ field }) => (
+                        <div className="d-flex gap-2">
+                          {(["Active", "Inactive"] as const).map(s => {
+                            const active = field.value === s;
+                            const sStyle =
+                              s === "Active"
+                                ? { bg: "#dcfce7", text: "#166534", border: "#86efac" }
+                                : { bg: "#f1f5f9", text: "#64748b", border: "#cbd5e1" };
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                className="btn"
+                                onClick={() => field.onChange(s)}
+                                style={{
+                                  borderRadius: 20,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  padding: "4px 16px",
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                  lineHeight: "1.4",
+                                  background: active ? sStyle.bg : "transparent",
+                                  color: active ? sStyle.text : "#94a3b8",
+                                  border: `1.5px solid ${active ? sStyle.border : "#e2e8f0"}`,
+                                  transition: "all 0.15s",
+                                  boxShadow: "none",
+                                }}
+                              >
+                                {s}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    />
                   )}
-                </div>
+                  {errors.itemstatus && <div className="invalid-feedback d-block" style={{ fontSize: 12 }}>{errors.itemstatus.message}</div>}
+                </FieldWrap>
               </div>
             </div>
-            <div className="row">
-              <div className="col-lg-12 col-md-12">
-                {/* Supplier Detail Section */}
-                <div className="mb-4">
-                  <h5 className="mb-3">Supplier Detail</h5>
-                  <div className="row">
-                    <div className="col-lg-4 col-md-6">
-                      <div className="mb-3">
-                        <label className="form-label">Supplier *</label>
-                        <Controller
-                          name="supplierid"
-                          control={control}
-                          rules={{
-                            required: "Supplier is required",
-                            validate: (value) =>
-                              value === 0 ? "Supplier is required" : true,
-                          }}
-                          render={({ field }) => (
-                            <SelectSupplier
-                              className={`${
-                                errors.supplierid && "is-invalid"
-                              } `}
-                              trigger={trigger}
-                              storeId={storeId}
-                              disableField={disableField}
-                              {...field}
-                            />
-                          )}
-                        />
-                        {errors.supplierid && (
-                          <div className="invalid-feedback">
-                            {errors.supplierid.message}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="col-lg-4 col-md-6">
-                      <div className="mb-3">
-                        <label className="form-label">Supplier Style #</label>
-                        <input
-                          type="text"
-                          className={`${
-                            errors.supplieritemcode && "is-invalid"
-                          } form-control`}
-                          {...register("supplieritemcode")}
-                          disabled={disableField}
-                        />
-                        {errors.supplieritemcode && (
-                          <div className="invalid-feedback">
-                            {errors.supplieritemcode.message}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="col-lg-4 col-md-6">
-                      <div className="mb-3">
-                        <label className="form-label">Supplier UPC #</label>
-                        <input
-                          type="text"
-                          className={`${
-                            errors.supplierbarcodeid && "is-invalid"
-                          } form-control`}
-                          {...register("supplierbarcodeid")}
-                          disabled={disableField}
-                        />
-                        {errors.supplierbarcodeid && (
-                          <div className="invalid-feedback">
-                            {errors.supplierbarcodeid.message}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            {/* Product Image Upload Section */}
-            <div className="mb-4">
-              <h5 className="mb-3">Product Image Upload</h5>
-              <div className="row">
-                <div className="col-12">
-                  <ProductImageUpload
-                    images={productImages}
-                    onChange={onImagesChange}
-                    maxImages={1}
-                    disabled={disableField}
+
+            {/* Row 2: Department · Product Line · Metal Type */}
+            <div className="row g-2">
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Department *</Label>
+                  <Controller
+                    name="itemcategoryid"
+                    control={control}
+                    rules={{ required: "Department is required", validate: v => v === 0 ? "Department is required" : true }}
+                    render={({ field }) => (
+                      <SelectItemCategory
+                        className={errors.itemcategoryid ? "is-invalid" : ""}
+                        trigger={trigger}
+                        storeId={storeId}
+                        disableField={disableField}
+                        {...field}
+                      />
+                    )}
                   />
-                </div>
+                  {errors.itemcategoryid && <div className="invalid-feedback d-block">{errors.itemcategoryid.message}</div>}
+                </FieldWrap>
+              </div>
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Product Line *</Label>
+                  <Controller
+                    name="subcategoryid"
+                    control={control}
+                    rules={{ required: "Product line is required", validate: v => v === 0 ? "Product line is required" : true }}
+                    render={({ field }) => (
+                      <SelectSubCategory
+                        className={errors.subcategoryid ? "is-invalid" : ""}
+                        trigger={trigger}
+                        storeId={storeId}
+                        disableField={disableField}
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.subcategoryid && <div className="invalid-feedback d-block">{errors.subcategoryid.message}</div>}
+                </FieldWrap>
+              </div>
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Metal Type</Label>
+                  <Controller
+                    name="itemmetal"
+                    control={control}
+                    render={({ field }) => (
+                      <SelectMetalType
+                        className={errors.itemmetal ? "is-invalid" : ""}
+                        trigger={trigger}
+                        storeId={storeId}
+                        disableField={disableField}
+                        {...field}
+                      />
+                    )}
+                  />
+                </FieldWrap>
               </div>
             </div>
+
+            {/* Row 3: Supplier · Style # · UPC # */}
+            <div className="row g-2">
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Supplier *</Label>
+                  <Controller
+                    name="supplierid"
+                    control={control}
+                    rules={{ required: "Supplier is required", validate: v => v === 0 ? "Supplier is required" : true }}
+                    render={({ field }) => (
+                      <SelectSupplier
+                        className={errors.supplierid ? "is-invalid" : ""}
+                        trigger={trigger}
+                        storeId={storeId}
+                        disableField={disableField}
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.supplierid && <div className="invalid-feedback d-block">{errors.supplierid.message}</div>}
+                </FieldWrap>
+              </div>
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Supplier Style #</Label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    {...register("supplieritemcode")}
+                  />
+                </FieldWrap>
+              </div>
+              <div className="col-lg-4 col-md-6">
+                <FieldWrap>
+                  <Label>Supplier UPC #</Label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    {...register("supplierbarcodeid")}
+                  />
+                </FieldWrap>
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Product Detail Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">Product Detail</h5>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Model #</label>
-              <input
-                type="text"
-                className={`${errors.modelno && "is-invalid"} form-control`}
-                {...register("modelno")}
-                disabled={disableField}
-              />
-              {errors.modelno && (
-                <div className="invalid-feedback">{errors.modelno.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Manufacturer</label>
-              <input
-                type="text"
-                className={`${
-                  errors.manufacturer && "is-invalid"
-                } form-control`}
-                {...register("manufacturer")}
-                disabled={disableField}
-              />
-              {errors.manufacturer && (
-                <div className="invalid-feedback">
-                  {errors.manufacturer.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Item Reorder Point</label>
+      {/* ════════════════════════════════════════════════════
+          CARD 2 — PRICING & MARGINS
+      ════════════════════════════════════════════════════ */}
+      <SectionCard icon={DollarSign} title="Pricing & Margins" accent="green">
+
+        {/* Cost → Profit% → Tag Price flow */}
+        <div className="d-flex align-items-end gap-2 mb-3 flex-wrap">
+
+          {/* Unit Cost */}
+          <div style={{ flex: "1 1 140px", minWidth: 120 }}>
+            <Label>Unit Cost *</Label>
+            <div className="input-group input-group-sm">
+              <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
               <input
                 type="number"
-                className={`${
-                  errors.itemreorderqtypnt && "is-invalid"
-                } form-control`}
-                {...register("itemreorderqtypnt", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
+                step="0.01"
+                className={`form-control ${errors.itempurchaseprice ? "is-invalid" : ""}`}
+                {...register("itempurchaseprice", { required: "Unit cost is required", valueAsNumber: true })}
               />
-              {errors.itemreorderqtypnt && (
-                <div className="invalid-feedback">
-                  {errors.itemreorderqtypnt.message}
-                </div>
-              )}
             </div>
+            {errors.itempurchaseprice && (
+              <div className="text-danger mt-1" style={{ fontSize: 11 }}>{errors.itempurchaseprice.message}</div>
+            )}
           </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Item Order Quantity</label>
+
+          <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
+            <ChevronRight size={16} color="#94a3b8" />
+          </div>
+
+          {/* Profit % */}
+          <div style={{ flex: "1 1 120px", minWidth: 100 }}>
+            <Label>Profit %</Label>
+            <div className="input-group input-group-sm">
               <input
                 type="number"
-                className={`${
-                  errors.itemreorderqty && "is-invalid"
-                } form-control`}
-                {...register("itemreorderqty", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
+                step="0.01"
+                className="form-control"
+                {...register("profitpercent", { valueAsNumber: true })}
               />
-              {errors.itemreorderqty && (
-                <div className="invalid-feedback">
-                  {errors.itemreorderqty.message}
-                </div>
-              )}
+              <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Product Settings Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">Product Settings</h5>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Department *</label>
-              <Controller
-                name="itemcategoryid"
-                control={control}
-                rules={{
-                  required: "Department is required",
-                  validate: (value) =>
-                    value === 0 ? "Department is required" : true,
-                }}
-                render={({ field }) => (
-                  <SelectItemCategory
-                    className={`${errors.itemcategoryid && "is-invalid"} `}
-                    trigger={trigger}
-                    storeId={storeId}
-                    disableField={disableField}
-                    {...field}
-                  />
-                )}
-              />
-              {errors.itemcategoryid && (
-                <div className="invalid-feedback">
-                  {errors.itemcategoryid.message}
-                </div>
-              )}
-            </div>
+          <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
+            <ChevronRight size={16} color="#94a3b8" />
           </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Product Line *</label>
-              <Controller
-                name="subcategoryid"
-                control={control}
-                rules={{
-                  required: "Product line is required",
-                  validate: (value) =>
-                    value === 0 ? "Product line is required" : true,
+
+          {/* Tag Price (auto) */}
+          <div style={{ flex: "1 1 150px", minWidth: 130 }}>
+            <Label>
+              Tag Price{" "}
+              <span
+                style={{
+                  fontSize: 10,
+                  background: "#dbeafe",
+                  color: "#1e40af",
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                  fontWeight: 700,
+                  marginLeft: 4,
                 }}
-                render={({ field }) => (
-                  <SelectSubCategory
-                    className={`${errors.subcategoryid && "is-invalid"} `}
-                    trigger={trigger}
-                    storeId={storeId}
-                    disableField={disableField}
-                    {...field}
-                  />
-                )}
-              />
-              {errors.subcategoryid && (
-                <div className="invalid-feedback">
-                  {errors.subcategoryid.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Status *</label>
-              <select
-                className={`${errors.itemstatus && "is-invalid"} form-select`}
-                {...register("itemstatus", {
-                  required: "Status is required",
-                  validate: (value) =>
-                    value === "" ? "Status is required" : true,
-                })}
-                disabled={disableField}
               >
-                <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-              {errors.itemstatus && (
-                <div className="invalid-feedback">
-                  {errors.itemstatus.message}
-                </div>
-              )}
+                AUTO
+              </span>
+            </Label>
+            <div className="input-group input-group-sm">
+              <span className="input-group-text" style={{ background: "#f0f9ff", fontSize: 13 }}>$</span>
+              <input
+                type="number"
+                step="0.01"
+                className="form-control"
+                style={{ background: "#f0f9ff" }}
+                {...register("itemtagprice", { valueAsNumber: true })}
+              />
+            </div>
+          </div>
+
+          {/* Live margin badge */}
+          {marginAmount > 0 && (
+            <div
+              className="d-flex align-items-center gap-2 px-3 py-2 rounded"
+              style={{
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                whiteSpace: "nowrap",
+                marginBottom: 0,
+              }}
+            >
+              <TrendingUp size={13} color="#166534" />
+              <span style={{ fontSize: 12, color: "#166534", fontWeight: 600 }}>
+                Margin ${marginAmount.toFixed(2)} &nbsp;·&nbsp; {profitpercent}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Secondary pricing row */}
+        <div className="row g-2">
+          <div className="col-lg-3 col-md-6">
+            <Label>Price Code</Label>
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              {...register("itemtagpricecode")}
+            />
+          </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Item Discount</Label>
+            <div className="input-group input-group-sm">
+              <span className="input-group-text" style={{ fontSize: 13 }}>$</span>
+              <input
+                type="number"
+                step="0.01"
+                className="form-control"
+                {...register("itemdiscount", { valueAsNumber: true })}
+              />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ════════════════════════════════════════════════════
+          CARD 3 — INVENTORY & SETTINGS
+      ════════════════════════════════════════════════════ */}
+      <SectionCard icon={Package} title="Inventory & Settings" accent="amber">
+
+        {/* Detail fields */}
+        <div className="row g-2 mb-3">
+          <div className="col-lg-3 col-md-6">
+            <Label>Warehouse</Label>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "6px 12px",
+                borderRadius: 6,
+                background: "#eff6ff",
+                color: "#1d4ed8",
+                border: "1px solid #bfdbfe",
+              }}
+            >
+              {warehouse?.warehousename || "—"}
             </div>
           </div>
           <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Warehouse *</label>
-              <input
-                type="text"
-                className={`${
-                  errors.itemwarehouseid && "is-invalid"
-                } form-control`}
-                {...register("itemwarehouseid", {
-                  required: "Warehouse is required",
-                })}
-                disabled
-                hidden
-              />
-              <input
-                type="text"
-                className={`${
-                  errors.itemwarehouseid && "is-invalid"
-                } form-control`}
-                value={warehouse?.warehousename || ""}
-                disabled
-              />
-              {errors.itemwarehouseid && (
-                <div className="invalid-feedback">
-                  {errors.itemwarehouseid.message}
-                </div>
-              )}
-            </div>
+            <Label>Model #</Label>
+            <input type="text" className="form-control form-control-sm" {...register("modelno")} />
+          </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Manufacturer</Label>
+            <input type="text" className="form-control form-control-sm" {...register("manufacturer")} />
+          </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Item Location</Label>
+            <input type="text" className="form-control form-control-sm" {...register("itemlocation")} />
           </div>
         </div>
-        <div className="row">
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className={`${
-                    errors.itemtaxable && "is-invalid"
-                  } form-check-input`}
-                  {...register("itemtaxable")}
-                  disabled={disableField}
-                />
-                <label className="form-check-label">Item Taxable *</label>
-              </div>
-              {errors.itemtaxable && (
-                <div className="invalid-feedback">
-                  {errors.itemtaxable.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className={`${
-                    errors.trackinventory && "is-invalid"
-                  } form-check-input`}
-                  {...register("trackinventory")}
-                  disabled={disableField}
-                />
-                <label className="form-check-label">Non Inventory Item</label>
-              </div>
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Item Location</label>
-              <input
-                type="text"
-                className={`${
-                  errors.itemlocation && "is-invalid"
-                } form-control`}
-                {...register("itemlocation")}
-                disabled={disableField}
-              />
-              {errors.itemlocation && (
-                <div className="invalid-feedback">
-                  {errors.itemlocation.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Sales Setting Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">Sales Setting</h5>
-        <div className="row">
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Unit Cost *</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.itempurchaseprice && "is-invalid"
-                } form-control`}
-                {...register("itempurchaseprice", {
-                  required: "Unit cost is required",
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.itempurchaseprice && (
-                <div className="invalid-feedback">
-                  {errors.itempurchaseprice.message}
-                </div>
-              )}
-            </div>
+        <div className="row g-2 mb-3">
+          <div className="col-lg-3 col-md-6">
+            <Label>Reorder Point</Label>
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              {...register("itemreorderqtypnt", { valueAsNumber: true })}
+            />
           </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Profit Percent *</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.profitpercent && "is-invalid"
-                } form-control`}
-                {...register("profitpercent", {
-                  required: "Profit percent is required",
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.profitpercent && (
-                <div className="invalid-feedback">
-                  {errors.profitpercent.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Tag Price</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.itemtagprice && "is-invalid"
-                } form-control`}
-                {...register("itemtagprice", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.itemtagprice && (
-                <div className="invalid-feedback">
-                  {errors.itemtagprice.message}
-                </div>
-              )}
-            </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Order Quantity</Label>
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              {...register("itemreorderqty", { valueAsNumber: true })}
+            />
           </div>
         </div>
-        <div className="row">
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Price Code</label>
-              <input
-                type="text"
-                className={`${
-                  errors.itemtagpricecode && "is-invalid"
-                } form-control`}
-                {...register("itemtagpricecode")}
-                disabled={disableField}
-              />
-              {errors.itemtagpricecode && (
-                <div className="invalid-feedback">
-                  {errors.itemtagpricecode.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Item Discount</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.itemdiscount && "is-invalid"
-                } form-control`}
-                {...register("itemdiscount", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.itemdiscount && (
-                <div className="invalid-feedback">
-                  {errors.itemdiscount.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Metal Type</label>
-              <Controller
-                name="itemmetal"
-                control={control}
-                render={({ field }) => (
-                  <SelectMetalType
-                    className={`${errors.itemmetal && "is-invalid"} `}
-                    trigger={trigger}
-                    storeId={storeId}
-                    disableField={disableField}
-                    {...field}
+
+        {/* Toggle switches */}
+        <div className="row g-2">
+          {[
+            { id: "itemtaxable",    field: "itemtaxable"    as const, label: "Item Taxable"    },
+            { id: "trackinventory", field: "trackinventory" as const, label: "Track Inventory" },
+            { id: "itemalert",      field: "itemalertwarning" as const, label: "Item Alert"    },
+          ].map(({ id, field, label }) => (
+            <div className="col-lg-4 col-md-6" key={id}>
+              <div
+                className="d-flex align-items-center gap-2 p-3 rounded"
+                style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}
+              >
+                <div className="form-check form-switch mb-0">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    id={id}
+                    style={{ width: 36, height: 20, cursor: "pointer" }}
+                    {...register(field)}
                   />
-                )}
-              />
-              {errors.itemmetal && (
-                <div className="invalid-feedback">
-                  {errors.itemmetal.message}
+                  <label
+                    className="form-check-label"
+                    htmlFor={id}
+                    style={{ fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer", marginLeft: 8 }}
+                  >
+                    {label}
+                  </label>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* General Setting Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">General Setting</h5>
-        <div className="row">
-          <div className="col-lg-6 col-md-12">
-            <div className="mb-3">
-              <label className="form-label">Notes</label>
-              <textarea
-                className={`${errors.itemremarks && "is-invalid"} form-control`}
-                rows={3}
-                {...register("itemremarks")}
-                disabled={disableField}
-              />
-              {errors.itemremarks && (
-                <div className="invalid-feedback">
-                  {errors.itemremarks.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-6 col-md-12">
-            <div className="mb-3">
-              <label className="form-label">Detail Description</label>
-              <textarea
-                className={`${
-                  errors.detaileditemdescription && "is-invalid"
-                } form-control`}
-                rows={3}
-                {...register("detaileditemdescription")}
-                disabled={disableField}
-              />
-              {errors.detaileditemdescription && (
-                <div className="invalid-feedback">
-                  {errors.detaileditemdescription.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-6 col-md-12">
-            <div className="mb-3">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className={`${
-                    errors.itemalertwarning && "is-invalid"
-                  } form-check-input`}
-                  {...register("itemalertwarning")}
-                  disabled={disableField}
-                />
-                <label className="form-check-label">Item Alert</label>
               </div>
-              {errors.itemalertwarning && (
-                <div className="invalid-feedback">
-                  {errors.itemalertwarning.message}
-                </div>
-              )}
             </div>
-          </div>
-          <div className="col-lg-6 col-md-12">
-            <div className="mb-3">
-              <label className="form-label">Alert Message</label>
+          ))}
+        </div>
+
+        {/* Conditional alert message */}
+        {!!itemAlert && (
+          <div className="row mt-2">
+            <div className="col-lg-6 col-md-12">
+              <Label>Alert Message</Label>
               <input
                 type="text"
-                className={`${
-                  errors.itemwarningmessage && "is-invalid"
-                } form-control`}
+                className="form-control form-control-sm"
+                placeholder="Enter alert message..."
                 {...register("itemwarningmessage")}
-                disabled={disableField}
               />
-              {errors.itemwarningmessage && (
-                <div className="invalid-feedback">
-                  {errors.itemwarningmessage.message}
-                </div>
-              )}
             </div>
           </div>
+        )}
+      </SectionCard>
+
+      {/* ════════════════════════════════════════════════════
+          CARD 4 — NOTES & DESCRIPTION
+      ════════════════════════════════════════════════════ */}
+      <SectionCard icon={FileText} title="Notes & Description" accent="violet">
+        <div className="row g-3">
+          <div className="col-lg-6 col-md-12">
+            <Label>Notes</Label>
+            <textarea
+              className="form-control"
+              rows={4}
+              style={{ fontSize: 13, resize: "vertical" }}
+              placeholder="Internal notes about this product..."
+              {...register("itemremarks")}
+            />
+          </div>
+          <div className="col-lg-6 col-md-12">
+            <Label>Detail Description</Label>
+            <textarea
+              className="form-control"
+              rows={4}
+              style={{ fontSize: 13, resize: "vertical" }}
+              placeholder="Detailed product description for listings..."
+              {...register("detaileditemdescription")}
+            />
+          </div>
         </div>
-      </div>
+      </SectionCard>
     </div>
   );
 };

@@ -588,3 +588,14 @@ export const GET_ON_HAND_CHEQUE_SUMMARY_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_SUPPLIER_STATS_QUERY = gql`
+  query GetSupplierStats($outletid: Int!) {
+    getSupplierStats(outletid: $outletid) {
+      totalSuppliers
+      totalBalanceDue
+      totalOpenCredit
+      totalPurchases
+    }
+  }
+`;

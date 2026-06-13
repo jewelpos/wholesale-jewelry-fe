@@ -16,6 +16,7 @@ interface EnvironmentConfig {
   features: {
     newUi: boolean;
     maintenanceMode: boolean;
+    commandPalette: boolean;
   };
 }
 
@@ -38,6 +39,7 @@ export const getEnvironmentConfig = (): EnvironmentConfig => {
     features: {
       newUi: process.env.NEXT_PUBLIC_FEATURE_FLAG_NEW_UI === "true",
       maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true",
+      commandPalette: process.env.NEXT_PUBLIC_FEATURE_FLAG_COMMAND_PALETTE !== "false",
     },
   };
 };

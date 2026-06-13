@@ -18,6 +18,8 @@ import CustomerInputsB from "./CustomerInputsB";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { useQuery } from "@apollo/client";
 import PlaceHolder from "../../PlaceHolder";
+import { UserRound, Settings } from "lucide-react";
+import useWarehouse from "@/hooks/useWarehouse";
 
 const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const { customerId } = useParams();
@@ -40,6 +42,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
     formState: { errors, isDirty },
     control,
     getValues,
+    watch,
     trigger,
     reset,
     setValue,
@@ -78,10 +81,24 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   });
   const storeId = getValues("storeid");
   const warehouseId = getValues("warehouseid");
-  const status = getValues("status");
+  const status = watch("status");
+  const custalert = watch("custalert");
   const photoPath = getValues("custphotopath");
   const customerid = getValues("customerid");
   const [loading, setLoading] = useState(false);
+
+  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+
+  useEffect(() => {
+    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
+  }, [parsedStoreId, fetchWarehouseByStoreId]);
+
+  // Pre-select default warehouse on new customer only
+  useEffect(() => {
+    if (customerId || warehouses.length === 0) return;
+    const defaultWarehouse = warehouses.find((w) => w.issystem) ?? warehouses[0];
+    if (defaultWarehouse) setValue("warehouseid", String(defaultWarehouse.warehouseid));
+  }, [warehouses, customerId, setValue]);
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -193,56 +210,94 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
             </div>
           </div>
         ) : (
-          <div className="row g-3 align-items-start">
-            {/* Left card — profile & contact */}
-            <div className="col-lg-6 col-md-12">
-              <div className="card h-100" style={{ border: "1px solid #e9ecef" }}>
+          <div
+            style={{
+              background: "#f5f6f8",
+              borderRadius: 10,
+              padding: "20px 20px 8px",
+            }}
+          >
+            <div className="row g-3">
+              {/* Left card — profile & contact */}
+              <div className="col-lg-6 col-md-12">
                 <div
-                  className="card-header py-3"
-                  style={{ background: "#f8f9fa", borderBottom: "1px solid #e9ecef" }}
+                  className="card h-100 w-100"
+                  style={{
+                    border: "1px solid #e9ecef",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  }}
                 >
-                  <h6 className="mb-0 fw-semibold" style={{ fontSize: 13, color: "#495057" }}>
-                    Customer Profile
-                  </h6>
-                </div>
-                <div className="card-body">
-                  <CustomerInputsA
-                    register={register}
-                    errors={errors}
-                    control={control}
-                    trigger={trigger}
-                    setValue={setValue}
-                    photoPath={photoPath}
-                    customerId={customerid}
-                    disableField={disableField}
-                  />
+                  <div
+                    className="card-header py-3"
+                    style={{
+                      background: "#fff",
+                      borderBottom: "1px solid #e9ecef",
+                      borderLeft: "3px solid #0d6efd",
+                    }}
+                  >
+                    <h6
+                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
+                      style={{ fontSize: 13, color: "#495057" }}
+                    >
+                      <UserRound size={14} strokeWidth={2} color="#0d6efd" />
+                      Customer Profile
+                    </h6>
+                  </div>
+                  <div className="card-body">
+                    <CustomerInputsA
+                      register={register}
+                      errors={errors}
+                      control={control}
+                      trigger={trigger}
+                      setValue={setValue}
+                      photoPath={photoPath}
+                      customerId={customerid}
+                      companyName={watch("custcompanyname")}
+                      disableField={disableField}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right card — account settings */}
-            <div className="col-lg-6 col-md-12">
-              <div className="card h-100" style={{ border: "1px solid #e9ecef" }}>
+              {/* Right card — account settings */}
+              <div className="col-lg-6 col-md-12">
                 <div
-                  className="card-header py-3"
-                  style={{ background: "#f8f9fa", borderBottom: "1px solid #e9ecef" }}
+                  className="card h-100 w-100"
+                  style={{
+                    border: "1px solid #e9ecef",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  }}
                 >
-                  <h6 className="mb-0 fw-semibold" style={{ fontSize: 13, color: "#495057" }}>
-                    Account Settings
-                  </h6>
-                </div>
-                <div className="card-body">
-                  <CustomerInputsB
-                    register={register}
-                    errors={errors}
-                    control={control}
-                    trigger={trigger}
-                    setValue={setValue}
-                    storeId={storeId}
-                    warehouseId={warehouseId}
-                    status={status}
-                    disableField={disableField}
-                  />
+                  <div
+                    className="card-header py-3"
+                    style={{
+                      background: "#fff",
+                      borderBottom: "1px solid #e9ecef",
+                      borderLeft: "3px solid #0d6efd",
+                    }}
+                  >
+                    <h6
+                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
+                      style={{ fontSize: 13, color: "#495057" }}
+                    >
+                      <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                      Account Settings
+                    </h6>
+                  </div>
+                  <div className="card-body">
+                    <CustomerInputsB
+                      register={register}
+                      errors={errors}
+                      control={control}
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      warehouseId={warehouseId}
+                      status={status}
+                      custalert={custalert}
+                      disableField={disableField}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

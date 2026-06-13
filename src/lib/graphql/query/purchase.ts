@@ -114,10 +114,12 @@ export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
         ponumber
         supplierid
         pocreatebyid
+        createdby
         podate
         postatus
         podiscount
         termsid
+        terms
         poremarks
         poconfirmedto
         posubtotal
@@ -127,6 +129,7 @@ export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
         posalestax
         poshippingmethod
         warehouseid
+        warehouse
         podutypaid
         porequestdate
         poordtocompanyname
@@ -231,6 +234,17 @@ export const GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY = gql`
         pobackorderadjusteddate
         adjustedby
       }
+    }
+  }
+`;
+
+export const GET_PURCHASE_ORDER_STATS_QUERY = gql`
+  query GetPurchaseOrderStats($storeid: Int!, $supplierid: Int) {
+    getPurchaseOrderStats(storeid: $storeid, supplierid: $supplierid) {
+      total
+      openCount
+      partialCount
+      totalOpenValue
     }
   }
 `;

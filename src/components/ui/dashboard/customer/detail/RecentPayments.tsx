@@ -47,7 +47,7 @@ const RecentPayments = ({
   outletId,
 }: Props) => {
   return (
-    <div className="card border-0 shadow-sm h-100">
+    <div className="card h-100" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-card)" }}>
       <div className="card-body">
         <div className="d-flex justify-content-between align-items-start mb-3">
           <div>

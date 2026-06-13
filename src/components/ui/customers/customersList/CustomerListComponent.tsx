@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useCallback,
@@ -36,6 +36,9 @@ import CustomerActions from "./CustomerActions";
 import CustomerListHeader from "./CustomerListHeader";
 import PrintModal, { PrintPayload } from "../../PrintModal";
 import CustomerPrintDetails from "./CustomerPrintDetails";
+import CustomerListSummaryCards from "./CustomerListSummaryCards";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
@@ -233,6 +236,8 @@ const CustomerListComponent = () => {
     }
   };
 
+  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("customer-list");
+
   return (
     <>
       <CustomerListHeader
@@ -240,22 +245,28 @@ const CustomerListComponent = () => {
         setShowPrintModal={setShowPrintModal}
         onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "customers", sheetName: "Customers" })}
       />
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Customer Summary">
+          <CustomerListSummaryCards storeid={parsedStoreId} />
+        </SummaryPanelWrapper>
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
           />
-          <div className="ag-theme-quartz custom-theme">
+          <div>
             <POSGrid
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              heightOffset={300 + panelOffset}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               rowSelection={{
                 mode: "singleRow",

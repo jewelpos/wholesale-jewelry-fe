@@ -12,27 +12,26 @@ import FeatherIcon from "../../FeatherIcon";
 import Link from "next/link";
 
 const CustomerChequeSummaryHeader = ({
-  setShowPrintModal,
   setOpenAddChequeModal,
+  onExport,
 }: {
-  setShowPrintModal: (value: boolean) => void;
   setOpenAddChequeModal: (value: boolean) => void;
+  onExport: () => void;
 }) => {
-  const { currentMenu, currentPath } = useMenu();
+  const { currentMenu } = useMenu();
 
   const handleActionClick = (action: MenuAction) => {
     switch (action.actionname) {
       case "add_new_checks":
         setOpenAddChequeModal(true);
         break;
-      case "print_check_list":
-        setShowPrintModal(true);
+      case "export_customer_onhand_check":
+        onExport();
         break;
       default:
         break;
     }
   };
-  console.log(currentMenu);
 
   return (
     <PageHeader
@@ -51,19 +50,14 @@ const CustomerChequeSummaryHeader = ({
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isModalButton =
-                btn.actionname.includes("add_new_checks") ||
-                btn.actionname.includes("print_check_list");
               return (
                 <div
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
                   <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
-                    onClick={() =>
-                      isModalButton ? handleActionClick(btn) : null
-                    }
+                    href="#"
+                    onClick={() => handleActionClick(btn)}
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}

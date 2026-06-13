@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import { TIME_FORMAT } from "@/lib/config/constants";
 import { SupplierPayment } from "@/types/supplier";
+import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 
 export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
   {
@@ -43,6 +44,7 @@ export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
     headerName: "Status",
     field: "checkstatus",
     filter: "agTextColumnFilter",
+    cellRenderer: StatusPillRenderer,
   },
   {
     headerName: "Check/Card No",

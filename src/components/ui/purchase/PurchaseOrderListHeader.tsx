@@ -14,12 +14,28 @@ export default function PurchaseOrderListHeader({
   selectedPOs,
   handleExport,
   onExport,
+  onEmail,
 }: {
   selectedPOs: number[];
   handleExport: (ids: number[], type: string) => void;
   onExport: () => void;
+  onEmail: () => void;
 }) {
   const { currentMenu, currentPath } = useMenu();
+
+  const ACTION_ORDER: Record<string, number> = {
+    add_new_purchaseorder: 1,
+    add_return_order:      2,
+    add_receive_poorder:   3,
+    print:                 4,
+    email:                 5,
+    export:                6,
+  };
+
+  const actionPriority = (actionName: string) => {
+    const key = Object.keys(ACTION_ORDER).find((k) => actionName.includes(k));
+    return key ? ACTION_ORDER[key] : 99;
+  };
 
   const resolveHref = (actionName: string) => {
     if (actionName.includes("add_receive_poorder")) {
@@ -39,6 +55,8 @@ export default function PurchaseOrderListHeader({
       handleExport(selectedPOs, "print");
     } else if (actionName.includes("export")) {
       onExport();
+    } else if (actionName.includes("email")) {
+      onEmail();
     }
   };
 
@@ -51,20 +69,20 @@ export default function PurchaseOrderListHeader({
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action.length &&
           [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
-            })
+            .sort((a: MenuAction, b: MenuAction) =>
+              actionPriority(a.actionname) - actionPriority(b.actionname)
+            )
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
               const isModalButton =
                 btn.actionname.includes("print") ||
-                btn.actionname.includes("export");
-              // Export is always enabled; print requires a selection
+                btn.actionname.includes("export") ||
+                btn.actionname.includes("email");
+              // Export is always enabled; print and email require a selection
               const disabledButton =
-                !selectedPOs.length && btn.actionname.includes("print");
+                !selectedPOs.length &&
+                (btn.actionname.includes("print") || btn.actionname.includes("email"));
               return (
                 <div
                   className="page-btn d-none d-sm-block"

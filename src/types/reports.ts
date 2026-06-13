@@ -276,6 +276,30 @@ export type DailySalesSummary = {
   outletid: number;
 };
 
+export type ItemQtySoldSummary = {
+  itemcode: string;
+  itemdescription: string;
+  supplier: string;
+  categoryname: string;
+  sales_year: number;
+  total_year_qty: number;
+  jan: number;
+  feb: number;
+  mar: number;
+  apr: number;
+  may: number;
+  jun: number;
+  jul: number;
+  aug: number;
+  sep: number;
+  oct: number;
+  nov: number;
+  dec: number;
+  warehousename: string;
+  warehouseid: number;
+  outletid: number;
+};
+
 export type MonthlyPaymentSummary = {
   year: number;
   month_display: string;

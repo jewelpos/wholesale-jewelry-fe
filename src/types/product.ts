@@ -79,6 +79,7 @@ export type ProductListType = {
   adjustedby?: string;
   lasttransferdate?: string;
   transferby?: string;
+  itemmetal?: string;
 };
 
 export type ProductListTypeResponseType = {
@@ -106,6 +107,14 @@ export type ProductActivityListResponseType = {
   data: ProductActivityList[];
 };
 
+export type ProductActivityChartPoint = {
+  transation_date: string;
+  transaction_type: string;
+  quantity: number;
+  reference: string;
+  running_balance: number;
+};
+
 export type InventoryAdjustment = {
   itemcode: string;
   description?: string;
@@ -126,6 +135,22 @@ export type InventoryAdjustment = {
 export type InventoryAdjustmentResponseType = {
   total: number;
   data: InventoryAdjustment[];
+};
+
+export type InventoryAdjustmentChartItem = {
+  itemcode: string;
+  description: string;
+  total_qty_adjusted: number;
+  total_cost_adjusted: number;
+  adjustment_count: number;
+};
+
+export type InventoryAdjustmentChartResponse = {
+  items: InventoryAdjustmentChartItem[];
+  total_adjustments: number;
+  total_qty: number;
+  total_cost: number;
+  items_affected: number;
 };
 
 export type ProductFormType = {

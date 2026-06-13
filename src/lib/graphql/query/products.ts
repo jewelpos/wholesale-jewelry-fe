@@ -288,6 +288,41 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
   }
 `;
 
+export const GET_INVENTORY_TAG_LABELS_QUERY = gql`
+  query GetInventoryTagLabels($storeid: Int!) {
+    getInventoryTagLabels(storeid: $storeid) {
+      labelid
+      labelname
+      tagmodel
+      labletype
+      labelwidth
+      labelheight
+      leftmargin
+      topmargin
+      middlemargin
+      tagprefix
+      tagsuffix
+      showbarcode
+      showitemcode
+      showdescription
+      showsellprice
+      showcodedprice
+      showcategory
+    }
+  }
+`;
+
+export const GET_PRODUCT_LIST_SUMMARY_QUERY = gql`
+  query GetProductListSummary($outletid: Int!) {
+    getProductListSummary(outletid: $outletid) {
+      total_products
+      out_of_stock
+      low_stock
+      total_inventory_value
+    }
+  }
+`;
+
 export const GET_PRODUCT_LIST_QUERY = gql`
   query GetProductList(
     $outletid: Int!
@@ -353,6 +388,32 @@ export const GET_PRODUCT_LIST_QUERY = gql`
   }
 `;
 
+export const GET_PRODUCT_ACTIVITY_CHART_QUERY = gql`
+  query GetProductActivityChart(
+    $storeid: Int!
+    $itemid: Int!
+    $outletid: Int
+    $warehouseid: Int
+    $dateFrom: String
+    $dateTo: String
+  ) {
+    getProductActivityChart(
+      storeid: $storeid
+      itemid: $itemid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      dateFrom: $dateFrom
+      dateTo: $dateTo
+    ) {
+      transation_date
+      transaction_type
+      quantity
+      reference
+      running_balance
+    }
+  }
+`;
+
 export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
   query GetProductActivityList(
     $storeid: Int!
@@ -377,12 +438,45 @@ export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
       total
       data {
         itemcode
+        itemdescription
         transaction_type
         transation_date
         reference
         quantity
         warehouse
         warehouseid
+      }
+    }
+  }
+`;
+
+export const GET_INVENTORY_ADJUSTMENT_CHART_QUERY = gql`
+  query GetInventoryAdjustmentChart(
+    $storeid: Int!
+    $outletid: Int
+    $warehouseid: Int
+    $itemid: Int
+    $dateFrom: String
+    $dateTo: String
+  ) {
+    getInventoryAdjustmentChart(
+      storeid: $storeid
+      outletid: $outletid
+      warehouseid: $warehouseid
+      itemid: $itemid
+      dateFrom: $dateFrom
+      dateTo: $dateTo
+    ) {
+      total_adjustments
+      total_qty
+      total_cost
+      items_affected
+      items {
+        itemcode
+        description
+        total_qty_adjusted
+        total_cost_adjusted
+        adjustment_count
       }
     }
   }

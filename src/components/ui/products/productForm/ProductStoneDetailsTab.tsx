@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Control,
   FieldErrors,
@@ -9,6 +9,7 @@ import {
   UseFormTrigger,
 } from "react-hook-form";
 import { ProductFormType } from "@/types/product";
+import { ChevronDown, ChevronUp } from "react-feather";
 
 interface ProductStoneDetailsTabProps {
   register: UseFormRegister<ProductFormType>;
@@ -19,478 +20,207 @@ interface ProductStoneDetailsTabProps {
   disableField?: boolean;
 }
 
+/* ── helpers ─────────────────────────────────────────── */
+
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>
+    {children}
+  </label>
+);
+
+const SubSection = ({
+  title,
+  color,
+  children,
+}: {
+  title: string;
+  color: string;
+  children: React.ReactNode;
+}) => (
+  <div className="mb-3 pb-3" style={{ borderBottom: "1px solid #f1f5f9" }}>
+    <div
+      className="d-flex align-items-center gap-2 mb-3"
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        color,
+      }}
+    >
+      <span
+        style={{
+          display: "inline-block",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: color,
+          flexShrink: 0,
+        }}
+      />
+      {title}
+    </div>
+    <div className="row g-2">{children}</div>
+  </div>
+);
+
+const TextField = ({
+  label,
+  field,
+  register,
+}: {
+  label: string;
+  field: keyof ProductFormType;
+  register: UseFormRegister<ProductFormType>;
+}) => (
+  <div className="col-lg-3 col-md-4 col-6">
+    <Label>{label}</Label>
+    <input
+      type="text"
+      className="form-control form-control-sm"
+      {...register(field as any)}
+    />
+  </div>
+);
+
+const NumberField = ({
+  label,
+  field,
+  register,
+}: {
+  label: string;
+  field: keyof ProductFormType;
+  register: UseFormRegister<ProductFormType>;
+}) => (
+  <div className="col-lg-3 col-md-4 col-6">
+    <Label>{label}</Label>
+    <input
+      type="number"
+      step="0.01"
+      className="form-control form-control-sm"
+      {...(register as any)(field, { valueAsNumber: true })}
+    />
+  </div>
+);
+
+const CurrencyField = ({
+  label,
+  field,
+  register,
+}: {
+  label: string;
+  field: keyof ProductFormType;
+  register: UseFormRegister<ProductFormType>;
+}) => (
+  <div className="col-lg-3 col-md-4 col-6">
+    <Label>{label}</Label>
+    <div className="input-group input-group-sm">
+      <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 12 }}>$</span>
+      <input
+        type="number"
+        step="0.01"
+        className="form-control"
+        {...(register as any)(field, { valueAsNumber: true })}
+      />
+    </div>
+  </div>
+);
+
+/* ── component ───────────────────────────────────────── */
+
 const ProductStoneDetailsTab: React.FC<ProductStoneDetailsTabProps> = ({
   register,
-  errors,
-  control,
-  trigger,
-  setValue,
-  disableField = false,
 }) => {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="new-employee-field">
-      {/* Stone Details Section */}
-      <div className="mb-4">
-        <h5 className="mb-3">Stone Details</h5>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Shape</label>
-              <input
-                type="text"
-                className={`${errors.dshape && "is-invalid"} form-control`}
-                {...register("dshape")}
-                disabled={disableField}
-              />
-              {errors.dshape && (
-                <div className="invalid-feedback">{errors.dshape.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Laboratory</label>
-              <input
-                type="text"
-                className={`${errors.dlab && "is-invalid"} form-control`}
-                {...register("dlab")}
-                disabled={disableField}
-              />
-              {errors.dlab && (
-                <div className="invalid-feedback">{errors.dlab.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Certificate #</label>
-              <input
-                type="text"
-                className={`${errors.dcerno && "is-invalid"} form-control`}
-                {...register("dcerno")}
-                disabled={disableField}
-              />
-              {errors.dcerno && (
-                <div className="invalid-feedback">{errors.dcerno.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Carat Weight</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.dcarat && "is-invalid"} form-control`}
-                {...register("dcarat", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dcarat && (
-                <div className="invalid-feedback">{errors.dcarat.message}</div>
-              )}
-            </div>
-          </div>
+    <div
+      className="card mb-3"
+      style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #e8ecf0" }}
+    >
+      {/* Collapsible header — div so fieldset:disabled doesn't block it */}
+      <div
+        role="button"
+        className="card-header d-flex align-items-center justify-content-between py-2 px-3"
+        style={{
+          cursor: "pointer",
+          background: open ? "#fdf4ff" : "#f8f9ff",
+          borderLeft: "3px solid #a855f7",
+          userSelect: "none",
+        }}
+        onClick={() => setOpen(v => !v)}
+      >
+        <div className="d-flex align-items-center gap-2">
+          {/* Diamond SVG icon */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 22 9 18 21 6 21 2 9 12 2" />
+          </svg>
+          <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Stone Details
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              background: "#f3e8ff",
+              color: "#7c3aed",
+              padding: "2px 8px",
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            Optional
+          </span>
         </div>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Diameter</label>
-              <input
-                type="text"
-                className={`${errors.ddiameter && "is-invalid"} form-control`}
-                {...register("ddiameter")}
-                disabled={disableField}
-              />
-              {errors.ddiameter && (
-                <div className="invalid-feedback">
-                  {errors.ddiameter.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Color</label>
-              <input
-                type="text"
-                className={`${errors.dcolor && "is-invalid"} form-control`}
-                {...register("dcolor")}
-                disabled={disableField}
-              />
-              {errors.dcolor && (
-                <div className="invalid-feedback">{errors.dcolor.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Clarity</label>
-              <input
-                type="text"
-                className={`${errors.dclarity && "is-invalid"} form-control`}
-                {...register("dclarity")}
-                disabled={disableField}
-              />
-              {errors.dclarity && (
-                <div className="invalid-feedback">
-                  {errors.dclarity.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Fluorescence</label>
-              <input
-                type="text"
-                className={`${errors.dflorence && "is-invalid"} form-control`}
-                {...register("dflorence")}
-                disabled={disableField}
-              />
-              {errors.dflorence && (
-                <div className="invalid-feedback">
-                  {errors.dflorence.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Polarity</label>
-              <input
-                type="text"
-                className={`${errors.dpolarity && "is-invalid"} form-control`}
-                {...register("dpolarity")}
-                disabled={disableField}
-              />
-              {errors.dpolarity && (
-                <div className="invalid-feedback">
-                  {errors.dpolarity.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Depth %</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.ddepth && "is-invalid"} form-control`}
-                {...register("ddepth", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.ddepth && (
-                <div className="invalid-feedback">{errors.ddepth.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Table %</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.dtable && "is-invalid"} form-control`}
-                {...register("dtable", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dtable && (
-                <div className="invalid-feedback">{errors.dtable.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Girdle</label>
-              <input
-                type="text"
-                className={`${errors.dgirdle && "is-invalid"} form-control`}
-                {...register("dgirdle")}
-                disabled={disableField}
-              />
-              {errors.dgirdle && (
-                <div className="invalid-feedback">{errors.dgirdle.message}</div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Culet</label>
-              <input
-                type="text"
-                className={`${errors.dculut && "is-invalid"} form-control`}
-                {...register("dculut")}
-                disabled={disableField}
-              />
-              {errors.dculut && (
-                <div className="invalid-feedback">{errors.dculut.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Polish</label>
-              <input
-                type="text"
-                className={`${errors.dpolish && "is-invalid"} form-control`}
-                {...register("dpolish")}
-                disabled={disableField}
-              />
-              {errors.dpolish && (
-                <div className="invalid-feedback">{errors.dpolish.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Symmetry</label>
-              <input
-                type="text"
-                className={`${errors.dsymmetry && "is-invalid"} form-control`}
-                {...register("dsymmetry")}
-                disabled={disableField}
-              />
-              {errors.dsymmetry && (
-                <div className="invalid-feedback">
-                  {errors.dsymmetry.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Crown Height</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.dcrownheight && "is-invalid"
-                } form-control`}
-                {...register("dcrownheight", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dcrownheight && (
-                <div className="invalid-feedback">
-                  {errors.dcrownheight.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Crown Angle</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.dcrownangle && "is-invalid"} form-control`}
-                {...register("dcrownangle", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dcrownangle && (
-                <div className="invalid-feedback">
-                  {errors.dcrownangle.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Pavillion Height</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.dpavillionheight && "is-invalid"
-                } form-control`}
-                {...register("dpavillionheight", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dpavillionheight && (
-                <div className="invalid-feedback">
-                  {errors.dpavillionheight.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Pavillion Depth</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${
-                  errors.dpavillionangle && "is-invalid"
-                } form-control`}
-                {...register("dpavillionangle", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dpavillionangle && (
-                <div className="invalid-feedback">
-                  {errors.dpavillionangle.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Measurement LxWxD</label>
-              <input
-                type="text"
-                className={`${errors.dmesurement && "is-invalid"} form-control`}
-                {...register("dmesurement")}
-                disabled={disableField}
-              />
-              {errors.dmesurement && (
-                <div className="invalid-feedback">
-                  {errors.dmesurement.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Size Ref</label>
-              <input
-                type="text"
-                className={`${errors.dsize && "is-invalid"} form-control`}
-                {...register("dsize")}
-                disabled={disableField}
-              />
-              {errors.dsize && (
-                <div className="invalid-feedback">{errors.dsize.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Quality</label>
-              <input
-                type="text"
-                className={`${errors.dquality && "is-invalid"} form-control`}
-                {...register("dquality")}
-                disabled={disableField}
-              />
-              {errors.dquality && (
-                <div className="invalid-feedback">
-                  {errors.dquality.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Stock Number</label>
-              <input
-                type="text"
-                className={`${errors.dstockno && "is-invalid"} form-control`}
-                {...register("dstockno")}
-                disabled={disableField}
-              />
-              {errors.dstockno && (
-                <div className="invalid-feedback">
-                  {errors.dstockno.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Rapaport Price</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.drapprice && "is-invalid"} form-control`}
-                {...register("drapprice", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.drapprice && (
-                <div className="invalid-feedback">
-                  {errors.drapprice.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Cost Per Carat</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.dcost && "is-invalid"} form-control`}
-                {...register("dcost", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dcost && (
-                <div className="invalid-feedback">{errors.dcost.message}</div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Sell Price Per Carat</label>
-              <input
-                type="number"
-                step="0.01"
-                className={`${errors.dsaleprice && "is-invalid"} form-control`}
-                {...register("dsaleprice", {
-                  valueAsNumber: true,
-                })}
-                disabled={disableField}
-              />
-              {errors.dsaleprice && (
-                <div className="invalid-feedback">
-                  {errors.dsaleprice.message}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="col-lg-4 col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Price Code</label>
-              <input
-                type="text"
-                className={`${errors.dpricecode && "is-invalid"} form-control`}
-                {...register("dpricecode")}
-                disabled={disableField}
-              />
-              {errors.dpricecode && (
-                <div className="invalid-feedback">
-                  {errors.dpricecode.message}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        {open ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
       </div>
+
+      {open && (
+        <div className="card-body py-3">
+
+          {/* ── Sub-section 1: Identification ── */}
+          <SubSection title="Identification" color="#6366f1">
+            <TextField label="Laboratory"    field="dlab"     register={register} />
+            <TextField label="Certificate #" field="dcerno"   register={register} />
+            <TextField label="Stock #"       field="dstockno" register={register} />
+            <TextField label="Shape"         field="dshape"   register={register} />
+            <TextField label="Color"         field="dcolor"   register={register} />
+            <TextField label="Clarity"       field="dclarity" register={register} />
+            <TextField label="Quality"       field="dquality" register={register} />
+            <TextField label="Size Ref"      field="dsize"    register={register} />
+          </SubSection>
+
+          {/* ── Sub-section 2: Physical Properties ── */}
+          <SubSection title="Physical Properties" color="#059669">
+            <NumberField label="Carat Weight"     field="dcarat"          register={register} />
+            <TextField  label="Diameter"          field="ddiameter"       register={register} />
+            <TextField  label="Measurement LxWxD" field="dmesurement"     register={register} />
+            <NumberField label="Depth %"          field="ddepth"          register={register} />
+            <NumberField label="Table %"          field="dtable"          register={register} />
+            <TextField  label="Girdle"            field="dgirdle"         register={register} />
+            <TextField  label="Culet"             field="dculut"          register={register} />
+            <TextField  label="Polish"            field="dpolish"         register={register} />
+            <TextField  label="Symmetry"          field="dsymmetry"       register={register} />
+            <TextField  label="Fluorescence"      field="dflorence"       register={register} />
+            <TextField  label="Polarity"          field="dpolarity"       register={register} />
+            <NumberField label="Crown Height"     field="dcrownheight"    register={register} />
+            <NumberField label="Crown Angle"      field="dcrownangle"     register={register} />
+            <NumberField label="Pavilion Height"  field="dpavillionheight" register={register} />
+            <NumberField label="Pavilion Depth"   field="dpavillionangle" register={register} />
+          </SubSection>
+
+          {/* ── Sub-section 3: Pricing ── */}
+          <SubSection title="Stone Pricing" color="#f59e0b">
+            <CurrencyField label="Rapaport Price"     field="drapprice"  register={register} />
+            <CurrencyField label="Cost per Carat"     field="dcost"      register={register} />
+            <CurrencyField label="Sell Price per Carat" field="dsaleprice" register={register} />
+            <div className="col-lg-3 col-md-4 col-6">
+              <Label>Price Code</Label>
+              <input type="text" className="form-control form-control-sm" {...register("dpricecode")} />
+            </div>
+          </SubSection>
+
+        </div>
+      )}
     </div>
   );
 };

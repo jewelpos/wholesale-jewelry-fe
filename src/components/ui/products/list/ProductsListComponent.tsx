@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useCallback,
@@ -30,6 +30,9 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import ProductsListHeader from "./ProductsListHeader";
 import ProductActions from "./ProductActions";
+import ProductListSummaryCards from "./ProductListSummaryCards";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -165,11 +168,13 @@ const ProductsListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 80,
+        width: 240,
+        minWidth: 240,
+        suppressAutoSize: true,
         sortable: false,
         filter: false,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,
@@ -178,12 +183,20 @@ const ProductsListComponent = () => {
     [handleDeleteSuccess]
   );
 
+  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("product-list");
+
   return (
     <>
       <ProductsListHeader />
+      {isAdmin && !!selectedOutlet && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
+          <ProductListSummaryCards outletid={selectedOutlet} />
+        </SummaryPanelWrapper>
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -196,10 +209,10 @@ const ProductsListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              heightOffset={300 + panelOffset}
               rowSelection="single"
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
             />
           </div>

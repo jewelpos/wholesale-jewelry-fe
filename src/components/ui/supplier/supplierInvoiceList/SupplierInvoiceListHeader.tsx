@@ -9,10 +9,9 @@ import {
   renderActionButtonIconName,
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
-import Link from "next/link";
 
-const SupplierInvoiceListHeader = ({}) => {
-  const { currentMenu, currentPath } = useMenu();
+const SupplierInvoiceListHeader = ({ onAdd }: { onAdd?: () => void }) => {
+  const { currentMenu } = useMenu();
 
   return (
     <PageHeader
@@ -36,13 +35,14 @@ const SupplierInvoiceListHeader = ({}) => {
                   className="page-btn d-none d-sm-block"
                   key={btn.actionname}
                 >
-                  <Link
-                    href={`${currentPath}/new`}
+                  <button
+                    type="button"
                     className={`btn btn-added ${btnColor}`}
+                    onClick={onAdd}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
-                  </Link>
+                  </button>
                 </div>
               );
             })}

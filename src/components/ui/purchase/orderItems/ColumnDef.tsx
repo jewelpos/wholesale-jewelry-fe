@@ -3,7 +3,6 @@
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import dayjs from "dayjs";
-import { TIME_FORMAT } from "@/lib/config/constants";
 import { PurchaseOrderItem } from "@/types/purchase";
 
 const purchaseOrderItemsColumnDefs: ColDef<PurchaseOrderItem>[] = [
@@ -11,7 +10,6 @@ const purchaseOrderItemsColumnDefs: ColDef<PurchaseOrderItem>[] = [
     headerName: "Item Code",
     field: "itemcode",
     filter: "agTextColumnFilter",
-    cellRenderer: "agGroupCellRenderer",
     flex: 1,
   },
   {
@@ -67,8 +65,12 @@ const purchaseOrderItemsColumnDefs: ColDef<PurchaseOrderItem>[] = [
   {
     headerName: "Last Modified",
     field: "lastmodifieddate",
-    cellRenderer: (params: ICellRendererParams) =>
-      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    cellRenderer: (params: ICellRendererParams) => {
+      if (!params.value) return "";
+      const asNum = Number(params.value);
+      const d = isNaN(asNum) ? dayjs(params.value) : dayjs(asNum);
+      return d.isValid() ? d.format("MM/DD/YYYY") : "";
+    },
     filter: "agDateColumnFilter",
     flex: 1,
   },

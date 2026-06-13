@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import OutletsFilter from "./OutletsFilter";
 import useOutlets from "@/hooks/useOutlets";
 import WarehouseFilter from "./WarehouseFilter";
@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import SupplierFilter from "./SupplierFilter";
 import useSupplier from "@/hooks/useSupplier";
 import useWarehouse from "@/hooks/useWarehouse";
+import { AgGridReact } from "ag-grid-react";
 
 interface Props {
   search?: string;
@@ -20,6 +21,7 @@ interface Props {
   setSelectedSupplier?: React.Dispatch<
     React.SetStateAction<number | undefined>
   >;
+  gridRef?: React.RefObject<AgGridReact | null>;
 }
 
 const CustomFilterSections = ({
@@ -31,6 +33,7 @@ const CustomFilterSections = ({
   setSelectedWarehouse,
   selectedSupplier,
   setSelectedSupplier,
+  gridRef,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -48,7 +51,8 @@ const CustomFilterSections = ({
     suppliers,
   } = useSupplier();
 
-  // Determine which warehouse fetch function to use based on selected outlet
+  const [showFilters, setShowFilters] = useState(false);
+
   const fetchWarehousesList = useCallback(() => {
     if (selectedOutlet) {
       fetchWarehouseByOutletId(selectedOutlet);
@@ -62,20 +66,62 @@ const CustomFilterSections = ({
     parsedStoreId,
   ]);
 
+  // Sync floating filter visibility: hide when search is active, restore when cleared
+  useEffect(() => {
+    if (!gridRef?.current?.api) return;
+    const active = showFilters && !search;
+    gridRef.current.api.updateGridOptions({
+      defaultColDef: { floatingFilter: active },
+    });
+  }, [search, showFilters, gridRef]);
+
+  const handleFilterToggle = (show: boolean) => {
+    setShowFilters(show);
+    if (!search) {
+      gridRef?.current?.api?.updateGridOptions({
+        defaultColDef: { floatingFilter: show },
+      });
+    }
+  };
+
   return (
     <div className="container-fluid my-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-        <div className="input-group w-50 w-md-100">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search"
-            value={search}
-            onChange={(e) => setSearch?.(e.target.value)}
-          />
-          <span className="input-group-text">
-            <i data-feather="search" className="feather-search" />
-          </span>
+        <div className="d-flex align-items-center gap-2">
+          <div className="input-group" style={{ width: 280 }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch?.(e.target.value)}
+            />
+            <span className="input-group-text">
+              <i data-feather="search" className="feather-search" />
+            </span>
+          </div>
+          {gridRef && (
+            <div
+              className="form-check form-switch d-flex align-items-center gap-1 mb-0"
+              style={{ paddingLeft: 0 }}
+            >
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="advancedFiltersToggle"
+                checked={showFilters}
+                onChange={(e) => handleFilterToggle(e.target.checked)}
+                style={{ cursor: "pointer", marginLeft: 0 }}
+              />
+              <label
+                className="form-check-label"
+                htmlFor="advancedFiltersToggle"
+                style={{ cursor: "pointer", fontSize: 12, color: "#64748b", userSelect: "none" }}
+              >
+                Filters
+              </label>
+            </div>
+          )}
         </div>
         {setSelectedOutlet && (
           <div className="d-flex align-items-center w-25 w-md-100">

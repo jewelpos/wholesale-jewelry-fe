@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery } from "@apollo/client";
 import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
@@ -16,8 +16,13 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import { ItemAgingSummary } from "@/types/product";
 import { productAgingColumnDefs } from "./ColumnDef";
 import ProductAgingHeader from "./ProductAgingHeader";
+import ProductAgingChartView from "./ProductAgingChartView";
 import { GET_PRODUCT_AGING_LIST_QUERY } from "@/lib/graphql/query/products";
 import { useParams } from "next/navigation";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import ReportSliderFilter from "@/components/ui/reports/shared/ReportSliderFilter";
+
+const AGE_MARKS = { 0: "All", 30: "30d", 60: "60d", 90: "90d", 180: "180d", 365: "1yr" };
 
 const ProductAgingComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -25,17 +30,15 @@ const ProductAgingComponent = () => {
   const [getProductAgingList] = useLazyQuery(GET_PRODUCT_AGING_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
-  const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>(
-    -1
-  );
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<"chart" | "grid">("grid");
+  const [minAgeDays, setMinAgeDays] = useState(0);
 
-  const handleOnGridReady = (
-    params: GridReadyEvent<ItemAgingSummary>
-  ) => {
+  const handleOnGridReady = (params: GridReadyEvent<ItemAgingSummary>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
@@ -48,6 +51,9 @@ const ProductAgingComponent = () => {
           debouncedSearch,
           "itemcode, itemdescription, supplier, warehousename"
         );
+        if (minAgeDays > 0) {
+          filters.filters = [...filters.filters, { key: "age_days", value: { filterType: "number", type: "greaterThanOrEqual", filter: String(minAgeDays) } }];
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getProductAgingList({
             variables: {
@@ -59,10 +65,7 @@ const ProductAgingComponent = () => {
           });
           if (data.getProductAgingList) {
             const { data: rows, total } = data.getProductAgingList;
-            params.success({
-              rowData: rows,
-              rowCount: total,
-            });
+            params.success({ rowData: rows, rowCount: total });
             if (!rows.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
@@ -73,38 +76,33 @@ const ProductAgingComponent = () => {
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+          dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
       },
     }),
-    [
-      parsedStoreId,
-      selectedOutlet,
-      selectedWarehouse,
-      dispatch,
-      getProductAgingList,
-      debouncedSearch,
-    ]
+    [parsedStoreId, selectedOutlet, selectedWarehouse, dispatch, getProductAgingList, debouncedSearch, minAgeDays]
   );
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+    if ((selectedOutlet || debouncedSearch) && gridReady && gridRef.current?.api) {
+      gridRef.current.api.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, selectedWarehouse, gridReady, debouncedSearch]);
+  }, [datasource, selectedOutlet, selectedWarehouse, gridReady, debouncedSearch]);
+
+  const handleExport = useCallback(() => {
+    exportGridToExcel(gridRef.current?.api, { fileName: "product-aging", sheetName: "Product Aging" });
+  }, []);
 
   return (
     <>
-      <ProductAgingHeader />
-      <div className="card table-list-card">
+      <ProductAgingHeader onExport={handleExport} viewMode={viewMode} setViewMode={setViewMode} />
+
+      {/* filters always visible regardless of view mode */}
+      <div className="card mb-3 border-0 shadow-sm">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -112,19 +110,41 @@ const ProductAgingComponent = () => {
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
           />
-          <div className="ag-theme-quartz custom-theme">
-            <POSGrid
-              ref={gridRef}
-              columnDefs={productAgingColumnDefs}
-              onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
-              }}
-            />
-          </div>
+          <ReportSliderFilter
+            label="Minimum Age"
+            min={0}
+            max={365}
+            step={null}
+            marks={AGE_MARKS}
+            value={minAgeDays}
+            onChange={(v) => setMinAgeDays(v as number)}
+            color="#f59e0b"
+          />
         </div>
       </div>
+
+      {viewMode === "chart" ? (
+        <ProductAgingChartView
+          storeid={parsedStoreId}
+          outletid={selectedOutlet}
+          warehouseid={selectedWarehouse}
+        />
+      ) : (
+        <div className="card table-list-card">
+          <div className="card-body p-2">
+            <div className="ag-theme-quartz custom-theme">
+              <POSGrid
+                ref={gridRef}
+                columnDefs={productAgingColumnDefs}
+                onGridReady={handleOnGridReady}
+                defaultColDef={{
+                  filter: !debouncedSearch,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

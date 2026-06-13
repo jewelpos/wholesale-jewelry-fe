@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo, useRef, useState, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   GridReadyEvent,
   IServerSideGetRowsParams,
@@ -25,6 +25,12 @@ import CustomFilterSections from "@/components/ui/grid/CustomFilterSections";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
 import MemoListHeader from "./MemoListHeader";
 import MemoActions from "./MemoActions";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "@/components/ui/grid/SummaryPanelWrapper";
+import DailyStatusCards from "@/components/ui/grid/DailyStatusCards";
+import StatusFilterChips from "@/components/ui/grid/StatusFilterChips";
+import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
+import { GET_MEMO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
@@ -46,7 +52,7 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
       return `${params.data.customerid} - ${params.data.companyname ?? ""}`;
     },
   },
-  { headerName: "Status", field: "statusname", filter: "agTextColumnFilter" },
+  { headerName: "Status", field: "statusname", filter: "agTextColumnFilter", cellRenderer: StatusPillRenderer },
   { headerName: "Mode",     field: "salemodename", filter: "agTextColumnFilter" },
   { headerName: "Date",     field: "saledate",    filter: "agDateColumnFilter", cellRenderer: dateRenderer },
   { headerName: "Items",    field: "numberofitems", filter: "agNumberColumnFilter" },
@@ -102,6 +108,7 @@ const MemoListComponent = () => {
   const [selectedMemoNumbers, setSelectedMemoNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -116,6 +123,12 @@ const MemoListComponent = () => {
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params, debouncedSearch, "memonumber, customerid, companyname");
+        if (statusFilter) {
+          filters.filters = [
+            ...filters.filters,
+            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
+          ];
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getMemoList({
             variables: {
@@ -165,7 +178,7 @@ const MemoListComponent = () => {
         }
       },
     }),
-    [debouncedSearch, dispatch, getMemoList, parsedOutletId, parsedStoreId, selectedWarehouse]
+    [debouncedSearch, dispatch, getMemoList, parsedOutletId, parsedStoreId, selectedWarehouse, statusFilter]
   );
 
   const handleGridReady = useCallback(
@@ -248,6 +261,14 @@ const MemoListComponent = () => {
     }
   }, [config.apiUrl, dispatch, parsedStoreId, selectedMemoNumbers]);
 
+  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("memo-list");
+
+  const { data: summaryData, loading: summaryLoading } = useQuery(GET_MEMO_DAILY_SUMMARY_QUERY, {
+    variables: { outletid: parsedOutletId },
+    skip: !parsedOutletId,
+  });
+  const summary = summaryData?.getMemoDailySummary ?? null;
+
   return (
     <>
       <MemoListHeader
@@ -271,9 +292,32 @@ const MemoListComponent = () => {
           }}
         />
       )}
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Memo Daily Summary">
+          <DailyStatusCards
+            data={summary}
+            loading={summaryLoading}
+            labelOverrides={{ revenue: "Revenue Today", total: "Memos Today", avg: "Avg Memo", open: "Open Today" }}
+          />
+          <StatusFilterChips
+            active={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
+              gridRef.current?.api?.refreshServerSide({ purge: true });
+            }}
+            counts={{
+              total: summary?.total_today ?? 0,
+              paid: summary?.paid_today ?? 0,
+              pending: summary?.pending_today ?? 0,
+              voided: summary?.voided_today ?? 0,
+            }}
+          />
+        </SummaryPanelWrapper>
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedWarehouse={selectedWarehouse}
@@ -284,9 +328,9 @@ const MemoListComponent = () => {
             columnDefs={memoColumnDefs}
             onGridReady={handleGridReady}
             onSelectionChanged={handleSelectionChanged}
+            heightOffset={300 + panelOffset}
             defaultColDef={{
               filter: !debouncedSearch,
-              floatingFilter: !debouncedSearch,
             }}
             rowSelection={{
               mode: "multiRow",

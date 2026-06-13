@@ -7,7 +7,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { CustomersListType } from "@/types/customer";
 import Link from "next/link";
-import { Edit, Trash2 } from "react-feather";
+import { Edit, Eye, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
@@ -70,25 +70,47 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
     }
   };
 
+  const canDelete = Number(data.numberofsales) === 0;
+  const deleteReason = canDelete ? "" : "Cannot delete: customer has existing sales";
+
   return (
     <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists"></div>
+      <div className="edit-delete-action" style={{ gap: "2px" }}>
         <Link
-          className="me-2 p-2"
+          className="p-1"
+          href={`${basePath}/customers/${data.customerid}/view`}
+          scroll={false}
+          title="View"
+        >
+          <Eye size={14} />
+        </Link>
+        <Link
+          className="p-1"
           href={`${basePath}/customers/${data.customerid}/edit`}
           scroll={false}
+          title="Edit"
         >
-          <Edit className="feather-edit" />
+          <Edit size={14} />
         </Link>
-        <Link
-          className="confirm-text p-2"
-          href="#"
-          onClick={handleDelete}
-          scroll={false}
-        >
-          <Trash2 className="feather-trash-2" />
-        </Link>
+        {canDelete ? (
+          <button
+            type="button"
+            className="confirm-text p-1 btn btn-link"
+            style={{ lineHeight: 1 }}
+            onClick={handleDelete}
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        ) : (
+          <span
+            className="p-1"
+            title={deleteReason}
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <Trash2 size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
       </div>
     </div>
   );

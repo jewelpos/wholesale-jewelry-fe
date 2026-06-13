@@ -1,6 +1,5 @@
 "use client";
 
-import { phoneNumberValidationCustomized } from "@/lib/utils/validations/formValidations";
 import { SupplierFormType } from "@/types/supplier";
 import React from "react";
 import {
@@ -15,6 +14,14 @@ import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
 import SelectStore from "@/components/forms/SelectStore";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
+import {
+  Landmark,
+  FileText,
+  CreditCard,
+  Activity,
+  StickyNote,
+  type LucideIcon,
+} from "lucide-react";
 
 interface Props {
   register: UseFormRegister<SupplierFormType>;
@@ -28,7 +35,26 @@ interface Props {
   disableField?: boolean;
 }
 
-export const SupplierInputsB = ({
+const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "20px 0 14px" }}>
+    <Icon size={13} strokeWidth={2} color="#6c757d" />
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        color: "#6c757d",
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </span>
+    <div style={{ flex: 1, height: 1, backgroundColor: "#dee2e6" }} />
+  </div>
+);
+
+const SupplierInputsB = ({
   register,
   errors,
   control,
@@ -40,9 +66,11 @@ export const SupplierInputsB = ({
   disableField,
 }: Props) => {
   return (
-    <div className="row">
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
+    <>
+      {/* Warehouse */}
+      <SectionLabel label="Warehouse" icon={Landmark} />
+      <div className="row">
+        <div className="col-6 mb-3">
           <label className="form-label">Store</label>
           <Controller
             name="storeid"
@@ -50,7 +78,7 @@ export const SupplierInputsB = ({
             rules={{ required: "Store is required" }}
             render={({ field }) => (
               <SelectStore
-                className={`${errors.storeid && "is-invalid"} `}
+                className={errors.storeid ? "is-invalid" : ""}
                 trigger={trigger}
                 setValue={setValue}
                 storeId={storeId}
@@ -63,9 +91,7 @@ export const SupplierInputsB = ({
             <div className="invalid-feedback">{errors.storeid.message}</div>
           )}
         </div>
-      </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
+        <div className="col-6 mb-3">
           <label className="form-label">Warehouse</label>
           <Controller
             name="warehouseid"
@@ -73,7 +99,7 @@ export const SupplierInputsB = ({
             rules={{ required: "Warehouse is required" }}
             render={({ field }) => (
               <SelectWarehouse
-                className={`${errors.warehouseid && "is-invalid"} `}
+                className={errors.warehouseid ? "is-invalid" : ""}
                 trigger={trigger}
                 setValue={setValue}
                 warehouseId={warehouseId}
@@ -88,9 +114,12 @@ export const SupplierInputsB = ({
           )}
         </div>
       </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
-          <label className="form-label">Terms</label>
+
+      {/* Terms */}
+      <SectionLabel label="Terms" icon={FileText} />
+      <div className="row">
+        <div className="col-6 mb-3">
+          <label className="form-label">Payment Terms</label>
           <Controller
             name="termsid"
             control={control}
@@ -106,10 +135,8 @@ export const SupplierInputsB = ({
             )}
           />
         </div>
-      </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
-          <label className="form-label">Shipping mode</label>
+        <div className="col-6 mb-3">
+          <label className="form-label">Shipping Mode</label>
           <Controller
             name="shippimgmethod"
             control={control}
@@ -126,12 +153,15 @@ export const SupplierInputsB = ({
           />
         </div>
       </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
+
+      {/* Account */}
+      <SectionLabel label="Account" icon={CreditCard} />
+      <div className="row">
+        <div className="col-12 mb-3">
           <label className="form-label">Account No</label>
           <input
             type="text"
-            className={`${errors.accountno && "is-invalid"} form-control`}
+            className={`form-control${errors.accountno ? " is-invalid" : ""}`}
             {...register("accountno")}
           />
           {errors.accountno && (
@@ -139,35 +169,74 @@ export const SupplierInputsB = ({
           )}
         </div>
       </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
-          <label className="form-label">Status</label>
-          <div className="form-check form-check-md form-switch">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              role="switch"
-              {...register("supplierstatus", { required: true })}
-              onChange={(e) => {
-                setValue("supplierstatus", e.target.checked ? 1 : 0);
-                trigger("supplierstatus");
-              }}
-            />
-            <label
-              className="form-check-label"
-              htmlFor="flexSwitchCheckDefault"
-            >
-              {status === 0 ? "Inactive" : "Active"}
-            </label>
+
+      {/* Status */}
+      <SectionLabel label="Status" icon={Activity} />
+      <div className="row">
+        <div className="col-12 mb-3">
+          <div
+            style={{
+              background: status === 1 ? "#f0fdf4" : "#f8f9fa",
+              border: `1px solid ${status === 1 ? "#bbf7d0" : "#dee2e6"}`,
+              borderRadius: 8,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: status === 1 ? "#15803d" : "#6c757d",
+                }}
+              >
+                {status === 1 ? "Active" : "Inactive"}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: status === 1 ? "#4ade80" : "#adb5bd",
+                  marginTop: 1,
+                }}
+              >
+                {status === 1
+                  ? "Supplier can receive purchase orders"
+                  : "Supplier account is disabled"}
+              </div>
+            </div>
+            <div className="form-check form-switch mb-0">
+              <Controller
+                name="supplierstatus"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    style={{ width: 42, height: 22, cursor: "pointer" }}
+                    checked={Number(field.value) === 1}
+                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)}
+                  />
+                )}
+              />
+            </div>
           </div>
         </div>
       </div>
-      <div className="col-lg-6 col-md-12">
-        <div className="mb-3">
+
+      {/* Notes */}
+      <SectionLabel label="Notes" icon={StickyNote} />
+      <div className="row">
+        <div className="col-12 mb-3">
           <label className="form-label">Remarks</label>
-          <input
-            type="text"
-            className={`${errors.remarks && "is-invalid"} form-control`}
+          <textarea
+            rows={3}
+            className={`form-control${errors.remarks ? " is-invalid" : ""}`}
+            placeholder="Internal notes about this supplier..."
             {...register("remarks")}
           />
           {errors.remarks && (
@@ -175,7 +244,7 @@ export const SupplierInputsB = ({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

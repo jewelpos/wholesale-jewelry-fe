@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -173,6 +173,7 @@ const SupplierPaymentsComponent = () => {
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedSupplier={selectedSupplier}
@@ -185,7 +186,6 @@ const SupplierPaymentsComponent = () => {
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               masterDetail
               detailCellRenderer={SupplierAppliedPaymentComponent}

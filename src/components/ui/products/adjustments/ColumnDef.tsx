@@ -2,7 +2,6 @@ import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { InventoryAdjustment } from "@/types/product";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../list/columnDef";
-import { TIME_FORMAT } from "@/lib/config/constants";
 
 export const inventoryAdjustmentColumnDefs: ColDef<InventoryAdjustment>[] = [
   { headerName: "Item Code", field: "itemcode", filter: "agTextColumnFilter" },
@@ -16,7 +15,7 @@ export const inventoryAdjustmentColumnDefs: ColDef<InventoryAdjustment>[] = [
     headerName: "Adjusted Date",
     field: "adjusted_date",
     cellRenderer: (params: ICellRendererParams) =>
-      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+      params.value ? dayjs(Number(params.value)).format("MM/DD/YYYY") : "",
     filter: "agDateColumnFilter",
   },
   {

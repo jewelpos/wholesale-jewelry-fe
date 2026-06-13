@@ -14,6 +14,15 @@ import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
 import SelectStore from "@/components/forms/SelectStore";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
+import {
+  Landmark,
+  FileText,
+  CreditCard,
+  Activity,
+  Bell,
+  StickyNote,
+  type LucideIcon,
+} from "lucide-react";
 
 interface Props {
   register: UseFormRegister<CustomerFormType>;
@@ -24,15 +33,17 @@ interface Props {
   storeId: number;
   warehouseId: string;
   status: number;
+  custalert: number;
   disableField?: boolean;
 }
 
-const SectionLabel = ({ label }: { label: string }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "18px 0 14px" }}>
-    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#adb5bd", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "20px 0 14px" }}>
+    <Icon size={13} strokeWidth={2} color="#6c757d" />
+    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#6c757d", textTransform: "uppercase", whiteSpace: "nowrap" }}>
       {label}
     </span>
-    <div style={{ flex: 1, height: 1, backgroundColor: "#e9ecef" }} />
+    <div style={{ flex: 1, height: 1, backgroundColor: "#dee2e6" }} />
   </div>
 );
 
@@ -45,12 +56,13 @@ const CustomerInputsB = ({
   storeId,
   warehouseId,
   status,
+  custalert,
   disableField,
 }: Props) => {
   return (
     <>
       {/* Warehouse */}
-      <SectionLabel label="Warehouse" />
+      <SectionLabel label="Warehouse" icon={Landmark} />
       <div className="row">
         <div className="col-6 mb-3">
           <label className="form-label">Store</label>
@@ -98,7 +110,7 @@ const CustomerInputsB = ({
       </div>
 
       {/* Terms */}
-      <SectionLabel label="Terms" />
+      <SectionLabel label="Terms" icon={FileText} />
       <div className="row">
         <div className="col-6 mb-3">
           <label className="form-label">Payment Terms</label>
@@ -137,7 +149,7 @@ const CustomerInputsB = ({
       </div>
 
       {/* Financials */}
-      <SectionLabel label="Financials" />
+      <SectionLabel label="Financials" icon={CreditCard} />
       <div className="row">
         <div className="col-6 mb-3">
           <label className="form-label">Credit Limit</label>
@@ -180,51 +192,105 @@ const CustomerInputsB = ({
       </div>
 
       {/* Status */}
-      <SectionLabel label="Status" />
+      <SectionLabel label="Status" icon={Activity} />
       <div className="row">
-        <div className="col-6 mb-3">
-          <label className="form-label d-block">Account Status</label>
-          <div className="d-flex align-items-center gap-3">
-            <div className="form-check form-switch mb-0">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                role="switch"
-                {...register("status", { required: true })}
-                onChange={(e) => {
-                  setValue("status", e.target.checked ? 1 : 0);
-                  trigger("status");
+        <div className="col-12 mb-3">
+          <div
+            style={{
+              background: status === 1 ? "#f0fdf4" : "#f8f9fa",
+              border: `1px solid ${status === 1 ? "#bbf7d0" : "#dee2e6"}`,
+              borderRadius: 8,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: status === 1 ? "#15803d" : "#6c757d",
                 }}
+              >
+                {status === 1 ? "Active" : "Inactive"}
+              </div>
+              <div style={{ fontSize: 11, color: status === 1 ? "#4ade80" : "#adb5bd", marginTop: 1 }}>
+                {status === 1
+                  ? "Customer can place orders"
+                  : "Customer account is disabled"}
+              </div>
+            </div>
+            <div className="form-check form-switch mb-0">
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    style={{ width: 42, height: 22, cursor: "pointer" }}
+                    checked={Number(field.value) === 1}
+                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)}
+                  />
+                )}
               />
             </div>
-            <span
-              className={`badge ${status === 1 ? "bg-success" : "bg-secondary"}`}
-              style={{ fontSize: 12 }}
-            >
-              {status === 1 ? "Active" : "Inactive"}
-            </span>
           </div>
         </div>
       </div>
 
       {/* Alerts */}
-      <SectionLabel label="Alerts" />
+      <SectionLabel label="Alerts" icon={Bell} />
       <div className="row">
         <div className="col-12 mb-3">
-          <div className="d-flex align-items-center gap-3">
-            <div className="form-check form-switch mb-0">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                role="switch"
-                {...register("custalert")}
-                onChange={(e) => {
-                  setValue("custalert", e.target.checked ? 1 : 0);
-                  trigger("custalert");
+          <div
+            style={{
+              background: custalert === 1 ? "#f0fdf4" : "#f8f9fa",
+              border: `1px solid ${custalert === 1 ? "#bbf7d0" : "#dee2e6"}`,
+              borderRadius: 8,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: custalert === 1 ? "#15803d" : "#6c757d",
                 }}
+              >
+                {custalert === 1 ? "Alert Enabled" : "Alert Disabled"}
+              </div>
+              <div style={{ fontSize: 11, color: custalert === 1 ? "#4ade80" : "#adb5bd", marginTop: 1 }}>
+                {custalert === 1
+                  ? "Warning shown on customer transactions"
+                  : "No alert active"}
+              </div>
+            </div>
+            <div className="form-check form-switch mb-0">
+              <Controller
+                name="custalert"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    style={{ width: 42, height: 22, cursor: "pointer" }}
+                    checked={Number(field.value) === 1}
+                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)}
+                  />
+                )}
               />
             </div>
-            <label className="form-label mb-0">Enable Alert Warning</label>
           </div>
         </div>
         <div className="col-12 mb-3">
@@ -242,7 +308,7 @@ const CustomerInputsB = ({
       </div>
 
       {/* Notes */}
-      <SectionLabel label="Notes" />
+      <SectionLabel label="Notes" icon={StickyNote} />
       <div className="row">
         <div className="col-12 mb-3">
           <label className="form-label">Remarks</label>

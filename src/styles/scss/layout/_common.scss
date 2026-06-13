@@ -180,6 +180,7 @@
     font-weight: $font-weight-bold;
     font-size: $font-size-14;
     border-radius: 8px;
+    white-space: nowrap;
     &:active {
       color: $white;
     }

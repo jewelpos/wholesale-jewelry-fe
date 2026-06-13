@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useEffect,
@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -33,6 +33,12 @@ import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { useParams } from "next/navigation";
 import DocumentEmailModal from "../DocumentEmailModal";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
+import DailyStatusCards from "../../grid/DailyStatusCards";
+import StatusFilterChips from "../../grid/StatusFilterChips";
+import StatusPillRenderer from "../../grid/StatusPillRenderer";
+import { GET_INVOICE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const SalesListComponent = () => {
@@ -49,6 +55,7 @@ const SalesListComponent = () => {
   const [selectedInvoiceNumbers, setSelectedInvoiceNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -59,6 +66,12 @@ const SalesListComponent = () => {
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params, debouncedSearch, "invoicenumber, customerid, companyname");
+        if (statusFilter) {
+          filters.filters = [
+            ...filters.filters,
+            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
+          ];
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getInvoiceList({
             variables: {
@@ -126,7 +139,7 @@ const SalesListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getInvoiceList, debouncedSearch]
+    [selectedOutlet, dispatch, getInvoiceList, debouncedSearch, statusFilter]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -205,7 +218,9 @@ const SalesListComponent = () => {
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      ...salesInvoiceColumnDefs,
+      ...salesInvoiceColumnDefs.map((col) =>
+        col.field === "statusname" ? { ...col, cellRenderer: StatusPillRenderer } : col
+      ),
       {
         headerName: "Actions",
         field: "actions",
@@ -258,6 +273,14 @@ const SalesListComponent = () => {
     exportGridToExcel(gridRef.current?.api, { fileName: "invoices", sheetName: "Invoices" });
   }, []);
 
+  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("invoice-list");
+
+  const { data: summaryData, loading: summaryLoading } = useQuery(GET_INVOICE_DAILY_SUMMARY_QUERY, {
+    variables: { outletid: selectedOutlet },
+    skip: !selectedOutlet,
+  });
+  const summary = summaryData?.getInvoiceDailySummary ?? null;
+
   return (
     <>
       <SalesListHeader
@@ -281,9 +304,32 @@ const SalesListComponent = () => {
           }}
         />
       )}
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Invoice Daily Summary">
+          <DailyStatusCards
+            data={summary}
+            loading={summaryLoading}
+            labelOverrides={{ revenue: "Revenue Today", total: "Invoices Today", avg: "Avg Invoice", open: "Open Today" }}
+          />
+          <StatusFilterChips
+            active={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
+              gridRef.current?.api?.refreshServerSide({ purge: true });
+            }}
+            counts={{
+              total: summary?.total_today ?? 0,
+              paid: summary?.paid_today ?? 0,
+              pending: summary?.pending_today ?? 0,
+              voided: summary?.voided_today ?? 0,
+            }}
+          />
+        </SummaryPanelWrapper>
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -295,9 +341,9 @@ const SalesListComponent = () => {
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               onSelectionChanged={handleSelectionChanged}
+              heightOffset={300 + panelOffset}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               rowSelection={{
                 mode: "multiRow",

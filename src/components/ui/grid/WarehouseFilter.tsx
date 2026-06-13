@@ -9,6 +9,7 @@ interface WarehouseFilterProps {
   loading: boolean;
   setSelectedWarehouse: Dispatch<SetStateAction<number | undefined>>;
   selectedWarehouse: number | undefined;
+  stacked?: boolean;
 }
 
 const WarehouseFilter = ({
@@ -17,6 +18,7 @@ const WarehouseFilter = ({
   loading,
   setSelectedWarehouse,
   selectedWarehouse,
+  stacked,
 }: WarehouseFilterProps) => {
   useEffect(() => {
     fetchWarehousesList();
@@ -36,35 +38,47 @@ const WarehouseFilter = ({
     }
   }, [warehouses, setSelectedWarehouse]);
 
+  const selectEl = (
+    <Select
+      className="img-select"
+      classNamePrefix="react-select"
+      options={warehouseList}
+      value={
+        selectedWarehouse
+          ? {
+              value: selectedWarehouse,
+              label:
+                warehouseList.find((w) => w.value === selectedWarehouse)
+                  ?.label || "",
+            }
+          : null
+      }
+      onChange={(option) => {
+        const parsedId = parseInt(option?.value as unknown as string, 10);
+        setSelectedWarehouse(parsedId);
+      }}
+      isLoading={loading}
+      isClearable
+      styles={stacked ? undefined : { container: (provided) => ({ ...provided, width: "10rem" }) }}
+    />
+  );
+
+  if (stacked) {
+    return (
+      <div>
+        <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Warehouse</label>
+        {selectEl}
+      </div>
+    );
+  }
+
   return (
     <Row className="d-flex align-items-center justify-content-center">
       <Col xs={6} className="mr-0 text-end">
         <h6 className="p-0 m-0">Select Warehouse</h6>
       </Col>
       <Col xs={6} className="p-0 m-0">
-        <Select
-          className="img-select"
-          classNamePrefix="react-select"
-          options={warehouseList}
-          value={
-            selectedWarehouse
-              ? {
-                  value: selectedWarehouse,
-                  label:
-                    warehouseList.find((w) => w.value === selectedWarehouse)
-                      ?.label || "",
-                }
-              : null
-          }
-          onChange={(option) => {
-            const parsedId = parseInt(option?.value as unknown as string, 10);
-            setSelectedWarehouse(parsedId);
-          }}
-          isLoading={loading}
-          styles={{
-            container: (provided) => ({ ...provided, width: "10rem" }),
-          }}
-        />
+        {selectEl}
       </Col>
     </Row>
   );

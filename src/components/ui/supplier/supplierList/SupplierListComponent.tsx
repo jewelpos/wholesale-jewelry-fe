@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useCallback,
@@ -29,6 +29,7 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import SupplierActions from "./SupplierActions";
 import SupplierListHeader from "./SupplierListHeader";
+import SupplierStatsCards from "./SupplierStatsCards";
 import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 import PaymentModal from "../appliedPayments/PaymentModal";
 
@@ -139,9 +140,11 @@ const SupplierListComponent = () => {
         setShowInvoiceFormModal={setShowInvoiceFormModal}
         setPaymentModal={setPaymentModal}
       />
+      <SupplierStatsCards outletid={selectedOutlet} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -154,13 +157,11 @@ const SupplierListComponent = () => {
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               rowSelection={{
-                mode: "multiRow",
-                checkboxes: true,
-                headerCheckbox: true,
-                suppressRowClickSelection: true,
+                mode: "singleRow",
+                checkboxes: false,
+                enableClickSelection: true,
               }}
             />
           </div>

@@ -13,6 +13,7 @@ type PropsType = {
   loading: boolean;
   setSelectedOutlet: Dispatch<SetStateAction<number | undefined>>;
   selectedOutlet: number | undefined;
+  stacked?: boolean;
 };
 
 const OutletsFilter = ({
@@ -21,6 +22,7 @@ const OutletsFilter = ({
   loading,
   setSelectedOutlet,
   selectedOutlet,
+  stacked,
 }: PropsType) => {
   const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
@@ -48,35 +50,47 @@ const OutletsFilter = ({
     }
   }, [outlets, setSelectedOutlet, parsedOutletId]);
 
+  const selectEl = (
+    <Select<SelectOption>
+      className="img-select"
+      classNamePrefix="react-select"
+      options={outletList}
+      value={
+        selectedOutlet
+          ? {
+              value: selectedOutlet,
+              label:
+                outletList.find((outlet) => outlet.value === selectedOutlet)
+                  ?.label || "",
+            }
+          : null
+      }
+      onChange={(option) => {
+        const parsedId = parseInt(option?.value as string, 10);
+        setSelectedOutlet(parsedId);
+      }}
+      isLoading={loading}
+      isClearable
+      styles={stacked ? undefined : { container: (provided) => ({ ...provided, width: "10rem" }) }}
+    />
+  );
+
+  if (stacked) {
+    return (
+      <div>
+        <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Outlet</label>
+        {selectEl}
+      </div>
+    );
+  }
+
   return (
     <Row className="d-flex align-items-center justify-content-center">
       <Col xs={6} className="mr-0 text-end">
         <h6 className="p-0 m-0">Select Outlet</h6>
       </Col>
       <Col xs={6} className="p-0 m-0">
-        <Select<SelectOption>
-          className="img-select"
-          classNamePrefix="react-select"
-          options={outletList}
-          value={
-            selectedOutlet
-              ? {
-                  value: selectedOutlet,
-                  label:
-                    outletList.find((outlet) => outlet.value === selectedOutlet)
-                      ?.label || "",
-                }
-              : null
-          }
-          onChange={(option) => {
-            const parsedId = parseInt(option?.value as string, 10);
-            setSelectedOutlet(parsedId);
-          }}
-          isLoading={loading}
-          styles={{
-            container: (provided) => ({ ...provided, width: "10rem" }),
-          }}
-        />
+        {selectEl}
       </Col>
     </Row>
   );

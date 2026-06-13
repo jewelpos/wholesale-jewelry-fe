@@ -1,0 +1,20 @@
+@media print {
+  body > *:not(#label-print-area) {
+    display: none !important;
+  }
+
+  #label-print-area {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .label-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+#label-print-area {
+  display: none;
+}

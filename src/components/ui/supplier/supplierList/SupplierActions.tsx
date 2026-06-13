@@ -17,10 +17,7 @@ interface SupplierActionsProps {
   onDeleteSuccess?: () => void;
 }
 
-const SupplierActions: React.FC<SupplierActionsProps> = ({
-  data,
-  onDeleteSuccess,
-}) => {
+const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess }) => {
   const dispatch = useAppDispatch();
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
   const { basePath } = useDefaultRoute();
@@ -39,62 +36,61 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteSupplier({
-          variables: {
-            supplierid: data.supplierid,
-            storeid: parsedStoreId,
-          },
+          variables: { supplierid: data.supplierid, storeid: parsedStoreId },
         });
-
         if (responseData?.deleteSupplier.success) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteSupplier.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
-          // Trigger the callback to refresh data
+          dispatch(showNotification({ message: responseData.deleteSupplier.message, type: NOTIFICATION_TYPES.SUCCESS }));
           onDeleteSuccess?.();
         }
         return true;
       });
-
       if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
+        dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
       }
     }
   };
 
+  const canDelete = Number(data.numberofpurchase) === 0;
+  const deleteReason = canDelete ? "" : "Cannot delete: supplier has existing purchases";
+
   return (
     <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists"></div>
+      <div className="edit-delete-action" style={{ gap: "2px" }}>
         <Link
-          className="me-2 p-2"
+          className="p-1"
           href={`${basePath}/supplier/${data.supplierid}/view`}
           scroll={false}
+          title="View"
         >
-          <Eye className="feather-view" />
+          <Eye size={14} />
         </Link>
         <Link
-          className="me-2 p-2"
+          className="p-1"
           href={`${basePath}/supplier/${data.supplierid}/edit`}
           scroll={false}
+          title="Edit"
         >
-          <Edit className="feather-edit" />
+          <Edit size={14} />
         </Link>
-        <Link
-          className="confirm-text p-2"
-          href="#"
-          onClick={handleDelete}
-          scroll={false}
-        >
-          <Trash2 className="feather-trash-2" />
-        </Link>
+        {canDelete ? (
+          <button
+            type="button"
+            className="confirm-text p-1 btn btn-link"
+            style={{ lineHeight: 1 }}
+            onClick={handleDelete}
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        ) : (
+          <span
+            className="p-1"
+            title={deleteReason}
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <Trash2 size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
       </div>
     </div>
   );

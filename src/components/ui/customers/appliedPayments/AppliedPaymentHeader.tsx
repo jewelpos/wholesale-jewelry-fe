@@ -4,30 +4,40 @@ import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
-import Link from "next/link";
 import { paymentModalTypes } from "@/lib/config/constants";
+
+const BUTTON_ORDER: Record<string, number> = {
+  [paymentModalTypes.add_customer_payment]: 1,
+  [paymentModalTypes.add_credit_adjustment]: 2,
+  [paymentModalTypes.add_invoice_credit_payment]: 3,
+  print: 4,
+  email: 5,
+  export: 6,
+};
+
+const getButtonOrder = (actionName: string): number => {
+  for (const [key, order] of Object.entries(BUTTON_ORDER)) {
+    if (actionName.includes(key)) return order;
+  }
+  return 99;
+};
 
 interface AppliedPaymentHeaderProps {
   setPaymentModal: (value: string) => void;
+  onPrint?: () => void;
+  onEmail?: () => void;
+  onExport?: () => void;
 }
 
-const AppliedPaymentHeader = ({ setPaymentModal }: AppliedPaymentHeaderProps) => {
-  const { currentMenu, currentPath } = useMenu();
+const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: AppliedPaymentHeaderProps) => {
+  const { currentMenu } = useMenu();
 
-  const handleAction = (actionName: string) => {
-    if (
-      actionName.includes(paymentModalTypes.add_customer_payment) ||
-      actionName.includes(paymentModalTypes.add_credit_adjustment) ||
-      actionName.includes(paymentModalTypes.add_invoice_credit_payment)
-    ) {
-      setPaymentModal(actionName);
-    }
-  };
+  const isModalButton = (actionName: string) =>
+    actionName.includes(paymentModalTypes.add_customer_payment) ||
+    actionName.includes(paymentModalTypes.add_credit_adjustment) ||
+    actionName.includes(paymentModalTypes.add_invoice_credit_payment);
 
   return (
     <PageHeader
@@ -38,33 +48,33 @@ const AppliedPaymentHeader = ({ setPaymentModal }: AppliedPaymentHeaderProps) =>
       <div className="d-flex purchase-pg-btn">
         {!!currentMenu?.action?.length &&
           [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
-            })
+            .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
             .map((btn: MenuAction) => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
-              const isModalButton =
-                btn.actionname.includes(paymentModalTypes.add_customer_payment) ||
-                btn.actionname.includes(paymentModalTypes.add_credit_adjustment) ||
-                btn.actionname.includes(
-                  paymentModalTypes.add_invoice_credit_payment
-                );
+
+              const isPrint = btn.actionname.includes("print");
+              const isEmail = btn.actionname.toLowerCase().includes("email");
+              const isExport = btn.actionname.includes("export");
+
+              const handleClick = isPrint
+                ? onPrint
+                : isEmail
+                  ? onEmail
+                  : isExport
+                    ? onExport
+                    : isModalButton(btn.actionname)
+                      ? () => setPaymentModal(btn.actionname)
+                      : undefined;
+
+              if (!handleClick) return null;
+
               return (
-                <div
-                  className="page-btn d-none d-sm-block"
-                  key={btn.actionname}
-                >
-                  <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
-                    onClick={() => (isModalButton ? handleAction(btn.actionname) : null)}
-                    className={`btn btn-added ${btnColor}`}
-                  >
+                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <button type="button" className={`btn btn-added ${btnColor}`} onClick={handleClick}>
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}
-                  </Link>
+                  </button>
                 </div>
               );
             })}

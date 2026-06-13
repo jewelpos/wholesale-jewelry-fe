@@ -87,8 +87,9 @@ export type EditPurchaseOrderInput = {
 
 export type PurchaseOrderItemInput = {
   poitemid?: number;
-  itemid?: number; // product itemid
-  itemcode: string | number; // product itemcode
+  itemid?: number;
+  itemcode: string | number;
+  itemdescription?: string;
   itemunit: string;
   qtyordered: number;
   orderunitcost: number;

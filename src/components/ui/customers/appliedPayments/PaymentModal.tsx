@@ -40,11 +40,10 @@ const PaymentModal = ({
             </div>
             <button
               type="button"
-              className="close"
+              className="btn-close"
+              aria-label="Close"
               onClick={() => setPaymentModal("")}
-            >
-              <span aria-hidden="true">X</span>
-            </button>
+            />
           </div>
           <div className="modal-body custom-modal-body pt-0 modal-min-height">
             {paymentModal.includes(paymentModalTypes.add_customer_payment) && (
@@ -76,6 +75,9 @@ const PaymentModal = ({
                   customerpaymentid={voidRow.customerpaymentid}
                   transactionno={voidRow.transactionno}
                   custcompanyname={voidRow.custcompanyname}
+                  amountpaid={voidRow.amountpaid}
+                  paymode={voidRow.paymode}
+                  paymentdate={voidRow.paymentdate}
                 />
               )}
           </div>

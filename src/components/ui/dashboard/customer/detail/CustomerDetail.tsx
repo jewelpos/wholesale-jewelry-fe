@@ -1,21 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client";
-import {
-  ArrowLeft,
-  Phone,
-  Mail,
-  MapPin,
-  Edit2,
-  AlertTriangle,
-  CreditCard,
-  Calendar,
-  DollarSign,
-  TrendingUp,
-} from "react-feather";
+import { ArrowLeft, Edit2, DollarSign } from "lucide-react";
 import {
   GET_CUSTOMER_QUERY,
   GET_CUSTOMER_BALANCE_REPORT_QUERY,
@@ -28,12 +17,18 @@ import KpiStrip from "./KpiStrip";
 import AgingStrip from "./AgingStrip";
 import OutstandingInvoices from "./OutstandingInvoices";
 import RecentPayments from "./RecentPayments";
+import ActivityTimeline from "./ActivityTimeline";
+import {
+  computePaymentBehavior,
+  paymentBehaviorLabel,
+  paymentBehaviorBadgeClass,
+} from "../forecast";
+import type DashboardCustomer from "../types";
+
+type TabKey = "overview" | "invoices" | "payments" | "timeline";
 
 const customerFilter = (id: number) => [
-  {
-    key: "customerid",
-    value: { filterType: "number", type: "equals", filter: id },
-  },
+  { key: "customerid", value: { filterType: "number", type: "equals", filter: id } },
 ];
 
 const CustomerDetail = () => {
@@ -41,6 +36,7 @@ const CustomerDetail = () => {
   const parsedStoreId = parseInt(params.storeId as string, 10);
   const parsedOutletId = parseInt(params.outletId as string, 10);
   const parsedCustomerId = parseInt(params.customerId as string, 10);
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
   const customerQuery = useQuery(GET_CUSTOMER_QUERY, {
     variables: { storeid: parsedStoreId, customerid: parsedCustomerId },
@@ -76,7 +72,6 @@ const CustomerDetail = () => {
   const customer = customerQuery.data?.getCustomer;
   const balance = balanceQuery.data?.getCustomerBalanceReport?.data?.[0];
   const aging = agingQuery.data?.getInvoiceAgingReport?.data?.[0];
-
   const warehouseId = customer?.warehouseid ?? 1;
 
   const outstandingQuery = useQuery(GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, {
@@ -94,7 +89,7 @@ const CustomerDetail = () => {
     variables: {
       outletid: parsedOutletId,
       page: 1,
-      perpage: 10,
+      perpage: 50,
       filters: customerFilter(parsedCustomerId),
       sortModel: [{ colId: "paymentdate", sort: "desc" }],
       rowGroupCols: [],
@@ -107,12 +102,57 @@ const CustomerDetail = () => {
   const payments = paymentsQuery.data?.getCustomerPaymentList?.data ?? [];
 
   const isLoading = useMemo(
-    () =>
-      customerQuery.loading ||
-      balanceQuery.loading ||
-      agingQuery.loading,
+    () => customerQuery.loading || balanceQuery.loading || agingQuery.loading,
     [customerQuery.loading, balanceQuery.loading, agingQuery.loading]
   );
+
+  // Build forecast proxy for payment behavior badge in KpiStrip
+  const forecastProxy = useMemo(() => {
+    if (!balance && !customer) return null;
+    return {
+      customerid: parsedCustomerId,
+      custcompanyname: customer?.custcompanyname ?? null,
+      fullname: null,
+      numberofsales: balance?.number_of_sale ?? null,
+      totalsale: balance?.total_sale ?? null,
+      balancedue: balance?.total_due ?? aging?.total_due ?? null,
+      days_since_last_sale: balance?.last_sale_date
+        ? Math.floor((Date.now() - new Date(balance.last_sale_date).getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+      custregistrationdate: customer?.custregistrationdate ?? null,
+      custcity: null,
+      phone: null,
+      lastsaledate: balance?.last_sale_date ?? null,
+      lastpaymentdate: null,
+      opencredit: null,
+      mobile: null,
+      custemailadd: customer?.custemailadd ?? null,
+      warehousename: null,
+      warehouseid: customer?.warehouseid ?? null,
+      outletid: parsedOutletId,
+    } as DashboardCustomer;
+  }, [balance, aging, customer, parsedCustomerId, parsedOutletId]);
+
+  const behavior = forecastProxy ? computePaymentBehavior(forecastProxy) : "unknown";
+
+  const paymentBehaviorBadge = (
+    <span className={`badge ${paymentBehaviorBadgeClass(behavior)}`} style={{ fontSize: 12 }}>
+      {paymentBehaviorLabel(behavior)}
+    </span>
+  );
+
+  // Enrich customer with balance data for header forecast
+  const enrichedCustomer = customer
+    ? {
+        ...customer,
+        numberofsales: balance?.number_of_sale ?? null,
+        totalsale: balance?.total_sale ?? null,
+        balancedue: balance?.total_due ?? aging?.total_due ?? null,
+        days_since_last_sale: balance?.last_sale_date
+          ? Math.floor((Date.now() - new Date(balance.last_sale_date).getTime()) / (1000 * 60 * 60 * 24))
+          : null,
+      }
+    : null;
 
   if (!parsedCustomerId || !parsedStoreId) {
     return (
@@ -122,8 +162,16 @@ const CustomerDetail = () => {
     );
   }
 
+  const tabs: { key: TabKey; label: string; badge?: number }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "invoices", label: "Invoices", badge: outstanding.length || undefined },
+    { key: "payments", label: "Payments", badge: payments.length || undefined },
+    { key: "timeline", label: "Timeline", badge: (outstanding.length + payments.length) || undefined },
+  ];
+
   return (
     <div className="content">
+      {/* Top nav */}
       <div className="d-flex align-items-center justify-content-between flex-wrap mb-3 gap-2">
         <Link
           href={`/jw/${parsedStoreId}/${parsedOutletId}/dashboard/customer`}
@@ -136,52 +184,113 @@ const CustomerDetail = () => {
             href={`/jw/${parsedStoreId}/${parsedOutletId}/customers/${parsedCustomerId}/edit`}
             className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
           >
-            <Edit2 size={14} /> Edit
+            <Edit2 size={13} /> Edit
           </Link>
           <Link
             href={`/jw/${parsedStoreId}/${parsedOutletId}/customers/applied_payments?customerid=${parsedCustomerId}`}
             className="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
           >
-            <DollarSign size={14} /> Record payment
+            <DollarSign size={13} /> Record Payment
           </Link>
         </div>
       </div>
 
-      <CustomerHeader
-        customer={customer}
-        loading={customerQuery.loading}
-        icons={{ Phone, Mail, MapPin, CreditCard, Calendar, AlertTriangle }}
-      />
+      {/* Header card */}
+      <CustomerHeader customer={enrichedCustomer} loading={customerQuery.loading} />
 
-      <KpiStrip
-        balance={balance}
-        aging={aging}
-        customer={customer}
-        loading={isLoading}
-        icons={{ DollarSign, TrendingUp, AlertTriangle, Calendar, CreditCard }}
-      />
-
-      <div className="row g-3 mt-1">
-        <div className="col-12">
-          <AgingStrip aging={aging} loading={agingQuery.loading} />
-        </div>
+      {/* KPI strip */}
+      <div className="mb-3">
+        <KpiStrip
+          balance={balance}
+          aging={aging}
+          customer={customer}
+          loading={isLoading}
+          paymentBehaviorBadge={paymentBehaviorBadge}
+        />
       </div>
 
-      <div className="row g-3 mt-1">
-        <div className="col-12 col-xl-6">
-          <OutstandingInvoices
-            invoices={outstanding}
-            loading={outstandingQuery.loading}
-          />
+      {/* Tab navigation */}
+      <div className="card" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-card)" }}>
+        <div className="border-bottom px-3">
+          <nav className="d-flex gap-0">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                className="btn btn-link px-3 py-3 text-decoration-none"
+                style={{
+                  fontSize: 13,
+                  fontWeight: activeTab === t.key ? 600 : 400,
+                  color: activeTab === t.key ? "var(--tile-indigo)" : "var(--text-secondary)",
+                  borderBottom: activeTab === t.key ? "2px solid var(--tile-indigo)" : "2px solid transparent",
+                  borderRadius: 0,
+                }}
+              >
+                {t.label}
+                {t.badge !== undefined && t.badge > 0 && (
+                  <span
+                    className="ms-2 badge"
+                    style={{
+                      fontSize: 10,
+                      backgroundColor: activeTab === t.key ? "var(--tile-indigo)" : "var(--border-subtle)",
+                      color: activeTab === t.key ? "#fff" : "var(--text-tertiary)",
+                    }}
+                  >
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
-        <div className="col-12 col-xl-6">
-          <RecentPayments
-            payments={payments}
-            loading={paymentsQuery.loading}
-            customerId={parsedCustomerId}
-            storeId={parsedStoreId}
-            outletId={parsedOutletId}
-          />
+
+        <div className="card-body">
+          {/* Overview tab */}
+          {activeTab === "overview" && (
+            <div className="row g-3">
+              <div className="col-12">
+                <AgingStrip aging={aging} loading={agingQuery.loading} />
+              </div>
+              <div className="col-12 col-xl-6">
+                <OutstandingInvoices invoices={outstanding.slice(0, 6)} loading={outstandingQuery.loading} />
+              </div>
+              <div className="col-12 col-xl-6">
+                <RecentPayments
+                  payments={payments.slice(0, 6)}
+                  loading={paymentsQuery.loading}
+                  customerId={parsedCustomerId}
+                  storeId={parsedStoreId}
+                  outletId={parsedOutletId}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Invoices tab */}
+          {activeTab === "invoices" && (
+            <OutstandingInvoices invoices={outstanding} loading={outstandingQuery.loading} />
+          )}
+
+          {/* Payments tab */}
+          {activeTab === "payments" && (
+            <RecentPayments
+              payments={payments}
+              loading={paymentsQuery.loading}
+              customerId={parsedCustomerId}
+              storeId={parsedStoreId}
+              outletId={parsedOutletId}
+            />
+          )}
+
+          {/* Timeline tab */}
+          {activeTab === "timeline" && (
+            <ActivityTimeline
+              invoices={outstanding}
+              payments={payments}
+              loading={outstandingQuery.loading || paymentsQuery.loading}
+            />
+          )}
         </div>
       </div>
     </div>

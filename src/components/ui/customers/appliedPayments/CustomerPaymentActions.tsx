@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { XSquare } from "react-feather";
+import { Trash2 } from "react-feather";
 
 import { CustomerPaymentListType } from "@/types/customer";
 import TooltipComponent from "../../TooltipComponent";
@@ -19,14 +19,14 @@ const CustomerPaymentActions: React.FC<CustomerPaymentActionsProps> = ({
       <div className="edit-delete-action">
         <div className="input-block add-lists"></div>
         {!data.voidpayment && (
-          <TooltipComponent value="Void">
+          <TooltipComponent value="Void Payment">
             <Link
               className="me-2 p-2"
               href=""
               scroll={false}
               onClick={() => onVoid(data)}
             >
-              <XSquare className="feather-trash-2" />
+              <Trash2 size={14} />
             </Link>
           </TooltipComponent>
         )}

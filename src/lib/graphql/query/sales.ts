@@ -323,3 +323,28 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
     }
   }
 `;
+
+
+export const GET_INVOICE_DAILY_SUMMARY_QUERY = gql`
+  query GetInvoiceDailySummary($outletid: Int!) {
+    getInvoiceDailySummary(outletid: $outletid) {
+      total_today paid_today pending_today voided_today revenue_today avg_today
+    }
+  }
+`;
+
+export const GET_MEMO_DAILY_SUMMARY_QUERY = gql`
+  query GetMemoDailySummary($outletid: Int!) {
+    getMemoDailySummary(outletid: $outletid) {
+      total_today paid_today pending_today voided_today revenue_today avg_today
+    }
+  }
+`;
+
+export const GET_SO_DAILY_SUMMARY_QUERY = gql`
+  query GetSODailySummary($outletid: Int!) {
+    getSODailySummary(outletid: $outletid) {
+      total_today paid_today pending_today voided_today revenue_today avg_today
+    }
+  }
+`;

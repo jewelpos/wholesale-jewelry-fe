@@ -13,18 +13,26 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { CheckOnHandType } from "@/types/customer";
 import { useMutation } from "@apollo/client";
 import { useParams } from "next/navigation";
-import React, { useState } from "react";
-import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
-
-const renderTooltip = (value: string) => (
-  <Tooltip id="tooltip">{value}</Tooltip>
-);
+import { Save, Trash2, Pencil, PlusCircle } from "lucide-react";
+import useWarehouse from "@/hooks/useWarehouse";
+import { DatePicker } from "antd";
+import dayjs from "dayjs";
 
 type FormValues = {
   entries: CheckOnHandType[];
 };
+
+const blankEntry = (warehouseId: string | number = ""): CheckOnHandType => ({
+  warehouseid: String(warehouseId),
+  customerid: "",
+  checkno: "",
+  checkamount: "",
+  checkpostingdate: "",
+  customercheckdetailid: "",
+});
 
 const AddOnHandChequeModal = ({
   setShowPrintModal,
@@ -33,65 +41,63 @@ const AddOnHandChequeModal = ({
   setShowPrintModal: (value: boolean) => void;
   triggerFetchSummary: () => Promise<void>;
 }) => {
-  const { storeId } = useParams();
+  const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
+  const parsedOutletId = parseInt(outletId as string, 10);
+
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  useEffect(() => {
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [fetchWarehouseByOutletId, parsedOutletId]);
+
+  const defaultWarehouse = useMemo(
+    () => warehouses.find((w) => w.issystem) ?? warehouses[0],
+    [warehouses]
+  );
+
   const {
     control,
     register,
-    handleSubmit,
     trigger,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors },
     getValues,
     setError,
   } = useForm<FormValues>({
-    defaultValues: {
-      entries: [
-        {
-          warehouseid: "",
-          customerid: "",
-          checkno: "",
-          checkamount: "",
-          checkpostingdate: "",
-          customercheckdetailid: "",
-        },
-      ],
-    },
+    defaultValues: { entries: [blankEntry()] },
     mode: "all",
   });
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "entries",
-  });
+  const { fields, append, remove } = useFieldArray({ control, name: "entries" });
+
+  useEffect(() => {
+    if (!defaultWarehouse?.warehouseid) return;
+    fields.forEach((_, i) => {
+      if (!getValues(`entries.${i}.customercheckdetailid`)) {
+        setValue(`entries.${i}.warehouseid`, String(defaultWarehouse.warehouseid));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultWarehouse]);
+
   const [createNewCheckOnHand] = useMutation(ADD_NEW_CHECK_ON_HAND_MUTATION);
   const [updateCheckOnHand] = useMutation(UPDATE_CHECK_ON_HAND_MUTATION);
   const [deleteCheckOnHand] = useMutation(DELETE_CHECK_ON_HAND_MUTATION);
   const dispatch = useAppDispatch();
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
-  const handleNew = () => {
-    append({
-      warehouseid: "",
-      customerid: "",
-      checkno: "",
-      checkamount: "",
-      checkpostingdate: "",
-      customercheckdetailid: "",
-    });
-  };
-
   const handleSave = async (index: number) => {
+    const isValid = await trigger(`entries.${index}`);
+    if (!isValid) return;
+
     const entry = getValues(`entries.${index}`);
     const allEntries = getValues("entries");
 
-    // Check for duplicates in other rows
     const isDuplicate = allEntries.some(
       (e, i) =>
         i !== index &&
         e.customerid === entry.customerid &&
         e.checkno === entry.checkno
     );
-
     if (isDuplicate) {
       setError(`entries.${index}.checkno`, {
         type: "manual",
@@ -99,12 +105,13 @@ const AddOnHandChequeModal = ({
       });
       return;
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let updateEntry: any = {
       customerid: Number(entry.customerid),
       checkamount: Number(entry.checkamount),
       warehouseid: Number(entry.warehouseid),
-      checkpostingdate: entry.checkpostingdate,
+      checkpostingdate: new Date(entry.checkpostingdate).toISOString(),
       checkno: entry.checkno,
     };
     if (entry.customercheckdetailid) {
@@ -113,6 +120,7 @@ const AddOnHandChequeModal = ({
         customercheckdetailid: Number(entry.customercheckdetailid),
       };
     }
+
     const result = await handleTryCatch(async () => {
       let response;
       if (entry.customercheckdetailid) {
@@ -127,14 +135,12 @@ const AddOnHandChequeModal = ({
       setEditIndex(null);
       const { data } = response;
       if (data?.createNewCheckOnHand || data?.updateNewCheckOnHand) {
-        const successData =
-          data.createNewCheckOnHand || data.updateNewCheckOnHand;
+        const successData = data.createNewCheckOnHand || data.updateNewCheckOnHand;
         if (!entry.customercheckdetailid) {
           setValue(
             `entries.${index}.customercheckdetailid`,
             successData.data.customercheckdetailid
           );
-          handleNew();
         }
         dispatch(
           showNotification({
@@ -148,37 +154,26 @@ const AddOnHandChequeModal = ({
 
     if (result.error) {
       dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
+        showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR })
       );
     }
-  };
-
-  const handleEdit = (index: number) => {
-    setEditIndex(index);
   };
 
   const handleDelete = async (index: number) => {
     const result = await handleTryCatch(async () => {
       const response = await deleteCheckOnHand({
         variables: {
-          customercheckdetailid: getValues(
-            `entries.${index}.customercheckdetailid`
-          ),
+          customercheckdetailid: getValues(`entries.${index}.customercheckdetailid`),
           storeid: parsedStoreId,
         },
       });
-      setEditIndex(null);
       const { data } = response;
       if (data?.deleteCheckOnHand) {
-        const successData = data.deleteCheckOnHand;
         remove(index);
         if (editIndex === index) setEditIndex(null);
         dispatch(
           showNotification({
-            message: successData.message,
+            message: data.deleteCheckOnHand.message,
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
@@ -188,12 +183,27 @@ const AddOnHandChequeModal = ({
 
     if (result.error) {
       dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
+        showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR })
       );
     }
+  };
+
+  const thStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+    color: "#6c757d",
+    borderBottom: "2px solid #dee2e6",
+    padding: "8px 10px",
+    whiteSpace: "nowrap",
+    background: "#f8f9fa",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "5px 6px",
+    verticalAlign: "top",
+    borderBottom: "1px solid #f1f3f5",
   };
 
   return (
@@ -201,223 +211,219 @@ const AddOnHandChequeModal = ({
       className="modal fade show"
       style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
     >
-      <div className="modal-dialog purchase modal-dialog-centered stock-adjust-modal ">
+      <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div className="modal-content">
-          <div className="page-wrapper-new p-0">
-            <div className="content">
-              <div className="modal-header border-0 custom-modal-header">
-                <div className="page-title">
-                  <h4>Add Purchase</h4>
-                </div>
-                <button
-                  type="button"
-                  className="close"
-                  onClick={() => {
-                    triggerFetchSummary();
-                    setShowPrintModal(false);
-                  }}
-                >
-                  <span aria-hidden="true">X</span>
-                </button>
-              </div>
-              <div className="modal-body custom-modal-body modal-height">
+          {/* Header */}
+          <div className="modal-header py-3" style={{ borderBottom: "1px solid #e9ecef" }}>
+            <h5 className="modal-title fw-semibold" style={{ fontSize: 15 }}>
+              Add New Check
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => {
+                triggerFetchSummary();
+                setShowPrintModal(false);
+              }}
+            />
+          </div>
+
+          {/* Body */}
+          <div className="modal-body p-0" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+            <table className="table table-borderless mb-0" style={{ minWidth: 860 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: "27%" }}>Customer</th>
+                  <th style={{ ...thStyle, width: "18%" }}>Outlet</th>
+                  <th style={{ ...thStyle, width: "14%" }}>Check No</th>
+                  <th style={{ ...thStyle, width: "12%" }}>Amount</th>
+                  <th style={{ ...thStyle, width: "14%" }}>Check Date</th>
+                  <th style={{ ...thStyle, width: "15%", textAlign: "center" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
                 {fields.map((field, index) => {
                   const isEditable =
                     (!!field.customercheckdetailid && editIndex === index) ||
                     field.customercheckdetailid === "";
                   const rowErrors = errors?.entries?.[index] || {};
-                  return (
-                    <div className="row" key={field.id}>
-                      <div className="col-lg-2 col-md-4 col-sm-12">
-                        <div className="input-blocks add-product">
-                          <label>Customer</label>
-                          <div className="row">
-                            <div className="col-lg-12 col-sm-12 col-12">
-                              <Controller
-                                name={`entries.${index}.customerid`}
-                                control={control}
-                                rules={{ required: "Customer is required" }}
-                                render={({ field }) => (
-                                  <SelectCustomer
-                                    className={`${
-                                      rowErrors.customerid && "is-invalid"
-                                    } `}
-                                    storeId={parsedStoreId}
-                                    trigger={trigger}
-                                    disableField={!isEditable}
-                                    {...field}
-                                  />
-                                )}
-                              />
-                              {rowErrors.customerid && (
-                                <div className="invalid-feedback">
-                                  {rowErrors.customerid.message}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-lg-3 col-md-4 col-sm-12">
-                        <div className="input-blocks add-product">
-                          <label>Warehouse</label>
-                          <div className="row">
-                            <div className="col-lg-12 col-sm-12 col-12">
-                              <Controller
-                                name={`entries.${index}.warehouseid`}
-                                control={control}
-                                rules={{ required: "Warehouse is required" }}
-                                disabled={!isEditable}
-                                render={({ field }) => (
-                                  <SelectWarehouse
-                                    className={`${
-                                      rowErrors.warehouseid && "is-invalid"
-                                    } `}
-                                    storeId={parsedStoreId}
-                                    trigger={trigger}
-                                    disableField={!isEditable}
-                                    {...field}
-                                  />
-                                )}
-                              />
-                              {rowErrors.warehouseid && (
-                                <div className="invalid-feedback">
-                                  {rowErrors.warehouseid.message}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-lg-2 col-md-4 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Check No</label>
-                          <div className="row">
-                            <div className="col-lg-12 col-sm-12 col-12">
-                              <input
-                                disabled={!isEditable}
-                                type="text"
-                                className={`${
-                                  rowErrors.checkno && "is-invalid"
-                                }  form-control`}
-                                {...register(`entries.${index}.checkno`, {
-                                  required: "Check invoice no is required",
-                                })}
-                              />
-                              {rowErrors.checkno && (
-                                <div className="invalid-feedback">
-                                  {rowErrors.checkno.message}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-lg-1 col-md-4 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Amount</label>
-                          <div className="row">
-                            <div className="col-lg-12 col-sm-12 col-12">
-                              <input
-                                disabled={!isEditable}
-                                type="text"
-                                className={`${
-                                  rowErrors.checkamount && "is-invalid"
-                                }  form-control`}
-                                {...register(`entries.${index}.checkamount`, {
-                                  required: "Amount is required",
-                                })}
-                              />
-                              {rowErrors.checkamount && (
-                                <div className="invalid-feedback">
-                                  {rowErrors.checkamount.message}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-lg-2 col-md-4 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Purchase Date</label>
-                          <div className="row">
-                            <div className="col-lg-12 col-sm-12 col-12">
-                              <input
-                                disabled={!isEditable}
-                                type="date"
-                                className={`${
-                                  rowErrors.checkpostingdate && "is-invalid"
-                                }  form-control`}
-                                {...register(
-                                  `entries.${index}.checkpostingdate`,
-                                  {
-                                    required: "Check posting date is required",
-                                  }
-                                )}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-lg-2 col-md-4 col-sm-12">
-                        <div className="input-blocks">
-                          <label>&nbsp;</label>
-                          <div className="row">
-                            <div className="col-lg-3 col-sm-3 col-3">
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={renderTooltip("Save")}
-                              >
-                                <button
-                                  type="button"
-                                  className="btn btn-icon btn-success"
-                                  onClick={() => handleSave(index)}
-                                  disabled={!isEditable}
-                                >
-                                  <i className="fa-solid fa-save"></i>
-                                </button>
-                              </OverlayTrigger>
-                            </div>
 
-                            {field.customercheckdetailid && (
-                              <>
-                                <div className="col-lg-3 col-sm-3 col-3">
-                                  <OverlayTrigger
-                                    placement="top"
-                                    overlay={renderTooltip("Delete")}
-                                  >
-                                    <button
-                                      className="btn btn-icon btn-danger"
-                                      onClick={() => handleDelete(index)}
-                                    >
-                                      <i className="fa-solid fa-trash"></i>
-                                    </button>
-                                  </OverlayTrigger>
-                                </div>
-                                <div className="col-lg-3 col-sm-3 col-3">
-                                  <OverlayTrigger
-                                    placement="top"
-                                    overlay={renderTooltip("Edit")}
-                                  >
-                                    <button
-                                      type="button"
-                                      className="btn btn-icon btn-warning"
-                                      onClick={() => handleEdit(index)}
-                                    >
-                                      <i className="fa-solid fa-pen"></i>
-                                    </button>
-                                  </OverlayTrigger>
-                                </div>
-                              </>
-                            )}
+                  return (
+                    <tr
+                      key={field.id}
+                      style={{
+                        background: isEditable ? "#fffef7" : "transparent",
+                      }}
+                    >
+                      {/* Customer */}
+                      <td style={tdStyle}>
+                        <Controller
+                          name={`entries.${index}.customerid`}
+                          control={control}
+                          rules={{ required: "Required" }}
+                          render={({ field }) => (
+                            <SelectCustomer
+                              className={`form-control-sm${rowErrors.customerid ? " is-invalid" : ""}`}
+                              storeId={parsedStoreId}
+                              trigger={trigger}
+                              disableField={!isEditable}
+                              {...field}
+                            />
+                          )}
+                        />
+                        {rowErrors.customerid && (
+                          <div className="invalid-feedback d-block" style={{ fontSize: 10 }}>
+                            {rowErrors.customerid.message}
                           </div>
+                        )}
+                      </td>
+
+                      {/* Warehouse */}
+                      <td style={tdStyle}>
+                        <Controller
+                          name={`entries.${index}.warehouseid`}
+                          control={control}
+                          rules={{ required: "Required" }}
+                          disabled={!isEditable}
+                          render={({ field }) => (
+                            <SelectWarehouse
+                              className={`form-control-sm${rowErrors.warehouseid ? " is-invalid" : ""}`}
+                              storeId={parsedStoreId}
+                              trigger={trigger}
+                              disableField={!isEditable}
+                              {...field}
+                            />
+                          )}
+                        />
+                        {rowErrors.warehouseid && (
+                          <div className="invalid-feedback d-block" style={{ fontSize: 10 }}>
+                            {rowErrors.warehouseid.message}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Check No */}
+                      <td style={tdStyle}>
+                        <input
+                          disabled={!isEditable}
+                          type="text"
+                          className={`form-control form-control-sm${rowErrors.checkno ? " is-invalid" : ""}`}
+                          {...register(`entries.${index}.checkno`, {
+                            required: "Required",
+                          })}
+                        />
+                        {rowErrors.checkno && (
+                          <div className="invalid-feedback" style={{ fontSize: 10 }}>
+                            {rowErrors.checkno.message}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Amount */}
+                      <td style={tdStyle}>
+                        <input
+                          disabled={!isEditable}
+                          type="text"
+                          className={`form-control form-control-sm${rowErrors.checkamount ? " is-invalid" : ""}`}
+                          {...register(`entries.${index}.checkamount`, {
+                            required: "Required",
+                          })}
+                        />
+                        {rowErrors.checkamount && (
+                          <div className="invalid-feedback" style={{ fontSize: 10 }}>
+                            {rowErrors.checkamount.message}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Check Date */}
+                      <td style={tdStyle}>
+                        <Controller
+                          name={`entries.${index}.checkpostingdate`}
+                          control={control}
+                          rules={{ required: "Required" }}
+                          render={({ field }) => (
+                            <DatePicker
+                              disabled={!isEditable}
+                              format="MM/DD/YYYY"
+                              className={`form-control form-control-sm p-0${rowErrors.checkpostingdate ? " is-invalid" : ""}`}
+                              style={{ height: 31 }}
+                              value={field.value ? dayjs(field.value) : null}
+                              onChange={(date) =>
+                                field.onChange(date ? date.toISOString() : "")
+                              }
+                              allowClear={false}
+                            />
+                          )}
+                        />
+                        {rowErrors.checkpostingdate && (
+                          <div className="invalid-feedback d-block" style={{ fontSize: 10 }}>
+                            {rowErrors.checkpostingdate.message}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                        <div
+                          className="d-inline-flex align-items-center"
+                          style={{ gap: 2, paddingTop: 4 }}
+                        >
+                          {isEditable && (
+                            <button
+                              type="button"
+                              className="p-1 btn btn-link"
+                              style={{ lineHeight: 1, color: "#198754" }}
+                              title="Save"
+                              onClick={() => handleSave(index)}
+                            >
+                              <Save size={14} />
+                            </button>
+                          )}
+                          {field.customercheckdetailid && editIndex !== index && (
+                            <button
+                              type="button"
+                              className="p-1 btn btn-link"
+                              style={{ lineHeight: 1, color: "#f59e0b" }}
+                              title="Edit"
+                              onClick={() => setEditIndex(index)}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          {field.customercheckdetailid && (
+                            <button
+                              type="button"
+                              className="p-1 btn btn-link"
+                              style={{ lineHeight: 1, color: "#dc3545" }}
+                              title="Delete"
+                              onClick={() => handleDelete(index)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div
+            className="modal-footer justify-content-start py-2"
+            style={{ borderTop: "1px solid #e9ecef" }}
+          >
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+              onClick={() => append(blankEntry(defaultWarehouse?.warehouseid ?? ""))}
+            >
+              <PlusCircle size={14} />
+              Add Row
+            </button>
           </div>
         </div>
       </div>

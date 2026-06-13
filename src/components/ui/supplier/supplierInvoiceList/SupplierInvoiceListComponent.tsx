@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useCallback,
@@ -43,9 +43,9 @@ const SupplierInvoiceListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
-    null
-  );
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierInvoiceType>) => {
     setGridReady(true);
@@ -126,6 +126,7 @@ const SupplierInvoiceListComponent = () => {
               data={params.data}
               handleRefreshInvoice={handleRefreshInvoice}
               setSelectedInvoiceId={setSelectedInvoiceId}
+              setViewInvoiceId={setViewInvoiceId}
             />
           ) : null,
         width: 80,
@@ -138,12 +139,12 @@ const SupplierInvoiceListComponent = () => {
         enableRowGroup: false,
       },
     ],
-    [handleRefreshInvoice, setSelectedInvoiceId]
+    [handleRefreshInvoice, setSelectedInvoiceId, setViewInvoiceId]
   );
 
   return (
     <>
-      <SupplierInvoiceListHeader />
+      <SupplierInvoiceListHeader onAdd={() => setShowAddModal(true)} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections search={search} setSearch={setSearch} />
@@ -154,7 +155,6 @@ const SupplierInvoiceListComponent = () => {
               onGridReady={handleOnGridReady}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               rowSelection={{
                 mode: "multiRow",
@@ -166,11 +166,24 @@ const SupplierInvoiceListComponent = () => {
           </div>
         </div>
       </div>
+      {showAddModal && (
+        <SupplierInvoiceFormModal
+          setShowInvoiceFormModal={() => setShowAddModal(false)}
+          handleRefreshInvoice={handleRefreshInvoice}
+        />
+      )}
       {selectedInvoiceId && (
         <SupplierInvoiceFormModal
           setShowInvoiceFormModal={() => setSelectedInvoiceId(null)}
           supplierinvoiceid={selectedInvoiceId}
           handleRefreshInvoice={handleRefreshInvoice}
+        />
+      )}
+      {viewInvoiceId && (
+        <SupplierInvoiceFormModal
+          setShowInvoiceFormModal={() => setViewInvoiceId(null)}
+          supplierinvoiceid={viewInvoiceId}
+          readOnly
         />
       )}
     </>

@@ -26,10 +26,12 @@ const SupplierInvoiceForm = ({
   supplierinvoiceid,
   setShowInvoiceFormModal,
   handleRefreshInvoice,
+  readOnly,
 }: {
   supplierinvoiceid?: number;
   setShowInvoiceFormModal: (value: boolean) => void;
   handleRefreshInvoice?: () => void;
+  readOnly?: boolean;
 }) => {
   const dispatch = useDispatch();
   const { storeId: storeIdParam } = useParams();
@@ -173,7 +175,7 @@ const SupplierInvoiceForm = ({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <fieldset>
+      <fieldset disabled={readOnly}>
         {invoiceLoading ? (
           [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
         ) : (
@@ -194,13 +196,25 @@ const SupplierInvoiceForm = ({
           </div>
         )}
         {!invoiceLoading && (
-          <ActionFooter handleCancel={handleCancel}>
-            <ButtonLoader
-              loading={createLoading || updateLoading}
-              btnText="Save"
-              loadingText="Saving ..."
-            />
-          </ActionFooter>
+          readOnly ? (
+            <div className="text-end mt-3">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowInvoiceFormModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <ActionFooter handleCancel={handleCancel}>
+              <ButtonLoader
+                loading={createLoading || updateLoading}
+                btnText="Save"
+                loadingText="Saving ..."
+              />
+            </ActionFooter>
+          )
         )}
       </fieldset>
     </form>

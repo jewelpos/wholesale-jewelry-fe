@@ -18,6 +18,7 @@ import SelectCustomer from "@/components/forms/SelectCustomer";
 import SelectYear from "@/components/forms/SelectYear";
 import OnHandChecksComponent from "../onHandChecks/OnHandChecksComponent";
 import CustomerChequeSummaryHeader from "./CustomerChequeSummaryHeader";
+import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import AddOnHandChequeModal from "./AddOnHandChequeModal";
 
 const CustomerChequeSummaryComponent = () => {
@@ -90,8 +91,8 @@ const CustomerChequeSummaryComponent = () => {
   return (
     <>
       <CustomerChequeSummaryHeader
-        setShowPrintModal={setOpenAddChequeModal}
         setOpenAddChequeModal={setOpenAddChequeModal}
+        onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "customer-checks", sheetName: "Checks" })}
       />
       <div className="barcode-content-list">
         <div className="row">

@@ -31,7 +31,6 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const isEdit = !!itemcode;
 
-  const [activeTab, setActiveTab] = useState("information");
   const [productImages, setProductImages] = useState<File[]>([]);
   const [loading] = useState(false);
   const [productData, setProductData] = useState<any>(null);
@@ -65,6 +64,17 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       detaileditemdescription: "",
       itemreorderqtypnt: 0,
       itemreorderqty: 0,
+      itemtagprice: 0,
+      itemtagpricecode: "",
+      itemdiscount: 0,
+      supplieritemcode: "",
+      supplierbarcodeid: "",
+      modelno: "",
+      manufacturer: "",
+      itemlocation: "",
+      itemtaxable: 0,
+      trackinventory: 0,
+      itemmetal: "",
       dshape: "",
       dlab: "",
       dcerno: "",
@@ -104,13 +114,12 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     },
   });
 
-  // Watch for changes in purchase price and profit percent to calculate tag price
-  const watchedValues = watch([
-    "itempurchaseprice",
-    "profitpercent",
-    "itemtagprice",
-  ]);
+  const watchedValues = watch(["itempurchaseprice", "profitpercent"]);
   const [itempurchaseprice, profitpercent] = watchedValues;
+  const marginAmount =
+    itempurchaseprice && profitpercent
+      ? Number(itempurchaseprice) * (Number(profitpercent) / 100)
+      : 0;
 
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
     variables: { storeid: parsedStoreId, warehouiseid: 0 },
@@ -118,94 +127,46 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   });
   const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
 
-  // Auto-calculate itemtagprice when purchase price, profit percent, or settings change
   useEffect(() => {
-    if (
-      productSettings?.saletagkey &&
-      itempurchaseprice &&
-        
-      !isEdit // Only auto-calculate for new products, not when editing
-    ) {
-      const percentageValue = (itempurchaseprice / 100) * profitpercent;
-      const profitpercentValue = itempurchaseprice + percentageValue;
-      const calculatedTagPrice =
-        profitpercentValue * productSettings.saletagkey;
-      setValue("itemtagprice", Number(calculatedTagPrice.toFixed(2)));
+    if (productSettings?.saletagkey && itempurchaseprice && !isEdit) {
+      const pct = (itempurchaseprice / 100) * profitpercent;
+      setValue("itemtagprice", Number(((itempurchaseprice + pct) * productSettings.saletagkey).toFixed(2)));
     }
   }, [itempurchaseprice, profitpercent, productSettings, setValue, isEdit]);
 
   const onSubmit: SubmitHandler<ProductFormType> = async (formData) => {
     setSaveLoading(true);
 
-    // Prepare file upload parameters
     let updatedParams = {};
-    if (productImages && productImages.length > 0) {
-      updatedParams = {
-        ...updatedParams,
-        itemimagepath: productImages,
-      };
-    }
-    if (itemcode && productData) {
-      updatedParams = {
-        ...updatedParams,
-        itemid: productData.itemid,
-      };
-    }
+    if (productImages?.length > 0) updatedParams = { ...updatedParams, itemimagepath: productImages };
+    if (itemcode && productData) updatedParams = { ...updatedParams, itemid: productData.itemid };
 
-    // Extract files and prepare payload
     const { itemimagepath, ...rest } = formData;
     const payload = {
       ...rest,
-      // Convert boolean fields to numbers
       itemtaxable: formData.itemtaxable ? 1 : 0,
       trackinventory: formData.trackinventory ? 1 : 0,
       itemalertwarning: formData.itemalertwarning ? 1 : 0,
-
-      // Convert string IDs to numbers
       supplierid: Number(formData.supplierid),
       itemcategoryid: Number(formData.itemcategoryid),
-      subcategoryid: formData.subcategoryid
-        ? Number(formData.subcategoryid)
-        : null,
-
-      // Convert price fields to numbers
+      subcategoryid: formData.subcategoryid ? Number(formData.subcategoryid) : null,
       itempurchaseprice: Number(formData.itempurchaseprice),
-      itemtagprice: formData.itemtagprice
-        ? Number(formData.itemtagprice)
-        : null,
-      itemdiscount: formData.itemdiscount
-        ? Number(formData.itemdiscount)
-        : null,
-      profitpercent: formData.profitpercent
-        ? Number(formData.profitpercent)
-        : null,
-      itemreorderqtypnt: formData.itemreorderqtypnt
-        ? Number(formData.itemreorderqtypnt)
-        : null,
-      itemreorderqty: formData.itemreorderqtypnt
-        ? Number(formData.itemreorderqtypnt)
-        : null,
-
-      // Stone detail numeric fields - convert to numbers or null
+      itemtagprice: formData.itemtagprice ? Number(formData.itemtagprice) : null,
+      itemdiscount: formData.itemdiscount ? Number(formData.itemdiscount) : null,
+      profitpercent: formData.profitpercent ? Number(formData.profitpercent) : null,
+      itemreorderqtypnt: formData.itemreorderqtypnt ? Number(formData.itemreorderqtypnt) : null,
+      itemreorderqty: formData.itemreorderqtypnt ? Number(formData.itemreorderqtypnt) : null,
       dcarat: formData.dcarat ? Number(formData.dcarat) : null,
       ddiameter: formData.ddiameter || null,
       ddepth: formData.ddepth ? Number(formData.ddepth) : null,
       dtable: formData.dtable ? Number(formData.dtable) : null,
-      dcrownheight: formData.dcrownheight
-        ? Number(formData.dcrownheight)
-        : null,
+      dcrownheight: formData.dcrownheight ? Number(formData.dcrownheight) : null,
       dcrownangle: formData.dcrownangle ? Number(formData.dcrownangle) : null,
-      dpavillionheight: formData.dpavillionheight
-        ? Number(formData.dpavillionheight)
-        : null,
-      dpavillionangle: formData.dpavillionangle
-        ? Number(formData.dpavillionangle)
-        : null,
+      dpavillionheight: formData.dpavillionheight ? Number(formData.dpavillionheight) : null,
+      dpavillionangle: formData.dpavillionangle ? Number(formData.dpavillionangle) : null,
       drapprice: formData.drapprice ? Number(formData.drapprice) : null,
       dcost: formData.dcost ? Number(formData.dcost) : null,
       dsaleprice: formData.dsaleprice ? Number(formData.dsaleprice) : null,
-
-      // Stone detail text fields - convert empty strings to null
       dshape: formData.dshape || null,
       dlab: formData.dlab || null,
       dcerno: formData.dcerno || null,
@@ -222,41 +183,23 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       dquality: formData.dquality || null,
       dstockno: formData.dstockno || null,
       dpricecode: formData.dpricecode || null,
-
       ...updatedParams,
     };
 
-    // Create FormData for file upload
     const form = new FormData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Object.entries(payload).forEach(([key, value]: [string, any]) => {
-      if (key !== "itemimagepath") {
-        form.append(key, value);
-      }
+      if (key !== "itemimagepath") form.append(key, value);
     });
-
-    // Append image file (single image only)
-    if (productImages && productImages.length > 0) {
-      // Only append the first image since we limit to 1
-      form.append(`itemimagepath`, productImages[0]);
-    }
+    if (productImages?.length > 0) form.append("itemimagepath", productImages[0]);
 
     const result = await handleTryCatch(async () => {
-      let response;
-      if (itemcode && productData) {
-        response = await api.put(`${config.apiUrl}/store/product/edit`, form);
-      } else {
-        response = await api.post(`${config.apiUrl}/store/product/add`, form);
-      }
-
+      const response = itemcode && productData
+        ? await api.put(`${config.apiUrl}/store/product/edit`, form)
+        : await api.post(`${config.apiUrl}/store/product/add`, form);
       const { data } = response;
       if (data) {
-        dispatch(
-          showNotification({
-            message: data.message,
-            type: NOTIFICATION_TYPES.SUCCESS,
-          })
-        );
+        dispatch(showNotification({ message: data.message, type: NOTIFICATION_TYPES.SUCCESS }));
         router.back();
       }
       return true;
@@ -264,12 +207,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
     setSaveLoading(false);
     if (result.error) {
-      dispatch(
-        showNotification({
-          message: result.error,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
     } else {
       reset();
     }
@@ -277,150 +215,77 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (itemcode) {
-        const result = await handleTryCatch(async () => {
-          const { data } = await getProductByItemCode({
-            variables: {
-              itemcode: itemcode as string,
-              storeid: parsedStoreId,
-            },
-          });
-
-          if (data?.getProductByItemCode) {
-            const product = data.getProductByItemCode;
-            setProductData(product);
-
-            // Load existing images if available
-            if (product.itemimagepath) {
-              try {
-                let imageUrls = [];
-                if (typeof product.itemimagepath === "string") {
-                  try {
-                    imageUrls = JSON.parse(product.itemimagepath);
-                  } catch {
-                    imageUrls = [product.itemimagepath];
-                  }
-                } else if (Array.isArray(product.itemimagepath)) {
-                  imageUrls = product.itemimagepath;
-                }
-
-                if (imageUrls.length > 0) {
-                  const imageFiles = await Promise.all(
-                    imageUrls.slice(0, 1).map(async (url: string) => {
-                      try {
-                        const response = await fetch(url);
-                        const blob = await response.blob();
-                        return new File([blob], `product-image.jpg`, {
-                          type: blob.type,
-                        });
-                      } catch (error) {
-                        console.error("Error loading image:", error);
-                        return null;
-                      }
-                    })
-                  );
-                  const validFiles = imageFiles.filter(Boolean) as File[];
-                  setProductImages(validFiles);
-                }
-              } catch (error) {
-                console.error("Error processing images:", error);
-              }
-            }
-
-            // Reset form with product data
-            reset({
-              ...product,
-              storeid: parsedStoreId,
-              supplierid: Number(product.supplierid),
-            });
-          }
-          return true;
+      if (!itemcode) return;
+      const result = await handleTryCatch(async () => {
+        const { data } = await getProductByItemCode({
+          variables: { itemcode: itemcode as string, storeid: parsedStoreId },
         });
-
-        if (result.error) {
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+        if (data?.getProductByItemCode) {
+          const product = data.getProductByItemCode;
+          setProductData(product);
+          if (product.itemimagepath) {
+            try {
+              let imageUrls: string[] = [];
+              if (typeof product.itemimagepath === "string") {
+                try { imageUrls = JSON.parse(product.itemimagepath); } catch { imageUrls = [product.itemimagepath]; }
+              } else if (Array.isArray(product.itemimagepath)) {
+                imageUrls = product.itemimagepath;
+              }
+              if (imageUrls.length > 0) {
+                const files = await Promise.all(
+                  imageUrls.slice(0, 1).map(async (url: string) => {
+                    try {
+                      const res = await fetch(url);
+                      const blob = await res.blob();
+                      return new File([blob], "product-image.jpg", { type: blob.type });
+                    } catch { return null; }
+                  })
+                );
+                setProductImages(files.filter(Boolean) as File[]);
+              }
+            } catch { /* ignore image load errors */ }
+          }
+          reset({ ...product, storeid: parsedStoreId, supplierid: Number(product.supplierid) });
         }
+        return true;
+      });
+      if (result.error) {
+        dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
       }
     };
     fetchProduct();
   }, [itemcode, parsedStoreId, getProductByItemCode, reset, dispatch]);
 
+  if (loading) return <>{[1, 2, 3, 4, 5].map(i => <PlaceHolder key={i} />)}</>;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <fieldset disabled={disableField}>
-        <div className="card">
-          <div className="card-header">
-            <ul className="nav nav-tabs card-header-tabs">
-              <li className="nav-item">
-                <button
-                  type="button"
-                  className={`nav-link ${
-                    activeTab === "information" ? "active" : ""
-                  }`}
-                  onClick={() => setActiveTab("information")}
-                >
-                  Information
-                </button>
-              </li>
-              <li className="nav-item">
-                <button
-                  type="button"
-                  className={`nav-link ${
-                    activeTab === "stone-details" ? "active" : ""
-                  }`}
-                  onClick={() => setActiveTab("stone-details")}
-                >
-                  Stone Details
-                </button>
-              </li>
-            </ul>
-          </div>
-          <div className="card-body">
-            {loading ? (
-              [1, 2, 3, 4, 5, 6, 7].map((item) => <PlaceHolder key={item} />)
-            ) : (
-              <div className="tab-content">
-                <div className={activeTab === "information" ? "" : "d-none"}>
-                  <ProductInformationTab
-                    register={register}
-                    errors={errors}
-                    control={control}
-                    trigger={trigger}
-                    setValue={setValue}
-                    disableField={disableField}
-                    storeId={parsedStoreId}
-                    productImages={productImages}
-                    onImagesChange={setProductImages}
-                    isEdit={isEdit}
-                    barcodeId={productData?.itembarcodeid}
-                  />
-                </div>
-                <div className={activeTab === "stone-details" ? "" : "d-none"}>
-                  <ProductStoneDetailsTab
-                    register={register}
-                    errors={errors}
-                    control={control}
-                    trigger={trigger}
-                    setValue={setValue}
-                    disableField={disableField}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        {!disableField && !loading && (
+        <ProductInformationTab
+          register={register}
+          errors={errors}
+          control={control}
+          trigger={trigger}
+          setValue={setValue}
+          disableField={disableField}
+          storeId={parsedStoreId}
+          productImages={productImages}
+          onImagesChange={setProductImages}
+          isEdit={isEdit}
+          barcodeId={productData?.itembarcodeid}
+          marginAmount={marginAmount}
+        />
+        <ProductStoneDetailsTab
+          register={register}
+          errors={errors}
+          control={control}
+          trigger={trigger}
+          setValue={setValue}
+          disableField={disableField}
+        />
+        {!disableField && (
           <ActionFooter handleCancel={handleCancel}>
-            <ButtonLoader
-              loading={saveLoading}
-              btnText="Save"
-              loadingText="Saving ..."
-            />
+            <ButtonLoader loading={saveLoading} btnText="Save Product" loadingText="Saving..." />
           </ActionFooter>
         )}
       </fieldset>

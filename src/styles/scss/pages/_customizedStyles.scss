@@ -1,4 +1,4 @@
-@use "../utils/variables" as *;
+﻿@use "../utils/variables" as *;
 @use "../utils/mixins" as *;
 
 $__basecolor: #2c3038;
@@ -400,6 +400,13 @@ ul.tabs.owl-carousel.pos-category {
 
 .custom-theme {
   --ag-border-radius: 0 !important;
+  --ag-font-size: 12px;
+  --ag-row-height: 28px;
+  --ag-header-height: 32px;
+  --ag-cell-horizontal-padding: 8px;
+  --ag-header-cell-horizontal-padding: 8px;
+  --ag-list-item-height: 24px;
+  --ag-icon-size: 14px;
 }
 
 [data-layout-mode="dark_mode"]
@@ -774,8 +781,7 @@ div.rc-slider-handle:active {
   justify-content: center;
   -webkit-justify-content: center;
   -ms-flex-pack: center;
-  height: 42px;
-  // height: 50px;
+  height: 28px;
 }
 .edit-delete-action a:hover {
   background-color: rgb(40, 142, 199);

@@ -1,2 +1,78 @@
 @use "variables" as *;
 @use "mixins" as *;
+
+:root {
+  /* Status colors — tint bg + dark same-hue text */
+  --status-paid-bg: #dcfce7;       --status-paid-text: #15803d;
+  --status-partial-bg: #fef3c7;    --status-partial-text: #b45309;
+  --status-open-bg: #fef9c3;       --status-open-text: #92400e;
+  --status-hold-bg: #ede9fe;       --status-hold-text: #7c3aed;
+  --status-void-bg: #fee2e2;       --status-void-text: #b91c1c;
+  --status-backorder-bg: #dbeafe;  --status-backorder-text: #1d4ed8;
+  --status-default-bg: #f1f5f9;    --status-default-text: #475569;
+
+  /* Surfaces */
+  --surface-card: #ffffff;
+  --surface-muted: #f8fafc;
+  --border-subtle: #e2e8f0;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  /* Accent */
+  --accent: #3b82f6;
+
+  /* Shape */
+  --radius-card: 12px;
+  --radius-chip: 20px;
+  --radius-pill: 10px;
+  --radius-input: 8px;
+
+  /* Prism tile accent palette — solid color + light tint bg */
+  --tile-indigo:      #6366f1;  --tile-indigo-bg:  #eef2ff;
+  --tile-violet:      #8b5cf6;  --tile-violet-bg:  #f5f3ff;
+  --tile-emerald:     #10b981;  --tile-emerald-bg: #ecfdf5;
+  --tile-amber:       #f59e0b;  --tile-amber-bg:   #fffbeb;
+  --tile-rose:        #f43f5e;  --tile-rose-bg:    #fff1f2;
+  --tile-cyan:        #06b6d4;  --tile-cyan-bg:    #ecfeff;
+  --tile-orange:      #f97316;  --tile-orange-bg:  #fff7ed;
+  --tile-teal:        #14b8a6;  --tile-teal-bg:    #f0fdfa;
+
+  /* Dashboard page background */
+  --surface-page: #f1f5f9;
+
+  /* KPI card accent border */
+  --tile-border-width: 4px;
+}
+
+/* ── Dark mode overrides ────────────────────────────────────────────── */
+[data-layout-mode="dark_mode"] {
+  --surface-card:    #1e293b;
+  --surface-muted:   #0f172a;
+  --surface-page:    #0f172a;
+  --border-subtle:   #334155;
+
+  --text-primary:    #f1f5f9;
+  --text-secondary:  #94a3b8;
+  --text-tertiary:   #64748b;
+
+  --status-paid-bg:       rgba(34,  197, 94,  0.15); --status-paid-text:       #4ade80;
+  --status-partial-bg:    rgba(251, 191, 36,  0.15); --status-partial-text:    #fbbf24;
+  --status-open-bg:       rgba(251, 191, 36,  0.12); --status-open-text:       #fcd34d;
+  --status-hold-bg:       rgba(167, 139, 250, 0.15); --status-hold-text:       #a78bfa;
+  --status-void-bg:       rgba(248, 113, 113, 0.15); --status-void-text:       #f87171;
+  --status-backorder-bg:  rgba(96,  165, 250, 0.15); --status-backorder-text:  #60a5fa;
+  --status-default-bg:    rgba(100, 116, 139, 0.15); --status-default-text:    #94a3b8;
+
+  /* Tile accent tints become translucent in dark mode */
+  --tile-indigo-bg:  rgba(99,  102, 241, 0.18);
+  --tile-violet-bg:  rgba(139, 92,  246, 0.18);
+  --tile-emerald-bg: rgba(16,  185, 129, 0.18);
+  --tile-amber-bg:   rgba(245, 158, 11,  0.18);
+  --tile-rose-bg:    rgba(244, 63,  94,  0.18);
+  --tile-cyan-bg:    rgba(6,   182, 212, 0.18);
+  --tile-orange-bg:  rgba(249, 115, 22,  0.18);
+  --tile-teal-bg:    rgba(20,  184, 166, 0.18);
+}

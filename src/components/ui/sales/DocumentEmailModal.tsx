@@ -7,7 +7,7 @@ import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 
-type DocumentType = "INVOICE" | "MEMO" | "SALES_ORDER";
+type DocumentType = "INVOICE" | "MEMO" | "SALES_ORDER" | "PURCHASE_ORDER";
 
 interface DocumentEmailModalProps {
   storeId: number;
@@ -22,15 +22,17 @@ const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
 const endpointMap: Record<DocumentType, { customerEmail: string; send: string; numberKey: string }> = {
-  INVOICE:     { customerEmail: "/store/invoice/customer-email",        send: "/store/invoice/email",        numberKey: "invoicenumbers"     },
-  MEMO:        { customerEmail: "/store/memo/customer-email",           send: "/store/memo/email",           numberKey: "memonumbers"        },
-  SALES_ORDER: { customerEmail: "/store/sales-order/customer-emails",   send: "/store/sales-order/email",    numberKey: "salesordernumbers"  },
+  INVOICE:        { customerEmail: "/store/invoice/customer-email",           send: "/store/invoice/email",           numberKey: "invoicenumbers"   },
+  MEMO:           { customerEmail: "/store/memo/customer-email",              send: "/store/memo/email",              numberKey: "memonumbers"      },
+  SALES_ORDER:    { customerEmail: "/store/sales-order/customer-emails",      send: "/store/sales-order/email",       numberKey: "salesordernumbers"},
+  PURCHASE_ORDER: { customerEmail: "/store/purchase-order/supplier-email",    send: "/store/purchase-order/email",    numberKey: "ponumbers"        },
 };
 
 const labelMap: Record<DocumentType, string> = {
   INVOICE: "Invoice",
   MEMO: "Memo",
   SALES_ORDER: "Sales Order",
+  PURCHASE_ORDER: "Purchase Order",
 };
 
 const DocumentEmailModal = ({

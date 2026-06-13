@@ -16,19 +16,14 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GET_INVOICE_AGING_REPORT_QUERY } from "@/lib/graphql/query/customer";
+import { formatCurrency, num, BUCKET_COLORS } from "./utils";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 type Props = {
   outletid: number;
   allOutlets: boolean;
+  collectionRate?: number;
 };
 
 type AgingRow = {
@@ -40,24 +35,7 @@ type AgingRow = {
   total_due: number | null;
 };
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-
-const num = (v: number | null | undefined) => Number(v ?? 0);
-
-const BUCKET_COLORS = [
-  "#22c55e",
-  "#84cc16",
-  "#facc15",
-  "#f97316",
-  "#ef4444",
-];
-
-const AgingBreakdown = ({ outletid, allOutlets }: Props) => {
+const AgingBreakdown = ({ outletid, allOutlets, collectionRate }: Props) => {
   const { storeId, outletId } = useParams();
   const { data, loading, error } = useQuery(GET_INVOICE_AGING_REPORT_QUERY, {
     variables: {
@@ -87,62 +65,9 @@ const AgingBreakdown = ({ outletid, allOutlets }: Props) => {
     );
   }, [data]);
 
-  const grandTotal =
-    totals.b0 + totals.b30 + totals.b60 + totals.b90 + totals.b120;
-
-  const chartData = {
-    labels: [""],
-    datasets: [
-      {
-        label: "0–30 days",
-        data: [totals.b0],
-        backgroundColor: BUCKET_COLORS[0],
-      },
-      {
-        label: "31–60 days",
-        data: [totals.b30],
-        backgroundColor: BUCKET_COLORS[1],
-      },
-      {
-        label: "61–90 days",
-        data: [totals.b60],
-        backgroundColor: BUCKET_COLORS[2],
-      },
-      {
-        label: "91–120 days",
-        data: [totals.b90],
-        backgroundColor: BUCKET_COLORS[3],
-      },
-      {
-        label: "120+ days",
-        data: [totals.b120],
-        backgroundColor: BUCKET_COLORS[4],
-      },
-    ],
-  };
-
-  const options: ChartOptions<"bar"> = {
-    indexAxis: "y" as const,
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: "bottom" },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(Number(ctx.parsed.x))}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        stacked: true,
-        ticks: {
-          callback: (v) => formatCurrency(Number(v)),
-        },
-      },
-      y: { stacked: true, display: false },
-    },
-  };
+  const grandTotal = totals.b0 + totals.b30 + totals.b60 + totals.b90 + totals.b120;
+  const overdueAmount = totals.b60 + totals.b90 + totals.b120;
+  const overduePercent = grandTotal > 0 ? ((overdueAmount / grandTotal) * 100).toFixed(0) : "0";
 
   const buckets = [
     { label: "0–30 days", value: totals.b0, color: BUCKET_COLORS[0] },
@@ -152,17 +77,53 @@ const AgingBreakdown = ({ outletid, allOutlets }: Props) => {
     { label: "120+ days", value: totals.b120, color: BUCKET_COLORS[4] },
   ];
 
+  const chartData = {
+    labels: [""],
+    datasets: buckets.map((b, i) => ({
+      label: b.label,
+      data: [b.value],
+      backgroundColor: BUCKET_COLORS[i],
+      borderRadius: i === 0 ? { topLeft: 4, bottomLeft: 4 } : i === 4 ? { topRight: 4, bottomRight: 4 } : 0,
+    })),
+  };
+
+  const options: ChartOptions<"bar"> = {
+    indexAxis: "y" as const,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const pct = grandTotal > 0 ? ((Number(ctx.parsed.x) / grandTotal) * 100).toFixed(1) : "0";
+            return `${ctx.dataset.label}: ${formatCurrency(Number(ctx.parsed.x))} (${pct}%)`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        ticks: { callback: (v) => formatCurrency(Number(v)), font: { size: 10 } },
+        grid: { color: "rgba(0,0,0,0.04)" },
+      },
+      y: { stacked: true, display: false },
+    },
+  };
+
+  const riskLevel = Number(overduePercent) >= 40 ? "danger" : Number(overduePercent) >= 20 ? "warning" : "success";
+  const riskText = Number(overduePercent) >= 40 ? "Critical — action needed" : Number(overduePercent) >= 20 ? "Moderate risk" : "Healthy";
+
   return (
-    <div className="card border-0 shadow-sm h-100">
+    <div className="card h-100" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-card)" }}>
       <div className="card-body">
-        <div className="d-flex justify-content-between align-items-start mb-3">
+        <div className="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <h6 className="mb-1">A/R Aging</h6>
+            <h6 className="mb-1">A/R Aging Breakdown</h6>
             <div className="text-muted small">
               Total outstanding{" "}
-              <span className="fw-semibold text-dark">
-                {formatCurrency(grandTotal)}
-              </span>
+              <span className="fw-semibold text-dark">{loading && !data ? "…" : formatCurrency(grandTotal)}</span>
             </div>
           </div>
           <Link
@@ -173,44 +134,63 @@ const AgingBreakdown = ({ outletid, allOutlets }: Props) => {
           </Link>
         </div>
 
+        {/* Risk summary line */}
+        {grandTotal > 0 && !loading && (
+          <div className={`d-flex align-items-center gap-2 rounded px-2 py-1 mb-3 bg-${riskLevel}-subtle`} style={{ fontSize: 11 }}>
+            <span className={`fw-semibold text-${riskLevel}`}>{overduePercent}% overdue &gt;60d</span>
+            <span className="text-muted">·</span>
+            <span className={`text-${riskLevel}`}>{riskText}</span>
+            <span className="text-muted">·</span>
+            <span className="text-muted">{formatCurrency(overdueAmount)} at risk</span>
+          </div>
+        )}
+
         {allOutlets && (
-          <div className="alert alert-info py-2 small mb-3">
-            Aging is shown for the current outlet only.
+          <div className="alert alert-info py-1 small mb-2" style={{ fontSize: 11 }}>
+            Aging shown for current outlet only.
           </div>
         )}
 
         {error && (
-          <div className="alert alert-danger py-2 small">
-            Failed to load aging: {error.message}
-          </div>
+          <div className="alert alert-danger py-1 small mb-2">{error.message}</div>
         )}
 
-        <div style={{ height: 120 }}>
+        <div style={{ height: 100 }}>
           <Bar data={chartData} options={options} />
         </div>
 
-        <div className="row g-2 mt-2">
-          {buckets.map((b) => (
-            <div className="col-6 col-md-4 col-xl-12" key={b.label}>
-              <div className="d-flex align-items-center justify-content-between small">
-                <span className="d-inline-flex align-items-center gap-2">
-                  <span
-                    className="d-inline-block rounded-circle"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      backgroundColor: b.color,
-                    }}
-                  />
-                  {b.label}
+        {/* Bucket breakdown with % */}
+        <div className="mt-3">
+          {buckets.map((b) => {
+            const pct = grandTotal > 0 ? ((b.value / grandTotal) * 100).toFixed(1) : "0.0";
+            return (
+              <div key={b.label} className="d-flex align-items-center justify-content-between py-1" style={{ borderBottom: "1px solid #f1f5f9" }}>
+                <span className="d-inline-flex align-items-center gap-2 small">
+                  <span className="d-inline-block rounded-circle" style={{ width: 8, height: 8, backgroundColor: b.color, flexShrink: 0 }} />
+                  <span className="text-muted">{b.label}</span>
                 </span>
-                <span className="fw-semibold">
-                  {loading && !data ? "—" : formatCurrency(b.value)}
+                <span className="d-flex align-items-center gap-2">
+                  <span className="text-muted" style={{ fontSize: 11 }}>{pct}%</span>
+                  <span className="fw-semibold small" style={{ minWidth: 72, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {loading && !data ? "—" : formatCurrency(b.value)}
+                  </span>
                 </span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Collection rate footer */}
+        {collectionRate !== undefined && (
+          <div className="d-flex align-items-center justify-content-between mt-3 pt-2" style={{ borderTop: "1px solid #e2e8f0" }}>
+            <span className="text-muted small">Collection rate</span>
+            <span
+              className={`fw-semibold small text-${collectionRate >= 90 ? "success" : collectionRate >= 70 ? "warning" : "danger"}`}
+            >
+              {collectionRate.toFixed(1)}%
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

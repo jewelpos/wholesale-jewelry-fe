@@ -13,7 +13,8 @@ import {
   UseFormTrigger,
 } from "react-hook-form";
 import SelectCountry from "@/components/forms/SelectCountry";
-import ImageCaptureUpload from "@/components/ui/common/ImageCaptureUpload";
+import AvatarUpload from "@/components/ui/common/AvatarUpload";
+import { Building2, MapPin, User, Phone, type LucideIcon } from "lucide-react";
 
 interface Props {
   register: UseFormRegister<CustomerFormType>;
@@ -23,15 +24,17 @@ interface Props {
   setValue: UseFormSetValue<CustomerFormType>;
   photoPath: string;
   customerId: string | undefined;
+  companyName?: string;
   disableField?: boolean;
 }
 
-const SectionLabel = ({ label }: { label: string }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "18px 0 14px" }}>
-    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#adb5bd", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "20px 0 14px" }}>
+    <Icon size={13} strokeWidth={2} color="#6c757d" />
+    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#6c757d", textTransform: "uppercase", whiteSpace: "nowrap" }}>
       {label}
     </span>
-    <div style={{ flex: 1, height: 1, backgroundColor: "#e9ecef" }} />
+    <div style={{ flex: 1, height: 1, backgroundColor: "#dee2e6" }} />
   </div>
 );
 
@@ -43,36 +46,33 @@ const CustomerInputsA = ({
   setValue,
   photoPath,
   customerId,
+  companyName,
   disableField,
 }: Props) => {
   return (
     <>
       {/* Photo */}
-      <div className="d-flex justify-content-center mb-3">
-        <Controller
-          name="file"
-          control={control}
-          render={({ field }) => (
-            <ImageCaptureUpload
-              value={field.value || photoPath || null}
-              onChange={(img) => {
-                field.onChange(img);
-                if (typeof img === "string") {
-                  setValue("custphotopath", img);
-                } else if (img instanceof File) {
-                  setValue("custphotopath", URL.createObjectURL(img));
-                }
-                trigger("custphotopath");
-              }}
-              label="Profile Photo"
-              disabled={!!disableField}
-            />
-          )}
-        />
-      </div>
+      <Controller
+        name="file"
+        control={control}
+        render={({ field }) => (
+          <AvatarUpload
+            value={field.value || photoPath || null}
+            name={companyName}
+            disabled={!!disableField}
+            onChange={(file) => {
+              field.onChange(file);
+              if (file instanceof File) {
+                setValue("custphotopath", URL.createObjectURL(file));
+              }
+              trigger("custphotopath");
+            }}
+          />
+        )}
+      />
 
       {/* Company */}
-      <SectionLabel label="Company" />
+      <SectionLabel label="Company" icon={Building2} />
       <div className="row">
         {customerId && (
           <div className="col-12 mb-3">
@@ -102,7 +102,7 @@ const CustomerInputsA = ({
       </div>
 
       {/* Address */}
-      <SectionLabel label="Address" />
+      <SectionLabel label="Address" icon={MapPin} />
       <div className="row">
         <div className="col-12 mb-3">
           <label className="form-label">Street Address</label>
@@ -170,7 +170,7 @@ const CustomerInputsA = ({
       </div>
 
       {/* Contact Person */}
-      <SectionLabel label="Contact Person" />
+      <SectionLabel label="Contact Person" icon={User} />
       <div className="row">
         <div className="col-6 mb-3">
           <label className="form-label">First Name</label>
@@ -190,7 +190,7 @@ const CustomerInputsA = ({
       </div>
 
       {/* Contact Info */}
-      <SectionLabel label="Contact Info" />
+      <SectionLabel label="Contact Info" icon={Phone} />
       <div className="row">
         <div className="col-6 mb-3">
           <label className="form-label">Store Phone</label>

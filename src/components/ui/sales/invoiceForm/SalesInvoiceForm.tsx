@@ -1386,7 +1386,7 @@ const SalesInvoiceForm = ({
                     control={control}
                     rules={{ required: "Bill To customer is required" }}
                     render={({ field }) => (
-                      <SelectCustomer trigger={trigger} storeId={parsedStoreId} {...field} />
+                      <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
                     )}
                   />
                 </div>
@@ -1444,7 +1444,7 @@ const SalesInvoiceForm = ({
                         name="shiptocustomerid"
                         control={control}
                         render={({ field }) => (
-                          <SelectCustomer trigger={trigger} storeId={parsedStoreId} {...field} />
+                          <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
                         )}
                       />
                     </div>

@@ -2,7 +2,6 @@
 
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
-import { TIME_FORMAT } from "@/lib/config/constants";
 import { ProductActivityList } from "@/types/product";
 
 const productActivityColumnDefs: ColDef<ProductActivityList>[] = [
@@ -31,8 +30,12 @@ const productActivityColumnDefs: ColDef<ProductActivityList>[] = [
   {
     headerName: "Transaction Date",
     field: "transation_date",
-    cellRenderer: (params: ICellRendererParams) =>
-      params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "",
+    cellRenderer: (params: ICellRendererParams) => {
+      if (!params.value) return "";
+      const asNum = Number(params.value);
+      const d = isNaN(asNum) ? dayjs(params.value) : dayjs(asNum);
+      return d.isValid() ? d.format("MM/DD/YYYY") : "";
+    },
     filter: "agDateColumnFilter",
     flex: 1.2,
     hide: false,
@@ -63,7 +66,7 @@ const productActivityColumnDefs: ColDef<ProductActivityList>[] = [
     field: "warehouse",
     filter: "agTextColumnFilter",
     flex: 1.2,
-    hide: false,
+    hide: true,
   },
   // Hidden columns
   {

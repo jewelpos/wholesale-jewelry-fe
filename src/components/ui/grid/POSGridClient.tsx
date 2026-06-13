@@ -54,12 +54,11 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
             ...defaultColDef,
           }}
           gridOptions={{
-            rowHeight: 42,
-            headerHeight: 50,
             suppressServerSideFullWidthLoadingRow: true,
-            // sideBar: true,
             ...gridOptions,
           }}
+          rowHeight={28}
+          headerHeight={32}
           rowData={rowData}
           rowSelection={rowSelection}
           rowGroupPanelShow="always"

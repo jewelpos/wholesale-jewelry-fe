@@ -1,22 +1,15 @@
 import { CustomerBalanceAgingType } from "@/types/customer";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
 export const balanceAgingColumnDefs: ColDef<CustomerBalanceAgingType>[] = [
   {
-    headerName: "Customer ID",
-    field: "customerid",
-    filter: "agNumberColumnFilter",
-  },
-  {
-    headerName: "Customer name",
-    field: "customername",
+    headerName: "Customer",
+    colId: "customerid, companyname",
+    cellRenderer: (params: ICellRendererParams<CustomerBalanceAgingType>) =>
+      params.data ? `${params.data.customerid} - ${params.data.companyname}` : "",
     filter: "agTextColumnFilter",
-  },
-  {
-    headerName: "Company name",
-    field: "companyname",
-    filter: "agTextColumnFilter",
+    minWidth: 220,
   },
   {
     headerName: "Total sale",

@@ -2,7 +2,6 @@ import { ErrorBoundary } from "@/components/root/ErrorBoundary";
 import ApolloClientProviderAuthorized from "./ApolloClientProviderAuthorized";
 import InitialDataLoader from "@/components/root/InitialDataLoader";
 import { PermissionGuard } from "@/components/root/PermissionGuard";
-
 export default function AuthorizedLayout({
   children,
 }: Readonly<{

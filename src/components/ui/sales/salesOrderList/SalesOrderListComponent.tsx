@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
@@ -18,6 +18,12 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import SalesOrderHeader from "./SalesOrderHeader";
 import SalesOrderEmailModal from "./SalesOrderEmailModal";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
+import DailyStatusCards from "../../grid/DailyStatusCards";
+import StatusFilterChips from "../../grid/StatusFilterChips";
+import StatusPillRenderer from "../../grid/StatusPillRenderer";
+import { GET_SO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { useParams, useRouter } from "next/navigation";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
@@ -36,6 +42,7 @@ const SalesOrderListComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [selectedSalesOrderNumbers, setSelectedSalesOrderNumbers] = useState<number[]>([]);
   const [selectedSalesOrders, setSelectedSalesOrders] = useState<SalesOrderListType[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -54,6 +61,12 @@ const SalesOrderListComponent = () => {
           debouncedSearch,
           "salesorderno, customerid, custcompanyname, warehousename, statusname"
         );
+        if (statusFilter) {
+          filters.filters = [
+            ...filters.filters,
+            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
+          ];
+        }
         const result = await handleTryCatch(async () => {
           const { data } = await getSalesOrderList({
             variables: {
@@ -86,7 +99,7 @@ const SalesOrderListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSalesOrderList, debouncedSearch]
+    [selectedOutlet, dispatch, getSalesOrderList, debouncedSearch, statusFilter]
   );
 
   useEffect(() => {
@@ -176,6 +189,21 @@ const SalesOrderListComponent = () => {
     router.push(`${basePath}/sales/invoice_from_order/${salesorderno}`);
   }, [selectedSalesOrders, router, basePath]);
 
+  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("so-list");
+
+  const columnDefs = useMemo(
+    () => salesOrderColumnDefs.map((col) =>
+      col.field === "statusname" ? { ...col, cellRenderer: StatusPillRenderer } : col
+    ),
+    []
+  );
+
+  const { data: summaryData, loading: summaryLoading } = useQuery(GET_SO_DAILY_SUMMARY_QUERY, {
+    variables: { outletid: selectedOutlet },
+    skip: !selectedOutlet,
+  });
+  const summary = summaryData?.getSODailySummary ?? null;
+
   return (
     <>
       <SalesOrderHeader
@@ -206,9 +234,32 @@ const SalesOrderListComponent = () => {
           onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
         />
       )}
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Sales Order Daily Summary">
+          <DailyStatusCards
+            data={summary}
+            loading={summaryLoading}
+            labelOverrides={{ revenue: "Value Today", total: "Orders Today", avg: "Avg Order", open: "Open Today" }}
+          />
+          <StatusFilterChips
+            active={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
+              gridRef.current?.api?.refreshServerSide({ purge: true });
+            }}
+            counts={{
+              total: summary?.total_today ?? 0,
+              paid: summary?.paid_today ?? 0,
+              pending: summary?.pending_today ?? 0,
+              voided: summary?.voided_today ?? 0,
+            }}
+          />
+        </SummaryPanelWrapper>
+      )}
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
+            gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
@@ -217,12 +268,12 @@ const SalesOrderListComponent = () => {
           <div className="ag-theme-quartz custom-theme">
             <POSGrid
               ref={gridRef}
-              columnDefs={salesOrderColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               onSelectionChanged={handleSelectionChanged}
+              heightOffset={300 + panelOffset}
               defaultColDef={{
                 filter: !debouncedSearch,
-                floatingFilter: !debouncedSearch,
               }}
               rowSelection={{
                 mode: "multiRow",

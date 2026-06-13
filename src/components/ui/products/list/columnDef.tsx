@@ -6,9 +6,12 @@ import dayjs from "dayjs";
 import { TIME_FORMAT } from "@/lib/config/constants";
 
 export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
-  return params.value !== null
-    ? `${detectUserCurrency().format(params.value)}`
-    : params.value;
+  if (params.value === null || params.value === undefined) return null;
+  return (
+    <span style={{ display: "block", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+      {detectUserCurrency().format(params.value)}
+    </span>
+  );
 };
 
 const dateRenderer = (params: ICellRendererParams) =>
