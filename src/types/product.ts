@@ -39,7 +39,7 @@ export type ProductListType = {
   itemcode?: string;
   itemid?: number;
   itemdescription?: string;
-  itembarcodeid?: number;
+  itembarcodeid?: string;
   itemsellprice?: number;
   categoryname?: string;
   subcategoryname?: string;

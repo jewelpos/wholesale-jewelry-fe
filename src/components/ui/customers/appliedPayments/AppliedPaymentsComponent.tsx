@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -29,6 +29,30 @@ import CustomerPaymentActions from "./CustomerPaymentActions";
 import { paymentModalTypes } from "@/lib/config/constants";
 import SelectCustomer from "@/components/forms/SelectCustomer";
 import PaymentPrintModal from "./PaymentPrintModal";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
+import ReportSummaryCards, { SummaryCardDef } from "../../reports/shared/ReportSummaryCards";
+import ReportMiniChart from "../../reports/shared/ReportMiniChart";
+import dayjs from "dayjs";
+
+const NO_FILTER: never[] = [];
+
+type ModePill = "all" | "Check" | "Cash" | "Charge" | "CashChk" | "MnyOrd" | "CrdInv" | "WireTrn" | "ReDep" | "NSF" | "Void" | "WriteOff";
+
+const MODE_PILLS: { key: ModePill; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "Check", label: "Check" },
+  { key: "Cash", label: "Cash" },
+  { key: "Charge", label: "Charge" },
+  { key: "CashChk", label: "CashChk" },
+  { key: "MnyOrd", label: "MnyOrd" },
+  { key: "CrdInv", label: "CrdInv" },
+  { key: "WireTrn", label: "WireTrn" },
+  { key: "ReDep", label: "ReDep" },
+  { key: "NSF", label: "NSF" },
+  { key: "Void", label: "Void" },
+  { key: "WriteOff", label: "WriteOff" },
+];
 
 const AppliedPaymentsComponent = () => {
   const router = useRouter();
@@ -38,9 +62,9 @@ const AppliedPaymentsComponent = () => {
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
 
-  const [getCustomerPaymentList] = useLazyQuery(GET_CUSTOMER_PAYMENT_LIST_QUERY);
+  const [getCustomerPaymentList] = useLazyQuery(GET_CUSTOMER_PAYMENT_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
   const [paymentModal, setPaymentModal] = useState<string>("");
   const [showPrint, setShowPrint] = useState(false);
   const [printPayments, setPrintPayments] = useState<CustomerPaymentListType[]>([]);
@@ -51,8 +75,73 @@ const AppliedPaymentsComponent = () => {
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
-
   const [voidRow, setVoidRow] = useState<CustomerPaymentListType | null>(null);
+  const [modePill, setModePill] = useState<ModePill>("all");
+
+  useEffect(() => {
+    if (parsedOutletId) setSelectedOutlet(parsedOutletId);
+  }, [parsedOutletId]);
+
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("applied-payments");
+
+  const outletFilter = selectedOutlet
+    ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutlet } }]
+    : NO_FILTER;
+
+  const { data: statsData, loading: statsLoading } = useQuery(GET_CUSTOMER_PAYMENT_LIST_QUERY, {
+    variables: {
+      outletid: selectedOutlet ?? 0,
+      page: 1,
+      perpage: 2000,
+      filters: outletFilter,
+      sortModel: NO_FILTER,
+      rowGroupCols: NO_FILTER,
+      groupKeys: NO_FILTER,
+    },
+    skip: !selectedOutlet,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const paymentStats = useMemo(() => {
+    const rows: CustomerPaymentListType[] = statsData?.getCustomerPaymentList?.data ?? [];
+    let totalCollected = 0, voidCount = 0, voidValue = 0, validCount = 0;
+    const monthlyMap: Record<string, number> = {};
+
+    for (const r of rows) {
+      const amt = Number(r.amountpaid) || 0;
+      if (r.voidpayment) {
+        voidCount++;
+        voidValue += amt;
+      } else {
+        totalCollected += amt;
+        validCount++;
+        const month = r.paymentdate ? dayjs(r.paymentdate).format("MMM YYYY") : "Unknown";
+        monthlyMap[month] = (monthlyMap[month] || 0) + amt;
+      }
+    }
+
+    const sortedMonths = Object.keys(monthlyMap).sort((a, b) =>
+      dayjs(a, "MMM YYYY").valueOf() - dayjs(b, "MMM YYYY").valueOf()
+    );
+    const monthlyLabels = sortedMonths.slice(-12);
+    const monthlyValues = monthlyLabels.map((m) => monthlyMap[m] || 0);
+
+    return {
+      totalCollected,
+      voidCount,
+      voidValue,
+      avgPayment: validCount > 0 ? totalCollected / validCount : 0,
+      monthlyLabels,
+      monthlyValues,
+    };
+  }, [statsData]);
+
+  const summaryCards: SummaryCardDef[] = [
+    { label: "Total Collected", value: paymentStats.totalCollected, format: "currency" },
+    { label: "# Void Payments", value: paymentStats.voidCount, format: "number" },
+    { label: "Void Value", value: paymentStats.voidValue, format: "currency" },
+    { label: "Avg Payment", value: paymentStats.avgPayment, format: "currency" },
+  ];
 
   const handleVoidClick = (row: CustomerPaymentListType) => {
     setVoidRow(row);
@@ -65,7 +154,7 @@ const AppliedPaymentsComponent = () => {
       router.replace(pathname);
       if (voidRow) {
         setVoidRow(null);
-        gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+        gridRef.current?.api?.refreshServerSide({ purge: true });
       }
       return;
     }
@@ -83,34 +172,52 @@ const AppliedPaymentsComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filtersMain = filterVariables(params, debouncedSearch, "transactionno, custcompanyname");
+  const selectedOutletRef = useRef(selectedOutlet);
+  const modePillRef = useRef(modePill);
+  const debouncedSearchRef = useRef(debouncedSearch);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
+  useEffect(() => { modePillRef.current = modePill; }, [modePill]);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
 
-        const result = await handleTryCatch(async () => {
-          const { data } = await getCustomerPaymentList({
-            variables: { outletid: selectedOutlet, ...filtersMain },
-          });
-          if (data.getCustomerPaymentList) {
-            params.success({
-              rowData: data.getCustomerPaymentList.data,
-              rowCount: data.getCustomerPaymentList.total,
-            });
-            if (!data.getCustomerPaymentList.data.length) gridRef.current?.api?.showNoRowsOverlay();
-            else gridRef.current?.api?.hideOverlay();
-          }
-          return true;
-        });
-        if (result.error) {
-          gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
-          params.fail();
-        }
-      },
-    }),
-    [selectedOutlet, dispatch, getCustomerPaymentList, debouncedSearch]
-  );
+  const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
+    const outlet = selectedOutletRef.current;
+    if (!outlet) { params.fail(); return; }
+
+    const filtersMain = filterVariables(params, debouncedSearchRef.current, "transactionno, custcompanyname");
+    const mode = modePillRef.current;
+    const modeExtra =
+      mode !== "all"
+        ? [{ key: "paymode", value: { filterType: "text", type: "equals", filter: mode } }]
+        : [];
+
+    const result = await handleTryCatch(async () => {
+      const { data } = await getCustomerPaymentList({
+        variables: {
+          outletid: outlet,
+          ...filtersMain,
+          filters: [
+            ...filtersMain.filters,
+            ...modeExtra,
+            { key: "outletid", value: { filterType: "number", type: "equals", filter: outlet } },
+          ],
+        },
+      });
+      if (data.getCustomerPaymentList) {
+        params.success({ rowData: data.getCustomerPaymentList.data, rowCount: data.getCustomerPaymentList.total });
+        if (!data.getCustomerPaymentList.data.length) gridRef.current?.api?.showNoRowsOverlay();
+        else gridRef.current?.api?.hideOverlay();
+      }
+      return true;
+    });
+    if (result.error) {
+      gridRef.current?.api?.showNoRowsOverlay();
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      params.fail();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const datasource = useRef({ getRows }).current;
 
   const columnDefs = useMemo(() => {
     return [
@@ -135,10 +242,16 @@ const AppliedPaymentsComponent = () => {
   }, [handleVoidClick]);
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
+    if (gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
+  }, [gridReady, datasource]);
+
+  useEffect(() => {
+    if (!gridReady) return;
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutlet, modePill, debouncedSearch]);
 
   const fetchAndPrint = async (customerid: number) => {
     setPrintLoading(true);
@@ -180,27 +293,68 @@ const AppliedPaymentsComponent = () => {
   };
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <AppliedPaymentHeader
         setPaymentModal={setPaymentModalAndSyncUrl}
         onPrint={handlePrint}
         onEmail={handleEmail}
         onExport={handleExport}
       />
-      <div className="card table-list-card">
-        <div className="card-body p-2">
+
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Payment Summary">
+          <ReportSummaryCards cards={summaryCards} loading={statsLoading && !statsData} />
+          <ReportMiniChart
+            labels={paymentStats.monthlyLabels}
+            values={paymentStats.monthlyValues}
+            title="Monthly Collections"
+            type="area"
+            color="#10b981"
+            height={120}
+            loading={statsLoading && !statsData}
+            defaultCollapsed
+          />
+        </SummaryPanelWrapper>
+      )}
+
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <CustomFilterSections
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
+            setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
           />
-          <div className="ag-theme-quartz custom-theme">
+
+          <div className="d-flex gap-1 flex-wrap mb-2">
+            {MODE_PILLS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setModePill(p.key)}
+                style={{
+                  fontSize: 11,
+                  padding: "3px 12px",
+                  borderRadius: 20,
+                  fontWeight: modePill === p.key ? 600 : 400,
+                  backgroundColor: modePill === p.key ? "#10b981" : "var(--surface-muted)",
+                  color: modePill === p.key ? "#fff" : "var(--text-secondary)",
+                  border: `1px solid ${modePill === p.key ? "#10b981" : "var(--border-subtle)"}`,
+                  cursor: "pointer",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              fillHeight
               defaultColDef={{ filter: !debouncedSearch }}
               masterDetail
               detailCellRenderer={CustomerAppliedPaymentComponent}
@@ -223,7 +377,6 @@ const AppliedPaymentsComponent = () => {
         />
       )}
 
-      {/* Customer picker for print */}
       {showCustomerPicker && (
         <div
           className="modal fade show"
@@ -283,7 +436,7 @@ const AppliedPaymentsComponent = () => {
           onClose={() => setShowPrint(false)}
         />
       )}
-    </>
+    </div>
   );
 };
 

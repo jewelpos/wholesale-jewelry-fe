@@ -178,10 +178,10 @@ const SupplierLedgerActitvityComponent = () => {
   }, [supplierid]);
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <SupplierLedgerActivityHeader onExport={supplierid ? handleExport : undefined} />
-      <div className="card table-list-card">
-        <div className="card-body p-2">
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {/* Filter bar */}
           <div className="row mb-3 g-2 align-items-end">
             <div className="col-lg-4 col-md-6">
@@ -283,41 +283,44 @@ const SupplierLedgerActitvityComponent = () => {
             />
           )}
 
-          {!supplierid ? (
-            <div
-              className="d-flex align-items-center justify-content-center text-muted"
-              style={{ height: 200, fontSize: 14 }}
-            >
-              Select a supplier to view ledger activity
-            </div>
-          ) : (
-            <POSGridClient
-              ref={gridRef}
-              columnDefs={supplierLedgerColumnDefs}
-              onGridReady={handleOnGridReady}
-              rowData={rowData}
-              loading={loading}
-              pinnedTopRowData={pinnedTopRow}
-              pinnedBottomRowData={pinnedBottomRow}
-              rowGroupPanelShow="never"
-              defaultColDef={{
-                filter: true,
-                floatingFilter: true,
-                sortable: false,
-                enableRowGroup: false,
-              }}
-              getRowStyle={(params): RowStyle | undefined => {
-                if (params.data?.ledgercode === OB_CODE)
-                  return { background: "#f0f4ff", fontWeight: "bold", fontStyle: "italic" };
-                if (params.node.rowPinned === "bottom")
-                  return { background: "#f8f9fa", fontWeight: "bold" };
-                return undefined;
-              }}
-            />
-          )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {!supplierid ? (
+              <div
+                className="d-flex align-items-center justify-content-center text-muted"
+                style={{ height: "100%", fontSize: 14 }}
+              >
+                Select a supplier to view ledger activity
+              </div>
+            ) : (
+              <POSGridClient
+                ref={gridRef}
+                columnDefs={supplierLedgerColumnDefs}
+                onGridReady={handleOnGridReady}
+                rowData={rowData}
+                loading={loading}
+                pinnedTopRowData={pinnedTopRow}
+                pinnedBottomRowData={pinnedBottomRow}
+                rowGroupPanelShow="never"
+                fillHeight
+                defaultColDef={{
+                  filter: true,
+                  floatingFilter: true,
+                  sortable: false,
+                  enableRowGroup: false,
+                }}
+                getRowStyle={(params): RowStyle | undefined => {
+                  if (params.data?.ledgercode === OB_CODE)
+                    return { background: "#f0f4ff", fontWeight: "bold", fontStyle: "italic" };
+                  if (params.node.rowPinned === "bottom")
+                    return { background: "#f8f9fa", fontWeight: "bold" };
+                  return undefined;
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useMutation } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -8,7 +8,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { DELETE_PRODUCT_MUTATION } from "@/lib/graphql/mutations/products";
 import { ProductListType } from "@/types/product";
 import Link from "next/link";
-import { Camera, Edit, Eye, Printer, Settings, Trash2 } from "react-feather";
+import { Camera, Edit, Eye, Printer, Settings, Trash2, X } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useAppDispatch } from "@/lib/store/hook";
 import ProductAdjustmentModal from "./ProductAdjustmentModal";
@@ -42,9 +42,15 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
-  const [imgTooltipPos, setImgTooltipPos] = useState<{ top: number; left: number } | null>(null);
-  const cameraRef = useRef<HTMLAnchorElement>(null);
+  const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
   const imageUrl = parseFirstImageUrl(data.itemimagepath);
+
+  useEffect(() => {
+    if (!imgLightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setImgLightboxOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [imgLightboxOpen]);
 
   const handleDelete = async (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -118,24 +124,15 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     onAdjustmentSuccess?.();
   };
 
-  const handleCameraEnter = () => {
-    if (!imageUrl || !cameraRef.current) return;
-    const rect = cameraRef.current.getBoundingClientRect();
-    setImgTooltipPos({ top: rect.bottom + 6, left: rect.left });
-  };
-
   return (
     <div className="action-table-data">
       <div className="edit-delete-action">
         <div className="input-block add-lists"></div>
         {/* Camera / image icon */}
         <a
-          ref={cameraRef}
           className="p-1 me-1"
           href="#"
-          onClick={(e) => e.preventDefault()}
-          onMouseEnter={handleCameraEnter}
-          onMouseLeave={() => setImgTooltipPos(null)}
+          onClick={(e) => { e.preventDefault(); if (imageUrl) setImgLightboxOpen(true); }}
           title={imageUrl ? "View image" : "No image"}
           style={{ cursor: imageUrl ? "pointer" : "default" }}
         >
@@ -197,37 +194,59 @@ const ProductActions: React.FC<ProductActionsProps> = ({
           onClose={() => setIsPrintLabelsOpen(false)}
         />
       )}
-      {imgTooltipPos && imageUrl && typeof window !== "undefined" &&
+      {imgLightboxOpen && imageUrl && typeof window !== "undefined" &&
         createPortal(
           <div
+            onClick={() => setImgLightboxOpen(false)}
             style={{
-              position: "fixed",
-              top: imgTooltipPos.top,
-              left: imgTooltipPos.left,
-              zIndex: 9999,
-              background: "#fff",
-              border: "1px solid #e2e8f0",
-              borderRadius: 10,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
-              padding: 10,
-              pointerEvents: "none",
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.65)",
+              display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
-            <img
-              src={imageUrl}
-              alt={data.itemdescription ?? "product"}
-              style={{ width: 180, height: 180, objectFit: "contain", borderRadius: 6, display: "block" }}
-            />
-            {data.itemdescription && (
-              <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: "#0f172a", textAlign: "center" }}>
-                {data.itemdescription}
-              </div>
-            )}
-            {data.itemcode && (
-              <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", marginTop: 2 }}>
-                {data.itemcode}
-              </div>
-            )}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff",
+                borderRadius: 12,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+                padding: 20,
+                maxWidth: "90vw",
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+                position: "relative",
+              }}
+            >
+              <button
+                onClick={() => setImgLightboxOpen(false)}
+                style={{
+                  position: "absolute", top: 10, right: 10,
+                  background: "#f1f5f9", border: "none", borderRadius: 6,
+                  width: 28, height: 28, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <X size={14} color="#64748b" />
+              </button>
+              <img
+                src={imageUrl}
+                alt={data.itemdescription ?? "product"}
+                style={{ width: 480, height: 480, objectFit: "contain", borderRadius: 8, display: "block" }}
+              />
+              {data.itemdescription && (
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "center" }}>
+                  {data.itemdescription}
+                </div>
+              )}
+              {data.itemcode && (
+                <div style={{ fontSize: 12, color: "#64748b", textAlign: "center" }}>
+                  {data.itemcode}
+                </div>
+              )}
+            </div>
           </div>,
           document.body
         )

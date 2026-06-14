@@ -30,6 +30,8 @@ import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import PurchaseOrderActions from "./PurchaseOrderActions";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../grid/SummaryPanelWrapper";
 
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
@@ -49,6 +51,9 @@ const PurchaseOrderListComponent = () => {
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const knownStatusesRef = useRef(new Set<string>());
+  const [knownStatuses, setKnownStatuses] = useState<string[]>([]);
 
   const config = getEnvironmentConfig();
 
@@ -65,55 +70,49 @@ const PurchaseOrderListComponent = () => {
           debouncedSearch,
           "ponumber, suppliername"
         );
+        if (statusFilter) {
+          filters.filters = [
+            ...filters.filters,
+            { key: "status", value: { filterType: "text", type: "equals", filter: statusFilter } },
+          ];
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let variables: any = {
-          storeid: parsedStoreId,
-        };
+        let variables: any = { storeid: parsedStoreId };
         if (selectedSupplier !== -1) {
-          variables = {
-            ...variables,
-            supplierid: selectedSupplier,
-          };
+          variables = { ...variables, supplierid: selectedSupplier };
         }
         const result = await handleTryCatch(async () => {
           const { data } = await getPurchaseOrdersList({
-            variables: {
-              ...variables,
-              ...filters,
-            },
+            variables: { ...variables, ...filters },
           });
           if (data.getSupplierPurchaseOrderList) {
+            const rows: PurchaseOrder[] = data.getSupplierPurchaseOrderList.data;
             params.success({
-              rowData: data.getSupplierPurchaseOrderList.data,
+              rowData: rows,
               rowCount: data.getSupplierPurchaseOrderList.total,
             });
-            if (!data.getSupplierPurchaseOrderList.data.length) {
+            if (!rows.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
+            }
+            // Accumulate unique statuses for dynamic pills
+            const prevSize = knownStatusesRef.current.size;
+            rows.forEach((r) => { if (r.status) knownStatusesRef.current.add(r.status); });
+            if (knownStatusesRef.current.size > prevSize) {
+              setKnownStatuses([...knownStatusesRef.current].sort());
             }
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+          dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
       },
     }),
-    [
-      parsedStoreId,
-      selectedSupplier,
-      dispatch,
-      getPurchaseOrdersList,
-      debouncedSearch,
-    ]
+    [parsedStoreId, selectedSupplier, dispatch, getPurchaseOrdersList, debouncedSearch, statusFilter]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -160,6 +159,8 @@ const PurchaseOrderListComponent = () => {
       gridRef.current.api.setGridOption("serverSideDatasource", datasource);
     }
   }, [datasource, gridReady, debouncedSearch]);
+
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 
   const handleExport = async (poNumbers: number[], type: string) => {
     setLoading(true);
@@ -226,58 +227,91 @@ const PurchaseOrderListComponent = () => {
 
   return (
     <>
-      <PurchaseOrderListHeader
-        selectedPOs={selectedPOs}
-        handleExport={handleExport}
-        onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "purchase-orders", sheetName: "Purchase Orders" })}
-        onEmail={() => setShowEmailModal(true)}
-      />
-      <POStatsCards
-        storeid={parsedStoreId}
-        supplierid={selectedSupplier}
-      />
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <CustomFilterSections
-            gridRef={gridRef}
-            search={search}
-            setSearch={setSearch}
-            selectedSupplier={selectedSupplier}
-            setSelectedSupplier={setSelectedSupplier}
-          />
-          <div className="ag-theme-quartz custom-theme">
-            <POSGrid
-              ref={gridRef}
-              columnDefs={columnDefs}
-              onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
-                mode: "multiRow",
-                checkboxes: true,
-                headerCheckbox: true,
-                suppressRowClickSelection: true,
-              }}
-              onSelectionChanged={() => {
-                const selected =
-                  gridRef.current?.api
-                    ?.getSelectedRows()
-                    ?.map?.((row: PurchaseOrder) => Number(row.ponumber)) || [];
-                setSelectedPOs(selected);
-              }}
-              onRowClicked={(e) => {
-                const target = e.event?.target as HTMLElement | null;
-                if (target?.closest(".ag-selection-checkbox")) return;
-                if (target?.closest(".action-table-data")) return;
-                if (e.data) setSelectedPO(e.data as PurchaseOrder);
-              }}
-              getRowStyle={(params) =>
-                params.data?.ponumber === selectedPO?.ponumber
-                  ? { background: "#eff6ff" }
-                  : undefined
-              }
+      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
+        <PurchaseOrderListHeader
+          selectedPOs={selectedPOs}
+          handleExport={handleExport}
+          onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "purchase-orders", sheetName: "Purchase Orders" })}
+          onEmail={() => setShowEmailModal(true)}
+        />
+        {isAdmin && (
+          <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Purchase Order Summary">
+            <POStatsCards storeid={parsedStoreId} supplierid={selectedSupplier} />
+          </SummaryPanelWrapper>
+        )}
+        <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+          <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <CustomFilterSections
+              gridRef={gridRef}
+              search={search}
+              setSearch={setSearch}
+              selectedSupplier={selectedSupplier}
+              setSelectedSupplier={setSelectedSupplier}
             />
+            {knownStatuses.length > 0 && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                {[null, ...knownStatuses].map((s) => {
+                  const isActive = statusFilter === s;
+                  return (
+                    <button
+                      key={s ?? "__all__"}
+                      type="button"
+                      onClick={() => setStatusFilter(isActive ? null : s)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        background: isActive ? "var(--accent)" : "var(--surface-muted)",
+                        color: isActive ? "#fff" : "var(--text-secondary)",
+                        border: isActive ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
+                      }}
+                    >
+                      {s ?? "All"}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <POSGrid
+                ref={gridRef}
+                columnDefs={columnDefs}
+                onGridReady={handleOnGridReady}
+                fillHeight
+                defaultColDef={{
+                  filter: !debouncedSearch,
+                }}
+                rowSelection={{
+                  mode: "multiRow",
+                  checkboxes: true,
+                  headerCheckbox: true,
+                  suppressRowClickSelection: true,
+                }}
+                onSelectionChanged={() => {
+                  const selected =
+                    gridRef.current?.api
+                      ?.getSelectedRows()
+                      ?.map?.((row: PurchaseOrder) => Number(row.ponumber)) || [];
+                  setSelectedPOs(selected);
+                }}
+                onRowClicked={(e) => {
+                  const target = e.event?.target as HTMLElement | null;
+                  if (target?.closest(".ag-selection-checkbox")) return;
+                  if (target?.closest(".action-table-data")) return;
+                  if (e.data) setSelectedPO(e.data as PurchaseOrder);
+                }}
+                getRowStyle={(params) =>
+                  params.data?.ponumber === selectedPO?.ponumber
+                    ? { background: "#eff6ff" }
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,18 @@
 import React, { Dispatch, SetStateAction, useEffect } from "react";
 import Select from "react-select";
 import { WarehouseType } from "@/types/warehouse";
-import { Col, Row } from "react-bootstrap";
+import { selectStyles } from "@/lib/styles/selectStyles";
+
+const filterSelectStyles = {
+  ...selectStyles,
+  valueContainer: (base: Record<string, unknown>) => ({
+    ...base,
+    paddingTop: 2,
+    paddingBottom: 2,
+    paddingLeft: 8,
+    paddingRight: 8,
+  }),
+};
 
 interface WarehouseFilterProps {
   fetchWarehousesList: () => void;
@@ -38,49 +49,40 @@ const WarehouseFilter = ({
     }
   }, [warehouses, setSelectedWarehouse]);
 
-  const selectEl = (
-    <Select
-      className="img-select"
-      classNamePrefix="react-select"
-      options={warehouseList}
-      value={
-        selectedWarehouse
-          ? {
-              value: selectedWarehouse,
-              label:
-                warehouseList.find((w) => w.value === selectedWarehouse)
-                  ?.label || "",
-            }
-          : null
-      }
-      onChange={(option) => {
-        const parsedId = parseInt(option?.value as unknown as string, 10);
-        setSelectedWarehouse(parsedId);
-      }}
-      isLoading={loading}
-      isClearable
-      styles={stacked ? undefined : { container: (provided) => ({ ...provided, width: "10rem" }) }}
-    />
-  );
-
   if (stacked) {
     return (
       <div>
         <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Warehouse</label>
-        {selectEl}
+        <div className="filter-select-wrap">
+          <Select
+            className="w-100"
+            classNamePrefix="react-select"
+            options={warehouseList}
+            value={selectedWarehouse ? { value: selectedWarehouse, label: warehouseList.find((w) => w.value === selectedWarehouse)?.label || "" } : null}
+            onChange={(option) => setSelectedWarehouse(parseInt(option?.value as unknown as string, 10))}
+            isLoading={loading}
+            isClearable
+            styles={filterSelectStyles}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <Row className="d-flex align-items-center justify-content-center">
-      <Col xs={6} className="mr-0 text-end">
-        <h6 className="p-0 m-0">Select Warehouse</h6>
-      </Col>
-      <Col xs={6} className="p-0 m-0">
-        {selectEl}
-      </Col>
-    </Row>
+    <div className="filter-select-wrap w-100">
+      <Select
+        className="w-100"
+        classNamePrefix="react-select"
+        placeholder="Select Warehouse"
+        options={warehouseList}
+        value={selectedWarehouse ? { value: selectedWarehouse, label: warehouseList.find((w) => w.value === selectedWarehouse)?.label || "" } : null}
+        onChange={(option) => setSelectedWarehouse(parseInt(option?.value as unknown as string, 10))}
+        isLoading={loading}
+        isClearable
+        styles={filterSelectStyles}
+      />
+    </div>
   );
 };
 

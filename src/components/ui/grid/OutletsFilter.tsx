@@ -5,7 +5,18 @@ import { SelectOption } from "@/types/form";
 import Select from "react-select";
 import { useParams } from "next/navigation";
 import { OutletType } from "@/types/outlet";
-import { Col, Row } from "react-bootstrap";
+import { selectStyles } from "@/lib/styles/selectStyles";
+
+const filterSelectStyles = {
+  ...selectStyles,
+  valueContainer: (base: Record<string, unknown>) => ({
+    ...base,
+    paddingTop: 2,
+    paddingBottom: 2,
+    paddingLeft: 8,
+    paddingRight: 8,
+  }),
+};
 
 type PropsType = {
   fetchOutletsList: (parsedStoreId: number[]) => void;
@@ -50,49 +61,40 @@ const OutletsFilter = ({
     }
   }, [outlets, setSelectedOutlet, parsedOutletId]);
 
-  const selectEl = (
-    <Select<SelectOption>
-      className="img-select"
-      classNamePrefix="react-select"
-      options={outletList}
-      value={
-        selectedOutlet
-          ? {
-              value: selectedOutlet,
-              label:
-                outletList.find((outlet) => outlet.value === selectedOutlet)
-                  ?.label || "",
-            }
-          : null
-      }
-      onChange={(option) => {
-        const parsedId = parseInt(option?.value as string, 10);
-        setSelectedOutlet(parsedId);
-      }}
-      isLoading={loading}
-      isClearable
-      styles={stacked ? undefined : { container: (provided) => ({ ...provided, width: "10rem" }) }}
-    />
-  );
-
   if (stacked) {
     return (
       <div>
         <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Outlet</label>
-        {selectEl}
+        <div className="filter-select-wrap">
+          <Select<SelectOption>
+            className="w-100"
+            classNamePrefix="react-select"
+            options={outletList}
+            value={selectedOutlet ? { value: selectedOutlet, label: outletList.find((o) => o.value === selectedOutlet)?.label || "" } : null}
+            onChange={(option) => setSelectedOutlet(parseInt(option?.value as string, 10))}
+            isLoading={loading}
+            isClearable
+            styles={filterSelectStyles}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <Row className="d-flex align-items-center justify-content-center">
-      <Col xs={6} className="mr-0 text-end">
-        <h6 className="p-0 m-0">Select Outlet</h6>
-      </Col>
-      <Col xs={6} className="p-0 m-0">
-        {selectEl}
-      </Col>
-    </Row>
+    <div className="filter-select-wrap w-100">
+      <Select<SelectOption>
+        className="w-100"
+        classNamePrefix="react-select"
+        placeholder="Select Outlet"
+        options={outletList}
+        value={selectedOutlet ? { value: selectedOutlet, label: outletList.find((o) => o.value === selectedOutlet)?.label || "" } : null}
+        onChange={(option) => setSelectedOutlet(parseInt(option?.value as string, 10))}
+        isLoading={loading}
+        isClearable
+        styles={filterSelectStyles}
+      />
+    </div>
   );
 };
 

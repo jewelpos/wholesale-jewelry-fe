@@ -44,10 +44,11 @@ import { exportGridToExcel } from "@/lib/utils/exportGrid";
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const config = getEnvironmentConfig();
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
   const gridRef = useRef<AgGridReact<SalesInvoiceListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -57,96 +58,82 @@ const SalesListComponent = () => {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
+  useEffect(() => { if (parsedOutletId) setSelectedOutlet(parsedOutletId); }, [parsedOutletId]);
+
+  const selectedOutletRef = useRef(selectedOutlet);
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const statusFilterRef = useRef(statusFilter);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
+
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "invoicenumber, customerid, companyname");
-        if (statusFilter) {
-          filters.filters = [
-            ...filters.filters,
-            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
-          ];
-        }
-        const result = await handleTryCatch(async () => {
-          const { data } = await getInvoiceList({
-            variables: {
-              outletid: selectedOutlet,
-              ...filters,
-            },
-          });
-          if (data.getInvoiceList) {
-            params.success({
-              rowData: data.getInvoiceList.data,
-              rowCount: data.getInvoiceList.total,
-            });
-            if (!data.getInvoiceList.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-              // Clear any existing pinned bottom totals if no rows
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-            } else {
-              gridRef.current?.api?.hideOverlay();
-              // Compute grand totals for the current loaded set and pin as bottom row
-              const rows = data.getInvoiceList.data as SalesInvoiceListType[];
-              const totals = rows.reduce(
-                (acc, r) => {
-                  acc.numberofitems += Number(r.numberofitems || 0);
-                  acc.totalamount += Number(r.totalamount || 0);
-                  acc.discountamount += Number(r.discountamount || 0);
-                  acc.subtotal += Number(r.subtotal || 0);
-                  acc.salestax += Number(r.salestax || 0);
-                  acc.shipping += Number(r.shipping || 0);
-                  acc.netamount += Number(r.netamount || 0);
-                  acc.amountreceived += Number(r.amountreceived || 0);
-                  acc.balancedue += Number(r.balancedue || 0);
-                  return acc;
-                },
-                {
-                  numberofitems: 0,
-                  totalamount: 0,
-                  discountamount: 0,
-                  subtotal: 0,
-                  salestax: 0,
-                  shipping: 0,
-                  netamount: 0,
-                  amountreceived: 0,
-                  balancedue: 0,
-                }
-              );
-              const pinnedRow: Partial<SalesInvoiceListType> = {
-                invoicenumber: "Page Total" as unknown as number,
-                ...totals,
-              };
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", [pinnedRow]);
-            }
-          }
-          return true;
-        });
-        if (result.error) {
+  const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
+    if (!selectedOutletRef.current) {
+      params.success({ rowData: [], rowCount: 0 });
+      gridRef.current?.api?.showNoRowsOverlay();
+      return;
+    }
+    const filters = filterVariables(params, debouncedSearchRef.current, "invoicenumber, customerid, companyname");
+    const sf = statusFilterRef.current;
+    if (sf) {
+      filters.filters = [
+        ...filters.filters,
+        { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } },
+      ];
+    }
+    const result = await handleTryCatch(async () => {
+      const { data } = await getInvoiceList({
+        variables: { outletid: selectedOutletRef.current, ...filters },
+      });
+      if (data.getInvoiceList) {
+        params.success({ rowData: data.getInvoiceList.data, rowCount: data.getInvoiceList.total });
+        if (!data.getInvoiceList.data.length) {
           gridRef.current?.api?.showNoRowsOverlay();
           gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
+        } else {
+          gridRef.current?.api?.hideOverlay();
+          const rows = data.getInvoiceList.data as SalesInvoiceListType[];
+          const totals = rows.reduce(
+            (acc, r) => {
+              acc.numberofitems += Number(r.numberofitems || 0);
+              acc.totalamount += Number(r.totalamount || 0);
+              acc.discountamount += Number(r.discountamount || 0);
+              acc.subtotal += Number(r.subtotal || 0);
+              acc.salestax += Number(r.salestax || 0);
+              acc.shipping += Number(r.shipping || 0);
+              acc.netamount += Number(r.netamount || 0);
+              acc.amountreceived += Number(r.amountreceived || 0);
+              acc.balancedue += Number(r.balancedue || 0);
+              return acc;
+            },
+            { numberofitems: 0, totalamount: 0, discountamount: 0, subtotal: 0, salestax: 0, shipping: 0, netamount: 0, amountreceived: 0, balancedue: 0 }
           );
-          params.fail();
+          gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
+            invoicenumber: "Page Total" as unknown as number, ...totals,
+          }]);
         }
-      },
-    }),
-    [selectedOutlet, dispatch, getInvoiceList, debouncedSearch, statusFilter]
-  );
+      }
+      return true;
+    });
+    if (result.error) {
+      gridRef.current?.api?.showNoRowsOverlay();
+      gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      params.fail();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const datasource = useRef({ getRows }).current;
 
   const handleDeleteSuccess = useCallback(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [datasource, gridReady, selectedOutlet]);
+    if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [gridReady]);
 
   const handleSelectionChanged = useCallback(() => {
     const selected = gridRef.current?.api?.getSelectedRows?.() || [];
@@ -253,17 +240,15 @@ const SalesListComponent = () => {
   );
 
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+    if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+  }, [gridReady, datasource]);
 
   useEffect(() => {
-    if (debouncedSearch && gridReady) {
-      gridRef?.current?.api?.setFilterModel(null);
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, gridReady, debouncedSearch]);
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutlet, debouncedSearch, statusFilter]);
 
   const handleEmailInvoice = useCallback(() => {
     if (selectedInvoiceNumbers.length > 0) setEmailModalOpen(true);
@@ -273,7 +258,7 @@ const SalesListComponent = () => {
     exportGridToExcel(gridRef.current?.api, { fileName: "invoices", sheetName: "Invoices" });
   }, []);
 
-  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("invoice-list");
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("invoice-list");
 
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_INVOICE_DAILY_SUMMARY_QUERY, {
     variables: { outletid: selectedOutlet },
@@ -282,7 +267,7 @@ const SalesListComponent = () => {
   const summary = summaryData?.getInvoiceDailySummary ?? null;
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <SalesListHeader
         selectedInvoiceNumbers={selectedInvoiceNumbers}
         onPrintInvoice={handlePrintInvoice}
@@ -311,6 +296,17 @@ const SalesListComponent = () => {
             loading={summaryLoading}
             labelOverrides={{ revenue: "Revenue Today", total: "Invoices Today", avg: "Avg Invoice", open: "Open Today" }}
           />
+        </SummaryPanelWrapper>
+      )}
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <CustomFilterSections
+            gridRef={gridRef}
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
           <StatusFilterChips
             active={statusFilter}
             onChange={(v) => {
@@ -324,30 +320,19 @@ const SalesListComponent = () => {
               voided: summary?.voided_today ?? 0,
             }}
           />
-        </SummaryPanelWrapper>
-      )}
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <CustomFilterSections
-            gridRef={gridRef}
-            search={search}
-            setSearch={setSearch}
-            selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
-          />
-          <div className="ag-theme-quartz custom-theme">
+          <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               onSelectionChanged={handleSelectionChanged}
-              heightOffset={300 + panelOffset}
+              fillHeight
               defaultColDef={{
                 filter: !debouncedSearch,
               }}
               rowSelection={{
                 mode: "multiRow",
-                checkboxes:   true,
+                checkboxes: true,
                 headerCheckbox: true,
                 suppressRowClickSelection: true,
               }}
@@ -362,7 +347,7 @@ const SalesListComponent = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

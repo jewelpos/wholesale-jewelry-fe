@@ -32,6 +32,8 @@ import SupplierListHeader from "./SupplierListHeader";
 import SupplierStatsCards from "./SupplierStatsCards";
 import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 import PaymentModal from "../appliedPayments/PaymentModal";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
@@ -108,6 +110,8 @@ const SupplierListComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("supplier-list");
+
   const columnDefs = useMemo<ColDef[]>(
     () => [
       ...supplierListcolumnDefs,
@@ -136,34 +140,41 @@ const SupplierListComponent = () => {
 
   return (
     <>
-      <SupplierListHeader
-        setShowInvoiceFormModal={setShowInvoiceFormModal}
-        setPaymentModal={setPaymentModal}
-      />
-      <SupplierStatsCards outletid={selectedOutlet} />
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <CustomFilterSections
-            gridRef={gridRef}
-            search={search}
-            setSearch={setSearch}
-            selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
-          />
-          <div className="ag-theme-quartz custom-theme">
-            <POSGrid
-              ref={gridRef}
-              columnDefs={columnDefs}
-              onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
-                mode: "singleRow",
-                checkboxes: false,
-                enableClickSelection: true,
-              }}
+      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
+        <SupplierListHeader
+          setShowInvoiceFormModal={setShowInvoiceFormModal}
+          setPaymentModal={setPaymentModal}
+        />
+        {isAdmin && (
+          <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Supplier Summary">
+            <SupplierStatsCards outletid={selectedOutlet} />
+          </SummaryPanelWrapper>
+        )}
+        <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+          <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <CustomFilterSections
+              gridRef={gridRef}
+              search={search}
+              setSearch={setSearch}
+              selectedOutlet={selectedOutlet}
+              setSelectedOutlet={setSelectedOutlet}
             />
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <POSGrid
+                ref={gridRef}
+                columnDefs={columnDefs}
+                onGridReady={handleOnGridReady}
+                fillHeight
+                defaultColDef={{
+                  filter: !debouncedSearch,
+                }}
+                rowSelection={{
+                  mode: "singleRow",
+                  checkboxes: false,
+                  enableClickSelection: true,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

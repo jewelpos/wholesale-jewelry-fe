@@ -19,6 +19,7 @@ interface POSGridClientProps extends AgGridReactProps {
   loading?: boolean;
   masterDetail?: boolean;
   height?: string;
+  fillHeight?: boolean;
 }
 
 const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
@@ -33,6 +34,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
       loading,
       masterDetail,
       height = "300px",
+      fillHeight = false,
       domLayout = "normal",
       ...props
     },
@@ -42,7 +44,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
     return (
       <div
         className="ag-theme-quartz custom-theme"
-        style={{ height: `calc(100vh - ${height})`, width: "100%" }}
+        style={{ height: fillHeight ? "100%" : `calc(100vh - ${height})`, width: "100%" }}
       >
         <AgGridReact
           ref={ref}

@@ -35,7 +35,6 @@ const SalesOrderListComponent = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { basePath } = useDefaultRoute();
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact<SalesOrderListType>>(null);
@@ -44,69 +43,75 @@ const SalesOrderListComponent = () => {
   const [selectedSalesOrders, setSelectedSalesOrders] = useState<SalesOrderListType[]>([]);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
   const config = getEnvironmentConfig();
+
+  useEffect(() => { if (parsedOutletId) setSelectedOutlet(parsedOutletId); }, [parsedOutletId]);
+
+  const selectedOutletRef = useRef(selectedOutlet);
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const statusFilterRef = useRef(statusFilter);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesOrderListType>) => {
     setGridReady(true);
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
-          params,
-          debouncedSearch,
-          "salesorderno, customerid, custcompanyname, warehousename, statusname"
-        );
-        if (statusFilter) {
-          filters.filters = [
-            ...filters.filters,
-            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
-          ];
-        }
-        const result = await handleTryCatch(async () => {
-          const { data } = await getSalesOrderList({
-            variables: {
-              outletid: selectedOutlet,
-              ...filters,
-            },
-          });
-          if (data.getSalesOrderList) {
-            params.success({
-              rowData: data.getSalesOrderList.data,
-              rowCount: data.getSalesOrderList.total,
-            });
-            if (!data.getSalesOrderList.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-            } else {
-              gridRef.current?.api?.hideOverlay();
-            }
-          }
-          return true;
-        });
-        if (result.error) {
-          gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
-          params.fail();
-        }
-      },
-    }),
-    [selectedOutlet, dispatch, getSalesOrderList, debouncedSearch, statusFilter]
-  );
+  const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
+    if (!selectedOutletRef.current) {
+      params.success({ rowData: [], rowCount: 0 });
+      gridRef.current?.api?.showNoRowsOverlay();
+      return;
+    }
+    const filters = filterVariables(
+      params,
+      debouncedSearchRef.current,
+      "salesorderno, customerid, custcompanyname, warehousename, statusname"
+    );
+    const sf = statusFilterRef.current;
+    if (sf) {
+      filters.filters = [
+        ...filters.filters,
+        { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } },
+      ];
+    }
+    const result = await handleTryCatch(async () => {
+      const { data } = await getSalesOrderList({
+        variables: { outletid: selectedOutletRef.current, ...filters },
+      });
+      if (data.getSalesOrderList) {
+        params.success({ rowData: data.getSalesOrderList.data, rowCount: data.getSalesOrderList.total });
+        if (!data.getSalesOrderList.data.length) gridRef.current?.api?.showNoRowsOverlay();
+        else gridRef.current?.api?.hideOverlay();
+      }
+      return true;
+    });
+    if (result.error) {
+      gridRef.current?.api?.showNoRowsOverlay();
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      params.fail();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const datasource = useRef({ getRows }).current;
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, selectedOutlet, gridReady, debouncedSearch]);
+    if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+  }, [gridReady, datasource]);
+
+  useEffect(() => {
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutlet, debouncedSearch, statusFilter]);
 
   const handleSelectionChanged = useCallback(() => {
     const selected: SalesOrderListType[] = gridRef.current?.api?.getSelectedRows?.() || [];
@@ -189,7 +194,7 @@ const SalesOrderListComponent = () => {
     router.push(`${basePath}/sales/invoice_from_order/${salesorderno}`);
   }, [selectedSalesOrders, router, basePath]);
 
-  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("so-list");
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("so-list");
 
   const columnDefs = useMemo(
     () => salesOrderColumnDefs.map((col) =>
@@ -205,7 +210,7 @@ const SalesOrderListComponent = () => {
   const summary = summaryData?.getSODailySummary ?? null;
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <SalesOrderHeader
         selectedSalesOrderNumbers={selectedSalesOrderNumbers}
         canCreateInvoice={(() => {
@@ -241,6 +246,17 @@ const SalesOrderListComponent = () => {
             loading={summaryLoading}
             labelOverrides={{ revenue: "Value Today", total: "Orders Today", avg: "Avg Order", open: "Open Today" }}
           />
+        </SummaryPanelWrapper>
+      )}
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <CustomFilterSections
+            gridRef={gridRef}
+            search={search}
+            setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
+          />
           <StatusFilterChips
             active={statusFilter}
             onChange={(v) => {
@@ -254,24 +270,13 @@ const SalesOrderListComponent = () => {
               voided: summary?.voided_today ?? 0,
             }}
           />
-        </SummaryPanelWrapper>
-      )}
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <CustomFilterSections
-            gridRef={gridRef}
-            search={search}
-            setSearch={setSearch}
-            selectedOutlet={selectedOutlet}
-            setSelectedOutlet={setSelectedOutlet}
-          />
-          <div className="ag-theme-quartz custom-theme">
+          <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               onSelectionChanged={handleSelectionChanged}
-              heightOffset={300 + panelOffset}
+              fillHeight
               defaultColDef={{
                 filter: !debouncedSearch,
               }}
@@ -287,7 +292,7 @@ const SalesOrderListComponent = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -12,6 +12,7 @@ const SelectWarehouse = ({
   className,
   trigger,
   storeId,
+  outletId,
   disableField,
   isSystemOnly,
   ...field
@@ -19,13 +20,15 @@ const SelectWarehouse = ({
 any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { fetchWarehouseByStoreId, warehouses, loading } = useWarehouse();
+  const { fetchWarehouseByStoreId, fetchWarehouseByOutletId, warehouses, loading } = useWarehouse();
 
   useEffect(() => {
-    if (storeId) {
+    if (outletId) {
+      fetchWarehouseByOutletId(outletId);
+    } else if (storeId) {
       fetchWarehouseByStoreId(storeId);
     }
-  }, [fetchWarehouseByStoreId, storeId]);
+  }, [fetchWarehouseByStoreId, fetchWarehouseByOutletId, storeId, outletId]);
 
   const warehouseOptions: SelectOption[] = useMemo(() => {
     let warehousesFiltered = warehouses;

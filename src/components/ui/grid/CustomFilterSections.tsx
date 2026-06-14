@@ -86,8 +86,8 @@ const CustomFilterSections = ({
 
   return (
     <div className="container-fluid my-3">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-        <div className="d-flex align-items-center gap-2">
+      <div className="row g-2 align-items-center">
+        <div className="col-12 col-md-auto d-flex align-items-center gap-2">
           <div className="input-group" style={{ width: 280 }}>
             <input
               type="text"
@@ -124,7 +124,7 @@ const CustomFilterSections = ({
           )}
         </div>
         {setSelectedOutlet && (
-          <div className="d-flex align-items-center w-25 w-md-100">
+          <div className="col-12 col-md-5 col-lg-3 ms-md-auto">
             <OutletsFilter
               fetchOutletsList={fetchOutletsList}
               outlets={outlets}
@@ -135,7 +135,7 @@ const CustomFilterSections = ({
           </div>
         )}
         {setSelectedWarehouse && (
-          <div className="d-flex align-items-center w-25 w-md-100">
+          <div className={`col-12 col-md-5 col-lg-3${!setSelectedOutlet ? " ms-md-auto" : ""}`}>
             <WarehouseFilter
               fetchWarehousesList={fetchWarehousesList}
               warehouses={warehouses}
@@ -146,7 +146,7 @@ const CustomFilterSections = ({
           </div>
         )}
         {setSelectedSupplier && (
-          <div className="d-flex align-items-center w-25 w-md-100">
+          <div className={`col-12 col-md-5 col-lg-3${!setSelectedOutlet && !setSelectedWarehouse ? " ms-md-auto" : ""}`}>
             <SupplierFilter
               fetchSuppliersList={fetchSuppliersByStoreId}
               fetchSuppliersByOutletId={fetchSuppliersByOutletId}

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useMemo, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery, useQuery } from "@apollo/client";
 import {
@@ -109,85 +109,84 @@ const MemoListComponent = () => {
   const [printing, setPrinting] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [gridReady, setGridReady] = useState(false);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const config = getEnvironmentConfig();
 
-  const handleOnGridReady = (params: GridReadyEvent<MemoSummary>) => {
-    params?.api?.autoSizeAllColumns?.();
-  };
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const selectedWarehouseRef = useRef(selectedWarehouse);
+  const statusFilterRef = useRef(statusFilter);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { selectedWarehouseRef.current = selectedWarehouse; }, [selectedWarehouse]);
+  useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
 
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "memonumber, customerid, companyname");
-        if (statusFilter) {
-          filters.filters = [
-            ...filters.filters,
-            { key: "statusname", value: { filterType: "text", type: "contains", filter: statusFilter } },
-          ];
-        }
-        const result = await handleTryCatch(async () => {
-          const { data } = await getMemoList({
-            variables: {
-              storeid: parsedStoreId,
-              outletid: parsedOutletId,
-              warehouseid: selectedWarehouse,
-              ...filters,
-            },
-          });
-
-          if (data?.getMemoList) {
-            params.success({
-              rowData: data.getMemoList.data,
-              rowCount: data.getMemoList.total,
-            });
-
-            if (!data.getMemoList.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-            } else {
-              gridRef.current?.api?.hideOverlay();
-              const totals: MemoSummaryTotals = data.getMemoList.totalsRow;
-              const pinnedRow: Partial<MemoSummary> = {
-                memonumber: "Page Total" as unknown as number,
-                totalamount: Number(totals?.totalamount ?? 0),
-                subtotal: Number(totals?.subtotal ?? 0),
-                netamount: Number(totals?.netamount ?? 0),
-                amountreceived: Number(totals?.amountreceived ?? 0),
-                balancedue: Number(totals?.balancedue ?? 0),
-              };
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", [pinnedRow]);
-            }
-          }
-          return true;
-        });
-
-        if (result.error) {
+  const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
+    const filters = filterVariables(params, debouncedSearchRef.current, "memonumber, customerid, companyname");
+    const sf = statusFilterRef.current;
+    if (sf) {
+      filters.filters = [
+        ...filters.filters,
+        { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } },
+      ];
+    }
+    const result = await handleTryCatch(async () => {
+      const { data } = await getMemoList({
+        variables: {
+          storeid: parsedStoreId,
+          outletid: parsedOutletId,
+          warehouseid: selectedWarehouseRef.current,
+          ...filters,
+        },
+      });
+      if (data?.getMemoList) {
+        params.success({ rowData: data.getMemoList.data, rowCount: data.getMemoList.total });
+        if (!data.getMemoList.data.length) {
           gridRef.current?.api?.showNoRowsOverlay();
           gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
-          params.fail();
+        } else {
+          gridRef.current?.api?.hideOverlay();
+          const totals: MemoSummaryTotals = data.getMemoList.totalsRow;
+          gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
+            memonumber: "Page Total" as unknown as number,
+            totalamount: Number(totals?.totalamount ?? 0),
+            subtotal: Number(totals?.subtotal ?? 0),
+            netamount: Number(totals?.netamount ?? 0),
+            amountreceived: Number(totals?.amountreceived ?? 0),
+            balancedue: Number(totals?.balancedue ?? 0),
+          }]);
         }
-      },
-    }),
-    [debouncedSearch, dispatch, getMemoList, parsedOutletId, parsedStoreId, selectedWarehouse, statusFilter]
-  );
+      }
+      return true;
+    });
+    if (result.error) {
+      gridRef.current?.api?.showNoRowsOverlay();
+      gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      params.fail();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleGridReady = useCallback(
-    (params: GridReadyEvent<MemoSummary>) => {
-      handleOnGridReady(params);
-      params.api.setGridOption("serverSideDatasource", datasource);
-    },
-    [datasource]
-  );
+  const datasource = useRef({ getRows }).current;
+
+  const handleGridReady = useCallback((params: GridReadyEvent<MemoSummary>) => {
+    setGridReady(true);
+    params?.api?.autoSizeAllColumns?.();
+  }, []);
+
+  useEffect(() => {
+    if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+  }, [gridReady, datasource]);
+
+  useEffect(() => {
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWarehouse, debouncedSearch, statusFilter]);
 
   const handleSelectionChanged = useCallback(() => {
     const selected = gridRef.current?.api?.getSelectedRows?.() || [];
@@ -261,7 +260,7 @@ const MemoListComponent = () => {
     }
   }, [config.apiUrl, dispatch, parsedStoreId, selectedMemoNumbers]);
 
-  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("memo-list");
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("memo-list");
 
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_MEMO_DAILY_SUMMARY_QUERY, {
     variables: { outletid: parsedOutletId },
@@ -270,7 +269,7 @@ const MemoListComponent = () => {
   const summary = summaryData?.getMemoDailySummary ?? null;
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <MemoListHeader
         selectedMemoNumbers={selectedMemoNumbers}
         onPrintMemo={handlePrintMemo}
@@ -299,6 +298,17 @@ const MemoListComponent = () => {
             loading={summaryLoading}
             labelOverrides={{ revenue: "Revenue Today", total: "Memos Today", avg: "Avg Memo", open: "Open Today" }}
           />
+        </SummaryPanelWrapper>
+      )}
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <CustomFilterSections
+            gridRef={gridRef}
+            search={search}
+            setSearch={setSearch}
+            selectedWarehouse={selectedWarehouse}
+            setSelectedWarehouse={setSelectedWarehouse}
+          />
           <StatusFilterChips
             active={statusFilter}
             onChange={(v) => {
@@ -312,42 +322,33 @@ const MemoListComponent = () => {
               voided: summary?.voided_today ?? 0,
             }}
           />
-        </SummaryPanelWrapper>
-      )}
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <CustomFilterSections
-            gridRef={gridRef}
-            search={search}
-            setSearch={setSearch}
-            selectedWarehouse={selectedWarehouse}
-            setSelectedWarehouse={setSelectedWarehouse}
-          />
-          <POSGrid
-            ref={gridRef}
-            columnDefs={memoColumnDefs}
-            onGridReady={handleGridReady}
-            onSelectionChanged={handleSelectionChanged}
-            heightOffset={300 + panelOffset}
-            defaultColDef={{
-              filter: !debouncedSearch,
-            }}
-            rowSelection={{
-              mode: "multiRow",
-              checkboxes: true,
-              headerCheckbox: true,
-              suppressRowClickSelection: true,
-            }}
-            getRowStyle={(params) =>
-              params.node.rowPinned === "bottom"
-                ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
-                : undefined
-            }
-            suppressCellFocus
-          />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <POSGrid
+              ref={gridRef}
+              columnDefs={memoColumnDefs}
+              onGridReady={handleGridReady}
+              onSelectionChanged={handleSelectionChanged}
+              fillHeight
+              defaultColDef={{
+                filter: !debouncedSearch,
+              }}
+              rowSelection={{
+                mode: "multiRow",
+                checkboxes: true,
+                headerCheckbox: true,
+                suppressRowClickSelection: true,
+              }}
+              getRowStyle={(params) =>
+                params.node.rowPinned === "bottom"
+                  ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
+                  : undefined
+              }
+              suppressCellFocus
+            />
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

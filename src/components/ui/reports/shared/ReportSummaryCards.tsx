@@ -14,6 +14,7 @@ export interface SummaryCardDef {
 interface Props {
   cards: SummaryCardDef[];
   loading?: boolean;
+  singleRow?: boolean;
 }
 
 const fmt = {
@@ -55,15 +56,16 @@ const SkeletonValue = () => (
   />
 );
 
-export default function ReportSummaryCards({ cards, loading }: Props) {
+export default function ReportSummaryCards({ cards, loading, singleRow }: Props) {
   if (!cards.length) return null;
 
-  const colClass =
-    cards.length <= 2
-      ? "col-12 col-md-6"
-      : cards.length === 3
-      ? "col-12 col-md-4"
-      : "col-6 col-md-3";
+  const colClass = singleRow
+    ? "col"
+    : cards.length <= 2
+    ? "col-12 col-md-6"
+    : cards.length === 3
+    ? "col-12 col-md-4"
+    : "col-6 col-md-3";
 
   return (
     <>

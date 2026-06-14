@@ -34,8 +34,9 @@ interface Props {
 
 const OnHandChecksComponent = ({ data }: Props) => {
   const [getCustomerChequeList] = useLazyQuery(GET_CUSTOMER_CHEQUE_LIST_QUERY);
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const dispatch = useAppDispatch();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
@@ -51,12 +52,16 @@ const OnHandChecksComponent = ({ data }: Props) => {
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(params);
+        const outletFilter = parsedOutletId
+          ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: parsedOutletId } }]
+          : [];
         const result = await handleTryCatch(async () => {
           const { data: chequeData } = await getCustomerChequeList({
             variables: {
               customerid: Number(data.customerid),
               storeid: parsedStoreId,
               ...filters,
+              filters: [...filters.filters, ...outletFilter],
             },
           });
           if (chequeData.getCustomerChequeList) {
@@ -84,7 +89,7 @@ const OnHandChecksComponent = ({ data }: Props) => {
         }
       },
     }),
-    [dispatch, getCustomerChequeList, data.customerid, parsedStoreId]
+    [dispatch, getCustomerChequeList, data.customerid, parsedStoreId, parsedOutletId]
   );
 
   useEffect(() => {
@@ -127,14 +132,12 @@ const OnHandChecksComponent = ({ data }: Props) => {
   return (
     <div className="card table-list-card">
       <div className="card-body p-2">
-        <div className="ag-theme-quartz custom-theme">
-          <POSGrid
-            ref={gridRef}
-            columnDefs={columnDefs}
-            onGridReady={handleOnGridReady}
-            domLayout="autoHeight"
-          />
-        </div>
+        <POSGrid
+          ref={gridRef}
+          columnDefs={columnDefs}
+          onGridReady={handleOnGridReady}
+          domLayout="autoHeight"
+        />
       </div>
     </div>
   );

@@ -289,6 +289,7 @@ const AddOnHandChequeModal = ({
                             <SelectWarehouse
                               className={`form-control-sm${rowErrors.warehouseid ? " is-invalid" : ""}`}
                               storeId={parsedStoreId}
+                              outletId={parsedOutletId}
                               trigger={trigger}
                               disableField={!isEditable}
                               {...field}
