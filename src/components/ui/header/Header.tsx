@@ -23,7 +23,8 @@ const Header = ({ onLogout, storeLoading }: Props) => {
     if (!storeId || !outletId) return `/jw/home`;
     const base = `/jw/${storeId}/${outletId}`;
     if (user?.role === "admin") return `${base}/dashboard/admin`;
-    // manager and cashier dashboards — coming soon; use home for now
+    if (user?.role === "manager") return `${base}/dashboard/manager`;
+    if (user?.role === "cashier") return `${base}/dashboard/cashier`;
     return `${base}/home`;
   })();
 
