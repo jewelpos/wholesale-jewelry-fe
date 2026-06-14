@@ -14,11 +14,18 @@ type Props = {
 };
 
 const Header = ({ onLogout, storeLoading }: Props) => {
-  const { storeId } = useParams();
+  const { storeId, outletId } = useParams();
   const [toggle, SetToggle] = useState(false);
   // const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
-  const defaultPage = storeId ? `/jw/${storeId}/home` : `/jw/home`;
+
+  const defaultPage = (() => {
+    if (!storeId || !outletId) return `/jw/home`;
+    const base = `/jw/${storeId}/${outletId}`;
+    if (user?.role === "admin") return `${base}/dashboard/admin`;
+    // manager and cashier dashboards — coming soon; use home for now
+    return `${base}/home`;
+  })();
 
   const isElementVisible = (element: HTMLElement | null): boolean => {
     if (!element) return false;

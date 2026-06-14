@@ -13,6 +13,7 @@ import { useParams, useRouter } from "next/navigation";
 import ButtonLoader from "../ButtonLoader";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import useStores from "@/hooks/useStores";
+import { useAppSelector } from "@/lib/store/hook";
 import OutletFormTypeA from "./OutletFormTypeA";
 import OutletFormTypeB from "./OutletFormTypeB";
 import OutletFormTypeC from "./OutletFormTypeC";
@@ -50,6 +51,8 @@ const CreateOutletForm = () => {
 
   const { homePagePath } = useDefaultRoute();
   const { fetchStoresData, loading: storesLoading } = useStores();
+  const existingOutlets = useAppSelector((state) => state.store.data?.outlets ?? []);
+  const storeName = useAppSelector((state) => state.store.data?.storename ?? "");
 
   const onSubmit: SubmitHandler<CreateOutlet> = async (formData) => {
     const result = await handleTryCatch(async () => {
@@ -81,6 +84,28 @@ const CreateOutletForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      {existingOutlets.length > 0 && (
+        <div
+          className="alert mb-4"
+          style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: 8,
+            padding: "12px 16px",
+            fontSize: 13,
+          }}
+        >
+          <strong style={{ color: "#1e40af" }}>
+            Existing branches of {storeName}:
+          </strong>{" "}
+          <span style={{ color: "#1e40af" }}>
+            {existingOutlets.map((o) => o.outletname).join(" · ")}
+          </span>
+          <div style={{ color: "#3b82f6", marginTop: 4, fontSize: 12 }}>
+            The new branch will share the same product catalog and team as these locations.
+          </div>
+        </div>
+      )}
       <OutletFormTypeA
         errors={errors}
         control={control}

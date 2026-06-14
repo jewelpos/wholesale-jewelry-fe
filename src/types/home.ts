@@ -1,11 +1,12 @@
-export type catalogType = {
+import { Store } from "./store";
+
+export type CatalogTile = {
   icon: string;
   title: string;
-  para: string;
-  linkText: string;
-  linkUrl: string;
+  para: string;        // may contain [StoreName] placeholder
   btnText: string;
-  btnUrl: string;
-  isLinkBtn: boolean;
-  disabled: boolean;
+  btnUrl: string;      // relative to basePath
+  setupFlag?: keyof Store;
+  comingSoon?: boolean;
+  optional?: boolean;  // shown with visual distinction
 };
