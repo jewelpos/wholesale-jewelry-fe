@@ -43,6 +43,11 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+  const imgContainerRef = useRef<HTMLDivElement>(null);
   const imageUrl = parseFirstImageUrl(data.itemimagepath);
 
   useEffect(() => {
@@ -51,6 +56,46 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [imgLightboxOpen]);
+
+  useEffect(() => {
+    if (!imgLightboxOpen) {
+      setScale(1);
+      setTranslate({ x: 0, y: 0 });
+    }
+  }, [imgLightboxOpen]);
+
+  useEffect(() => {
+    const el = imgContainerRef.current;
+    if (!el || !imgLightboxOpen) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      setScale(prev => {
+        const next = Math.min(Math.max(prev * factor, 1), 4);
+        if (next <= 1) setTranslate({ x: 0, y: 0 });
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [imgLightboxOpen]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    setDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, tx: translate.x, ty: translate.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragging) return;
+    setTranslate({
+      x: dragStart.current.tx + (e.clientX - dragStart.current.x),
+      y: dragStart.current.ty + (e.clientY - dragStart.current.y),
+    });
+  };
+
+  const handleMouseUp = () => setDragging(false);
 
   const handleDelete = async (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -231,11 +276,46 @@ const ProductActions: React.FC<ProductActionsProps> = ({
               >
                 <X size={14} color="#64748b" />
               </button>
-              <img
-                src={imageUrl}
-                alt={data.itemdescription ?? "product"}
-                style={{ width: 480, height: 480, objectFit: "contain", borderRadius: 8, display: "block" }}
-              />
+              <div
+                ref={imgContainerRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onDoubleClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); }}
+                style={{
+                  width: 480, height: 480,
+                  overflow: "hidden",
+                  borderRadius: 8,
+                  cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "default",
+                  userSelect: "none",
+                  position: "relative",
+                }}
+              >
+                <img
+                  src={imageUrl}
+                  alt={data.itemdescription ?? "product"}
+                  style={{
+                    width: 480, height: 480,
+                    objectFit: "contain",
+                    display: "block",
+                    transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+                    transformOrigin: "center center",
+                    transition: dragging ? "none" : "transform 0.15s ease",
+                    pointerEvents: "none",
+                  }}
+                />
+                {scale > 1 && (
+                  <div style={{
+                    position: "absolute", bottom: 8, right: 8,
+                    background: "rgba(0,0,0,0.5)", color: "#fff",
+                    fontSize: 11, padding: "2px 6px", borderRadius: 4,
+                    pointerEvents: "none",
+                  }}>
+                    {scale.toFixed(1)}×
+                  </div>
+                )}
+              </div>
               {data.itemdescription && (
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "center" }}>
                   {data.itemdescription}
@@ -246,6 +326,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
                   {data.itemcode}
                 </div>
               )}
+              <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                Scroll to zoom · Drag to pan · Double-click to reset
+              </div>
             </div>
           </div>,
           document.body
