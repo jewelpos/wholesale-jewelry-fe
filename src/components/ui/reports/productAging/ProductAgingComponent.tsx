@@ -95,11 +95,10 @@ const ProductAgingComponent = () => {
   }, []);
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <ProductAgingHeader onExport={handleExport} viewMode={viewMode} setViewMode={setViewMode} />
 
-      {/* filters always visible regardless of view mode */}
-      <div className="card mb-3 border-0 shadow-sm">
+      <div className="card mb-2 border-0 shadow-sm" style={{ flexShrink: 0 }}>
         <div className="card-body p-2">
           <CustomFilterSections
             gridRef={gridRef}
@@ -130,13 +129,14 @@ const ProductAgingComponent = () => {
           warehouseid={selectedWarehouse}
         />
       ) : (
-        <div className="card table-list-card">
-          <div className="card-body p-2">
-            <div className="ag-theme-quartz custom-theme">
+        <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+          <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, minHeight: 0 }}>
               <POSGrid
                 ref={gridRef}
                 columnDefs={productAgingColumnDefs}
                 onGridReady={handleOnGridReady}
+                fillHeight
                 defaultColDef={{
                   filter: !debouncedSearch,
                 }}
@@ -145,7 +145,7 @@ const ProductAgingComponent = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

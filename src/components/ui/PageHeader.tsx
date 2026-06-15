@@ -5,7 +5,7 @@ import Breadcrumb from "./Breadcrumb";
 
 type Props = {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   children?: React.ReactNode;
   showBreadcrumb?: boolean;
   rightSection?: React.ReactNode;

@@ -1,10 +1,10 @@
 import Content from "@/components/layout/Content";
 import AddStore from "@/components/ui/store/AddStore";
 
-const StoreSetupCreatePage = () => (
+const SettingsCreateStorePage = () => (
   <Content>
     <AddStore />
   </Content>
 );
 
-export default StoreSetupCreatePage;
+export default SettingsCreateStorePage;

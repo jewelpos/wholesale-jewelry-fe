@@ -34,21 +34,24 @@ const UserComponent = () => {
       headerName: "User",
       field: "userfullname",
       filter: true,
-      cellRenderer: (params: ICellRendererParams) => (
-        <Link
-          href={`${basePath}/users/${params?.data?.id}`}
-          style={{ display: "flex", alignItems: "center", gap: 10 }}
-        >
-          <span
-            className={`avatar avatar-sm ${getRandomUserAvatar()} avatar-rounded me-1`}
+      cellRenderer: (params: ICellRendererParams) => {
+        if (!params.value) return null;
+        return (
+          <Link
+            href={`${basePath}/users/${params?.data?.id}`}
+            style={{ display: "flex", alignItems: "center", gap: 10 }}
           >
-            <span className="avatar-title">{getShortName(params.value)}</span>
-          </span>
-          <div>
-            <p className="text-primary">{params.value}</p>
-          </div>
-        </Link>
-      ),
+            <span
+              className={`avatar avatar-sm ${getRandomUserAvatar()} avatar-rounded me-1`}
+            >
+              <span className="avatar-title">{getShortName(params.value)}</span>
+            </span>
+            <div>
+              <p className="text-primary">{params.value}</p>
+            </div>
+          </Link>
+        );
+      },
     },
     { headerName: "Role", field: "rolename" },
     { headerName: "Outlet", field: "outletname" },
@@ -98,11 +101,11 @@ const UserComponent = () => {
   }, [dispatch, getUserListUnderStore, parsedStoreId]);
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <UserListHeader />
-      <div className="card table-list-card">
-        <div className="card-body p-2">
-          <div className="ag-theme-quartz custom-theme">
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
             <POSGridClient
               columnDefs={columnDefs}
               onGridReady={onGridReady}
@@ -111,12 +114,13 @@ const UserComponent = () => {
               rowData={users}
               loading={loading}
               pagination
-              height="250px"
+              rowHeight={44}
+              fillHeight
             />
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

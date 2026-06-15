@@ -1,14 +1,12 @@
 "use client";
 
-import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
+import { AddUserFormType } from "@/types/user";
 import React, { Dispatch, SetStateAction } from "react";
 import {
   Control,
   Controller,
   FieldErrors,
-  UseFormRegister,
   UseFormTrigger,
-  UseFormWatch,
 } from "react-hook-form";
 import { SelectOption } from "@/types/form";
 import Select from "react-select";
@@ -16,7 +14,6 @@ import { RolesType } from "@/types/role";
 import { AddUserMenusType } from "@/types/permissions";
 import UserPermissionInputs from "./UserPermissionInputs";
 import PlaceHolder from "../PlaceHolder";
-import { register } from "module";
 
 interface Props {
   errors: FieldErrors<AddUserFormType>;
@@ -25,7 +22,6 @@ interface Props {
   roles: RolesType | undefined;
   menus: AddUserMenusType | undefined;
   rolesLoading: boolean;
-  register: UseFormRegister<AddUserFormType>;
   permissionLoading: boolean;
   permittedMenus: AddUserMenusType;
   setPermittedMenus: Dispatch<SetStateAction<AddUserMenusType>>;
@@ -52,7 +48,7 @@ const UserRolesAndPermissionsInputs = ({
           </div>
           <div className="col-md-7">
             <div className="mb-3">
-              <label className="form-label">Roles</label>
+              <label className="form-label">Roles <span className="text-danger">*</span></label>
               <Controller
                 name="roleid"
                 control={control}
@@ -65,7 +61,7 @@ const UserRolesAndPermissionsInputs = ({
                       value: role.id,
                       label: role.name,
                     }))}
-                    placeholder="Select an outlet"
+                    placeholder="Select a role"
                     isClearable={roles && roles?.length > 1}
                     className={`${
                       errors.roleid && "is-invalid"

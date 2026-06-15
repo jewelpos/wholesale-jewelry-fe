@@ -22,14 +22,15 @@ const UserProfileInputs = ({ register, errors }: Props) => {
           </div>
           <div className="col-md-7">
             <div className="mb-3">
-              <label className="form-label">Display name</label>
+              <label className="form-label">Display name <span className="text-danger">*</span></label>
               <input
                 type="text"
+                autoComplete="name"
                 className={`${
                   errors.userfullname && "is-invalid"
                 }  form-control`}
                 {...register("userfullname", {
-                  required: "Outlet name is required",
+                  required: "Display name is required",
                 })}
               />
               {errors.userfullname && (
@@ -39,9 +40,10 @@ const UserProfileInputs = ({ register, errors }: Props) => {
               )}
             </div>
             <div className="mb-3">
-              <label className="form-label">Phone number</label>
+              <label className="form-label">Phone number <span className="text-danger">*</span></label>
               <input
-                type="text"
+                type="tel"
+                autoComplete="tel"
                 className={`${errors.userphone && "is-invalid"}  form-control`}
                 {...register("userphone", phoneNumberValidation)}
               />
@@ -52,9 +54,10 @@ const UserProfileInputs = ({ register, errors }: Props) => {
               )}
             </div>
             <div className="mb-3">
-              <label className="form-label">Email address</label>
+              <label className="form-label">Email address <span className="text-danger">*</span></label>
               <input
-                type="text"
+                type="email"
+                autoComplete="email"
                 className={`${
                   errors.emailaddress && "is-invalid"
                 }  form-control`}

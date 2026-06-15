@@ -2,13 +2,14 @@
 
 import useStores from "@/hooks/useStores";
 import { MENU_STATUS_TYPES, NOTIFICATION_TYPES } from "@/lib/config/constants";
+
 import {
   CREATE_OUTLET_USER_MUTATION,
   EDIT_OUTLET_USER_MUTATION,
 } from "@/lib/graphql/mutations/user";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import { AddUserFormType, AddUserPermittedMenu } from "@/types/user";
+import { AddUserFormType } from "@/types/user";
 import { useMutation, useQuery } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -29,7 +30,6 @@ import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { GET_USER_QUERY } from "@/lib/graphql/query/user";
-import { get } from "http";
 
 const AddUserForm = () => {
   const dispatch = useDispatch();
@@ -40,7 +40,7 @@ const AddUserForm = () => {
   const [createOutletUser, { loading }] = useMutation(
     CREATE_OUTLET_USER_MUTATION
   );
-  const [editOutletUser, { loading: editLoading }] = useMutation(
+  const [editOutletUser] = useMutation(
     EDIT_OUTLET_USER_MUTATION
   );
   const {
@@ -81,7 +81,7 @@ const AddUserForm = () => {
       skip: !roleId || !storeId,
     }
   );
-  const { data: userData, loading: userLoading } = useQuery(GET_USER_QUERY, {
+  const { data: userData } = useQuery(GET_USER_QUERY, {
     variables: { id: parsedUserId },
     skip: !parsedUserId,
   });
@@ -118,6 +118,20 @@ const AddUserForm = () => {
       fetchOutletsList([storeId]);
     }
   }, [storeId, fetchOutletsList]);
+
+  // Pre-select default permissions when role loads (add mode only)
+  useEffect(() => {
+    if (!menus || userId) return;
+    const preSelected: AddUserMenusType = menus
+      .map((menu) => ({
+        ...menu,
+        children: menu.children.filter(
+          (p) => p.status === MENU_STATUS_TYPES.SELECTED
+        ),
+      }))
+      .filter((menu) => menu.children.length > 0);
+    setPermittedMenus(preSelected);
+  }, [menus, userId]);
 
   const onSubmit: SubmitHandler<AddUserFormType> = async (formData) => {
     const selectedOutlets = formData.outlets.map((outlet) => outlet.value);
@@ -277,7 +291,6 @@ const AddUserForm = () => {
             roles={roles}
             menus={menus}
             rolesLoading={rolesLoading}
-            register={register}
             permissionLoading={permissionLoading}
             permittedMenus={permittedMenus}
             setPermittedMenus={setPermittedMenus}

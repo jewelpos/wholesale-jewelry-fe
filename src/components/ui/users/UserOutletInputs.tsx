@@ -63,7 +63,7 @@ const UserOutletInputs = ({
             <div className="row">
               <div className="col-sm-12 col-md-12 col-lg-12">
                 <div className="mb-3">
-                  <label className="form-label">Outlets</label>
+                  <label className="form-label">Outlets <span className="text-danger">*</span></label>
                   <Controller
                     name="outlets"
                     control={control}
@@ -97,7 +97,7 @@ const UserOutletInputs = ({
               <div className="row">
                 <div className="col-sm-12 col-md-12 col-lg-12">
                   <div className="mb-3">
-                    <label className="form-label">Default Outlet</label>
+                    <label className="form-label">Default Outlet <span className="text-danger">*</span></label>
                     <Controller
                       name="defaultoutletid"
                       control={control}

@@ -183,18 +183,18 @@ const ProductsListComponent = () => {
     [handleDeleteSuccess]
   );
 
-  const { isAdmin, isCollapsed, toggle, panelOffset } = useSummaryPanel("product-list");
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("product-list");
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <ProductsListHeader />
       {isAdmin && !!selectedOutlet && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
           <ProductListSummaryCards outletid={selectedOutlet} />
         </SummaryPanelWrapper>
       )}
-      <div className="card table-list-card">
-        <div className="card-body p-2">
+      <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
+        <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <CustomFilterSections
             gridRef={gridRef}
             search={search}
@@ -204,12 +204,12 @@ const ProductsListComponent = () => {
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
           />
-          <div className="ag-theme-quartz custom-theme">
+          <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              heightOffset={300 + panelOffset}
+              fillHeight
               rowSelection="single"
               defaultColDef={{
                 filter: !debouncedSearch,
@@ -218,7 +218,7 @@ const ProductsListComponent = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

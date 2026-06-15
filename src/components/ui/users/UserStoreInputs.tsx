@@ -79,7 +79,7 @@ const UserStoreInputs = ({
           </div>
           <div className="col-md-7">
             <div className="mb-3">
-              <label className="form-label">Stores</label>
+              <label className="form-label">Stores <span className="text-danger">*</span></label>
               <Controller
                 name="storeid"
                 control={control}
