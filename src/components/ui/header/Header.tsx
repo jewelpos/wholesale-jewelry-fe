@@ -22,9 +22,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
   const defaultPage = (() => {
     if (!storeId || !outletId) return `/jw/home`;
     const base = `/jw/${storeId}/${outletId}`;
-    if (user?.role === "admin") return `${base}/dashboard/admin`;
-    if (user?.role === "manager") return `${base}/dashboard/manager`;
-    if (user?.role === "cashier") return `${base}/dashboard/cashier`;
+    const role = user?.role?.toLowerCase();
+    if (role === "admin") return `${base}/dashboard/admin`;
+    if (role === "manager") return `${base}/dashboard/manager`;
+    if (role === "cashier") return `${base}/dashboard/cashier`;
     return `${base}/home`;
   })();
 
