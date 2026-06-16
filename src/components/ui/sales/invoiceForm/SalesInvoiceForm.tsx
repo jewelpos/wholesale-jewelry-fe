@@ -1236,7 +1236,7 @@ const SalesInvoiceForm = ({
           <div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">${docLabel} ${label} saved successfully.</div>
           ${showSmsButton ? `<div style="margin-top:14px; padding-top:12px; border-top:1px solid #eee;">
             <button id="swal-sms-btn" style="background:none; border:1px solid #198754; color:#198754; border-radius:6px; padding:6px 16px; cursor:pointer; font-size:0.875rem;">
-              📱 Send SMS Invoice
+              📱 Share Invoice Link
             </button>
           </div>` : ""}
         `,

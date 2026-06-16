@@ -145,14 +145,14 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
             style={{ lineHeight: 1, color: "#198754" }}
             onClick={handleSendSMS}
             disabled={smsSending}
-            title="Send SMS Invoice"
+            title="Share Invoice Link"
           >
             <MessageCircle size={14} />
           </button>
         ) : (
           <span
             className="p-1"
-            title="Cannot send SMS: invoice is cancelled"
+            title="Cannot share link: invoice is cancelled"
             style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
           >
             <MessageCircle size={14} style={{ opacity: 0.35 }} />
