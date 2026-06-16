@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { CANCEL_INVOICE_MUTATION } from "@/lib/graphql/mutations/sales";
 import { useAppDispatch } from "@/lib/store/hook";
@@ -7,11 +7,13 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesInvoiceListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, Trash2 } from "react-feather";
+import { Edit, Eye, MessageCircle, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import { IRowNode } from "ag-grid-community";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
 
 interface SalesActionsProps {
   data: SalesInvoiceListType;
@@ -24,6 +26,23 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const config = getEnvironmentConfig();
+  const [smsSending, setSmsSending] = useState(false);
+
+  const handleSendSMS = async () => {
+    setSmsSending(true);
+    try {
+      await api.post(`${config.apiUrl}/store/invoice/sms`, {
+        storeid: parsedStoreId,
+        invoicenumber: data.invoicenumber,
+      });
+      dispatch(showNotification({ message: `SMS sent for Invoice #${data.invoicenumber}`, type: NOTIFICATION_TYPES.SUCCESS }));
+    } catch {
+      dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setSmsSending(false);
+    }
+  };
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -114,9 +133,31 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     else cancelReason = "Cannot cancel in current status";
   }
 
+  const canSendSMS = data.statusname !== "Cancelled";
+
   return (
     <div className="action-table-data">
       <div className="edit-delete-action" style={{ gap: "2px" }}>
+        {canSendSMS ? (
+          <button
+            type="button"
+            className="p-1 btn btn-link"
+            style={{ lineHeight: 1, color: "#198754" }}
+            onClick={handleSendSMS}
+            disabled={smsSending}
+            title="Send SMS Invoice"
+          >
+            <MessageCircle size={14} />
+          </button>
+        ) : (
+          <span
+            className="p-1"
+            title="Cannot send SMS: invoice is cancelled"
+            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
+          >
+            <MessageCircle size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
         <Link
           className="p-1"
           href={`${basePath}/sales/${data.invoicenumber}/view`}
