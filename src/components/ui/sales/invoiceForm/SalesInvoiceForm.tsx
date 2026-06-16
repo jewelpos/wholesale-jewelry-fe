@@ -1227,6 +1227,8 @@ const SalesInvoiceForm = ({
             : "Memo"
           : "Invoice";
 
+      let smsSendClicked = false;
+      const showSmsButton = documentType === "INVOICE" && !isEdit && !!documentNumber;
       const popupResult = await MySwal.fire({
         icon: "success",
         title: `${docLabel} Saved`,
@@ -1237,6 +1239,16 @@ const SalesInvoiceForm = ({
         denyButtonText: "Email",
         cancelButtonText: "Close",
         showCloseButton: true,
+        footer: showSmsButton
+          ? `<button id="swal-sms-btn" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" style="margin:0 auto;"><i class="feather-message-circle"></i> Send SMS Invoice</button>`
+          : undefined,
+        didOpen: () => {
+          if (!showSmsButton) return;
+          document.getElementById("swal-sms-btn")?.addEventListener("click", async () => {
+            smsSendClicked = true;
+            MySwal.close();
+          });
+        },
       });
 
       if (popupResult.isConfirmed && documentNumber) {
@@ -1249,6 +1261,21 @@ const SalesInvoiceForm = ({
           type: NOTIFICATION_TYPES.SUCCESS,
         })
       );
+
+      if (smsSendClicked && documentNumber) {
+        try {
+          await api.post(`${config.apiUrl}/store/invoice/sms`, {
+            storeid: parsedStoreId,
+            invoicenumber: documentNumber,
+          });
+          dispatch(showNotification({ message: `SMS sent for Invoice #${documentNumber}`, type: NOTIFICATION_TYPES.SUCCESS }));
+        } catch {
+          dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
+        }
+        reset();
+        router.back();
+        return;
+      }
 
       if (popupResult.isDenied && documentNumber) {
         setEmailModalDocNumber(documentNumber);
