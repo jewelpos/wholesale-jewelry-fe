@@ -11,6 +11,20 @@ export type CreateOutlet = {
   contactperson: string;
 };
 
+export type UpdateOutlet = {
+  outletid: number;
+  outletname: string;
+  address: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  country: string;
+  storephone: string;
+  storeemail: string;
+  storewebsite?: string;
+  contactperson: string;
+};
+
 export type OutletType = {
   outletid: number;
   storeid: number;

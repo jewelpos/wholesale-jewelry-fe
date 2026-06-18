@@ -36,19 +36,29 @@ const InitialDataLoader = ({
       const defaultStore = stores.find((s) =>
         s.outlets?.find((o) => o.isdefaultoutlet)
       );
+      const storeIsSetup =
+        defaultStore?.hassetupoutlet || defaultStore?.hassetupproduct;
+      const roleid = user?.roleid;
+      const getLandingPage = (setup: boolean | undefined) => {
+        if (setup && roleid === 2) return "dashboard/manager";
+        if (setup && roleid === 3) return "sales/new_invoice";
+        return "home";
+      };
       if (defaultStore) {
         router.push(
           `/jw/${defaultStore?.storeid}/${
             defaultStore?.outlets?.find((o) => o.isdefaultoutlet)?.outletid
-          }/home`
+          }/${getLandingPage(storeIsSetup)}`
         );
       } else {
         router.push(
-          `/jw/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/home`
+          `/jw/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/${getLandingPage(
+            stores[0]?.hassetupoutlet || stores[0]?.hassetupproduct
+          )}`
         );
       }
     }
-  }, [storeId, outletId, stores, router]);
+  }, [storeId, outletId, stores, router, user]);
 
   useEffect(() => {
     fetchUserData();

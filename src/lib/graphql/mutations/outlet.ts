@@ -10,3 +10,14 @@ export const CREATE_OUTLET_MUTATION = gql`
     }
   }
 `;
+
+export const UPDATE_OUTLET_MUTATION = gql`
+  mutation UpdateOutlet($input: UpdateOutletInput!) {
+    updateOutlet(updateOutletInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

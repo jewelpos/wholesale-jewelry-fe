@@ -374,8 +374,8 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
       ════════════════════════════════════════════════════ */}
       <SectionCard icon={DollarSign} title="Pricing & Margins" accent="green">
 
-        {/* Cost → Profit% → Tag Price flow */}
-        <div className="d-flex align-items-end gap-2 mb-3 flex-wrap">
+        {/* Row 1: Cost → Profit % → Sell Price */}
+        <div className="d-flex align-items-end gap-2 mb-2 flex-wrap">
 
           {/* Unit Cost */}
           <div style={{ flex: "1 1 140px", minWidth: 120 }}>
@@ -416,21 +416,46 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             <ChevronRight size={16} color="#94a3b8" />
           </div>
 
-          {/* Tag Price (auto) */}
+          {/* Sell Price (auto) */}
           <div style={{ flex: "1 1 150px", minWidth: 130 }}>
             <Label>
+              Sell Price{" "}
+              <span style={{ fontSize: 10, background: "#dcfce7", color: "#166534", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
+                AUTO
+              </span>
+            </Label>
+            <div className="input-group input-group-sm">
+              <span className="input-group-text" style={{ background: "#f0fdf4", fontSize: 13 }}>$</span>
+              <input
+                type="number"
+                step="0.01"
+                className="form-control"
+                style={{ background: "#f0fdf4" }}
+                {...register("itemsellprice", { valueAsNumber: true })}
+              />
+            </div>
+          </div>
+
+          {/* Live margin badge */}
+          {marginAmount > 0 && (
+            <div
+              className="d-flex align-items-center gap-2 px-3 py-2 rounded"
+              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", whiteSpace: "nowrap", marginBottom: 0 }}
+            >
+              <TrendingUp size={13} color="#166534" />
+              <span style={{ fontSize: 12, color: "#166534", fontWeight: 600 }}>
+                Margin ${marginAmount.toFixed(2)} &nbsp;·&nbsp; {profitpercent}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: Tag Price · Price Code · Item Discount */}
+        <div className="row g-2">
+          <div className="col-lg-3 col-md-6">
+            <Label>
               Tag Price{" "}
-              <span
-                style={{
-                  fontSize: 10,
-                  background: "#dbeafe",
-                  color: "#1e40af",
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                  fontWeight: 700,
-                  marginLeft: 4,
-                }}
-              >
+              <span style={{ fontSize: 10, background: "#dbeafe", color: "#1e40af", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
                 AUTO
               </span>
             </Label>
@@ -445,28 +470,6 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               />
             </div>
           </div>
-
-          {/* Live margin badge */}
-          {marginAmount > 0 && (
-            <div
-              className="d-flex align-items-center gap-2 px-3 py-2 rounded"
-              style={{
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                whiteSpace: "nowrap",
-                marginBottom: 0,
-              }}
-            >
-              <TrendingUp size={13} color="#166534" />
-              <span style={{ fontSize: 12, color: "#166534", fontWeight: 600 }}>
-                Margin ${marginAmount.toFixed(2)} &nbsp;·&nbsp; {profitpercent}%
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Secondary pricing row */}
-        <div className="row g-2">
           <div className="col-lg-3 col-md-6">
             <Label>Price Code</Label>
             <input

@@ -221,6 +221,7 @@ const ReceivePurchaseOrderForm = () => {
   const h = (poHeader || {}) as Record<string, string | number | null | undefined>;
   const hasPo = !!poHeader;
   const ss = statusStyle(h.statusname as string);
+  const [addrOpen, setAddrOpen] = useState(false);
 
   return (
     <>
@@ -328,53 +329,71 @@ const ReceivePurchaseOrderForm = () => {
         {hasPo && (
           <>
             <div className="card mb-3">
-              <div className="card-body py-3">
-                <div className="row g-3">
-                  {/* Order To */}
-                  <div className="col-lg-6 col-md-12">
-                    <div className="border rounded p-3 h-100">
-                      <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Order To</div>
-                      {h.poordtocompanyname && (
-                        <div className="fw-semibold text-body mb-1">{String(h.poordtocompanyname)}</div>
-                      )}
-                      <div className="text-muted small lh-lg">
-                        {h.poordtoadd1 && <div>{String(h.poordtoadd1)}</div>}
-                        {h.poordtoadd2 && <div>{String(h.poordtoadd2)}</div>}
-                        {(h.poordtocity || h.poordtostate) && (
-                          <div>
-                            {[h.poordtocity, h.poordtostate].filter(Boolean).join(", ")}
-                            {h.poordtozip ? ` ${h.poordtozip}` : ""}
-                          </div>
+              <div
+                className="card-header d-flex align-items-center justify-content-between py-2"
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onClick={() => setAddrOpen((o) => !o)}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <span className="fw-semibold" style={{ fontSize: 13 }}>Addresses</span>
+                  {!addrOpen && h.poordtocompanyname && (
+                    <span className="text-muted" style={{ fontSize: 12 }}>
+                      — Order To: {String(h.poordtocompanyname)}
+                      {h.poshiptocompanyname ? ` · Ship To: ${String(h.poshiptocompanyname)}` : ""}
+                    </span>
+                  )}
+                </div>
+                <i className={`fas fa-chevron-${addrOpen ? "up" : "down"} text-muted`} style={{ fontSize: 12 }} />
+              </div>
+              {addrOpen && (
+                <div className="card-body py-3">
+                  <div className="row g-3">
+                    {/* Order To */}
+                    <div className="col-lg-6 col-md-12">
+                      <div className="border rounded p-3 h-100">
+                        <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Order To</div>
+                        {h.poordtocompanyname && (
+                          <div className="fw-semibold text-body mb-1">{String(h.poordtocompanyname)}</div>
                         )}
-                        {h.poordtocountry && <div>{String(h.poordtocountry)}</div>}
-                        {h.poordtophone && <div>{String(h.poordtophone)}</div>}
+                        <div className="text-muted small lh-lg">
+                          {h.poordtoadd1 && <div>{String(h.poordtoadd1)}</div>}
+                          {h.poordtoadd2 && <div>{String(h.poordtoadd2)}</div>}
+                          {(h.poordtocity || h.poordtostate) && (
+                            <div>
+                              {[h.poordtocity, h.poordtostate].filter(Boolean).join(", ")}
+                              {h.poordtozip ? ` ${h.poordtozip}` : ""}
+                            </div>
+                          )}
+                          {h.poordtocountry && <div>{String(h.poordtocountry)}</div>}
+                          {h.poordtophone && <div>{String(h.poordtophone)}</div>}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Ship To */}
-                  <div className="col-lg-6 col-md-12">
-                    <div className="border rounded p-3 h-100">
-                      <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Ship To</div>
-                      {h.poshiptocompanyname && (
-                        <div className="fw-semibold text-body mb-1">{String(h.poshiptocompanyname)}</div>
-                      )}
-                      <div className="text-muted small lh-lg">
-                        {h.poshiptoadd1 && <div>{String(h.poshiptoadd1)}</div>}
-                        {h.poshiptoadd2 && <div>{String(h.poshiptoadd2)}</div>}
-                        {(h.poshiptocity || h.poshiptostate) && (
-                          <div>
-                            {[h.poshiptocity, h.poshiptostate].filter(Boolean).join(", ")}
-                            {h.poshiptozip ? ` ${h.poshiptozip}` : ""}
-                          </div>
+                    {/* Ship To */}
+                    <div className="col-lg-6 col-md-12">
+                      <div className="border rounded p-3 h-100">
+                        <div className="text-uppercase fw-semibold text-muted mb-2" style={sectionLabel}>Ship To</div>
+                        {h.poshiptocompanyname && (
+                          <div className="fw-semibold text-body mb-1">{String(h.poshiptocompanyname)}</div>
                         )}
-                        {h.poshiptocountry && <div>{String(h.poshiptocountry)}</div>}
-                        {h.poshiptophone && <div>{String(h.poshiptophone)}</div>}
+                        <div className="text-muted small lh-lg">
+                          {h.poshiptoadd1 && <div>{String(h.poshiptoadd1)}</div>}
+                          {h.poshiptoadd2 && <div>{String(h.poshiptoadd2)}</div>}
+                          {(h.poshiptocity || h.poshiptostate) && (
+                            <div>
+                              {[h.poshiptocity, h.poshiptostate].filter(Boolean).join(", ")}
+                              {h.poshiptozip ? ` ${h.poshiptozip}` : ""}
+                            </div>
+                          )}
+                          {h.poshiptocountry && <div>{String(h.poshiptocountry)}</div>}
+                          {h.poshiptophone && <div>{String(h.poshiptophone)}</div>}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* ── PO Details (3 gray boxes) ────────────────────────────── */}

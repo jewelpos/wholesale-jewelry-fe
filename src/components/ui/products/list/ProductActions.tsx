@@ -148,6 +148,13 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     }
   };
 
+  const hasTransactions = !!(
+    Number(data.qtypurchased    ?? 0) !== 0 ||
+    Number(data.itemquantityinhand ?? 0) !== 0 ||
+    Number(data.totalsoldqty    ?? 0) !== 0 ||
+    Number(data.overall_qty     ?? 0) !== 0
+  );
+
   const handleAdjustment = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -201,14 +208,25 @@ const ProductActions: React.FC<ProductActionsProps> = ({
         >
           <Edit className="feather-edit" />
         </Link>
-        <Link
-          className="confirm-text p-2 me-2"
-          href="#"
-          onClick={handleDelete}
-          scroll={false}
-        >
-          <Trash2 className="feather-trash-2" />
-        </Link>
+        {hasTransactions ? (
+          <span
+            className="p-2 me-2"
+            title="Item has transactions, can't be deleted"
+            style={{ cursor: "not-allowed", opacity: 0.35, display: "inline-flex", alignItems: "center" }}
+          >
+            <Trash2 size={14} />
+          </span>
+        ) : (
+          <Link
+            className="confirm-text p-2 me-2"
+            href="#"
+            onClick={handleDelete}
+            scroll={false}
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </Link>
+        )}
         <Link
           className="p-2 p-2 me-2"
           href="#"

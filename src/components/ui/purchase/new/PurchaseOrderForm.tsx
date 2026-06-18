@@ -960,6 +960,15 @@ const PurchaseOrderForm = ({
     ? watch("poshiptocompanyname")
     : watch("poordtocompanyname");
 
+  const [addrOpen, setAddrOpen] = useState(true);
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    if (supplierName && !autoCollapsedRef.current) {
+      setAddrOpen(false);
+      autoCollapsedRef.current = true;
+    }
+  }, [supplierName]);
+
   return (
     <>
       <PageHeader title={currentMenu?.permissiondisplayname ?? ""} subtitle={currentMenu?.permissiondescription} showBreadcrumb />
@@ -1109,116 +1118,137 @@ const PurchaseOrderForm = ({
             </div>
           </div>
 
-          {/* ── ORDER TO / SHIP TO + ORDER DETAILS ──────── */}
+          {/* ADDRESSES — collapsible */}
           <div className="card mb-3">
-            <div className="card-body">
-              <div className="row g-3">
+            <div
+              className="card-header d-flex align-items-center justify-content-between py-2"
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onClick={() => setAddrOpen((o) => !o)}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-semibold" style={{ fontSize: 13 }}>Addresses</span>
+                {!addrOpen && supplierName && (
+                  <span className="text-muted" style={{ fontSize: 12 }}>
+                    — {isReturnOrder ? "Order From" : "Order To"}: {supplierName}
+                  </span>
+                )}
+              </div>
+              <i className={`fas fa-chevron-${addrOpen ? "up" : "down"} text-muted`} style={{ fontSize: 12 }} />
+            </div>
+            {addrOpen && (
+              <div className="card-body">
+                <div className="row g-3">
 
-                {/* Order To */}
-                <div className="col-lg-6 col-md-12">
-                  <div className="border rounded p-3 h-100">
-                    <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
-                      {isReturnOrder ? "Order From" : "Order To"}
-                    </div>
+                  {/* Order To */}
+                  <div className="col-lg-6 col-md-12">
+                    <div className="border rounded p-3 h-100">
+                      <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                        {isReturnOrder ? "Order From" : "Order To"}
+                      </div>
 
-                    {!isReturnOrder && (
-                      <Controller
-                        name="supplierid"
-                        control={control}
-                        rules={{ required: "Supplier is required" }}
-                        render={({ field }) => (
-                          <SelectSupplier
-                            trigger={trigger}
-                            storeId={parsedStoreId}
-                            disableField={disableField || isEdit}
-                            {...field}
-                          />
-                        )}
-                      />
-                    )}
-
-                    <div className="text-muted small lh-lg mt-2">
-                      {isReturnOrder ? (
-                        <>
-                          {currentOutlet?.outletname && <div className="fw-semibold text-dark">{currentOutlet.outletname}</div>}
-                          {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
-                          {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
-                          {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
-                            <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
+                      {!isReturnOrder && (
+                        <Controller
+                          name="supplierid"
+                          control={control}
+                          rules={{ required: "Supplier is required" }}
+                          render={({ field }) => (
+                            <SelectSupplier
+                              trigger={trigger}
+                              storeId={parsedStoreId}
+                              disableField={disableField || isEdit}
+                              {...field}
+                            />
                           )}
-                          {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
-                        </>
-                      ) : (
-                        <>
-                          {watch("poordtocompanyname") && <div className="fw-semibold text-dark">{watch("poordtocompanyname")}</div>}
-                          {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
-                          {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
-                          {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
-                            <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
-                          )}
-                          {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
-                        </>
+                        />
                       )}
-                    </div>
 
-                    <input type="hidden" {...register("poordtocompanyname")} />
-                    <input type="hidden" {...register("poordtoadd1")} />
-                    <input type="hidden" {...register("poordtoadd2")} />
-                    <input type="hidden" {...register("poordtocity")} />
-                    <input type="hidden" {...register("poordtostate")} />
-                    <input type="hidden" {...register("poordtozip")} />
-                    <input type="hidden" {...register("poordtocountry")} />
-                    <input type="hidden" {...register("poordtophone")} />
+                      <div className="text-muted small lh-lg mt-2">
+                        {isReturnOrder ? (
+                          <>
+                            {currentOutlet?.outletname && <div className="fw-semibold text-dark">{currentOutlet.outletname}</div>}
+                            {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
+                            {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
+                            {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
+                              <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
+                            )}
+                            {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
+                          </>
+                        ) : (
+                          <>
+                            {watch("poordtocompanyname") && <div className="fw-semibold text-dark">{watch("poordtocompanyname")}</div>}
+                            {watch("poordtoadd1") && <div>{watch("poordtoadd1")}</div>}
+                            {watch("poordtoadd2") && <div>{watch("poordtoadd2")}</div>}
+                            {[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).length > 0 && (
+                              <div>{[watch("poordtocity"), watch("poordtostate"), watch("poordtozip"), watch("poordtocountry")].filter(Boolean).join(", ")}</div>
+                            )}
+                            {watch("poordtophone") && <div>{watch("poordtophone")}</div>}
+                          </>
+                        )}
+                      </div>
+
+                      <input type="hidden" {...register("poordtocompanyname")} />
+                      <input type="hidden" {...register("poordtoadd1")} />
+                      <input type="hidden" {...register("poordtoadd2")} />
+                      <input type="hidden" {...register("poordtocity")} />
+                      <input type="hidden" {...register("poordtostate")} />
+                      <input type="hidden" {...register("poordtozip")} />
+                      <input type="hidden" {...register("poordtocountry")} />
+                      <input type="hidden" {...register("poordtophone")} />
+                    </div>
                   </div>
-                </div>
 
-                {/* Ship To */}
-                <div className="col-lg-6 col-md-12">
-                  <div className="border rounded p-3 h-100">
-                    <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
-                      {isReturnOrder ? "Ship To (Supplier)" : "Ship To"}
-                    </div>
+                  {/* Ship To */}
+                  <div className="col-lg-6 col-md-12">
+                    <div className="border rounded p-3 h-100">
+                      <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                        {isReturnOrder ? "Ship To (Supplier)" : "Ship To"}
+                      </div>
 
-                    {isReturnOrder && (
-                      <Controller
-                        name="supplierid"
-                        control={control}
-                        rules={{ required: "Supplier is required" }}
-                        render={({ field }) => (
-                          <SelectSupplier
-                            trigger={trigger}
-                            storeId={parsedStoreId}
-                            disableField={disableField || isEdit}
-                            {...field}
-                          />
-                        )}
-                      />
-                    )}
-
-                    <div className="text-muted small lh-lg mt-2">
-                      {watch("poshiptocompanyname") && <div className="fw-semibold text-dark">{watch("poshiptocompanyname")}</div>}
-                      {watch("poshiptoadd1") && <div>{watch("poshiptoadd1")}</div>}
-                      {watch("poshiptoadd2") && <div>{watch("poshiptoadd2")}</div>}
-                      {[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).length > 0 && (
-                        <div>{[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).join(", ")}</div>
+                      {isReturnOrder && (
+                        <Controller
+                          name="supplierid"
+                          control={control}
+                          rules={{ required: "Supplier is required" }}
+                          render={({ field }) => (
+                            <SelectSupplier
+                              trigger={trigger}
+                              storeId={parsedStoreId}
+                              disableField={disableField || isEdit}
+                              {...field}
+                            />
+                          )}
+                        />
                       )}
-                      {watch("poshiptophone") && <div>{watch("poshiptophone")}</div>}
-                    </div>
 
-                    <input type="hidden" {...register("poshiptocompanyname")} />
-                    <input type="hidden" {...register("poshiptoadd1")} />
-                    <input type="hidden" {...register("poshiptoadd2")} />
-                    <input type="hidden" {...register("poshiptocity")} />
-                    <input type="hidden" {...register("poshiptostate")} />
-                    <input type="hidden" {...register("poshiptozip")} />
-                    <input type="hidden" {...register("poshiptocountry")} />
-                    <input type="hidden" {...register("poshiptophone")} />
+                      <div className="text-muted small lh-lg mt-2">
+                        {watch("poshiptocompanyname") && <div className="fw-semibold text-dark">{watch("poshiptocompanyname")}</div>}
+                        {watch("poshiptoadd1") && <div>{watch("poshiptoadd1")}</div>}
+                        {watch("poshiptoadd2") && <div>{watch("poshiptoadd2")}</div>}
+                        {[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).length > 0 && (
+                          <div>{[watch("poshiptocity"), watch("poshiptostate"), watch("poshiptozip"), watch("poshiptocountry")].filter(Boolean).join(", ")}</div>
+                        )}
+                        {watch("poshiptophone") && <div>{watch("poshiptophone")}</div>}
+                      </div>
+
+                      <input type="hidden" {...register("poshiptocompanyname")} />
+                      <input type="hidden" {...register("poshiptoadd1")} />
+                      <input type="hidden" {...register("poshiptoadd2")} />
+                      <input type="hidden" {...register("poshiptocity")} />
+                      <input type="hidden" {...register("poshiptostate")} />
+                      <input type="hidden" {...register("poshiptozip")} />
+                      <input type="hidden" {...register("poshiptocountry")} />
+                      <input type="hidden" {...register("poshiptophone")} />
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ── ORDER DETAILS GROUPS ─────────────────── */}
-              <div className="row g-2 mt-3">
+          {/* ORDER DETAILS */}
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="row g-2">
 
                 {/* Reference */}
                 <div className="col-lg-4 col-md-12">

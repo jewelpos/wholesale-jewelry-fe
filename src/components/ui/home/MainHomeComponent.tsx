@@ -9,6 +9,9 @@ import HomeCatalogTiles from "./HomeCatalogTiles";
 import { catalogByStoreType, defaultCatalog } from "@/lib/utils/homeCatalogConfig";
 import { CatalogTile } from "@/types/home";
 import { Store } from "@/types/store";
+import Link from "next/link";
+import { Edit } from "react-feather";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 const MainHomeComponent = () => {
   const user = useAppSelector((state) => state.user.data);
@@ -22,7 +25,7 @@ const MainHomeComponent = () => {
 
   const tiles: CatalogTile[] = catalogByStoreType[categoryName ?? ""] ?? defaultCatalog;
 
-  const outletNames = store?.outlets?.map((o) => o.outletname).join(" · ");
+  const { basePath } = useDefaultRoute();
 
   return (
     <div className="content">
@@ -58,9 +61,33 @@ const MainHomeComponent = () => {
             </span>
           )}
         </div>
-        {outletNames && (
-          <div style={{ fontSize: 12, color: "var(--text-secondary, #64748b)", marginTop: 4 }}>
-            Current branches: {outletNames}
+        {store?.outlets && store.outlets.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+            <span style={{ fontSize: 12, color: "var(--text-secondary, #64748b)" }}>
+              Branches:
+            </span>
+            {store.outlets.map((o) => (
+              <Link
+                key={o.outletid}
+                href={`${basePath.replace(/\/\d+$/, `/${o.outletid}`)}/settings/outlet`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 20,
+                  padding: "2px 10px 2px 8px",
+                  fontSize: 12,
+                  color: "#334155",
+                  textDecoration: "none",
+                  fontWeight: 500,
+                }}
+              >
+                {o.outletname}
+                <Edit size={11} style={{ color: "#94a3b8" }} />
+              </Link>
+            ))}
           </div>
         )}
         <p style={{ fontSize: 13, color: "var(--text-secondary, #64748b)", marginTop: 6, marginBottom: 0 }}>

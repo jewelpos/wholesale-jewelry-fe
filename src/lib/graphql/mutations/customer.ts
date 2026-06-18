@@ -98,3 +98,14 @@ export const VOID_CUSTOMER_PAYMENT_MUTATION = gql`
     }
   }
 `;
+
+export const SEND_STATEMENT_SMS_MUTATION = gql`
+  mutation SendCustomerStatementSMS($input: SendStatementSMSInput!) {
+    sendCustomerStatementSMS(input: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

@@ -348,3 +348,39 @@ export const GET_SO_DAILY_SUMMARY_QUERY = gql`
     }
   }
 `;
+
+export const GET_TODAY_INVOICE_STATS_QUERY = gql`
+  query GetTodayInvoiceStats($outletid: Int!) {
+    getTodayInvoiceStats(outletid: $outletid) {
+      revenue_today total_today paid_today pending_today outstanding_today active_cashiers
+    }
+  }
+`;
+
+export const GET_DAY_END_REPORT_QUERY = gql`
+  query GetDayEndReport($storeid: Int!, $outletid: Int!, $date: String!) {
+    getDayEndReport(storeid: $storeid, outletid: $outletid, date: $date) {
+      date
+      summary {
+        totalSales totalOutstanding invoiceCount paidCount
+      }
+      paymentBreakdown {
+        paymode paymentCount totalReceived
+      }
+      cashierBreakdown {
+        employeeid employeename invoiceCount totalSales outstanding
+      }
+      invoices {
+        invoicenumber companyname saledate salemodename netamount balancedue statusname
+      }
+    }
+  }
+`;
+
+export const GET_CASH_DRAWER_SESSION_QUERY = gql`
+  query GetCashDrawerSession($storeid: Int!, $outletid: Int!, $date: String) {
+    getCashDrawerSession(storeid: $storeid, outletid: $outletid, date: $date) {
+      id outletid date openedby openingfloat expectedclosing actualclosing variance status notes openedat closedat
+    }
+  }
+`;

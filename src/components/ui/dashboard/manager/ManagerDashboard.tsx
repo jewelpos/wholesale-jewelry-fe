@@ -2,13 +2,14 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
-import { DollarSign, TrendingUp, BarChart2, Users, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart2, Users, Calendar, AlertCircle, UserCheck } from "lucide-react";
 import { GET_WAREHOUSES_BY_OUTLET_ID_QUERY } from "@/lib/graphql/query/warehouse";
 import {
   GET_MONTHLY_SALES_PIVOT_QUERY,
   GET_MONTHLY_EMPLOYEE_SALES_PIVOT_QUERY,
   GET_ITEM_SOLD_BY_CATEGORY_PIVOT_QUERY,
 } from "@/lib/graphql/query/reports";
+import { GET_TODAY_INVOICE_STATS_QUERY } from "@/lib/graphql/query/sales";
 import {
   num,
   formatCurrency,
@@ -177,6 +178,13 @@ const ManagerDashboard = () => {
     }
   );
 
+  const { data: todayData, loading: todayLoading } = useQuery(GET_TODAY_INVOICE_STATS_QUERY, {
+    variables: { outletid: outletId },
+    skip: !outletId,
+    pollInterval: 3 * 60 * 1000,
+  });
+  const today = todayData?.getTodayInvoiceStats ?? null;
+
   const salesRows: Record<string, number | string>[] =
     salesData?.getMonthlySalesPivot?.data ?? [];
   const totals: MonthTotals | null = useMemo(
@@ -269,6 +277,33 @@ const ManagerDashboard = () => {
             <Calendar size={12} />
             {curMonthLabel} {year}
           </div>
+        </div>
+      </div>
+
+      {/* Today Strip */}
+      <div className="mb-4">
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+          Today · Live
+        </div>
+        <div className="row row-cols-2 row-cols-md-4 g-2">
+          {[
+            { label: "Revenue Today", value: formatCurrency(today?.revenue_today ?? 0), Icon: TrendingUp, accent: "#6366f1" },
+            { label: "Invoices Today", value: `${today?.paid_today ?? 0} / ${today?.total_today ?? 0} paid`, Icon: DollarSign, accent: "#10b981" },
+            { label: "Outstanding", value: formatCurrency(today?.outstanding_today ?? 0), Icon: AlertCircle, accent: "#f59e0b" },
+            { label: "Active Cashiers", value: String(today?.active_cashiers ?? 0), Icon: UserCheck, accent: "#8b5cf6" },
+          ].map(({ label, value, Icon, accent }) => (
+            <div key={label} className="col">
+              <div className="p-2" style={{ border: `1px solid ${accent}30`, borderLeft: `3px solid ${accent}`, borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-card)" }}>
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <Icon size={12} style={{ color: accent }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>
+                  {todayLoading ? "—" : value}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

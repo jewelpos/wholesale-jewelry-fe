@@ -64,6 +64,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       detaileditemdescription: "",
       itemreorderqtypnt: 0,
       itemreorderqty: 0,
+      itemsellprice: 0,
       itemtagprice: 0,
       itemtagpricecode: "",
       itemdiscount: 0,
@@ -127,12 +128,35 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   });
   const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
 
+  // Auto-calculate sell price, price code, and tag price from settings
   useEffect(() => {
-    if (productSettings?.saletagkey && itempurchaseprice && !isEdit) {
-      const pct = (itempurchaseprice / 100) * profitpercent;
-      setValue("itemtagprice", Number(((itempurchaseprice + pct) * productSettings.saletagkey).toFixed(2)));
+    if (!productSettings || !itempurchaseprice) return;
+
+    // 1. Sell price: profit margin takes priority; fall back to saletagkey multiplier
+    let sellPrice = 0;
+    if (profitpercent && profitpercent > 0) {
+      sellPrice = Number((itempurchaseprice * (1 + profitpercent / 100)).toFixed(2));
+    } else if (productSettings.saletagkey) {
+      sellPrice = Number((itempurchaseprice * productSettings.saletagkey).toFixed(2));
     }
-  }, [itempurchaseprice, profitpercent, productSettings, setValue, isEdit]);
+    if (sellPrice <= 0) return;
+    setValue("itemsellprice", sellPrice);
+
+    // 2. Price code: encode sell price using codechars (same as label printing)
+    const codechars = productSettings.codechars as unknown as string;
+    if (codechars) {
+      const encoded = String(Math.round(sellPrice * 100))
+        .split("")
+        .map((d) => codechars[parseInt(d, 10)] ?? d)
+        .join("");
+      setValue("itemtagpricecode", encoded);
+    }
+
+    // 3. Tag price: sell price × tagpricekey
+    if (productSettings.tagpricekey) {
+      setValue("itemtagprice", Number((sellPrice * productSettings.tagpricekey).toFixed(2)));
+    }
+  }, [itempurchaseprice, profitpercent, productSettings, setValue]);
 
   const onSubmit: SubmitHandler<ProductFormType> = async (formData) => {
     setSaveLoading(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
@@ -574,6 +574,16 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const toolLine = computeLine(toolItem as SalesOrderItemForm);
 
+  const billToCompanyName = watch("invbilltocompanyname") || "";
+  const [addrOpen, setAddrOpen] = useState(true);
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    if (billToCompanyName && !autoCollapsedRef.current) {
+      setAddrOpen(false);
+      autoCollapsedRef.current = true;
+    }
+  }, [billToCompanyName]);
+
   if (isEdit && editLoading) return <div className="text-center py-5"><div className="spinner-border" /></div>;
 
   return (
@@ -627,14 +637,29 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
               )}
             </div>
 
-            {watch("invbilltocity") && (
+            {billToCompanyName && (
               <>
                 <div className="vr align-self-stretch" />
                 <div>
                   <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To</div>
+                  <div className="fw-semibold">{billToCompanyName}</div>
                   <div className="text-muted small">
                     {watch("invbilltocity")}{watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
                   </div>
+                </div>
+                <div className="vr align-self-stretch" />
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
+                  {shipSameAsBill ? (
+                    <div className="text-muted small fst-italic">Same as Bill To</div>
+                  ) : (
+                    <>
+                      <div className="fw-semibold">{watch("invshiptocompanyname") || billToCompanyName}</div>
+                      <div className="text-muted small">
+                        {watch("invshiptocity")}{watch("invshiptostate") ? `, ${watch("invshiptostate")}` : ""}
+                      </div>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -642,87 +667,107 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         </div>
       </div>
 
-      {/* CUSTOMERS + ADDRESS */}
+      {/* ADDRESSES — collapsible */}
       <div className="card mb-3">
-        <div className="card-body">
-
-          {/* Bill To / Ship To */}
-          <div className="row g-3">
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To <span className="text-danger">*</span></div>
-                <div className="mb-2">
-                  <Controller
-                    control={control}
-                    name="customerid"
-                    rules={{ required: "Customer is required" }}
-                    render={({ field, fieldState }) => (
-                      <>
-                        <SelectCustomer
-                          storeId={parsedStoreId}
-                          value={field.value}
-                          onChange={(val: number | undefined) => field.onChange(val)}
-                          trigger={trigger}
-                        />
-                        {fieldState.error && <div className="text-danger small mt-1">{fieldState.error.message}</div>}
-                      </>
-                    )}
-                  />
-                </div>
-                <div className="row g-1 mt-1">
-                  <div className="col-12">
-                    <input className="form-control form-control-sm" placeholder="Address" {...register("invbilltoadd1")} />
-                  </div>
-                  <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invbilltocity")} /></div>
-                  <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invbilltostate")} /></div>
-                  <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invbilltozip")} /></div>
-                  <div className="col-12">
-                    <input className="form-control form-control-sm" placeholder="Phone" {...register("invbilltophone")} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
-                  <label className="d-flex align-items-center gap-2 m-0 small text-muted" style={{ cursor: "pointer" }}>
-                    <input type="checkbox" {...register("shipSameAsBill")} />
-                    Same as Bill To
-                  </label>
-                </div>
-                {!shipSameAsBill && (
+        <div
+          className="card-header d-flex align-items-center justify-content-between py-2"
+          style={{ cursor: "pointer", userSelect: "none" }}
+          onClick={() => setAddrOpen((o) => !o)}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <span className="fw-semibold" style={{ fontSize: 13 }}>Addresses</span>
+            {!addrOpen && billToCompanyName && (
+              <span className="text-muted" style={{ fontSize: 12 }}>
+                — Bill To: {billToCompanyName}
+                {!shipSameAsBill && watch("invshiptocompanyname") ? ` · Ship To: ${watch("invshiptocompanyname")}` : ""}
+              </span>
+            )}
+          </div>
+          <i className={`fas fa-chevron-${addrOpen ? "up" : "down"} text-muted`} style={{ fontSize: 12 }} />
+        </div>
+        {addrOpen && (
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-lg-6 col-md-12">
+                <div className="border rounded p-3 h-100">
+                  <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To <span className="text-danger">*</span></div>
                   <div className="mb-2">
                     <Controller
                       control={control}
-                      name="shiptocustomerid"
-                      render={({ field }) => (
-                        <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+                      name="customerid"
+                      rules={{ required: "Customer is required" }}
+                      render={({ field, fieldState }) => (
+                        <>
+                          <SelectCustomer
+                            storeId={parsedStoreId}
+                            value={field.value}
+                            onChange={(val: number | undefined) => field.onChange(val)}
+                            trigger={trigger}
+                          />
+                          {fieldState.error && <div className="text-danger small mt-1">{fieldState.error.message}</div>}
+                        </>
                       )}
                     />
                   </div>
-                )}
-                <div className="row g-1 mt-1">
-                  <div className="col-12">
-                    <input className="form-control form-control-sm" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
+                  <div className="row g-1 mt-1">
+                    <div className="col-12">
+                      <input className="form-control form-control-sm" placeholder="Address" {...register("invbilltoadd1")} />
+                    </div>
+                    <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invbilltocity")} /></div>
+                    <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invbilltostate")} /></div>
+                    <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invbilltozip")} /></div>
+                    <div className="col-12">
+                      <input className="form-control form-control-sm" placeholder="Phone" {...register("invbilltophone")} />
+                    </div>
                   </div>
-                  <div className="col-12">
-                    <input className="form-control form-control-sm" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
+                </div>
+              </div>
+
+              <div className="col-lg-6 col-md-12">
+                <div className="border rounded p-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
+                    <label className="d-flex align-items-center gap-2 m-0 small text-muted" style={{ cursor: "pointer" }}>
+                      <input type="checkbox" {...register("shipSameAsBill")} />
+                      Same as Bill To
+                    </label>
                   </div>
-                  <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
-                  <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
-                  <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
-                  <div className="col-12">
-                    <input className="form-control form-control-sm" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+                  {!shipSameAsBill && (
+                    <div className="mb-2">
+                      <Controller
+                        control={control}
+                        name="shiptocustomerid"
+                        render={({ field }) => (
+                          <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+                        )}
+                      />
+                    </div>
+                  )}
+                  <div className="row g-1 mt-1">
+                    <div className="col-12">
+                      <input className="form-control form-control-sm" placeholder="Company" {...register("invshiptocompanyname")} disabled={shipSameAsBill} />
+                    </div>
+                    <div className="col-12">
+                      <input className="form-control form-control-sm" placeholder="Address" {...register("invshiptoadd1")} disabled={shipSameAsBill} />
+                    </div>
+                    <div className="col-5"><input className="form-control form-control-sm" placeholder="City" {...register("invshiptocity")} disabled={shipSameAsBill} /></div>
+                    <div className="col-3"><input className="form-control form-control-sm" placeholder="State" {...register("invshiptostate")} disabled={shipSameAsBill} /></div>
+                    <div className="col-4"><input className="form-control form-control-sm" placeholder="Zip" {...register("invshiptozip")} disabled={shipSameAsBill} /></div>
+                    <div className="col-12">
+                      <input className="form-control form-control-sm" placeholder="Phone" {...register("invshiptophone")} disabled={shipSameAsBill} />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* ORDER DETAILS */}
-          <div className="row g-2 mt-3">
+      {/* ORDER DETAILS */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <div className="row g-2">
             {/* Reference */}
             <div className="col-lg-4 col-md-12">
               <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>

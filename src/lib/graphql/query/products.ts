@@ -288,26 +288,27 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
   }
 `;
 
+const LABEL_FIELDS = `
+  labelid labelname tagmodel labletype
+  labelwidth labelheight leftmargin topmargin middlemargin
+  tagprefix tagsuffix
+  showbarcode showitemcode showdescription showsellprice showcodedprice showcategory
+  barcodeside itemcodeside descriptionside sellpriceside codedpriceside categoryside
+  backgroundimage isactive
+`;
+
 export const GET_INVENTORY_TAG_LABELS_QUERY = gql`
   query GetInventoryTagLabels($storeid: Int!) {
     getInventoryTagLabels(storeid: $storeid) {
-      labelid
-      labelname
-      tagmodel
-      labletype
-      labelwidth
-      labelheight
-      leftmargin
-      topmargin
-      middlemargin
-      tagprefix
-      tagsuffix
-      showbarcode
-      showitemcode
-      showdescription
-      showsellprice
-      showcodedprice
-      showcategory
+      ${LABEL_FIELDS}
+    }
+  }
+`;
+
+export const GET_ALL_INVENTORY_TAG_LABELS_QUERY = gql`
+  query GetAllInventoryTagLabels($storeid: Int!) {
+    getAllInventoryTagLabels(storeid: $storeid) {
+      ${LABEL_FIELDS}
     }
   }
 `;

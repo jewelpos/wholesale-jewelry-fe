@@ -70,6 +70,14 @@ export const paymentTypes ={
   all:"all",
 }
 
+export const USER_ROLES = {
+  Admin: "Admin",
+  Manager: "Manager",
+  Cashier: "Cashier",
+} as const;
+
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
 export const paymentModalTypes = {
   add_credit_adjustment:"add_credit_adjustment",
   add_customer_credit_adjustment:"add_customer_credit_adjustment",

@@ -182,6 +182,7 @@ export type ProductFormType = {
   
   // Information Tab - Sales Setting Section
   itempurchaseprice: number;//Unit Cost
+  itemsellprice?: number;//Sell Price (auto)
   itemtagpricecode?: string;//Price Code
   itemtagprice?: number;//Tag Price
   itemdiscount?: number;//Item Discount

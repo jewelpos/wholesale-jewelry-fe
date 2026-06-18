@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { DELETE_CUSTOMER_MUTATION } from "@/lib/graphql/mutations/customer";
 import { useAppDispatch } from "@/lib/store/hook";
@@ -7,10 +7,12 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { CustomersListType } from "@/types/customer";
 import Link from "next/link";
-import { Edit, Eye, Trash2 } from "react-feather";
+import { Edit, Eye, FileText, Trash2 } from "react-feather";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
+import CustomerStatementModal from "@/components/ui/customers/statement/CustomerStatementModal";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface CustomerActionsProps {
   data: CustomersListType;
@@ -26,6 +28,8 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const [statementOpen, setStatementOpen] = useState(false);
+  const { isAtLeastManager } = useUserRole();
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -84,6 +88,17 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
         >
           <Eye size={14} />
         </Link>
+        {isAtLeastManager && (
+          <button
+            type="button"
+            className="p-1 btn btn-link"
+            style={{ lineHeight: 1 }}
+            onClick={() => setStatementOpen(true)}
+            title="Print Statement"
+          >
+            <FileText size={14} />
+          </button>
+        )}
         <Link
           className="p-1"
           href={`${basePath}/customers/${data.customerid}/edit`}
@@ -112,6 +127,9 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
           </span>
         )}
       </div>
+      {statementOpen && (
+        <CustomerStatementModal customer={data} onClose={() => setStatementOpen(false)} />
+      )}
     </div>
   );
 };

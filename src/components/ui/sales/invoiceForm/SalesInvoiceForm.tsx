@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
@@ -37,6 +37,8 @@ import {
 } from "@/lib/graphql/mutations/sales";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { GET_INVOICE_BY_NUMBER_QUERY, GET_MEMO_DETAIL_QUERY, GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
+import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
+import { CREATE_CUSTOMER_PAYMENT_MUTATION } from "@/lib/graphql/mutations/customer";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
@@ -51,6 +53,9 @@ export type SalesInvoiceFormMode = "NEW_INVOICE" | "CREDIT_INVOICE";
 export type SalesDocumentType = "INVOICE" | "MEMO";
 
 const MySwal = withReactContent(Swal);
+
+const EXCLUDED_PAYMENT_MODES = new Set(["ReDep", "NSF", "Void", "WriteOff", "CashChk", "MnyOrd", "CrdInv", "WireTrn"]);
+const PAYMENT_MODE_ORDER = ["Card", "Cash", "Check", "Zelle"];
 
 type SalesInvoiceItemForm = {
   salesorderitemid?: number;
@@ -205,6 +210,186 @@ const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => 
   };
 };
 
+type PaymentModalState = {
+  open: boolean;
+  invoicenumber: number | null;
+  netamount: number;
+  customerid: number | null;
+  warehouseid: number | null;
+  onDone: (() => void) | null;
+};
+
+const PaymentCollectModal = ({
+  paymentModal,
+  paymentModes,
+  selectedModeId,
+  setSelectedModeId,
+  paymentAmount,
+  setPaymentAmount,
+  checkCardNo,
+  setCheckCardNo,
+  paymentLoading,
+  formatMoney,
+  onSkip,
+  onCollect,
+}: {
+  paymentModal: PaymentModalState;
+  paymentModes: { paymentmodeid: number; paymode: string }[];
+  selectedModeId: number | null;
+  setSelectedModeId: (id: number) => void;
+  paymentAmount: string;
+  setPaymentAmount: (v: string) => void;
+  checkCardNo: string;
+  setCheckCardNo: (v: string) => void;
+  paymentLoading: boolean;
+  formatMoney: (v: unknown) => string;
+  onSkip: () => void;
+  onCollect: () => void;
+}) => {
+  const validModes = paymentModes
+    .filter((m) => !EXCLUDED_PAYMENT_MODES.has(m.paymode))
+    .sort((a, b) => {
+      const ai = PAYMENT_MODE_ORDER.indexOf(a.paymode);
+      const bi = PAYMENT_MODE_ORDER.indexOf(b.paymode);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  const received = Number(paymentAmount) || 0;
+  const invoiceAmt = paymentModal.netamount;
+  const diff = received - invoiceAmt;
+  const selectedMode = validModes.find((m) => m.paymentmodeid === selectedModeId);
+  const isCardOrCheck = !!selectedMode?.paymode?.toLowerCase().match(/card|check/);
+
+  return (
+    <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.55)", zIndex: 1055 }}>
+      <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 420 }}>
+        <div className="modal-content" style={{ borderRadius: 14, overflow: "hidden", border: "none", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+
+          {/* Coloured header */}
+          <div style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)", padding: "20px 24px 18px" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 6 }}>
+              Collect Payment
+            </div>
+            <div className="d-flex justify-content-between align-items-end">
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
+                Invoice {paymentModal.invoicenumber ? `#${paymentModal.invoicenumber}` : ""}
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                {formatMoney(invoiceAmt)}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4">
+            {/* Payment method pills */}
+            <div className="mb-4">
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+                Payment Method
+              </div>
+              <div className="d-flex flex-wrap gap-2">
+                {validModes.map((m) => {
+                  const sel = selectedModeId === m.paymentmodeid;
+                  return (
+                    <button
+                      key={m.paymentmodeid}
+                      type="button"
+                      onClick={() => setSelectedModeId(m.paymentmodeid)}
+                      style={{
+                        padding: "6px 18px",
+                        borderRadius: 20,
+                        border: sel ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                        backgroundColor: sel ? "#eff6ff" : "#fff",
+                        color: sel ? "#1d4ed8" : "#64748b",
+                        fontWeight: sel ? 700 : 500,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        outline: "none",
+                      }}
+                    >
+                      {m.paymode}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reference for card / check */}
+            {isCardOrCheck && (
+              <div className="mb-4">
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                  {selectedMode?.paymode?.toLowerCase().includes("card") ? "Card Reference / Last 4" : "Check Number"}
+                </div>
+                <input
+                  className="form-control"
+                  value={checkCardNo}
+                  onChange={(e) => setCheckCardNo(e.target.value)}
+                  placeholder={selectedMode?.paymode?.toLowerCase().includes("card") ? "Last 4 digits or auth code" : "Check number"}
+                  style={{ fontSize: 13 }}
+                />
+              </div>
+            )}
+
+            {/* Amount box */}
+            <div className="rounded-3 p-3" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <div className="d-flex justify-content-between align-items-center mb-3" style={{ fontSize: 13, color: "#64748b" }}>
+                <span>Invoice total</span>
+                <span className="fw-semibold" style={{ fontVariantNumeric: "tabular-nums", color: "#1e293b" }}>{formatMoney(invoiceAmt)}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span style={{ fontSize: 13, color: "#64748b" }}>Amount received</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  autoFocus
+                  className="form-control text-end fw-bold"
+                  style={{ width: 130, fontSize: 15, border: "2px solid #2563eb", borderRadius: 8 }}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                />
+              </div>
+              {received > 0 && (
+                <div className="d-flex justify-content-between align-items-center mt-3 pt-2" style={{ borderTop: "1px solid #e2e8f0" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: diff < -0.005 ? "#d97706" : diff > 0.005 ? "#6366f1" : "#059669" }}>
+                    {diff < -0.005 ? "Balance remaining" : diff > 0.005 ? "Change due" : "Paid in full ✓"}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: diff < -0.005 ? "#d97706" : diff > 0.005 ? "#6366f1" : "#059669" }}>
+                    {Math.abs(diff) > 0.005 ? formatMoney(Math.abs(diff)) : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="d-flex gap-2 px-4 pb-4">
+            <button
+              type="button"
+              className="btn btn-light"
+              style={{ fontSize: 13, color: "#64748b", border: "1.5px solid #e2e8f0", flex: "0 0 auto" }}
+              onClick={onSkip}
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary flex-fill"
+              disabled={paymentLoading || !selectedModeId || !paymentAmount || !paymentModal.invoicenumber}
+              onClick={onCollect}
+              style={{ fontWeight: 600, fontSize: 14 }}
+            >
+              {paymentLoading ? "Processing…" : `Collect ${received > 0 ? formatMoney(received) : "Payment"}`}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SalesInvoiceForm = ({
   mode,
   invoiceId,
@@ -226,8 +411,9 @@ const SalesInvoiceForm = ({
 }) => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const config = getEnvironmentConfig();
 
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
@@ -326,6 +512,11 @@ const SalesInvoiceForm = ({
     return currencyFormatter.formatFixed(safe);
   };
 
+  const [paymentModal, setPaymentModal] = useState<PaymentModalState>({ open: false, invoicenumber: null, netamount: 0, customerid: null, warehouseid: null, onDone: null });
+  const [selectedModeId, setSelectedModeId] = useState<number | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [checkCardNo, setCheckCardNo] = useState("");
+
   const [, setProducts] = useState<ItemDetails[]>([]);
   const [fetchedInvoiceId, setFetchedInvoiceId] = useState<number | undefined>(undefined);
   const [fetchedBalanceDue, setFetchedBalanceDue] = useState<number | null>(null);
@@ -356,6 +547,13 @@ const SalesInvoiceForm = ({
   const [updateSOAfterInvoicing] = useMutation(UPDATE_SO_AFTER_INVOICING_MUTATION);
   const [updateMemoAfterInvoicing] = useMutation(UPDATE_MEMO_AFTER_INVOICING_MUTATION);
   const [createInvoiceFromMemo, { loading: savingCreditFromMemo }] = useMutation(CREATE_INVOICE_FROM_MEMO_MUTATION);
+  const [createPayment, { loading: paymentLoading }] = useMutation(CREATE_CUSTOMER_PAYMENT_MUTATION);
+
+  const { data: paymentModeData } = useQuery(GET_PAYMENT_MODE_LIST_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+  const paymentModes: { paymentmodeid: number; paymode: string }[] = paymentModeData?.getPaymentExpenseModes ?? [];
 
   const saving =
     savingInvoice ||
@@ -1015,6 +1213,32 @@ const SalesInvoiceForm = ({
     resetToolItem();
   };
 
+  const handleCollectPayment = async () => {
+    try {
+      await createPayment({
+        variables: {
+          input: {
+            storeid: parsedStoreId,
+            customerid: paymentModal.customerid,
+            outletid: parsedOutletId,
+            warehouseid: paymentModal.warehouseid ?? undefined,
+            paymentmodeid: selectedModeId,
+            amount: Number(paymentAmount),
+            invoicenumbers: [String(paymentModal.invoicenumber)],
+            checkcardno: checkCardNo || undefined,
+          },
+        },
+      });
+      dispatch(showNotification({ message: "Payment recorded", type: NOTIFICATION_TYPES.SUCCESS }));
+    } catch {
+      dispatch(showNotification({ message: "Payment failed — invoice saved without payment", type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      const done = paymentModal.onDone;
+      setPaymentModal((p) => ({ ...p, open: false }));
+      done?.();
+    }
+  };
+
   const onSubmit: SubmitHandler<SalesInvoiceFormType> = async (formData) => {
     const warehouseId = Number(formData.warehouseid);
     if (!parsedStoreId || !warehouseId) return;
@@ -1227,6 +1451,81 @@ const SalesInvoiceForm = ({
             : "Memo"
           : "Invoice";
 
+      // For new invoices only: show the payment collection modal before the print popup
+      const isNewStandardInvoice = documentType === "INVOICE" && !isEdit && !memonumber && mode !== "CREDIT_INVOICE";
+      if (isNewStandardInvoice) {
+        const capturedDocNumber = documentNumber ?? null;
+        const capturedNetAmount = payload.netamount as number;
+        const capturedCustomerId = formData.customerid ? Number(formData.customerid) : null;
+        const capturedWarehouseId = warehouseId ?? null;
+        const firstModeId =
+          paymentModes.find((m) => m.paymode === "Card")?.paymentmodeid ??
+          paymentModes.find((m) => !EXCLUDED_PAYMENT_MODES.has(m.paymode))?.paymentmodeid ??
+          null;
+        setSelectedModeId(firstModeId);
+        setPaymentAmount(String(capturedNetAmount));
+        setCheckCardNo("");
+        setPaymentModal({
+          open: true,
+          invoicenumber: capturedDocNumber,
+          netamount: capturedNetAmount,
+          customerid: capturedCustomerId,
+          warehouseid: capturedWarehouseId,
+          onDone: async () => {
+            const num = capturedDocNumber;
+            let smsSendClicked = false;
+            const showSmsButton = !!num;
+            const popupResult = await MySwal.fire({
+              icon: "success",
+              title: "Invoice Saved",
+              html: `
+                <div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">Invoice ${num ? `#${num}` : ""} saved successfully.</div>
+                ${showSmsButton ? `<div style="margin-top:14px; padding-top:12px; border-top:1px solid #eee;">
+                  <button id="swal-sms-btn" style="background:none; border:1px solid #198754; color:#198754; border-radius:6px; padding:6px 16px; cursor:pointer; font-size:0.875rem;">
+                    📱 Share Invoice Link
+                  </button>
+                </div>` : ""}
+              `,
+              showCancelButton: true,
+              showDenyButton: true,
+              confirmButtonText: "Print",
+              denyButtonText: "Email",
+              cancelButtonText: "Close",
+              showCloseButton: true,
+              didOpen: () => {
+                if (!showSmsButton) return;
+                document.getElementById("swal-sms-btn")?.addEventListener("click", () => {
+                  smsSendClicked = true;
+                  MySwal.close();
+                });
+              },
+            });
+            if (popupResult.isConfirmed && num) await handlePrintDocumentNumber(num);
+            dispatch(showNotification({ message: response?.message || "Invoice saved successfully", type: NOTIFICATION_TYPES.SUCCESS }));
+            if (smsSendClicked && num) {
+              try {
+                await api.post(`${config.apiUrl}/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: num });
+                dispatch(showNotification({ message: `SMS sent for Invoice #${num}`, type: NOTIFICATION_TYPES.SUCCESS }));
+              } catch {
+                dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
+              }
+              reset();
+              router.back();
+              return;
+            }
+            if (popupResult.isDenied && num) {
+              setEmailModalDocNumber(num);
+              setEmailModalNavigateBack(true);
+              reset();
+              return;
+            }
+            reset();
+            router.back();
+          },
+        });
+        return;
+      }
+
       let smsSendClicked = false;
       const showSmsButton = documentType === "INVOICE" && !isEdit && !!documentNumber;
       const popupResult = await MySwal.fire({
@@ -1304,8 +1603,18 @@ const SalesInvoiceForm = ({
     );
   };
 
+  const billToCompanyName = watch("invbilltocompanyname") || "";
   const shipToCompanyName = watch("invshiptocompanyname") || "";
   const shipToAddress = watch("invshiptoadd1") || "";
+
+  const [addrOpen, setAddrOpen] = useState(true);
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    if (billToCompanyName && !autoCollapsedRef.current) {
+      setAddrOpen(false);
+      autoCollapsedRef.current = true;
+    }
+  }, [billToCompanyName]);
 
   // Show loader while SO data is being fetched / retrying
   if (salesordernoFromSO && (soQueryLoading || (soQueryError && !soQueryData))) {
@@ -1386,15 +1695,29 @@ const SalesInvoiceForm = ({
               <div className="text-muted fst-italic">Auto-assigned</div>
             </div>
 
-            {watch("invbilltocompanyname") && (
+            {billToCompanyName && (
               <>
                 <div className="vr align-self-stretch" />
                 <div>
                   <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To</div>
-                  <div className="fw-semibold">{watch("invbilltocompanyname")}</div>
+                  <div className="fw-semibold">{billToCompanyName}</div>
                   <div className="text-muted small">
                     {watch("invbilltocity")}{watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
                   </div>
+                </div>
+                <div className="vr align-self-stretch" />
+                <div>
+                  <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
+                  {shipSameAsBill ? (
+                    <div className="text-muted small fst-italic">Same as Bill To</div>
+                  ) : (
+                    <>
+                      <div className="fw-semibold">{shipToCompanyName || billToCompanyName}</div>
+                      <div className="text-muted small">
+                        {watch("invshiptocity")}{watch("invshiptostate") ? `, ${watch("invshiptostate")}` : ""}
+                      </div>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -1402,117 +1725,139 @@ const SalesInvoiceForm = ({
         </div>
       </div>
 
-      {/* CUSTOMERS + ORDER DETAILS */}
+      {/* ADDRESSES — collapsible */}
       <div className="card mb-3">
-        <div className="card-body">
-          <div className="row g-3">
+        <div
+          className="card-header d-flex align-items-center justify-content-between py-2"
+          style={{ cursor: "pointer", userSelect: "none" }}
+          onClick={() => setAddrOpen((o) => !o)}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <span className="fw-semibold" style={{ fontSize: 13 }}>Addresses</span>
+            {!addrOpen && billToCompanyName && (
+              <span className="text-muted" style={{ fontSize: 12 }}>
+                — Bill To: {billToCompanyName}
+                {!shipSameAsBill && shipToCompanyName ? ` · Ship To: ${shipToCompanyName}` : ""}
+              </span>
+            )}
+          </div>
+          <i className={`fas fa-chevron-${addrOpen ? "up" : "down"} text-muted`} style={{ fontSize: 12 }} />
+        </div>
+        {addrOpen && (
+          <div className="card-body">
+            <div className="row g-3">
 
-            {/* Bill To */}
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To <span className="text-danger">*</span></div>
-                <div className="mb-2">
-                  <Controller
-                    name="customerid"
-                    control={control}
-                    rules={{ required: "Bill To customer is required" }}
-                    render={({ field }) => (
-                      <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
-                    )}
-                  />
-                </div>
-                <div className="text-muted small lh-lg mt-2">
-                  {watch("invbilltoadd1") && <div>{watch("invbilltoadd1")}</div>}
-                  {(watch("invbilltocity") || watch("invbilltostate")) && (
-                    <div>
-                      {watch("invbilltocity")}
-                      {watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
-                      {watch("invbilltozip") ? ` ${watch("invbilltozip")}` : ""}
-                    </div>
-                  )}
-                  {watch("invbilltophone") && <div>{watch("invbilltophone")}</div>}
-                </div>
-                <input type="hidden" {...register("invbilltoadd1")} />
-                <input type="hidden" {...register("invbilltocity")} />
-                <input type="hidden" {...register("invbilltostate")} />
-                <input type="hidden" {...register("invbilltozip")} />
-                <input type="hidden" {...register("invbilltophone")} />
-              </div>
-            </div>
-
-            {/* Ship To */}
-            <div className="col-lg-6 col-md-12">
-              <div className="border rounded p-3 h-100">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
-                  <label className="d-flex align-items-center gap-2 m-0 small text-muted" style={{ cursor: "pointer" }}>
-                    <input type="checkbox" {...register("shipSameAsBill")} />
-                    Same as Bill To
-                  </label>
-                </div>
-                {shipSameAsBill ? (
-                  <>
-                    <div className="text-muted small lh-lg mt-2">
-                      {watch("invbilltocompanyname") && <div className="fw-semibold text-body">{watch("invbilltocompanyname")}</div>}
-                      {watch("invbilltoadd1") && <div>{watch("invbilltoadd1")}</div>}
-                      {(watch("invbilltocity") || watch("invbilltostate")) && (
-                        <div>
-                          {watch("invbilltocity")}
-                          {watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
-                          {watch("invbilltozip") ? ` ${watch("invbilltozip")}` : ""}
-                        </div>
+              {/* Bill To */}
+              <div className="col-lg-6 col-md-12">
+                <div className="border rounded p-3 h-100">
+                  <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Bill To <span className="text-danger">*</span></div>
+                  <div className="mb-2">
+                    <Controller
+                      name="customerid"
+                      control={control}
+                      rules={{ required: "Bill To customer is required" }}
+                      render={({ field }) => (
+                        <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
                       )}
-                      {watch("invbilltophone") && <div>{watch("invbilltophone")}</div>}
-                    </div>
-                    {!watch("invbilltocompanyname") && (
-                      <div className="text-muted small fst-italic">Select a Bill To customer to see address</div>
+                    />
+                  </div>
+                  <div className="text-muted small lh-lg mt-2">
+                    {watch("invbilltoadd1") && <div>{watch("invbilltoadd1")}</div>}
+                    {(watch("invbilltocity") || watch("invbilltostate")) && (
+                      <div>
+                        {watch("invbilltocity")}
+                        {watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
+                        {watch("invbilltozip") ? ` ${watch("invbilltozip")}` : ""}
+                      </div>
                     )}
-                  </>
-                ) : (
-                  <>
-                    <div className="mb-2">
-                      <Controller
-                        name="shiptocustomerid"
-                        control={control}
-                        render={({ field }) => (
-                          <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
+                    {watch("invbilltophone") && <div>{watch("invbilltophone")}</div>}
+                  </div>
+                  <input type="hidden" {...register("invbilltoadd1")} />
+                  <input type="hidden" {...register("invbilltocity")} />
+                  <input type="hidden" {...register("invbilltostate")} />
+                  <input type="hidden" {...register("invbilltozip")} />
+                  <input type="hidden" {...register("invbilltophone")} />
+                </div>
+              </div>
+
+              {/* Ship To */}
+              <div className="col-lg-6 col-md-12">
+                <div className="border rounded p-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Ship To</div>
+                    <label className="d-flex align-items-center gap-2 m-0 small text-muted" style={{ cursor: "pointer" }}>
+                      <input type="checkbox" {...register("shipSameAsBill")} />
+                      Same as Bill To
+                    </label>
+                  </div>
+                  {shipSameAsBill ? (
+                    <>
+                      <div className="text-muted small lh-lg mt-2">
+                        {billToCompanyName && <div className="fw-semibold text-body">{billToCompanyName}</div>}
+                        {watch("invbilltoadd1") && <div>{watch("invbilltoadd1")}</div>}
+                        {(watch("invbilltocity") || watch("invbilltostate")) && (
+                          <div>
+                            {watch("invbilltocity")}
+                            {watch("invbilltostate") ? `, ${watch("invbilltostate")}` : ""}
+                            {watch("invbilltozip") ? ` ${watch("invbilltozip")}` : ""}
+                          </div>
                         )}
-                      />
-                    </div>
-                    <div className="row g-1 mt-1">
-                      <div className="col-12">
-                        <input type="text" className="form-control form-control-sm" placeholder="Company"
-                          value={shipToCompanyName} onChange={(e) => setValue("invshiptocompanyname", e.target.value)} />
+                        {watch("invbilltophone") && <div>{watch("invbilltophone")}</div>}
                       </div>
-                      <div className="col-12">
-                        <input type="text" className="form-control form-control-sm" placeholder="Address"
-                          value={shipToAddress} onChange={(e) => setValue("invshiptoadd1", e.target.value)} />
+                      {!billToCompanyName && (
+                        <div className="text-muted small fst-italic">Select a Bill To customer to see address</div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-2">
+                        <Controller
+                          name="shiptocustomerid"
+                          control={control}
+                          render={({ field }) => (
+                            <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
+                          )}
+                        />
                       </div>
-                      <div className="col-5">
-                        <input type="text" className="form-control form-control-sm" placeholder="City"
-                          value={watch("invshiptocity") || ""} onChange={(e) => setValue("invshiptocity", e.target.value)} />
+                      <div className="row g-1 mt-1">
+                        <div className="col-12">
+                          <input type="text" className="form-control form-control-sm" placeholder="Company"
+                            value={shipToCompanyName} onChange={(e) => setValue("invshiptocompanyname", e.target.value)} />
+                        </div>
+                        <div className="col-12">
+                          <input type="text" className="form-control form-control-sm" placeholder="Address"
+                            value={shipToAddress} onChange={(e) => setValue("invshiptoadd1", e.target.value)} />
+                        </div>
+                        <div className="col-5">
+                          <input type="text" className="form-control form-control-sm" placeholder="City"
+                            value={watch("invshiptocity") || ""} onChange={(e) => setValue("invshiptocity", e.target.value)} />
+                        </div>
+                        <div className="col-4">
+                          <input type="text" className="form-control form-control-sm" placeholder="State"
+                            value={watch("invshiptostate") || ""} onChange={(e) => setValue("invshiptostate", e.target.value)} />
+                        </div>
+                        <div className="col-3">
+                          <input type="text" className="form-control form-control-sm" placeholder="Zip"
+                            value={watch("invshiptozip") || ""} onChange={(e) => setValue("invshiptozip", e.target.value)} />
+                        </div>
+                        <div className="col-12">
+                          <input type="text" className="form-control form-control-sm" placeholder="Phone"
+                            value={watch("invshiptophone") || ""} onChange={(e) => setValue("invshiptophone", e.target.value)} />
+                        </div>
                       </div>
-                      <div className="col-4">
-                        <input type="text" className="form-control form-control-sm" placeholder="State"
-                          value={watch("invshiptostate") || ""} onChange={(e) => setValue("invshiptostate", e.target.value)} />
-                      </div>
-                      <div className="col-3">
-                        <input type="text" className="form-control form-control-sm" placeholder="Zip"
-                          value={watch("invshiptozip") || ""} onChange={(e) => setValue("invshiptozip", e.target.value)} />
-                      </div>
-                      <div className="col-12">
-                        <input type="text" className="form-control form-control-sm" placeholder="Phone"
-                          value={watch("invshiptophone") || ""} onChange={(e) => setValue("invshiptophone", e.target.value)} />
-                      </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* ORDER DETAILS */}
-          <div className="row g-2 mt-3">
+      {/* ORDER DETAILS */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <div className="row g-2">
 
             {/* Reference group */}
             <div className="col-lg-4 col-md-12">
@@ -1963,6 +2308,27 @@ const SalesInvoiceForm = ({
           router.back();
         }}
         onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+      />
+    )}
+
+    {paymentModal.open && (
+      <PaymentCollectModal
+        paymentModal={paymentModal}
+        paymentModes={paymentModes}
+        selectedModeId={selectedModeId}
+        setSelectedModeId={setSelectedModeId}
+        paymentAmount={paymentAmount}
+        setPaymentAmount={setPaymentAmount}
+        checkCardNo={checkCardNo}
+        setCheckCardNo={setCheckCardNo}
+        paymentLoading={paymentLoading}
+        formatMoney={formatMoney}
+        onSkip={() => {
+          const done = paymentModal.onDone;
+          setPaymentModal((p) => ({ ...p, open: false }));
+          done?.();
+        }}
+        onCollect={handleCollectPayment}
       />
     )}
     </>
