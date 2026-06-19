@@ -298,6 +298,25 @@ export const GET_MONTHLY_PAYMENT_PIVOT_QUERY = gql`
   }
 `;
 
+export const GET_PAYMENT_COLLECTION_STATS_QUERY = gql`
+  query GetPaymentCollectionStats($storeid: Int!, $outletid: Int, $warehouseid: Int) {
+    getPaymentCollectionStats(storeid: $storeid, outletid: $outletid, warehouseid: $warehouseid) {
+      todayTotal
+      thisWeekTotal
+      thisMonthTotal
+      ytdTotal
+      todayCount
+      thisMonthCount
+      yesterdayTotal
+      priorWeekTotal
+      priorMonthTotal
+      priorYtdTotal
+      currentDso
+      priorPeriodDso
+    }
+  }
+`;
+
 export const GET_MONTHLY_EMPLOYEE_SALES_PIVOT_QUERY = gql`
   query GetMonthlyEmployeeSalesPivot(
     $storeid: Int!

@@ -4,12 +4,13 @@ import React from "react";
 import { ICellRendererParams } from "ag-grid-community";
 
 const STATUS_MAP: { keywords: string[]; bg: string; text: string }[] = [
-  { keywords: ["paid", "complete", "fulfilled", "invoiced", "shipped", "picked", "closed", "ready"], bg: "var(--status-paid-bg)",      text: "var(--status-paid-text)" },
+  { keywords: ["paid", "complete", "fulfilled", "invoiced", "shipped", "picked", "closed", "ready", "posted"], bg: "var(--status-paid-bg)",      text: "var(--status-paid-text)" },
+  { keywords: ["approved"],                                                                           bg: "#ede9fe",                    text: "#6d28d9" },
   { keywords: ["partial"],                                                                            bg: "var(--status-partial-bg)",   text: "var(--status-partial-text)" },
   { keywords: ["open", "pending", "active", "confirmed"],                                            bg: "var(--status-open-bg)",      text: "var(--status-open-text)" },
-  { keywords: ["hold"],                                                                               bg: "var(--status-hold-bg)",      text: "var(--status-hold-text)" },
-  { keywords: ["void", "refund", "cancel", "return", "reject"],                                      bg: "var(--status-void-bg)",      text: "var(--status-void-text)" },
-  { keywords: ["backorder", "back order"],                                                            bg: "var(--status-backorder-bg)", text: "var(--status-backorder-text)" },
+  { keywords: ["hold", "review"],                                                                    bg: "var(--status-hold-bg)",      text: "var(--status-hold-text)" },
+  { keywords: ["void", "refund", "cancel", "return", "reject"],                                     bg: "var(--status-void-bg)",      text: "var(--status-void-text)" },
+  { keywords: ["backorder", "back order"],                                                           bg: "var(--status-backorder-bg)", text: "var(--status-backorder-text)" },
 ];
 
 export function getStatusColor(status: string): { bg: string; text: string } {

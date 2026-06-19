@@ -532,6 +532,8 @@ const PurchaseOrderForm = ({
           itemdescription: row.itemdescription ?? "",
           itemunit: row.itemunit,
           qtyordered: Number(row.qtyordered || 0),
+          itemqtyreceived: Number(row.itemqtyreceived || 0),
+          itemqtybackorder: Number(row.itemqtybackorder || 0),
           orderunitcost: Number(row.orderunitcost || 0),
           orddiscount: row.orddiscount != null ? Number(row.orddiscount) : 0,
           ordextendedprice:
@@ -1376,17 +1378,19 @@ const PurchaseOrderForm = ({
                       <th className="text-nowrap">#</th>
                       <th className="text-nowrap">Item Code</th>
                       <th>Description</th>
-                      <th className="text-end text-nowrap">Qty</th>
+                      <th className="text-end text-nowrap">{disableField ? "Order Qty" : "Qty"}</th>
+                      {disableField && <th className="text-end text-nowrap">Recv Qty</th>}
+                      {disableField && <th className="text-end text-nowrap">Backorder</th>}
                       <th className="text-end text-nowrap">Unit Price</th>
                       <th className="text-end text-nowrap">Disc %</th>
                       <th className="text-end text-nowrap">Ext. Price</th>
-                      <th className="text-center text-nowrap">Action</th>
+                      {!disableField && <th className="text-center text-nowrap">Action</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {itemFields.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center text-muted py-5 fst-italic">
+                        <td colSpan={disableField ? 9 : 8} className="text-center text-muted py-5 fst-italic">
                           No items yet — use the form above to add line items
                         </td>
                       </tr>
@@ -1396,6 +1400,8 @@ const PurchaseOrderForm = ({
                           String(getValues(`items.${index}.itemcode`) || "");
                         const description = String(getValues(`items.${index}.itemdescription`) || "");
                         const qty = Number(getValues(`items.${index}.qtyordered`) || 0);
+                        const recvQty = Number(getValues(`items.${index}.itemqtyreceived`) || 0);
+                        const backorder = Number(getValues(`items.${index}.itemqtybackorder`) || 0);
                         const unitPrice = Number(getValues(`items.${index}.orderunitcost`) || 0);
                         const discountPct = Number(getValues(`items.${index}.orddiscount`) || 0);
                         const savedExtPrice = Number(
@@ -1421,44 +1427,44 @@ const PurchaseOrderForm = ({
                             <td className="text-nowrap">{displayItemCode}</td>
                             <td>{description}</td>
                             <td className="text-end">{qty}</td>
+                            {disableField && <td className="text-end">{recvQty}</td>}
+                            {disableField && <td className="text-end">{backorder}</td>}
                             <td className="text-end">{unitPrice}</td>
                             <td className="text-end">{discountPct}</td>
                             <td className="text-end">
                               {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
                             </td>
-                            <td className="text-center">
-                              {!disableField && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary me-1"
-                                    onClick={() => {
-                                      setEditingIndex(index);
-                                      setToolItem({
-                                        itemid:
-                                          (getValues(`items.${index}.itemid`) as unknown as number) ??
-                                          undefined,
-                                        itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
-                                        itemdescription: String(getValues(`items.${index}.itemdescription`) || ""),
-                                        itemunit: getValues(`items.${index}.itemunit`) || "",
-                                        qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
-                                        orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
-                                        orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
-                                      });
-                                    }}
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-danger"
-                                    onClick={() => handleRemoveItemRow(index)}
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </>
-                              )}
-                            </td>
+                            {!disableField && (
+                              <td className="text-center">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary me-1"
+                                  onClick={() => {
+                                    setEditingIndex(index);
+                                    setToolItem({
+                                      itemid:
+                                        (getValues(`items.${index}.itemid`) as unknown as number) ??
+                                        undefined,
+                                      itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
+                                      itemdescription: String(getValues(`items.${index}.itemdescription`) || ""),
+                                      itemunit: getValues(`items.${index}.itemunit`) || "",
+                                      qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
+                                      orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
+                                      orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
+                                    });
+                                  }}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleRemoveItemRow(index)}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })

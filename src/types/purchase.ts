@@ -92,6 +92,8 @@ export type PurchaseOrderItemInput = {
   itemdescription?: string;
   itemunit: string;
   qtyordered: number;
+  itemqtyreceived?: number;
+  itemqtybackorder?: number;
   orderunitcost: number;
   orddiscount: number;
   ordextendedprice: number;

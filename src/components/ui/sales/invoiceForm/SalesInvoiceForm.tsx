@@ -64,7 +64,13 @@ type SalesInvoiceItemForm = {
   itemdescription?: string;
   itemtaxable?: number;
   itempcs?: number;
+  memopcinvoice?: number;
+  memopcsreturn?: number;
+  memopcsremain?: number;
   itemquantity?: number;
+  memoqtyinvoice?: number;
+  memoqtyreturn?: number;
+  memoqtyremain?: number;
   unitprice?: number;
   discountpercent?: number;
   maxpcs?: number;
@@ -893,7 +899,13 @@ const SalesInvoiceForm = ({
         itemdescription: it.itemdescription,
         itemtaxable: toNum(it.itemtaxable),
         itempcs: toNum(it.itempcs),
+        memopcinvoice: toNum(it.memopcinvoice),
+        memopcsreturn: toNum(it.memopcsreturn),
+        memopcsremain: toNum(it.memopcsremain),
         itemquantity: toNum(it.itemquantity),
+        memoqtyinvoice: toNum(it.memoqtyinvoice),
+        memoqtyreturn: toNum(it.memoqtyreturn),
+        memoqtyremain: toNum(it.memoqtyremain),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
       })),
@@ -1644,6 +1656,8 @@ const SalesInvoiceForm = ({
     );
   }
 
+  const isMemoView = readOnly && documentType === "MEMO";
+
   return (
     <>
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -1948,7 +1962,7 @@ const SalesInvoiceForm = ({
         <div className="card-body">
 
           {/* Scrollable items table */}
-          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          <div style={{ maxHeight: 400, overflowY: "auto", overflowX: "auto" }}>
             <table className="table datanew mb-0">
               <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
                 <tr>
@@ -1956,18 +1970,24 @@ const SalesInvoiceForm = ({
                   <th className="text-nowrap">Item Code</th>
                   <th style={{ minWidth: allowPcsEntry ? "180px" : "260px" }}>Description</th>
                   <th className="text-center text-nowrap">Tax</th>
-                  {allowPcsEntry && <th className="text-end text-nowrap">Pcs</th>}
-                  <th className="text-end text-nowrap">Qty</th>
+                  {allowPcsEntry && <th className="text-end text-nowrap">{isMemoView ? "Ord Pcs" : "Pcs"}</th>}
+                  {isMemoView && allowPcsEntry && <th className="text-end text-nowrap">Inv Pcs</th>}
+                  {isMemoView && allowPcsEntry && <th className="text-end text-nowrap">Ret Pcs</th>}
+                  {isMemoView && allowPcsEntry && <th className="text-end text-nowrap">Rem Pcs</th>}
+                  <th className="text-end text-nowrap">{isMemoView ? "Ord Qty" : "Qty"}</th>
+                  {isMemoView && <th className="text-end text-nowrap">Inv Qty</th>}
+                  {isMemoView && <th className="text-end text-nowrap">Ret Qty</th>}
+                  {isMemoView && <th className="text-end text-nowrap">Rem Qty</th>}
                   <th className="text-end text-nowrap">Unit Price</th>
                   <th className="text-end text-nowrap">Disc %</th>
                   <th className="text-end text-nowrap">Ext. Price</th>
-                  <th className="text-center text-nowrap">Action</th>
+                  {!readOnly && <th className="text-center text-nowrap">Action</th>}
                 </tr>
               </thead>
               <tbody>
                 {itemFields.length === 0 ? (
                   <tr>
-                    <td colSpan={allowPcsEntry ? 10 : 9} className="text-center text-muted py-5 fst-italic">
+                    <td colSpan={isMemoView ? (allowPcsEntry ? 15 : 11) : (allowPcsEntry ? 10 : 9)} className="text-center text-muted py-5 fst-italic">
                       No items yet -- use the form below to add line items
                     </td>
                   </tr>
@@ -1982,38 +2002,46 @@ const SalesInvoiceForm = ({
                         <td>{item?.itemdescription || ""}</td>
                         <td className="text-center">{toNum(item?.itemtaxable) === 1 ? "Y" : "N"}</td>
                         {allowPcsEntry && <td className="text-end">{toNum(item?.itempcs) || 0}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcinvoice) || 0}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcsreturn) || 0}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcsremain) || 0}</td>}
                         <td className="text-end">{line.qty}</td>
+                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyinvoice) || 0}</td>}
+                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyreturn) || 0}</td>}
+                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyremain) || 0}</td>}
                         <td className="text-end">{formatMoney(line.unit)}</td>
                         <td className="text-end">{line.disc}</td>
                         <td className="text-end">{formatMoney(line.net)}</td>
-                        <td className="text-center">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary me-1"
-                            onClick={() => {
-                              setEditingIndex(index);
-                              setToolItem({
-                                itemid: item?.itemid,
-                                itemcode: item?.itemcode,
-                                itemdescription: item?.itemdescription,
-                                itemtaxable: item?.itemtaxable,
-                                itempcs: toNum(item?.itempcs),
-                                itemquantity: toNum(item?.itemquantity),
-                                unitprice: toNum(item?.unitprice),
-                                discountpercent: toNum(item?.discountpercent),
-                              });
-                            }}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => remove(index)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
+                        {!readOnly && (
+                          <td className="text-center">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary me-1"
+                              onClick={() => {
+                                setEditingIndex(index);
+                                setToolItem({
+                                  itemid: item?.itemid,
+                                  itemcode: item?.itemcode,
+                                  itemdescription: item?.itemdescription,
+                                  itemtaxable: item?.itemtaxable,
+                                  itempcs: toNum(item?.itempcs),
+                                  itemquantity: toNum(item?.itemquantity),
+                                  unitprice: toNum(item?.unitprice),
+                                  discountpercent: toNum(item?.discountpercent),
+                                });
+                              }}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => remove(index)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
