@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
+import SupplierDrawer from "@/components/ui/supplier/supplierView/SupplierDrawer";
 import { DELETE_SUPPLIER_MUTATION } from "@/lib/graphql/mutations/supplier";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -21,8 +22,10 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
   const dispatch = useAppDispatch();
   const [deleteSupplier] = useMutation(DELETE_SUPPLIER_MUTATION);
   const { basePath } = useDefaultRoute();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -54,16 +57,17 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
   const deleteReason = canDelete ? "" : "Cannot delete: supplier has existing purchases";
 
   return (
+    <>
     <div className="action-table-data">
       <div className="edit-delete-action" style={{ gap: "2px" }}>
-        <Link
+        <a
           className="p-1"
-          href={`${basePath}/supplier/${data.supplierid}/view`}
-          scroll={false}
-          title="View"
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDrawerOpen(true); }}
+          title="Quick View"
         >
           <Eye size={14} />
-        </Link>
+        </a>
         <Link
           className="p-1"
           href={`${basePath}/supplier/${data.supplierid}/edit`}
@@ -93,6 +97,16 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
         )}
       </div>
     </div>
+    {drawerOpen && (
+      <SupplierDrawer
+        supplierId={data.supplierid}
+        storeId={parsedStoreId}
+        outletId={parsedOutletId}
+        onClose={() => setDrawerOpen(false)}
+        mode="drawer"
+      />
+    )}
+    </>
   );
 };
 

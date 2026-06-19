@@ -14,6 +14,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import ProductAdjustmentModal from "./ProductAdjustmentModal";
 import PrintLabelsModal from "../labels/PrintLabelsModal";
 import { createPortal } from "react-dom";
+import ProductDrawer from "../productView/ProductDrawer";
 
 function parseFirstImageUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -43,6 +44,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const [imgLightboxOpen, setImgLightboxOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { outletId: outletIdParam } = useParams();
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -177,6 +181,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   };
 
   return (
+    <>
     <div className="action-table-data">
       <div className="edit-delete-action">
         <div className="input-block add-lists"></div>
@@ -190,15 +195,14 @@ const ProductActions: React.FC<ProductActionsProps> = ({
         >
           <Camera size={14} style={{ color: imageUrl ? "#3b82f6" : "#cbd5e1" }} />
         </a>
-        <Link
+        <a
           className="p-1 me-1"
-          href={`${basePath}/products/${data.itemcode}/view`}
-          onClick={(e) => e.stopPropagation()}
-          scroll={false}
-          title="View"
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDrawerOpen(true); }}
+          title="Quick View"
         >
           <Eye size={14} />
-        </Link>
+        </a>
         <Link
           className="me-2 p-2"
           href={`${basePath}/products/${data.itemcode}/edit`}
@@ -353,6 +357,16 @@ const ProductActions: React.FC<ProductActionsProps> = ({
         )
       }
     </div>
+      {drawerOpen && (
+        <ProductDrawer
+          itemcode={data.itemcode ?? ""}
+          storeId={parsedStoreId}
+          outletId={parsedOutletId}
+          onClose={() => setDrawerOpen(false)}
+          mode="drawer"
+        />
+      )}
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
+import CustomerDrawer from "@/components/ui/customers/customerView/CustomerDrawer";
 import { DELETE_CUSTOMER_MUTATION } from "@/lib/graphql/mutations/customer";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -26,9 +27,11 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
   const dispatch = useAppDispatch();
   const [deleteCustomer] = useMutation(DELETE_CUSTOMER_MUTATION);
   const { basePath } = useDefaultRoute();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [statementOpen, setStatementOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { isAtLeastManager } = useUserRole();
 
   const handleDelete = async () => {
@@ -78,16 +81,17 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
   const deleteReason = canDelete ? "" : "Cannot delete: customer has existing sales";
 
   return (
+    <>
     <div className="action-table-data">
       <div className="edit-delete-action" style={{ gap: "2px" }}>
-        <Link
+        <a
           className="p-1"
-          href={`${basePath}/customers/${data.customerid}/view`}
-          scroll={false}
-          title="View"
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDrawerOpen(true); }}
+          title="Quick View"
         >
           <Eye size={14} />
-        </Link>
+        </a>
         {isAtLeastManager && (
           <button
             type="button"
@@ -131,6 +135,16 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
         <CustomerStatementModal customer={data} onClose={() => setStatementOpen(false)} />
       )}
     </div>
+    {drawerOpen && (
+      <CustomerDrawer
+        customerId={parseInt(data.customerid, 10)}
+        storeId={parsedStoreId}
+        outletId={parsedOutletId}
+        onClose={() => setDrawerOpen(false)}
+        mode="drawer"
+      />
+    )}
+    </>
   );
 };
 

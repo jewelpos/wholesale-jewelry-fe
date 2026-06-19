@@ -1,29 +1,24 @@
 "use client";
 
 import Content from "@/components/layout/Content";
-import ProductForm from "@/components/ui/products/productForm/ProductForm";
-import PageHeader from "@/components/ui/PageHeader";
-import { useRouter } from "next/navigation";
+import ProductDrawer from "@/components/ui/products/productView/ProductDrawer";
+import { useParams, useRouter } from "next/navigation";
 
 const ViewProduct = () => {
+  const { storeId: storeIdParam, outletId: outletIdParam, itemcode } = useParams();
   const router = useRouter();
+  const storeId = parseInt(storeIdParam as string, 10);
+  const outletId = parseInt(outletIdParam as string, 10);
+
   return (
     <Content>
-      <PageHeader title="View Product" showBreadcrumb />
-      <ProductForm disableField />
-      <div className="card sticky-footer">
-        <div className="card-body">
-          <div className="text-end">
-            <button
-              type="button"
-              className="btn btn-cancel"
-              onClick={() => router.back()}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
+      <ProductDrawer
+        itemcode={itemcode as string}
+        storeId={storeId}
+        outletId={outletId}
+        onClose={() => router.back()}
+        mode="page"
+      />
     </Content>
   );
 };
