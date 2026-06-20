@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setCookieResponse } from "@/lib/authStorage";
 import { LOGIN_MUTATION } from "@/lib/graphql/mutations/auth";
-import { apolloClient } from "@/lib/apolloClient";
+import { apolloClientServer } from "@/lib/apolloClientServer";
 
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
-    const { data } = await apolloClient.mutate({
+    const { data } = await apolloClientServer.mutate({
       mutation: LOGIN_MUTATION,
       variables: {
         username,

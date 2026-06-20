@@ -1,4 +1,4 @@
-import { apolloClient } from "@/lib/apolloClient";
+import { apolloClientServer } from "@/lib/apolloClientServer";
 import { setCookieResponse } from "@/lib/authStorage";
 import { REFRESH_TOKEN_MUTATION } from "@/lib/graphql/mutations/auth";
 import { cookies } from "next/headers";
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "No refresh token" }, { status: 401 });
     }
-    const { data } = await apolloClient.mutate({
+    const { data } = await apolloClientServer.mutate({
       mutation: REFRESH_TOKEN_MUTATION,
       variables: {
         refreshToken: token,
