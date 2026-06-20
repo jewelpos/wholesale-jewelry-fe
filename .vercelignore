@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+build
+coverage
+*.log
+*.pem
+.env.local
+.env*.local
+backend-err.log
+backend.log
+backend.log.err
+frontend.log
+frontend.log.err
