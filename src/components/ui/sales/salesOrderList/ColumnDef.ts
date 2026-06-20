@@ -61,8 +61,8 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
   {
     headerName: "Actions",
     cellRenderer: SalesOrderActions,
-    maxWidth: 130,
-    minWidth: 110,
+    maxWidth: 180,
+    minWidth: 160,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,

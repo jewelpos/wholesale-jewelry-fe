@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { CANCEL_INVOICE_MUTATION } from "@/lib/graphql/mutations/sales";
@@ -7,13 +9,15 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesInvoiceListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, MessageCircle, Trash2 } from "react-feather";
+import { Edit, Eye, MessageCircle, Printer, Mail, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import { IRowNode } from "ag-grid-community";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
+import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
 interface SalesActionsProps {
   data: SalesInvoiceListType;
@@ -27,7 +31,11 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const config = getEnvironmentConfig();
+
   const [smsSending, setSmsSending] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
 
   const handleSendSMS = async () => {
     setSmsSending(true);
@@ -44,6 +52,25 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     }
   };
 
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      const response = await api.post(
+        `${config.apiUrl}/store/invoice/print`,
+        { storeid: parsedStoreId, invoicenumbers: [data.invoicenumber] },
+        { responseType: "blob", headers: { "Content-Type": "application/json" } }
+      );
+      if (response.data) {
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+        setPdfUrl(url);
+      }
+    } catch {
+      dispatch(showNotification({ message: "Failed to generate PDF", type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
       title: "Cancel this invoice?",
@@ -56,155 +83,134 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await cancelInvoice({
-          variables: {
-            input: {
-              storeid: parsedStoreId,
-              invoicenumber: data.invoicenumber,
-            },
-          },
+          variables: { input: { storeid: parsedStoreId, invoicenumber: data.invoicenumber } },
         });
-
         if (responseData?.cancelInvoice.success) {
           node.setData({ ...data, statusname: "Cancelled" });
-          dispatch(
-            showNotification({
-              message: responseData.cancelInvoice.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
+          dispatch(showNotification({ message: responseData.cancelInvoice.message, type: NOTIFICATION_TYPES.SUCCESS }));
         }
         return true;
       });
-
       if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
+        dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
       }
     }
   };
 
-  const isCreditInvoiceNotApplied =
-    Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
-  const isReturnedWithCredit =
-    data.statusname === "Returned" && Number(data.custcrediapplied) === 1;
+  const isCreditInvoiceNotApplied = Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
+  const isReturnedWithCredit = data.statusname === "Returned" && Number(data.custcrediapplied) === 1;
   const canEdit =
     isCreditInvoiceNotApplied ||
-    (data.statusname === "Ready" &&
-      Number(data.amountreceived) === 0 &&
-      !isReturnedWithCredit);
+    (data.statusname === "Ready" && Number(data.amountreceived) === 0 && !isReturnedWithCredit);
   const canCancel =
     !isCreditInvoiceNotApplied &&
     Number(data.amountreceived) === 0 &&
     data.statusname !== "Shipped" &&
     data.statusname !== "Picked up" &&
     data.statusname !== "Cancelled";
+  const canSendSMS = data.statusname !== "Cancelled";
 
   let editReason = "";
   if (!canEdit) {
-    if (Number(data.amountreceived) > 0)
-      editReason = "Cannot edit: payment already received";
-    else if (data.statusname === "Cancelled")
-      editReason = "Cannot edit: invoice is cancelled";
-    else if (data.statusname === "Shipped")
-      editReason = "Cannot edit: invoice has been shipped";
-    else if (data.statusname === "Picked up")
-      editReason = "Cannot edit: invoice has been picked up";
-    else if (Number(data.custcrediapplied) === 1)
-      editReason = "Cannot edit: credit already applied";
+    if (Number(data.amountreceived) > 0) editReason = "Cannot edit: payment already received";
+    else if (data.statusname === "Cancelled") editReason = "Cannot edit: invoice is cancelled";
+    else if (data.statusname === "Shipped") editReason = "Cannot edit: invoice has been shipped";
+    else if (data.statusname === "Picked up") editReason = "Cannot edit: invoice has been picked up";
+    else if (Number(data.custcrediapplied) === 1) editReason = "Cannot edit: credit already applied";
     else editReason = "Cannot edit in current status";
   }
 
   let cancelReason = "";
   if (!canCancel) {
-    if (isCreditInvoiceNotApplied)
-      cancelReason = "Cannot cancel: this is an unapplied credit invoice";
-    else if (Number(data.amountreceived) > 0)
-      cancelReason = "Cannot cancel: payment already received";
-    else if (data.statusname === "Shipped")
-      cancelReason = "Cannot cancel: invoice has been shipped";
-    else if (data.statusname === "Picked up")
-      cancelReason = "Cannot cancel: invoice has been picked up";
-    else if (data.statusname === "Cancelled")
-      cancelReason = "Invoice is already cancelled";
+    if (isCreditInvoiceNotApplied) cancelReason = "Cannot cancel: this is an unapplied credit invoice";
+    else if (Number(data.amountreceived) > 0) cancelReason = "Cannot cancel: payment already received";
+    else if (data.statusname === "Shipped") cancelReason = "Cannot cancel: invoice has been shipped";
+    else if (data.statusname === "Picked up") cancelReason = "Cannot cancel: invoice has been picked up";
+    else if (data.statusname === "Cancelled") cancelReason = "Invoice is already cancelled";
     else cancelReason = "Cannot cancel in current status";
   }
 
-  const canSendSMS = data.statusname !== "Cancelled";
+  const iconBtn: React.CSSProperties = { lineHeight: 1 };
+  const dimmed: React.CSSProperties = { cursor: "not-allowed", display: "inline-flex", alignItems: "center" };
 
   return (
-    <div className="action-table-data">
-      <div className="edit-delete-action" style={{ gap: "2px" }}>
-        {canSendSMS ? (
-          <button
-            type="button"
-            className="p-1 btn btn-link"
-            style={{ lineHeight: 1, color: "#198754" }}
-            onClick={handleSendSMS}
-            disabled={smsSending}
-            title="Share Invoice Link"
-          >
-            <MessageCircle size={14} />
+    <>
+      <div className="action-table-data">
+        <div className="edit-delete-action" style={{ gap: "2px" }}>
+
+          {/* SMS */}
+          {canSendSMS ? (
+            <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#198754" }}
+              onClick={handleSendSMS} disabled={smsSending} title="Share Invoice Link">
+              <MessageCircle size={14} />
+            </button>
+          ) : (
+            <span className="p-1" title="Cannot share link: invoice is cancelled" style={dimmed}>
+              <MessageCircle size={14} style={{ opacity: 0.35 }} />
+            </span>
+          )}
+
+          {/* Print */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+            onClick={handlePrint} disabled={printing} title="Print Invoice">
+            <Printer size={14} />
           </button>
-        ) : (
-          <span
-            className="p-1"
-            title="Cannot share link: invoice is cancelled"
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
-            <MessageCircle size={14} style={{ opacity: 0.35 }} />
-          </span>
-        )}
-        <Link
-          className="p-1"
-          href={`${basePath}/sales/${data.invoicenumber}/view`}
-          scroll={false}
-          title="View"
-        >
-          <Eye size={14} />
-        </Link>
-        {canEdit ? (
-          <Link
-            className="p-1"
-            href={`${basePath}/sales/${data.invoicenumber}/edit`}
-            scroll={false}
-            title="Edit"
-          >
-            <Edit size={14} />
+
+          {/* Email */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+            onClick={() => setShowEmail(true)} title="Email Invoice">
+            <Mail size={14} />
+          </button>
+
+          {/* View */}
+          <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/view`} scroll={false} title="View">
+            <Eye size={14} />
           </Link>
-        ) : (
-          <span
-            className="p-1"
-            title={editReason}
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
-            <Edit size={14} style={{ opacity: 0.35 }} />
-          </span>
-        )}
-        {canCancel ? (
-          <button
-            type="button"
-            className="confirm-text p-1 btn btn-link"
-            style={{ lineHeight: 1 }}
-            onClick={handleDelete}
-            title="Cancel Invoice"
-          >
-            <Trash2 size={14} />
-          </button>
-        ) : (
-          <span
-            className="p-1"
-            title={cancelReason}
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
-            <Trash2 size={14} style={{ opacity: 0.35 }} />
-          </span>
-        )}
+
+          {/* Edit */}
+          {canEdit ? (
+            <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/edit`} scroll={false} title="Edit">
+              <Edit size={14} />
+            </Link>
+          ) : (
+            <span className="p-1" title={editReason} style={dimmed}>
+              <Edit size={14} style={{ opacity: 0.35 }} />
+            </span>
+          )}
+
+          {/* Cancel */}
+          {canCancel ? (
+            <button type="button" className="confirm-text p-1 btn btn-link" style={{ ...iconBtn, color: "#dc3545" }}
+              onClick={handleDelete} title="Cancel Invoice">
+              <Trash2 size={14} />
+            </button>
+          ) : (
+            <span className="p-1" title={cancelReason} style={dimmed}>
+              <Trash2 size={14} style={{ opacity: 0.35 }} />
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+
+      {pdfUrl && (
+        <PdfPreviewModal
+          pdfUrl={pdfUrl}
+          filename={`invoice-${data.invoicenumber}.pdf`}
+          onClose={() => setPdfUrl(null)}
+        />
+      )}
+
+      {showEmail && (
+        <DocumentEmailModal
+          storeId={parsedStoreId}
+          documentType="INVOICE"
+          documentNumbers={[Number(data.invoicenumber)]}
+          onClose={() => setShowEmail(false)}
+          onSent={(msg) => { setShowEmail(false); dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS })); }}
+          onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+        />
+      )}
+    </>
   );
 };
 

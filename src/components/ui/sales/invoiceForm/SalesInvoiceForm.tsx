@@ -47,6 +47,7 @@ import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 export type SalesInvoiceFormMode = "NEW_INVOICE" | "CREDIT_INVOICE";
 
@@ -63,6 +64,7 @@ type SalesInvoiceItemForm = {
   itemcode?: string;
   itemdescription?: string;
   itemtaxable?: number;
+  itemunit?: string;
   itempcs?: number;
   memopcinvoice?: number;
   memopcsreturn?: number;
@@ -184,6 +186,7 @@ type ToolItem = {
   itemcode?: string;
   itemdescription?: string;
   itemtaxable?: number;
+  itemunit?: string;
 
   itempcs: number;
   itemquantity: number;
@@ -430,6 +433,7 @@ const SalesInvoiceForm = ({
   const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
 
   const handlePrintDocumentNumber = async (documentNumber: number) => {
     if (!parsedStoreId || !documentNumber) return;
@@ -458,16 +462,8 @@ const SalesInvoiceForm = ({
       const { data } = response;
       if (data) {
         const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-        const tab = window.open(url, "_blank");
-        if (!tab) {
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", documentType === "MEMO" ? `memo-${documentNumber}.pdf` : `invoice-${documentNumber}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        }
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+        const filename = documentType === "MEMO" ? `memo-${documentNumber}.pdf` : `invoice-${documentNumber}.pdf`;
+        setPdfPreview({ url, filename });
       }
       return true;
     });
@@ -534,6 +530,7 @@ const SalesInvoiceForm = ({
     itemcode: undefined,
     itemdescription: undefined,
     itemtaxable: undefined,
+    itemunit: undefined,
     itempcs: 0,
     itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
     unitprice: 0,
@@ -737,6 +734,7 @@ const SalesInvoiceForm = ({
             itemcode: it.itemcode,
             itemdescription: it.itemdescription,
             itemtaxable: toNum(it.itemtaxable),
+            itemunit: it.itemunit,
             itempcs: availPcs,
             itemquantity: availQty,
             unitprice: toNum(it.unitprice),
@@ -792,6 +790,7 @@ const SalesInvoiceForm = ({
             itemcode: it.itemcode,
             itemdescription: it.itemdescription,
             itemtaxable: toNum(it.itemtaxable),
+            itemunit: it.itemunit,
             itempcs: creditFromMemo ? -remainPcs : remainPcs,
             itemquantity: creditFromMemo ? -remainQty : remainQty,
             unitprice: toNum(it.unitprice),
@@ -845,6 +844,7 @@ const SalesInvoiceForm = ({
         itemcode: it.itemcode,
         itemdescription: it.itemdescription,
         itemtaxable: toNum(it.itemtaxable),
+        itemunit: it.itemunit,
         itempcs: toNum(it.itempcs),
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
@@ -898,6 +898,7 @@ const SalesInvoiceForm = ({
         itemcode: it.itemcode,
         itemdescription: it.itemdescription,
         itemtaxable: toNum(it.itemtaxable),
+        itemunit: it.itemunit,
         itempcs: toNum(it.itempcs),
         memopcinvoice: toNum(it.memopcinvoice),
         memopcsreturn: toNum(it.memopcsreturn),
@@ -1056,6 +1057,12 @@ const SalesInvoiceForm = ({
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
 
+    const unitQtyTotals: Record<string, number> = {};
+    for (const it of items) {
+      const unit = (it.itemunit ?? "Pc").trim() || "Pc";
+      unitQtyTotals[unit] = (unitQtyTotals[unit] ?? 0) + Math.abs(toNum(it.itemquantity));
+    }
+
     const taxableSale = items.reduce((acc, it) => {
       if (toNum(it.itemtaxable) !== 1) return acc;
       return acc + computeLine(it, mode).net;
@@ -1076,6 +1083,7 @@ const SalesInvoiceForm = ({
     return {
       totalItems: items.length,
       totalPcs,
+      unitQtyTotals,
       grossTotal,
       discountAmount,
       subtotal,
@@ -1103,6 +1111,7 @@ const SalesInvoiceForm = ({
       itemcode: undefined,
       itemdescription: undefined,
       itemtaxable: undefined,
+      itemunit: undefined,
       itempcs: 0,
       itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
       unitprice: 0,
@@ -1129,6 +1138,7 @@ const SalesInvoiceForm = ({
         itemcode: selected.itemcode,
         itemdescription: selected.itemdescription,
         itemtaxable: toNum(selected.itemtaxable),
+        itemunit: selected.itemunit,
         itempcs: 0,
         itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
         unitprice: Number(selected.itemsellprice || 0),
@@ -1203,6 +1213,7 @@ const SalesInvoiceForm = ({
       itemcode: toolItem.itemcode,
       itemdescription: toolItem.itemdescription,
       itemtaxable: toNum(toolItem.itemtaxable),
+      itemunit: toolItem.itemunit,
       itempcs: toNum(toolItem.itempcs),
       itemquantity: normalizedQty,
       unitprice: unitPrice,
@@ -1970,6 +1981,7 @@ const SalesInvoiceForm = ({
                   <th className="text-nowrap">Item Code</th>
                   <th style={{ minWidth: allowPcsEntry ? "180px" : "260px" }}>Description</th>
                   <th className="text-center text-nowrap">Tax</th>
+                  <th className="text-center text-nowrap">Unit</th>
                   {allowPcsEntry && <th className="text-end text-nowrap">{isMemoView ? "Ord Pcs" : "Pcs"}</th>}
                   {isMemoView && allowPcsEntry && <th className="text-end text-nowrap">Inv Pcs</th>}
                   {isMemoView && allowPcsEntry && <th className="text-end text-nowrap">Ret Pcs</th>}
@@ -1987,7 +1999,7 @@ const SalesInvoiceForm = ({
               <tbody>
                 {itemFields.length === 0 ? (
                   <tr>
-                    <td colSpan={isMemoView ? (allowPcsEntry ? 15 : 11) : (allowPcsEntry ? 10 : 9)} className="text-center text-muted py-5 fst-italic">
+                    <td colSpan={isMemoView ? (allowPcsEntry ? 16 : 12) : (allowPcsEntry ? 11 : 10)} className="text-center text-muted py-5 fst-italic">
                       No items yet -- use the form below to add line items
                     </td>
                   </tr>
@@ -2001,6 +2013,11 @@ const SalesInvoiceForm = ({
                         <td className="text-nowrap">{item?.itemcode || ""}</td>
                         <td>{item?.itemdescription || ""}</td>
                         <td className="text-center">{toNum(item?.itemtaxable) === 1 ? "Y" : "N"}</td>
+                        <td className="text-center">
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: (item?.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (item?.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
+                            {item?.itemunit || "Pc"}
+                          </span>
+                        </td>
                         {allowPcsEntry && <td className="text-end">{toNum(item?.itempcs) || 0}</td>}
                         {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcinvoice) || 0}</td>}
                         {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcsreturn) || 0}</td>}
@@ -2024,6 +2041,7 @@ const SalesInvoiceForm = ({
                                   itemcode: item?.itemcode,
                                   itemdescription: item?.itemdescription,
                                   itemtaxable: item?.itemtaxable,
+                                  itemunit: item?.itemunit,
                                   itempcs: toNum(item?.itempcs),
                                   itemquantity: toNum(item?.itemquantity),
                                   unitprice: toNum(item?.unitprice),
@@ -2076,17 +2094,19 @@ const SalesInvoiceForm = ({
                     onChange={(val: number | undefined) => setToolItem((prev) => ({ ...prev, itemid: val }))}
                     onChangeAdditional={(selected: ItemDetails) => {
                       if (!selected) {
-                        setToolItem((prev) => ({ ...prev, itemid: undefined, itemcode: undefined, itemdescription: undefined, itemtaxable: undefined, unitprice: 0 }));
+                        setToolItem((prev) => ({ ...prev, itemid: undefined, itemcode: undefined, itemdescription: undefined, itemtaxable: undefined, itemunit: undefined, unitprice: 0 }));
                         return;
                       }
-                      if (allowCarriage) { autoAddItem(selected); return; }
+                      const isWtItem = (selected.itemunit ?? "").toLowerCase() === "wt";
+                      if (allowCarriage && !isWtItem) { autoAddItem(selected); return; }
                       setToolItem((prev) => ({
                         ...prev,
                         itemid: Number(selected.itemid),
                         itemcode: selected.itemcode,
                         itemdescription: selected.itemdescription,
                         itemtaxable: toNum(selected.itemtaxable),
-                        itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
+                        itemunit: selected.itemunit,
+                        itemquantity: isWtItem ? 0 : (mode === "CREDIT_INVOICE" ? -1 : 1),
                         unitprice: Number(selected.itemsellprice || 0),
                         discountpercent: Number(watch("discountpercent") || 0),
                       }));
@@ -2118,7 +2138,13 @@ const SalesInvoiceForm = ({
                 )}
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
-                  <label className="form-label small text-muted mb-1">Qty *</label>
+                  <label className="form-label small text-muted mb-1">
+                    Qty *{toolItem.itemunit && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: (toolItem.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (toolItem.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af", marginLeft: 4 }}>
+                        {toolItem.itemunit}
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     step="0.001"
@@ -2233,7 +2259,14 @@ const SalesInvoiceForm = ({
             <div className="card-body">
               <div className="d-flex justify-content-between mb-3 text-muted small">
                 <span>{itemFields.length} item{itemFields.length !== 1 ? "s" : ""}</span>
-                {totals.totalPcs > 0 && <span>{totals.totalPcs} pcs</span>}
+                <span className="d-flex gap-2 flex-wrap justify-content-end">
+                  {totals.totalPcs > 0 && <span>{totals.totalPcs} pcs</span>}
+                  {Object.entries(totals.unitQtyTotals).map(([unit, qty]) => (
+                    <span key={unit} style={{ fontWeight: 600 }}>
+                      {Number.isInteger(qty) ? qty : qty.toFixed(3)} {unit}
+                    </span>
+                  ))}
+                </span>
               </div>
               <table className="table table-sm table-borderless mb-0">
                 <tbody>
@@ -2357,6 +2390,13 @@ const SalesInvoiceForm = ({
           done?.();
         }}
         onCollect={handleCollectPayment}
+      />
+    )}
+    {pdfPreview && (
+      <PdfPreviewModal
+        pdfUrl={pdfPreview.url}
+        filename={pdfPreview.filename}
+        onClose={() => setPdfPreview(null)}
       />
     )}
     </>

@@ -559,6 +559,16 @@ const ProductDetailView = () => {
                 <AttrRow label="Location" value={product.itemlocation} />
               </div>
               <div className="col-md-6">
+                <AttrRow
+                  label="Unit"
+                  value={
+                    product.itemunit === "Wt"
+                      ? "Wt — Weight"
+                      : product.itemunit
+                      ? "Pc — Piece"
+                      : null
+                  }
+                />
                 <AttrRow label="Metal" value={product.itemmetal} />
                 <AttrRow label="Price Code" value={product.itemtagpricecode} />
                 <AttrRow

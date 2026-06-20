@@ -104,6 +104,7 @@ export const SEARCH_INVENTORY_ITEMS_QUERY = gql`
       itembarcodeid
       itemcode
       itemdescription
+      itemunit
       itemsellprice
       itemtaxable
       itemdiscount

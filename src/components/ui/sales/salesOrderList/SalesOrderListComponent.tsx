@@ -29,6 +29,7 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 const SalesOrderListComponent = () => {
   const [getSalesOrderList] = useLazyQuery(GET_SALES_ORDER_LIST_QUERY);
@@ -40,6 +41,7 @@ const SalesOrderListComponent = () => {
   const gridRef = useRef<AgGridReact<SalesOrderListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [selectedSalesOrderNumbers, setSelectedSalesOrderNumbers] = useState<number[]>([]);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [selectedSalesOrders, setSelectedSalesOrders] = useState<SalesOrderListType[]>([]);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
@@ -145,17 +147,7 @@ const SalesOrderListComponent = () => {
       const { data } = response;
       if (data) {
         const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-        const tab = window.open(url, "_blank");
-        if (!tab) {
-          // Fallback if popup blocked
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", "sales-order.pdf");
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        }
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+        setPdfPreview({ url, filename: "sales-order.pdf" });
         dispatch(
           showNotification({
             message: "Sales order preview opened",
@@ -292,6 +284,13 @@ const SalesOrderListComponent = () => {
           </div>
         </div>
       </div>
+      {pdfPreview && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreview.url}
+          filename={pdfPreview.filename}
+          onClose={() => setPdfPreview(null)}
+        />
+      )}
     </div>
   );
 };

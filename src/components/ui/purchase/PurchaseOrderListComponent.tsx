@@ -26,6 +26,7 @@ import { GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY } from "@/lib/graphql/query/purc
 import { purchaseOrderColumnDefs } from "./ColumnDef";
 import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import PurchaseOrderActions from "./PurchaseOrderActions";
@@ -48,6 +49,7 @@ const PurchaseOrderListComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [selectedPOs, setSelectedPOs] = useState<number[]>([]);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -134,7 +136,7 @@ const PurchaseOrderListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 160,
+        width: 200,
         sortable: false,
         filter: false,
         pinned: "right",
@@ -198,7 +200,7 @@ const PurchaseOrderListComponent = () => {
             link.remove();
           } else {
             const url = window.URL.createObjectURL(data);
-            window.open(url, "_blank");
+            setPdfPreview({ url, filename: "purchase_orders.pdf" });
           }
           dispatch(
             showNotification({
@@ -330,6 +332,13 @@ const PurchaseOrderListComponent = () => {
           onClose={() => setShowEmailModal(false)}
           onSent={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS }))}
           onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+        />
+      )}
+      {pdfPreview && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreview.url}
+          filename={pdfPreview.filename}
+          onClose={() => setPdfPreview(null)}
         />
       )}
     </>

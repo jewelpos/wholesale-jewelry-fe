@@ -35,6 +35,7 @@ import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import DocumentEmailModal from "../DocumentEmailModal";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 const dateRenderer = (params: ICellRendererParams) =>
   params.node.rowPinned === "bottom" || params.value == null
@@ -91,7 +92,7 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
       return <MemoActions data={params.data} />;
     },
     pinned: "right",
-    maxWidth: 100,
+    maxWidth: 130,
     sortable: false,
     filter: false,
     suppressHeaderMenuButton: true,
@@ -107,6 +108,7 @@ const MemoListComponent = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>();
   const [selectedMemoNumbers, setSelectedMemoNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [gridReady, setGridReady] = useState(false);
@@ -225,16 +227,7 @@ const MemoListComponent = () => {
         const { data } = response;
         if (data) {
           const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-          const tab = window.open(url, "_blank");
-          if (!tab) {
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", "memo.pdf");
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          }
-          setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+          setPdfPreview({ url, filename: "memo.pdf" });
           dispatch(
             showNotification({
               message: "Memo printed successfully",
@@ -348,6 +341,13 @@ const MemoListComponent = () => {
           </div>
         </div>
       </div>
+      {pdfPreview && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreview.url}
+          filename={pdfPreview.filename}
+          onClose={() => setPdfPreview(null)}
+        />
+      )}
     </div>
   );
 };

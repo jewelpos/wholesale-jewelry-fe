@@ -547,6 +547,54 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               {...register("itemreorderqty", { valueAsNumber: true })}
             />
           </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Item Unit *</Label>
+            <Controller
+              name="itemunit"
+              control={control}
+              rules={{ required: "Item unit is required" }}
+              render={({ field }) => (
+                <div className="d-flex gap-2">
+                  {([
+                    { value: "Pc", label: "Pc — Piece", tooltip: "Sold by pieces (counted as individual units)" },
+                    { value: "Wt", label: "Wt — Weight", tooltip: "Sold by weight (quantity entered in grams, oz, etc.)" },
+                  ] as const).map(opt => {
+                    const active = field.value === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className="btn"
+                        title={opt.tooltip}
+                        onClick={() => field.onChange(opt.value)}
+                        style={{
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          padding: "4px 14px",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          lineHeight: "1.4",
+                          background: active ? "#dbeafe" : "transparent",
+                          color: active ? "#1e40af" : "#94a3b8",
+                          border: `1.5px solid ${active ? "#93c5fd" : "#e2e8f0"}`,
+                          transition: "all 0.15s",
+                          boxShadow: "none",
+                        }}
+                      >
+                        {opt.value}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {errors.itemunit && (
+              <div className="invalid-feedback d-block" style={{ fontSize: 12 }}>
+                {errors.itemunit.message}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Toggle switches */}

@@ -6,8 +6,6 @@ import { apolloClient } from "@/lib/apolloClient";
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
-    console.log("jsdkwdiwff", username);
-    
     const { data } = await apolloClient.mutate({
       mutation: LOGIN_MUTATION,
       variables: {
@@ -20,8 +18,6 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json(data.login, {
       status: 201,
     });
-    console.log('iuwefpwefwefddfdf----', response);
-    
     if (data.login.success) {
       setCookieResponse(response, "accessToken", accessToken, {
         // maxAge: 15 * 60, // 15 minutes
@@ -38,8 +34,6 @@ export async function POST(request: NextRequest) {
     }
     return response;
   } catch (error) {
-    console.log('i3293r23r', error);
-    
     return NextResponse.json(error, {});
   }
 }

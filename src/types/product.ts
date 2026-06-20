@@ -174,6 +174,7 @@ export type ProductFormType = {
   itemcategoryid: number;//Department
   subcategoryid: number;//Product Line
   itemstatus: string;//Status
+  itemunit: string;//Unit (Pc = pieces, Wt = weight)
   itemtaxable: number;//Item Taxable
   trackinventory?: number;//Non Inventory Item
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

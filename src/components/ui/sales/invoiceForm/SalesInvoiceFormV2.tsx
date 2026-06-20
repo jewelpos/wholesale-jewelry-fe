@@ -45,6 +45,7 @@ import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 export type SalesInvoiceFormMode = "NEW_INVOICE" | "CREDIT_INVOICE";
 
@@ -264,16 +265,8 @@ const SalesInvoiceFormV2 = ({
       const { data } = response;
       if (data) {
         const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-        const tab = window.open(url, "_blank");
-        if (!tab) {
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", documentType === "MEMO" ? `memo-${documentNumber}.pdf` : `invoice-${documentNumber}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        }
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+        const filename = documentType === "MEMO" ? `memo-${documentNumber}.pdf` : `invoice-${documentNumber}.pdf`;
+        setPdfPreview({ url, filename });
       }
       return true;
     });
@@ -339,6 +332,7 @@ const SalesInvoiceFormV2 = ({
   const [fetchedBalanceDue, setFetchedBalanceDue] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [emailModalDocNumber, setEmailModalDocNumber] = useState<number | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [emailModalNavigateBack, setEmailModalNavigateBack] = useState(false);
   const [toolItem, setToolItem] = useState<ToolItem>(() => ({
     itemid: undefined,
@@ -1933,6 +1927,13 @@ const SalesInvoiceFormV2 = ({
           router.back();
         }}
         onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+      />
+    )}
+    {pdfPreview && (
+      <PdfPreviewModal
+        pdfUrl={pdfPreview.url}
+        filename={pdfPreview.filename}
+        onClose={() => setPdfPreview(null)}
       />
     )}
     </>

@@ -40,6 +40,7 @@ import StatusFilterChips from "../../grid/StatusFilterChips";
 import StatusPillRenderer from "../../grid/StatusPillRenderer";
 import { GET_INVOICE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
@@ -55,6 +56,7 @@ const SalesListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const [selectedInvoiceNumbers, setSelectedInvoiceNumbers] = useState<number[]>([]);
   const [printing, setPrinting] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
@@ -168,16 +170,7 @@ const SalesListComponent = () => {
         const { data } = response;
         if (data) {
           const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-          const tab = window.open(url, "_blank");
-          if (!tab) {
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", "invoice.pdf");
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          }
-          setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+          setPdfPreview({ url, filename: "invoice.pdf" });
           dispatch(
             showNotification({
               message: "Invoice printed successfully",
@@ -211,7 +204,7 @@ const SalesListComponent = () => {
       {
         headerName: "Actions",
         field: "actions",
-        width: 120,
+        width: 185,
         cellRenderer: (params: ICellRendererParams<SalesInvoiceListType>) => {
           if (params.node.rowPinned) {
             return null;
@@ -228,7 +221,7 @@ const SalesListComponent = () => {
         },
         sortable: false,
         filter: false,
-        maxWidth: 150,
+        maxWidth: 190,
         pinned: "right",
         suppressSizeToFit: false,
         suppressMovable: true,
@@ -347,6 +340,13 @@ const SalesListComponent = () => {
           </div>
         </div>
       </div>
+      {pdfPreview && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreview.url}
+          filename={pdfPreview.filename}
+          onClose={() => setPdfPreview(null)}
+        />
+      )}
     </div>
   );
 };

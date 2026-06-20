@@ -204,6 +204,7 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
         itemcode
         itemdescription
         itemtaxable
+        itemunit
         itempcs
         memopcinvoice
         memopcsreturn
@@ -251,6 +252,7 @@ export const GET_MEMO_DETAIL_QUERY = gql`
         itemcode
         itemdescription
         itemtaxable
+        itemunit
         itempcs
         memopcinvoice
         memopcsreturn

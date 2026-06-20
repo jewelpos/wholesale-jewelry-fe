@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMutation } from "@apollo/client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Edit, Eye, Inbox, Trash2 } from "react-feather";
+import { Edit, Eye, Inbox, Mail, Printer, Trash2 } from "react-feather";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
@@ -11,26 +11,51 @@ import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { PurchaseOrder } from "@/types/purchase";
 import { DELETE_PURCHASE_ORDER_MUTATION } from "@/lib/graphql/mutations/purchase";
+import api from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
+import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
 interface PurchaseOrderActionsProps {
   data: PurchaseOrder;
   onDeleteSuccess?: () => void;
 }
 
-const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({
-  data,
-  onDeleteSuccess,
-}) => {
+const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDeleteSuccess }) => {
   const dispatch = useAppDispatch();
   const [deletePurchaseOrder] = useMutation(DELETE_PURCHASE_ORDER_MUTATION);
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const config = getEnvironmentConfig();
+
+  const [printing, setPrinting] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
 
   const status = data.postatus ?? 0;
   const isOpen = status === 1;
   const isReceivable = status === 2 || status === 3;
   const isClosed = status === 4;
+
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      const response = await api.post(
+        `${config.apiUrl}/store/purchase-order/print`,
+        { storeid: parsedStoreId, ponumbers: [Number(data.ponumber)] },
+        { responseType: "blob", headers: { "Content-Type": "application/json" } }
+      );
+      if (response.data) {
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+        setPdfUrl(url);
+      }
+    } catch {
+      dispatch(showNotification({ message: "Failed to generate PDF", type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   const handleDelete = async () => {
     const poNumber = Number(data.ponumber);
@@ -66,83 +91,85 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({
     }
   };
 
+  const iconBtn: React.CSSProperties = { lineHeight: 1 };
+  const dimmed: React.CSSProperties = { color: "#cbd5e1", cursor: "not-allowed", display: "inline-flex" };
+
   return (
-    <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists" />
+    <>
+      <div className="action-table-data">
+        <div className="edit-delete-action" style={{ gap: "2px" }}>
 
-        {/* View — always enabled */}
-        <Link
-          className="me-2 p-2"
-          href={`${basePath}/purchases/${data.ponumber}/view`}
-          scroll={false}
-          title="View"
-        >
-          <Eye className="feather-eye" size={14} />
-        </Link>
+          {/* Print */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+            onClick={handlePrint} disabled={printing} title="Print PO">
+            <Printer size={14} />
+          </button>
 
-        {/* Edit — only for Open */}
-        {isOpen ? (
-          <Link
-            className="me-2 p-2"
-            href={`${basePath}/purchases/${data.ponumber}/edit`}
-            scroll={false}
-            title="Edit"
-          >
-            <Edit className="feather-edit" size={14} />
+          {/* Email */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+            onClick={() => setShowEmail(true)} title="Email PO">
+            <Mail size={14} />
+          </button>
+
+          {/* View */}
+          <Link className="p-1" href={`${basePath}/purchases/${data.ponumber}/view`} scroll={false} title="View">
+            <Eye className="feather-eye" size={14} />
           </Link>
-        ) : (
-          <span
-            className="me-2 p-2"
-            title={isClosed ? "Closed PO cannot be edited" : "Only open POs can be edited"}
-            style={{ color: "#cbd5e1", cursor: "not-allowed", display: "inline-flex" }}
-          >
-            <Edit size={14} />
-          </span>
-        )}
 
-        {/* Receive — for Sent or Partially Received */}
-        {isReceivable ? (
-          <Link
-            className="me-2 p-2"
-            href={`${basePath}/purchases/receiveorder_items?ponumber=${data.ponumber}`}
-            scroll={false}
-            title="Receive Order"
-          >
-            <Inbox className="feather-inbox" size={14} />
-          </Link>
-        ) : (
-          <span
-            className="me-2 p-2"
-            title={isClosed ? "PO already fully received" : "PO must be in Sent or Partial status to receive"}
-            style={{ color: "#cbd5e1", cursor: "not-allowed", display: "inline-flex" }}
-          >
-            <Inbox size={14} />
-          </span>
-        )}
+          {/* Edit */}
+          {isOpen ? (
+            <Link className="p-1" href={`${basePath}/purchases/${data.ponumber}/edit`} scroll={false} title="Edit">
+              <Edit className="feather-edit" size={14} />
+            </Link>
+          ) : (
+            <span className="p-1" title={isClosed ? "Closed PO cannot be edited" : "Only open POs can be edited"} style={dimmed}>
+              <Edit size={14} />
+            </span>
+          )}
 
-        {/* Delete — disabled for Closed */}
-        {!isClosed ? (
-          <Link
-            className="confirm-text p-2"
-            href="#"
-            onClick={handleDelete}
-            scroll={false}
-            title="Delete"
-          >
-            <Trash2 className="feather-trash-2" size={14} />
-          </Link>
-        ) : (
-          <span
-            className="p-2"
-            title="Closed PO cannot be deleted"
-            style={{ color: "#cbd5e1", cursor: "not-allowed", display: "inline-flex" }}
-          >
-            <Trash2 size={14} />
-          </span>
-        )}
+          {/* Receive */}
+          {isReceivable ? (
+            <Link className="p-1" href={`${basePath}/purchases/receiveorder_items?ponumber=${data.ponumber}`} scroll={false} title="Receive Order">
+              <Inbox className="feather-inbox" size={14} />
+            </Link>
+          ) : (
+            <span className="p-1" title={isClosed ? "PO already fully received" : "PO must be Sent or Partial to receive"} style={dimmed}>
+              <Inbox size={14} />
+            </span>
+          )}
+
+          {/* Delete */}
+          {!isClosed ? (
+            <Link className="confirm-text p-1" href="#" onClick={handleDelete} scroll={false} title="Delete">
+              <Trash2 className="feather-trash-2" size={14} />
+            </Link>
+          ) : (
+            <span className="p-1" title="Closed PO cannot be deleted" style={dimmed}>
+              <Trash2 size={14} />
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+
+      {pdfUrl && (
+        <PdfPreviewModal
+          pdfUrl={pdfUrl}
+          filename={`purchase-order-${data.ponumber}.pdf`}
+          onClose={() => setPdfUrl(null)}
+        />
+      )}
+
+      {showEmail && (
+        <DocumentEmailModal
+          storeId={parsedStoreId}
+          documentType="PURCHASE_ORDER"
+          documentNumbers={[Number(data.ponumber)]}
+          onClose={() => setShowEmail(false)}
+          onSent={(msg) => { setShowEmail(false); dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS })); }}
+          onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+        />
+      )}
+    </>
   );
 };
 

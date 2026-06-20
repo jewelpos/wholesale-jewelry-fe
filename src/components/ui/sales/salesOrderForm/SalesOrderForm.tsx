@@ -35,6 +35,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
 import { getEnvironmentConfig } from "@/lib/config/environment";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 const MySwal = withReactContent(Swal);
 
@@ -43,6 +44,7 @@ type SalesOrderItemForm = {
   itemcode?: string;
   itemdescription?: string;
   itemtaxable?: number;
+  itemunit?: string;
   itempcs?: number;
   itemquantity?: number;
   unitprice?: number;
@@ -58,6 +60,7 @@ type ToolItem = {
   itemcode?: string;
   itemdescription?: string;
   itemtaxable?: number;
+  itemunit?: string;
   itempcs: number;
   itemquantity: number;
   unitprice: number;
@@ -118,6 +121,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const config = getEnvironmentConfig();
   const [emailModalSONumber, setEmailModalSONumber] = useState<number | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
 
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
     variables: { storeid: parsedStoreId, warehouiseid: 0 },
@@ -154,6 +158,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     itemcode: undefined,
     itemdescription: undefined,
     itemtaxable: undefined,
+    itemunit: undefined,
     itempcs: 0,
     itemquantity: 1,
     unitprice: 0,
@@ -258,6 +263,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemid: it.itemid ? Number(it.itemid) : undefined,
         itemcode: it.itemcode,
         itemdescription: it.itemdescription,
+        itemunit: it.itemunit,
         itempcs: toNum(it.itempcs),
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
@@ -363,7 +369,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     const shipping = toNum(watchedShipping);
     const orderTotal = subtotal + shipping;
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
-    return { totalItems: items.length, totalPcs, grossTotal, discountAmount, subtotal, shipping, orderTotal };
+    const unitQtyTotals: Record<string, number> = {};
+    for (const it of items) {
+      const unit = (it.itemunit ?? "Pc").trim() || "Pc";
+      unitQtyTotals[unit] = (unitQtyTotals[unit] ?? 0) + Math.abs(toNum(it.itemquantity));
+    }
+    return { totalItems: items.length, totalPcs, unitQtyTotals, grossTotal, discountAmount, subtotal, shipping, orderTotal };
   }, [watchedDiscountPercent, watchedItems, watchedShipping]);
 
   const { handleCancel } = useUnsavedChanges({
@@ -374,7 +385,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const resetToolItem = () => {
     setToolItem({
       itemid: undefined, itemcode: undefined, itemdescription: undefined, itemtaxable: undefined,
-      itempcs: 0, itemquantity: 1, unitprice: 0, discountpercent: invoiceDiscountPrefill,
+      itemunit: undefined, itempcs: 0, itemquantity: 1, unitprice: 0, discountpercent: invoiceDiscountPrefill,
     });
   };
 
@@ -392,6 +403,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemcode: selected.itemcode,
         itemdescription: selected.itemdescription,
         itemtaxable: toNum(selected.itemtaxable),
+        itemunit: selected.itemunit,
         itempcs: 0,
         itemquantity: 1,
         unitprice: Number(selected.itemsellprice || 0),
@@ -423,6 +435,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itemcode: toolItem.itemcode,
       itemdescription: toolItem.itemdescription,
       itemtaxable: toolItem.itemtaxable,
+      itemunit: toolItem.itemunit,
       itempcs: toNum(toolItem.itempcs),
       itemquantity: qty,
       unitprice: toNum(toolItem.unitprice),
@@ -446,6 +459,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itemcode: item.itemcode,
       itemdescription: item.itemdescription,
       itemtaxable: item.itemtaxable,
+      itemunit: item.itemunit,
       itempcs: toNum(item.itempcs),
       itemquantity: toNum(item.itemquantity),
       unitprice: toNum(item.unitprice),
@@ -492,6 +506,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         ...(it.itemid != null ? { itemid: it.itemid } : {}),
         itemcode: it.itemcode ?? null,
         itemdescription: it.itemdescription ?? null,
+        itemunit: it.itemunit ?? null,
         itempcs: toNum(it.itempcs),
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
@@ -530,16 +545,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
           const response = await api.post(`${config.apiUrl}/store/sales-order/print`, { storeid: parsedStoreId, salesordernumbers: [soNumber] }, { responseType: "blob" });
           if (response.data) {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
-            const tab = window.open(url, "_blank");
-            if (!tab) {
-              const link = document.createElement("a");
-              link.href = url;
-              link.setAttribute("download", `sales-order-${soNumber}.pdf`);
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-            }
-            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+            setPdfPreview({ url, filename: `sales-order-${soNumber}.pdf` });
           }
           return true;
         });
@@ -873,6 +879,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   <th className="text-nowrap">Item Code</th>
                   <th style={{ minWidth: readOnly ? (allowPcsEntry ? "160px" : "320px") : (allowPcsEntry ? "180px" : "220px") }}>Description</th>
                   <th className="text-center text-nowrap">Tax</th>
+                  <th className="text-center text-nowrap">Unit</th>
                   {allowPcsEntry && <th className="text-end text-nowrap">Ord Pcs</th>}
                   {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Inv Pcs</th>}
                   {allowPcsEntry && readOnly && <th className="text-end text-nowrap">Bord Pcs</th>}
@@ -888,7 +895,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
               <tbody>
                 {itemFields.length === 0 ? (
                   <tr>
-                    <td colSpan={(readOnly ? 14 : 10) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-5 fst-italic">
+                    <td colSpan={(readOnly ? 15 : 11) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-5 fst-italic">
                       No items yet — use the form below to add line items
                     </td>
                   </tr>
@@ -902,6 +909,11 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         <td className="text-nowrap">{item.itemcode || ""}</td>
                         <td>{item.itemdescription || ""}</td>
                         <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
+                        <td className="text-center">
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: (item.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (item.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
+                            {item.itemunit || "Pc"}
+                          </span>
+                        </td>
                         {allowPcsEntry && <td className="text-end">{toNum(item.itempcs)}</td>}
                         {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
                         {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
@@ -968,11 +980,13 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           itemcode: undefined,
                           itemdescription: undefined,
                           itemtaxable: undefined,
+                          itemunit: undefined,
                           unitprice: 0,
                         }));
                         return;
                       }
-                      if (allowCarriage) {
+                      const isWtItem = (selected.itemunit ?? "").toLowerCase() === "wt";
+                      if (allowCarriage && !isWtItem) {
                         autoAddItem(selected);
                         return;
                       }
@@ -982,7 +996,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         itemcode: selected.itemcode,
                         itemdescription: selected.itemdescription,
                         itemtaxable: toNum(selected.itemtaxable),
-                        itemquantity: 1,
+                        itemunit: selected.itemunit,
+                        itemquantity: isWtItem ? 0 : 1,
                         unitprice: Number(selected.itemsellprice || 0),
                         discountpercent: toNum(watch("discountpercent")),
                       }));
@@ -1018,7 +1033,13 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                 )}
 
                 <div className="col-lg-1 col-md-6 col-sm-12 p-0">
-                  <label className="form-label small text-muted mb-1">Quantity *</label>
+                  <label className="form-label small text-muted mb-1">
+                    Quantity *{toolItem.itemunit && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: (toolItem.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (toolItem.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af", marginLeft: 4 }}>
+                        {toolItem.itemunit}
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     className="form-control px-1 text-end"
@@ -1117,7 +1138,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
             <div className="card-body">
               <div className="d-flex justify-content-between mb-3 text-muted small">
                 <span>{itemFields.length} item{itemFields.length !== 1 ? "s" : ""}</span>
-                {totals.totalPcs > 0 && <span>{totals.totalPcs} pcs</span>}
+                <span className="d-flex gap-2 flex-wrap justify-content-end">
+                  {totals.totalPcs > 0 && <span>{totals.totalPcs} pcs</span>}
+                  {Object.entries(totals.unitQtyTotals).map(([unit, qty]) => (
+                    <span key={unit} style={{ fontWeight: 600 }}>
+                      {Number.isInteger(qty) ? qty : qty.toFixed(3)} {unit}
+                    </span>
+                  ))}
+                </span>
               </div>
               <table className="table table-sm table-borderless mb-0">
                 <tbody>
@@ -1192,6 +1220,13 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
           dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS }));
         }}
         onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+      />
+    )}
+    {pdfPreview && (
+      <PdfPreviewModal
+        pdfUrl={pdfPreview.url}
+        filename={pdfPreview.filename}
+        onClose={() => setPdfPreview(null)}
       />
     )}
     </>

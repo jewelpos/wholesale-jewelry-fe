@@ -105,9 +105,8 @@ export const LoginForm = () => {
           <div className="pass-group">
             <input
               type={`${isPasswordVisible ? "text" : "password"}`}
-              className={`${
-                errors.password && "is-invalid"
-              }  pass-input form-control`}
+              className={`${errors.password ? "is-invalid" : ""}  pass-input form-control`}
+              autoComplete="current-password"
               {...register("password", passwordValidation)}
             />
             {errors.password && (

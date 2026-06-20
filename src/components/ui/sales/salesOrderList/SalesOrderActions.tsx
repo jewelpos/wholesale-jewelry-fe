@@ -11,12 +11,16 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesOrderListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, Trash2, RefreshCw } from "react-feather";
+import { Edit, Eye, Mail, Printer, Trash2, RefreshCw } from "react-feather";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import { GridApi, IRowNode } from "ag-grid-community";
+import axiosApi from "@/lib/axios";
+import { getEnvironmentConfig } from "@/lib/config/environment";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
+import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
 const MySwal = withReactContent(Swal);
 
@@ -31,16 +35,19 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const config = getEnvironmentConfig();
 
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [statuses, setStatuses] = useState<{ orderstatusid: number; statusname: string }[]>([]);
+  const [printing, setPrinting] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
 
   const [deleteSalesOrder] = useMutation(DELETE_SALES_ORDER_MUTATION);
   const [updateStatus, { loading: updatingStatus }] = useMutation(UPDATE_SALES_ORDER_STATUS_MUTATION);
   const [fetchStatuses] = useLazyQuery(GET_SALES_ORDER_STATUS_LIST_QUERY, { fetchPolicy: "network-only" });
 
-  // Guard: AG Grid may render cell renderers with undefined data during load
   if (!data) return null;
 
   const ALLOWED_STATUS_NAMES = ["pending", "confirmed", "cancelled", "on hold", "backordered"];
@@ -59,6 +66,25 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
     ? "Cannot delete: invoice already created from this order"
     : "Cannot delete: only Pending orders can be deleted";
   const statusReason = "Cannot change status: invoice already created from this order";
+
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      const response = await axiosApi.post(
+        `${config.apiUrl}/store/sales-order/print`,
+        { storeid: parsedStoreId, salesordernumbers: [Number(data.salesorderno)] },
+        { responseType: "blob", headers: { "Content-Type": "application/json" } }
+      );
+      if (response.data) {
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+        setPdfUrl(url);
+      }
+    } catch {
+      dispatch(showNotification({ message: "Failed to generate PDF", type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   const handleOpenStatusModal = async () => {
     setSelectedStatusId(null);
@@ -128,76 +154,86 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
     }
   };
 
+  const iconBtn: React.CSSProperties = { lineHeight: 1 };
+  const dimmed: React.CSSProperties = { cursor: "not-allowed", display: "inline-flex", alignItems: "center" };
+
   return (
     <>
       <div className="action-table-data">
         <div className="edit-delete-action" style={{ gap: "2px" }}>
-          <Link
-            className="p-1"
-            href={`${basePath}/sales/view_sales_order/${data.salesorderno}`}
-            scroll={false}
-            title="View"
-          >
+
+          {/* Print */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+            onClick={handlePrint} disabled={printing} title="Print Sales Order">
+            <Printer size={14} />
+          </button>
+
+          {/* Email */}
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+            onClick={() => setShowEmail(true)} title="Email Sales Order">
+            <Mail size={14} />
+          </button>
+
+          {/* View */}
+          <Link className="p-1" href={`${basePath}/sales/view_sales_order/${data.salesorderno}`} scroll={false} title="View">
             <Eye size={14} />
           </Link>
+
+          {/* Edit */}
           {canEdit ? (
-            <Link
-              className="p-1"
-              href={`${basePath}/sales/new_sales_order/${data.salesorderno}`}
-              scroll={false}
-              title="Edit"
-            >
+            <Link className="p-1" href={`${basePath}/sales/new_sales_order/${data.salesorderno}`} scroll={false} title="Edit">
               <Edit size={14} className="feather-edit" />
             </Link>
           ) : (
-            <span
-              className="p-1"
-              title={editReason}
-              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-            >
+            <span className="p-1" title={editReason} style={dimmed}>
               <Edit size={14} style={{ opacity: 0.35 }} />
             </span>
           )}
+
+          {/* Change Status */}
           {canChangeStatus ? (
-            <button
-              type="button"
-              className="p-1 btn btn-link"
-              style={{ lineHeight: 1 }}
-              onClick={handleOpenStatusModal}
-              title="Change Status"
-            >
+            <button type="button" className="p-1 btn btn-link" style={iconBtn}
+              onClick={handleOpenStatusModal} title="Change Status">
               <RefreshCw size={14} />
             </button>
           ) : (
-            <span
-              className="p-1"
-              title={statusReason}
-              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-            >
+            <span className="p-1" title={statusReason} style={dimmed}>
               <RefreshCw size={14} style={{ opacity: 0.35 }} />
             </span>
           )}
+
+          {/* Delete */}
           {canDelete ? (
-            <button
-              type="button"
-              className="p-1 btn btn-link text-danger"
-              style={{ lineHeight: 1 }}
-              onClick={handleDelete}
-              title="Delete"
-            >
+            <button type="button" className="p-1 btn btn-link text-danger" style={iconBtn}
+              onClick={handleDelete} title="Delete">
               <Trash2 size={14} />
             </button>
           ) : (
-            <span
-              className="p-1"
-              title={deleteReason}
-              style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-            >
+            <span className="p-1" title={deleteReason} style={dimmed}>
               <Trash2 size={14} style={{ opacity: 0.35 }} />
             </span>
           )}
         </div>
       </div>
+
+      {pdfUrl && (
+        <PdfPreviewModal
+          pdfUrl={pdfUrl}
+          filename={`sales-order-${data.salesorderno}.pdf`}
+          onClose={() => setPdfUrl(null)}
+        />
+      )}
+
+      {showEmail && (
+        <DocumentEmailModal
+          storeId={parsedStoreId}
+          documentType="SALES_ORDER"
+          documentNumbers={[Number(data.salesorderno)]}
+          onClose={() => setShowEmail(false)}
+          onSent={(msg) => { setShowEmail(false); dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.SUCCESS })); }}
+          onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
+        />
+      )}
 
       {showStatusModal && typeof document !== "undefined" && ReactDOM.createPortal(
         <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>

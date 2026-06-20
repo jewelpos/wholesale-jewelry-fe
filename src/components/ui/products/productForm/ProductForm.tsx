@@ -55,6 +55,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemcategoryid: 0,
       subcategoryid: 0,
       itemstatus: "Active",
+      itemunit: "Pc",
       itemimagepath: "",
       itempurchaseprice: 0,
       profitpercent: 0,
