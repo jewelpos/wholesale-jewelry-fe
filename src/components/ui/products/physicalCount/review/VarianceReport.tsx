@@ -268,7 +268,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
   return (
     <div>
       {/* Print stylesheet */}
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           .no-print { display: none !important; }
           .print-header { display: block !important; }
@@ -279,7 +279,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
           .signature-block { page-break-before: always; margin-top: 40px; }
         }
         .print-header { display: none; }
-      `}</style>
+      ` }} />
 
       {/* Print header (hidden on screen, visible on print) */}
       <div className="print-header" style={{ marginBottom: 16 }}>

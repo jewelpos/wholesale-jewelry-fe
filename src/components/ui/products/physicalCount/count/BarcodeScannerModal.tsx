@@ -145,12 +145,12 @@ const BarcodeScannerModal = ({ show, items, onClose, onItemFound, onQtyEntry }: 
         )}
       </div>
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scanline {
           from { top: 25%; }
           to { top: 75%; }
         }
-      `}</style>
+      ` }} />
     </div>
   );
 };
