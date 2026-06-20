@@ -110,31 +110,36 @@ const PhysicalCountActions = ({ data, onRefresh }: { data: RowData; onRefresh?: 
 
   return (
     <div className="action-table-data">
-      {isPosted || isCancelled ? (
-        <Link href={`${base}/${data.batchid}/view`} title="View">
-          <Eye size={14} />
-        </Link>
-      ) : (
-        <Link href={`${base}/${data.batchid}/count`} title="Count">
-          <ClipboardList size={14} />
-        </Link>
-      )}
-      <span
-        title="Export CSV"
-        style={{ cursor: exporting ? "wait" : "pointer", color: "#6366f1", opacity: exporting ? 0.5 : 1 }}
-        onClick={exporting ? undefined : handleExport}
-      >
-        <Download size={14} />
-      </span>
-      {isActive && (
-        <span
-          title="Cancel"
-          style={{ cursor: "pointer", color: "#ef4444" }}
-          onClick={handleCancel}
+      <div className="edit-delete-action">
+        {isPosted || isCancelled ? (
+          <Link className="me-2 p-2" href={`${base}/${data.batchid}/view`} title="View">
+            <Eye size={14} />
+          </Link>
+        ) : (
+          <Link className="me-2 p-2" href={`${base}/${data.batchid}/count`} title="Count">
+            <ClipboardList size={14} />
+          </Link>
+        )}
+        <Link
+          className="me-2 p-2"
+          href="#"
+          title="Export CSV"
+          style={{ color: "#6366f1", opacity: exporting ? 0.5 : 1, pointerEvents: exporting ? "none" : "auto" }}
+          onClick={(e) => { e.preventDefault(); if (!exporting) handleExport(); }}
         >
-          <XCircle size={14} />
-        </span>
-      )}
+          <Download size={14} />
+        </Link>
+        {isActive && (
+          <Link
+            className="confirm-text p-2"
+            href="#"
+            title="Cancel batch"
+            onClick={(e) => { e.preventDefault(); handleCancel(); }}
+          >
+            <XCircle size={14} />
+          </Link>
+        )}
+      </div>
     </div>
   );
 };

@@ -100,7 +100,7 @@ export const physicalCountColumnDefs: ColDef[] = [
   {
     headerName: "Actions",
     field: "actions",
-    width: 110,
+    width: 140,
     pinned: "right",
     filter: false,
     sortable: false,
