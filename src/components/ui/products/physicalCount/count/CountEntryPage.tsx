@@ -249,13 +249,21 @@ const CountEntryPage = () => {
         }}
       >
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div>
-            <h6 className="mb-0 fw-semibold">
-              Count Entry — {batch?.batchnumber}
-              <span className="ms-2 text-muted" style={{ fontSize: 12, fontWeight: 400 }}>
-                {batch?.warehousename} · {batch?.scope}
-              </span>
-            </h6>
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/list`)}
+            >
+              ← Back
+            </button>
+            <div>
+              <h6 className="mb-0 fw-semibold">
+                Count Entry — {batch?.batchnumber}
+                <span className="ms-2 text-muted" style={{ fontSize: 12, fontWeight: 400 }}>
+                  {batch?.warehousename} · {batch?.scope}
+                </span>
+              </h6>
+            </div>
           </div>
           <CountProgressBar counted={countedCount} total={allItems.length} />
         </div>
