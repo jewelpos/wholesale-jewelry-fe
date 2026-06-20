@@ -60,7 +60,7 @@ const BarcodeScannerModal = ({ show, items, onClose, onItemFound, onQtyEntry }: 
           if (found) {
             setLastScanned(code);
             if (navigator.vibrate) navigator.vibrate(30);
-            if (found.itemtype === "Pc") {
+            if ((found.itemtype ?? "").toLowerCase() === "pc") {
               onItemFound(found);
             } else {
               onQtyEntry(found);
