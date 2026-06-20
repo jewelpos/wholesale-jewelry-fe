@@ -4,13 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_PHYSICAL_COUNT_BATCH_QUERY, GET_PHYSICAL_COUNT_BATCH_ITEMS_QUERY } from "@/lib/graphql/query/physicalcount";
-import { SAVE_COUNT_ITEMS_MUTATION, COMPLETE_COUNT_MUTATION } from "@/lib/graphql/mutations/physicalcount";
+import { SAVE_COUNT_ITEMS_MUTATION, COMPLETE_COUNT_MUTATION, CANCEL_PHYSICAL_COUNT_MUTATION } from "@/lib/graphql/mutations/physicalcount";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import CountProgressBar from "./CountProgressBar";
 import BarcodeScannerModal from "./BarcodeScannerModal";
-import { Camera, Save, CheckCircle2 } from "lucide-react";
+import { Camera, Save, CheckCircle2, XCircle } from "lucide-react";
 
 interface BatchItem {
   countitemid: number;
@@ -70,6 +70,8 @@ const CountEntryPage = () => {
 
   const [saveItems] = useMutation(SAVE_COUNT_ITEMS_MUTATION);
   const [completeCount] = useMutation(COMPLETE_COUNT_MUTATION);
+  const [cancelBatch] = useMutation(CANCEL_PHYSICAL_COUNT_MUTATION);
+  const [cancelling, setCancelling] = useState(false);
 
   const batch = batchData?.getPhysicalCountBatch;
   const allItems: BatchItem[] = itemsData?.getPhysicalCountBatchItems ?? [];
@@ -167,6 +169,25 @@ const CountEntryPage = () => {
     rowRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
     setQtyDialogItem(null);
     setShowScanner(true);
+  };
+
+  const handleCancelBatch = async () => {
+    if (!confirm(`Cancel batch ${batch?.batchnumber}? This cannot be undone.`)) return;
+    setCancelling(true);
+    try {
+      const res = await cancelBatch({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
+      if (res.data?.cancelPhysicalCount?.success) {
+        dispatch(showNotification({ message: "Batch cancelled", type: NOTIFICATION_TYPES.SUCCESS }));
+        router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/list`);
+      } else {
+        dispatch(showNotification({ message: res.data?.cancelPhysicalCount?.error || "Failed to cancel", type: NOTIFICATION_TYPES.ERROR }));
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error";
+      dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleSaveProgress = async () => {
@@ -465,9 +486,19 @@ const CountEntryPage = () => {
           }}
         >
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span className="text-muted" style={{ fontSize: 12 }}>
-              {countedCount} / {allItems.length} done
-            </span>
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-muted" style={{ fontSize: 12 }}>
+                {countedCount} / {allItems.length} done
+              </span>
+              <button
+                className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                onClick={handleCancelBatch}
+                disabled={cancelling}
+              >
+                {cancelling ? <span className="spinner-border spinner-border-sm" /> : <XCircle size={13} />}
+                Cancel Batch
+              </button>
+            </div>
             <div className="d-flex gap-2">
               <button
                 className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
