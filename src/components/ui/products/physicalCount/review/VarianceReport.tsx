@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { AgGridReact } from "ag-grid-react";
@@ -63,23 +63,6 @@ const VarianceReport = ({ readOnly = false }: Props) => {
 
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
 
-  useEffect(() => {
-    const el = document.createElement("style");
-    el.textContent = `
-      @media print {
-        .no-print { display: none !important; }
-        .print-header { display: block !important; }
-        body { font-size: 10pt; }
-        .card { border: 1px solid #000 !important; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
-        .signature-block { page-break-before: always; margin-top: 40px; }
-      }
-      .print-header { display: none; }
-    `;
-    document.head.appendChild(el);
-    return () => { document.head.removeChild(el); };
-  }, []);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showRecountModal, setShowRecountModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -439,7 +422,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
       </div>
 
       {/* Print-only variance table */}
-      <table style={{ display: "none" }} className="print-only-table">
+      <table className="print-only-table">
         <thead>
           <tr>
             <th>Item Code</th><th>Description</th><th>Location</th>
@@ -465,7 +448,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
       </table>
 
       {/* Signature block (print only) */}
-      <div className="signature-block" style={{ display: "none" }}>
+      <div className="signature-block">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40, marginTop: 60 }}>
           <div>
             <div style={{ borderTop: "1px solid #000", paddingTop: 6, fontSize: 11 }}>Counted By</div>
