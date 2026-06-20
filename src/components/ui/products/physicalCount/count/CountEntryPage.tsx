@@ -72,6 +72,7 @@ const CountEntryPage = () => {
   const [completeCount] = useMutation(COMPLETE_COUNT_MUTATION);
   const [cancelBatch] = useMutation(CANCEL_PHYSICAL_COUNT_MUTATION);
   const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const batch = batchData?.getPhysicalCountBatch;
   const allItems: BatchItem[] = itemsData?.getPhysicalCountBatchItems ?? [];
@@ -172,7 +173,6 @@ const CountEntryPage = () => {
   };
 
   const handleCancelBatch = async () => {
-    if (!confirm(`Cancel batch ${batch?.batchnumber}? This cannot be undone.`)) return;
     setCancelling(true);
     try {
       const res = await cancelBatch({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
@@ -185,6 +185,7 @@ const CountEntryPage = () => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error";
       dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
+      setShowCancelConfirm(false);
     } finally {
       setCancelling(false);
     }
@@ -492,7 +493,7 @@ const CountEntryPage = () => {
               </span>
               <button
                 className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                onClick={handleCancelBatch}
+                onClick={() => setShowCancelConfirm(true)}
                 disabled={cancelling}
               >
                 {cancelling ? <span className="spinner-border spinner-border-sm" /> : <XCircle size={13} />}
@@ -569,6 +570,52 @@ const CountEntryPage = () => {
             <div className="d-flex gap-2 mt-3">
               <button className="btn btn-sm btn-outline-secondary flex-fill" onClick={() => setQtyDialogItem(null)}>Cancel</button>
               <button className="btn btn-sm btn-primary flex-fill" onClick={confirmQtyDialog}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel batch confirmation modal */}
+      {showCancelConfirm && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1070,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => !cancelling && setShowCancelConfirm(false)}
+        >
+          <div
+            className="card"
+            style={{ width: 360, padding: 24 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <XCircle size={20} color="#ef4444" />
+              <h6 className="mb-0 fw-semibold">Cancel Batch?</h6>
+            </div>
+            <p style={{ fontSize: 13, color: "#475569", marginBottom: 4 }}>
+              You are about to cancel batch <strong>{batch?.batchnumber}</strong>.
+            </p>
+            <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 20 }}>
+              All count entries will be discarded and the batch cannot be reopened.
+            </p>
+            <div className="d-flex gap-2 justify-content-end">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={cancelling}
+              >
+                Keep Counting
+              </button>
+              <button
+                className="btn btn-sm btn-danger d-flex align-items-center gap-1"
+                onClick={handleCancelBatch}
+                disabled={cancelling}
+              >
+                {cancelling ? <span className="spinner-border spinner-border-sm" /> : <XCircle size={13} />}
+                Yes, Cancel Batch
+              </button>
             </div>
           </div>
         </div>
