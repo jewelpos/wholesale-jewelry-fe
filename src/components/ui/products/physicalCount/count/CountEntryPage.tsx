@@ -377,9 +377,9 @@ const CountEntryPage = () => {
       </div>
 
       {/* Desktop layout: table */}
-      <div className="d-none d-md-block" style={{ overflowX: "auto" }}>
+      <div className="d-none d-md-block" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
         <table className="table table-sm table-hover mb-0" style={{ fontSize: 12 }}>
-          <thead style={{ position: "sticky", top: 110, backgroundColor: "#f8fafc", zIndex: 5 }}>
+          <thead style={{ position: "sticky", top: 0, backgroundColor: "#f8fafc", zIndex: 5 }}>
             <tr style={{ fontSize: 11, color: "#64748b" }}>
               <th>Item Code</th>
               <th>Description</th>
