@@ -530,7 +530,7 @@ const CountEntryPage = () => {
         onClose={() => setShowScanner(false)}
         onItemFound={item => {
           const fullItem = item as unknown as BatchItem;
-          if (scanMode === "manual" || fullItem.itemtype === "Qt") {
+          if (scanMode === "manual" || (fullItem.itemtype ?? "").toLowerCase() === "wt") {
             handleQtyEntry(fullItem);
           } else {
             handleItemFound(fullItem);
