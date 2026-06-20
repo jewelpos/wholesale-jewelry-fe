@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { AgGridReact } from "ag-grid-react";
@@ -47,6 +47,11 @@ const currFmt = (v: number | null | undefined) =>
   v == null ? "—" : v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qtyFmt = (v: number | null | undefined) =>
   v == null ? "—" : Number(v).toLocaleString("en-US", { maximumFractionDigits: 4 });
+const fmtDate = (d: string | number | null | undefined) => {
+  if (!d) return "—";
+  const date = new Date(typeof d === "string" ? d : Number(d));
+  return isNaN(date.getTime()) ? String(d) : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
 
 const VarianceReport = ({ readOnly = false }: Props) => {
   const { storeId: storeIdParam, outletId: outletIdParam, batchId } = useParams();
@@ -57,6 +62,24 @@ const VarianceReport = ({ readOnly = false }: Props) => {
   const gridRef = useRef<AgGridReact>(null);
 
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
+
+  useEffect(() => {
+    const el = document.createElement("style");
+    el.textContent = `
+      @media print {
+        .no-print { display: none !important; }
+        .print-header { display: block !important; }
+        body { font-size: 10pt; }
+        .card { border: 1px solid #000 !important; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
+        .signature-block { page-break-before: always; margin-top: 40px; }
+      }
+      .print-header { display: none; }
+    `;
+    document.head.appendChild(el);
+    return () => { document.head.removeChild(el); };
+  }, []);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showRecountModal, setShowRecountModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -267,27 +290,13 @@ const VarianceReport = ({ readOnly = false }: Props) => {
 
   return (
     <div>
-      {/* Print stylesheet */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          .no-print { display: none !important; }
-          .print-header { display: block !important; }
-          body { font-size: 10pt; }
-          .card { border: 1px solid #000 !important; }
-          table { border-collapse: collapse; width: 100%; }
-          th, td { border: 1px solid #000; padding: 3px 6px; font-size: 9pt; }
-          .signature-block { page-break-before: always; margin-top: 40px; }
-        }
-        .print-header { display: none; }
-      ` }} />
-
       {/* Print header (hidden on screen, visible on print) */}
       <div className="print-header" style={{ marginBottom: 16 }}>
         <h4 style={{ margin: 0 }}>Physical Count Variance Report</h4>
         <div style={{ fontSize: 11, marginTop: 4 }}>
           <strong>Batch:</strong> {batch?.batchnumber} &nbsp;|&nbsp;
           <strong>Warehouse:</strong> {batch?.warehousename} &nbsp;|&nbsp;
-          <strong>Count Date:</strong> {batch?.countdate} &nbsp;|&nbsp;
+          <strong>Count Date:</strong> {fmtDate(batch?.countdate)} &nbsp;|&nbsp;
           <strong>Status:</strong> {batch?.countstatus} &nbsp;|&nbsp;
           <strong>Printed:</strong> {printDate}
         </div>
@@ -298,7 +307,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
         <div>
           <h5 className="mb-0 fw-semibold">{readOnly ? "View Count" : "Review Count"} — {batch?.batchnumber}</h5>
           <div className="text-muted" style={{ fontSize: 12 }}>
-            {batch?.warehousename} · {batch?.scope} · {batch?.countdate}
+            {batch?.warehousename} · {batch?.scope} · {fmtDate(batch?.countdate)}
             {" "}
             <span
               className={`badge ms-1 ${

@@ -1,10 +1,10 @@
 import { ColDef } from "ag-grid-community";
 import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 
-const formatDate = (v: string | null | undefined) => {
+const formatDate = (v: string | number | null | undefined) => {
   if (!v) return "—";
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? v : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const d = new Date(typeof v === "string" ? v : Number(v));
+  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
 const pctRenderer = (p: { data: { counteditems?: number; totalitems?: number } }) => {
