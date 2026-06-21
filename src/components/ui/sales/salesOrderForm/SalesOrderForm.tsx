@@ -1160,9 +1160,10 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     onChange={(e) => {
                       const qty = toNum(e.target.value);
                       setToolItem((p) => {
-                        if (p.itemunit === "Wt") {
-                          const goldRate = currentRates ? (currentRates[KARAT_RATE_FIELD[p.itemmetal ?? ""] ?? ""] ?? 0) : 0;
-                          const newUnitPrice = calcWtUnitPrice(qty, p.itemmetal, currentRates, p.itempremium ?? 0, p.broakerage ?? 0);
+                        if ((p.itemunit ?? "").trim().toLowerCase() === "wt") {
+                          const rateField = getRateField(p.itemmetal);
+                          const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+                          const newUnitPrice = calcWtUnitPrice(p.itemmetal, currentRates as any, p.itempremium ?? 0, p.broakerage ?? 0);
                           return { ...p, itemquantity: qty, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: p.itempremium, labour_used: p.broakerage };
                         }
                         return { ...p, itemquantity: qty };
