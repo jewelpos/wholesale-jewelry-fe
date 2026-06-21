@@ -51,6 +51,11 @@ const OnHandChecksComponent = ({ data }: Props) => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
+        const validCustomerId = Number.isInteger(Number(data.customerid)) && Number(data.customerid) > 0;
+        if (!validCustomerId) {
+          params.success({ rowData: [], rowCount: 0 });
+          return;
+        }
         const filters = filterVariables(params);
         const outletFilter = parsedOutletId
           ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: parsedOutletId } }]

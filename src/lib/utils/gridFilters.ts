@@ -32,7 +32,9 @@ export const filterVariables = (
       value: filterModel[item],
     }));
   }
-  const rowGroupCols = rowGroup.map((item: any) => ({ field: item.field }));
+  const rowGroupCols = rowGroup
+    .filter((item: any) => item.field != null)
+    .map((item: any) => ({ field: item.field }));
   const perpage = endRow - startRow;
   const page = Math.floor(startRow / perpage) + 1;
   return { perpage, page, filters, sortModel, rowGroupCols, groupKeys };

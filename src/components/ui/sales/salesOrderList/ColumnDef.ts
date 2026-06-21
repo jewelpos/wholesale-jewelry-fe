@@ -15,6 +15,7 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     headerName: "Customer",
     colId: "customerid, custcompanyname",
     filter: "agTextColumnFilter",
+    enableRowGroup: false,
     valueGetter: (params) =>
       params.data ? `${params.data.customerid} - ${params.data.custcompanyname ?? ""}` : "",
   },
@@ -31,9 +32,7 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     filter: "agTextColumnFilter",
   },
   { headerName: "Status", field: "statusname", filter: "agTextColumnFilter" },
-  { headerName: "Invoice Pcs", field: "invoicepcs", filter: "agNumberColumnFilter" },
   { headerName: "Invoice Qty", field: "invoiceqty", filter: "agNumberColumnFilter" },
-  { headerName: "Bord Pcs", field: "bordpcs", filter: "agNumberColumnFilter" },
   { headerName: "Bord Qty", field: "bordqty", filter: "agNumberColumnFilter" },
   { headerName: "Terms", field: "termsname", filter: "agTextColumnFilter" },
   {
@@ -67,6 +66,7 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
+    enableRowGroup: false,
     suppressHeaderMenuButton: true,
   },
 ];

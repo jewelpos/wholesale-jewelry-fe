@@ -27,6 +27,7 @@ import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
+import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -53,6 +54,12 @@ type SalesOrderItemForm = {
   invoiceqty?: number;
   bordpcs?: number;
   bordqty?: number;
+  itemmetal?: string;
+  itempremium?: number;
+  broakerage?: number;
+  goldprice_used?: number;
+  premium_used?: number;
+  labour_used?: number;
 };
 
 type ToolItem = {
@@ -65,6 +72,12 @@ type ToolItem = {
   itemquantity: number;
   unitprice: number;
   discountpercent?: number;
+  itemmetal?: string;
+  itempremium?: number;
+  broakerage?: number;
+  goldprice_used?: number;
+  premium_used?: number;
+  labour_used?: number;
 };
 
 type SalesOrderFormType = {
@@ -100,6 +113,26 @@ const toNum = (v: unknown) => {
   const n = typeof v === "number" ? v : Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 };
+
+const KARAT_RATE_FIELD: Record<string, string> = {
+  "10Kt": "gold10kt_gram",
+  "14Kt": "gold14kt_gram",
+  "18Kt": "gold18kt_gram",
+  "22Kt": "gold22kt_gram",
+};
+
+function calcWtUnitPrice(
+  weight: number,
+  metalType: string | undefined,
+  rates: Record<string, number> | null | undefined,
+  premium: number,
+  labour: number
+): number {
+  if (!weight || !metalType || !rates) return 0;
+  const rateField = KARAT_RATE_FIELD[metalType];
+  const goldRate = rateField ? (rates[rateField] ?? 0) : 0;
+  return Math.round((goldRate + premium + labour) * weight * 100) / 100;
+}
 
 const computeLine = (item: SalesOrderItemForm) => {
   const qty = toNum(item.itemquantity);
@@ -168,6 +201,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const [createSalesOrder, { loading: savingCreate }] = useMutation(CREATE_SALES_ORDER_MUTATION);
   const [editSalesOrder, { loading: savingEdit }] = useMutation(EDIT_SALES_ORDER_MUTATION);
   const saving = savingCreate || savingEdit;
+
+  const { data: metalRatesQueryData } = useQuery(GET_CURRENT_METAL_RATES_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+  const currentRates = metalRatesQueryData?.getCurrentMetalRates ?? null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const ratesStale = !currentRates || currentRates.ratedate < todayStr;
 
   const { data: editData, loading: editLoading } = useQuery(GET_SALES_ORDER_QUERY, {
     variables: { storeid: parsedStoreId, salesorderno: salesordernoEdit },
@@ -398,6 +439,13 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       const existing = currentItems[dupIndex];
       update(dupIndex, { ...existing, itemquantity: Number(existing.itemquantity || 0) + 1 });
     } else {
+      const isWt = selected.itemunit === "Wt";
+      const premium = Number(selected.itempremium || 0);
+      const labour = Number(selected.broakerage || 0);
+      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+      const unitprice = isWt
+        ? calcWtUnitPrice(1, selected.itemmetal, currentRates, premium, labour)
+        : Number(selected.itemsellprice || 0);
       append({
         itemid,
         itemcode: selected.itemcode,
@@ -406,8 +454,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemunit: selected.itemunit,
         itempcs: 0,
         itemquantity: 1,
-        unitprice: Number(selected.itemsellprice || 0),
+        unitprice,
         discountpercent: discountPct,
+        itemmetal: selected.itemmetal,
+        itempremium: premium,
+        broakerage: labour,
+        goldprice_used: isWt ? goldRate : undefined,
+        premium_used: isWt ? premium : undefined,
+        labour_used: isWt ? labour : undefined,
       });
     }
     resetToolItem();
@@ -440,6 +494,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itemquantity: qty,
       unitprice: toNum(toolItem.unitprice),
       discountpercent: toNum(toolItem.discountpercent),
+      itemmetal: toolItem.itemmetal,
+      itempremium: toolItem.itempremium,
+      broakerage: toolItem.broakerage,
+      goldprice_used: toolItem.goldprice_used,
+      premium_used: toolItem.premium_used,
+      labour_used: toolItem.labour_used,
     };
 
     if (editingIndex != null) {
@@ -478,6 +538,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       return;
     }
 
+    const hasWtItems = (values.items || []).some((it) => it.itemunit === "Wt");
+
     const soInput = {
       storeid: parsedStoreId,
       customerid: Number(values.customerid),
@@ -502,6 +564,19 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshiptostate: values.invshiptostate || null,
       invshiptozip: values.invshiptozip || null,
       invshiptophone: values.invshiptophone || null,
+      goldrate_snapshot: hasWtItems && currentRates
+        ? {
+            ratedate: currentRates.ratedate,
+            gold10kt_gram: currentRates.gold10kt_gram,
+            gold14kt_gram: currentRates.gold14kt_gram,
+            gold18kt_gram: currentRates.gold18kt_gram,
+            gold22kt_gram: currentRates.gold22kt_gram,
+            silver_gram: currentRates.silver_gram,
+            platinum_gram: currentRates.platinum_gram,
+            rhodium_gram: currentRates.rhodium_gram,
+            source: currentRates.source,
+          }
+        : undefined,
       items: values.items.map((it) => ({
         ...(it.itemid != null ? { itemid: it.itemid } : {}),
         itemcode: it.itemcode ?? null,
@@ -511,6 +586,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        goldprice_used: it.goldprice_used ?? undefined,
+        premium_used: it.premium_used ?? undefined,
+        labour_used: it.labour_used ?? undefined,
       })),
     };
 
@@ -866,6 +944,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         </div>
       </div>
 
+      {/* Gold rate warning — shown when no rates set for today */}
+      {ratesStale && (
+        <div
+          className="d-flex align-items-center gap-2 mb-2"
+          style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e", borderRadius: 8, fontSize: 12, padding: "8px 12px" }}
+        >
+          <span>⚠</span>
+          <span>Gold rates not set for today — Wt-priced items will price at $0. Go to System Settings → Metal Rates to update.</span>
+        </div>
+      )}
+
       {/* LINE ITEMS */}
       <div className="card mb-3">
         <div className="card-body">
@@ -985,11 +1074,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         }));
                         return;
                       }
-                      const isWtItem = (selected.itemunit ?? "").toLowerCase() === "wt";
+                      const isWtItem = selected.itemunit === "Wt";
                       if (allowCarriage && !isWtItem) {
                         autoAddItem(selected);
                         return;
                       }
+                      const premium = Number(selected.itempremium || 0);
+                      const labour = Number(selected.broakerage || 0);
+                      const goldRate = isWtItem && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                      const unitprice = isWtItem
+                        ? calcWtUnitPrice(isWtItem ? 0 : 1, selected.itemmetal, currentRates, premium, labour)
+                        : Number(selected.itemsellprice || 0);
                       setToolItem((prev) => ({
                         ...prev,
                         itemid: Number(selected.itemid),
@@ -998,8 +1093,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         itemtaxable: toNum(selected.itemtaxable),
                         itemunit: selected.itemunit,
                         itemquantity: isWtItem ? 0 : 1,
-                        unitprice: Number(selected.itemsellprice || 0),
+                        unitprice,
                         discountpercent: toNum(watch("discountpercent")),
+                        itemmetal: selected.itemmetal,
+                        itempremium: premium,
+                        broakerage: labour,
+                        goldprice_used: isWtItem ? goldRate : undefined,
+                        premium_used: isWtItem ? premium : undefined,
+                        labour_used: isWtItem ? labour : undefined,
                       }));
                     }}
                     onNotFound={() =>
@@ -1046,7 +1147,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     min={1}
                     step="0.001"
                     value={toolItem.itemquantity}
-                    onChange={(e) => setToolItem((p) => ({ ...p, itemquantity: toNum(e.target.value) }))}
+                    onChange={(e) => {
+                      const qty = toNum(e.target.value);
+                      setToolItem((p) => {
+                        if (p.itemunit === "Wt") {
+                          const goldRate = currentRates ? (currentRates[KARAT_RATE_FIELD[p.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                          const newUnitPrice = calcWtUnitPrice(qty, p.itemmetal, currentRates, p.itempremium ?? 0, p.broakerage ?? 0);
+                          return { ...p, itemquantity: qty, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: p.itempremium, labour_used: p.broakerage };
+                        }
+                        return { ...p, itemquantity: qty };
+                      });
+                    }}
                   />
                 </div>
 

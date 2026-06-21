@@ -80,6 +80,10 @@ export type ProductListType = {
   lasttransferdate?: string;
   transferby?: string;
   itemmetal?: string;
+  itemmetalpercent?: string;
+  itempremium?: string;
+  broakerage?: string;
+  broakeragepercent?: number;
 };
 
 export type ProductListTypeResponseType = {
@@ -188,6 +192,10 @@ export type ProductFormType = {
   itemtagprice?: number;//Tag Price
   itemdiscount?: number;//Item Discount
   itemmetal?: string;//Metal Type
+  itemmetalpercent?: string;//Metal %
+  itempremium?: string;//Item Premium
+  broakerage?: string;//Brokerage
+  broakeragepercent?: number;//Brokerage %
   profitpercent: number; //Profit Percent
   
   // Information Tab - General Setting Section

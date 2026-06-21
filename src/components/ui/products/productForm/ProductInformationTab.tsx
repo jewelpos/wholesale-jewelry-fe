@@ -10,6 +10,8 @@ import {
   UseFormTrigger,
   useWatch,
 } from "react-hook-form";
+import { useQuery } from "@apollo/client";
+import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { ProductFormType } from "@/types/product";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectItemCategory from "@/components/forms/SelectItemCategory";
@@ -22,6 +24,7 @@ import {
   ChevronRight,
   DollarSign,
   FileText,
+  Layers,
   Package,
   Tag,
   TrendingUp,
@@ -115,9 +118,24 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   const warehouse = warehouses.find(w => w.issystem);
 
-  const itemStatus      = useWatch({ control, name: "itemstatus" });
-  const itemAlert       = useWatch({ control, name: "itemalertwarning" });
-  const profitpercent   = useWatch({ control, name: "profitpercent" });
+  const itemStatus        = useWatch({ control, name: "itemstatus" });
+  const itemAlert         = useWatch({ control, name: "itemalertwarning" });
+  const profitpercent     = useWatch({ control, name: "profitpercent" });
+  const itemmetal         = useWatch({ control, name: "itemmetal" });
+
+  const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
+
+  // Auto-fill Metal % from the selected metal type's default percent
+  useEffect(() => {
+    if (!itemmetal || !metalTypeData?.getMetalTypeList) return;
+    const match = metalTypeData.getMetalTypeList.find((m: any) => m.metalname === itemmetal);
+    if (match?.metalpercent != null) {
+      setValue("itemmetalpercent", String(match.metalpercent));
+    }
+  }, [itemmetal, metalTypeData, setValue]);
 
   useEffect(() => {
     if (outletId) fetchWarehouseByOutletId(Number(outletId));
@@ -259,9 +277,9 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
             </div>
 
-            {/* Row 2: Department · Product Line · Metal Type */}
+            {/* Row 2: Department · Product Line */}
             <div className="row g-2">
-              <div className="col-lg-4 col-md-6">
+              <div className="col-lg-6 col-md-6">
                 <FieldWrap>
                   <Label>Department *</Label>
                   <Controller
@@ -281,7 +299,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                   {errors.itemcategoryid && <div className="invalid-feedback d-block">{errors.itemcategoryid.message}</div>}
                 </FieldWrap>
               </div>
-              <div className="col-lg-4 col-md-6">
+              <div className="col-lg-6 col-md-6">
                 <FieldWrap>
                   <Label>Product Line *</Label>
                   <Controller
@@ -299,24 +317,6 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                     )}
                   />
                   {errors.subcategoryid && <div className="invalid-feedback d-block">{errors.subcategoryid.message}</div>}
-                </FieldWrap>
-              </div>
-              <div className="col-lg-4 col-md-6">
-                <FieldWrap>
-                  <Label>Metal Type</Label>
-                  <Controller
-                    name="itemmetal"
-                    control={control}
-                    render={({ field }) => (
-                      <SelectMetalType
-                        className={errors.itemmetal ? "is-invalid" : ""}
-                        trigger={trigger}
-                        storeId={storeId}
-                        disableField={disableField}
-                        {...field}
-                      />
-                    )}
-                  />
                 </FieldWrap>
               </div>
             </div>
@@ -370,7 +370,69 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
       </SectionCard>
 
       {/* ════════════════════════════════════════════════════
-          CARD 2 — PRICING & MARGINS
+          CARD 2 — METAL & MAKING CHARGES
+      ════════════════════════════════════════════════════ */}
+      <SectionCard icon={Layers} title="Metal & Making Charges" accent="violet">
+        <div className="row g-2">
+          <div className="col-lg-3 col-md-6">
+            <FieldWrap>
+              <Label>Metal Type</Label>
+              <Controller
+                name="itemmetal"
+                control={control}
+                render={({ field }) => (
+                  <SelectMetalType
+                    className={errors.itemmetal ? "is-invalid" : ""}
+                    trigger={trigger}
+                    storeId={storeId}
+                    disableField={disableField}
+                    {...field}
+                  />
+                )}
+              />
+            </FieldWrap>
+          </div>
+          <div className="col-lg-2 col-md-6">
+            <FieldWrap>
+              <Label>Metal %</Label>
+              <div className="input-group input-group-sm">
+                <input
+                  type="text"
+                  className="form-control"
+                  {...register("itemmetalpercent")}
+                />
+                <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
+              </div>
+            </FieldWrap>
+          </div>
+          <div className="col-lg-2 col-md-6">
+            <FieldWrap>
+              <Label>Item Premium</Label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                {...register("itempremium")}
+              />
+            </FieldWrap>
+          </div>
+          <div className="col-lg-2 col-md-6">
+            <FieldWrap>
+              <Label>Making Charges</Label>
+              <div className="input-group input-group-sm">
+                <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
+                <input
+                  type="text"
+                  className="form-control"
+                  {...register("broakerage")}
+                />
+              </div>
+            </FieldWrap>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ════════════════════════════════════════════════════
+          CARD 3 — PRICING & MARGINS
       ════════════════════════════════════════════════════ */}
       <SectionCard icon={DollarSign} title="Pricing & Margins" accent="green">
 

@@ -117,6 +117,9 @@ export const SEARCH_INVENTORY_ITEMS_QUERY = gql`
       itemtagprice
       supplierid
       trackinventory
+      itemmetal
+      itempremium
+      broakerage
     }
   }
 `;

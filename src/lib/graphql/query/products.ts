@@ -284,6 +284,10 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
       dpricecode
       itemid
       itemwarehouseid
+      itemunit
+      itemsellprice
+      itempremium
+      broakerage
     }
   }
 `;

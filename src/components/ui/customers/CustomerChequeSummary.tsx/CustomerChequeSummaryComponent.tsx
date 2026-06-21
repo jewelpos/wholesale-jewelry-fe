@@ -134,11 +134,37 @@ const CustomerChequeSummaryComponent = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedStoreId, selectedCustomer, selectedYear, selectedWarehouse]);
 
+  const isValidCustomerRow = (r: CustomerChequeSummaryListType) =>
+    Number.isInteger(Number(r.customerid)) && Number(r.customerid) > 0;
+
   // Filter by current outlet — include records assigned to this outlet OR with no outlet (legacy data)
   const filteredRowData = useMemo(() => {
-    if (!parsedOutletId || !rowData.length) return rowData;
-    return rowData.filter((r) => !r.outletid || Number(r.outletid) === parsedOutletId);
+    const outletFiltered = !parsedOutletId || !rowData.length
+      ? rowData
+      : rowData.filter((r) => !r.outletid || Number(r.outletid) === parsedOutletId);
+    return outletFiltered.filter(isValidCustomerRow);
   }, [rowData, parsedOutletId]);
+
+  const pinnedGrandTotal = useMemo(() => {
+    const raw = !parsedOutletId || !rowData.length
+      ? rowData
+      : rowData.filter((r) => !r.outletid || Number(r.outletid) === parsedOutletId);
+    const grandRow = raw.find((r) => !isValidCustomerRow(r));
+    if (grandRow) return [{ ...grandRow, custcompanyname: "Grand Total" }];
+    // Compute from valid rows if backend doesn't include one
+    if (!filteredRowData.length) return [];
+    const sum = (field: keyof CustomerChequeSummaryListType) =>
+      filteredRowData.reduce((acc, r) => acc + (Number(r[field]) || 0), 0);
+    return [{
+      customerid: "",
+      custcompanyname: "Grand Total",
+      yearly_total: String(sum("yearly_total")),
+      Jan: String(sum("Jan")), Feb: String(sum("Feb")), Mar: String(sum("Mar")),
+      Apr: String(sum("Apr")), May: String(sum("May")), Jun: String(sum("Jun")),
+      Jul: String(sum("Jul")), Aug: String(sum("Aug")), Sep: String(sum("Sep")),
+      Oct: String(sum("Oct")), Nov: String(sum("Nov")), Dec: String(sum("Dec")),
+    }];
+  }, [rowData, parsedOutletId, filteredRowData]);
 
   const chequeStats = useMemo(() => {
     if (!filteredRowData.length) return { totalValue: 0, customerCount: 0, largestValue: 0, largestName: "—", monthlyTotals: Array(12).fill(0) as number[] };
@@ -277,11 +303,13 @@ const CustomerChequeSummaryComponent = () => {
               columnDefs={customerChequeSummaryColumnDefs}
               onGridReady={handleOnGridReady}
               rowData={filteredRowData}
+              pinnedBottomRowData={pinnedGrandTotal}
               loading={loading}
               fillHeight
               quickFilterText={search}
               defaultColDef={{ filter: true, floatingFilter: false }}
               masterDetail
+              isRowMaster={(row) => Number.isInteger(Number(row?.customerid)) && Number(row?.customerid) > 0}
               detailCellRenderer={OnHandChecksComponent}
               detailRowAutoHeight
             />

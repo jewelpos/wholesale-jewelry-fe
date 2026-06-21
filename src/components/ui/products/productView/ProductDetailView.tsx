@@ -570,6 +570,10 @@ const ProductDetailView = () => {
                   }
                 />
                 <AttrRow label="Metal" value={product.itemmetal} />
+                <AttrRow label="Metal %" value={product.itemmetalpercent ? `${product.itemmetalpercent}%` : null} />
+                <AttrRow label="Item Premium" value={product.itempremium} />
+                <AttrRow label="Making Charges" value={product.broakerage} />
+                <AttrRow label="Making Charges %" value={product.broakeragepercent != null ? `${product.broakeragepercent}%` : null} />
                 <AttrRow label="Price Code" value={product.itemtagpricecode} />
                 <AttrRow
                   label="Discount"

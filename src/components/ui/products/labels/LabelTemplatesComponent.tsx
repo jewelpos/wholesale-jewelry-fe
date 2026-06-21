@@ -2,10 +2,8 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { Plus, Edit2, Trash2, Tag } from "react-feather";
-import PageHeader from "@/components/ui/PageHeader";
-import ActionFooter from "@/components/ui/ActionFooter";
 import { GET_ALL_INVENTORY_TAG_LABELS_QUERY } from "@/lib/graphql/query/products";
 import { DELETE_INVENTORY_TAG_LABEL_MUTATION } from "@/lib/graphql/mutations/label";
 import { LabelTemplate } from "./LabelCanvas";
@@ -14,7 +12,9 @@ import Swal from "sweetalert2";
 
 const LabelTemplatesComponent = () => {
   const router = useRouter();
-  const { storeId: storeIdParam } = useParams();
+  const pathname = usePathname();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const fromSystemSettings = pathname?.includes("/system_settings");
   const storeid = parseInt(storeIdParam as string, 10);
 
   const { data, loading, refetch } = useQuery(GET_ALL_INVENTORY_TAG_LABELS_QUERY, {
@@ -79,16 +79,29 @@ const LabelTemplatesComponent = () => {
 
   return (
     <>
-      <PageHeader
-        title="Label Templates"
-        subtitle="Configure rat-tail and rectangular price tag templates"
-        rightSection={
-          <button className="btn btn-submit d-flex align-items-center gap-2" onClick={handleNew}>
+      <div className="page-header">
+        <div className="add-item d-flex flex-column">
+          {fromSystemSettings && (
+            <button
+              type="button"
+              onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`)}
+              style={{ background: "none", border: "none", padding: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b", cursor: "pointer" }}
+            >
+              ← System Settings
+            </button>
+          )}
+          <div className="page-title">
+            <h4>Label Templates</h4>
+            <h6>Configure rat-tail and rectangular price tag templates</h6>
+          </div>
+        </div>
+        <div className="page-btn">
+          <button className="btn btn-added d-flex align-items-center gap-2" onClick={handleNew}>
             <Plus size={14} />
             New Template
           </button>
-        }
-      />
+        </div>
+      </div>
 
       <div className="card" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", overflow: "hidden" }}>
         {loading ? (
@@ -160,10 +173,6 @@ const LabelTemplatesComponent = () => {
           </div>
         )}
       </div>
-
-      <ActionFooter handleCancel={() => router.back()}>
-        <></>
-      </ActionFooter>
 
       {modalOpen && (
         <LabelTemplateFormModal

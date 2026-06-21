@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
+import { Bookmark, Calendar, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -37,6 +37,9 @@ import {
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { GET_INVOICE_BY_NUMBER_QUERY, GET_MEMO_DETAIL_QUERY, GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
+import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
+import { GET_INVOICE_HOLDS_QUERY } from "@/lib/graphql/query/invoiceHold";
+import { SAVE_INVOICE_HOLD_MUTATION, DELETE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
 import type { ProductSettingsInfo } from "@/types/product";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
@@ -65,6 +68,13 @@ type SalesInvoiceItemForm = {
   discountpercent?: number;
   maxpcs?: number;
   maxqty?: number;
+  itemmetal?: string;
+  itemunit?: string;
+  itempremium?: number;
+  broakerage?: number;
+  goldprice_used?: number;
+  premium_used?: number;
+  labour_used?: number;
 };
 
 const extractMemoNumber = (raw: unknown): number | undefined => {
@@ -179,12 +189,40 @@ type ToolItem = {
   itemquantity: number;
   unitprice: number;
   discountpercent?: number;
+
+  itemmetal?: string;
+  itemunit?: string;
+  itempremium?: number;
+  broakerage?: number;
+  goldprice_used?: number;
+  premium_used?: number;
+  labour_used?: number;
 };
 
 const toNum = (v: unknown) => {
   const n = typeof v === "number" ? v : Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 };
+
+const KARAT_RATE_FIELD: Record<string, string> = {
+  "10Kt": "gold10kt_gram",
+  "14Kt": "gold14kt_gram",
+  "18Kt": "gold18kt_gram",
+  "22Kt": "gold22kt_gram",
+};
+
+function calcWtUnitPrice(
+  weight: number,
+  metalType: string | undefined,
+  rates: Record<string, number> | null | undefined,
+  premium: number,
+  labour: number
+): number {
+  if (!weight || !metalType || !rates) return 0;
+  const rateField = KARAT_RATE_FIELD[metalType];
+  const goldRate = rateField ? (rates[rateField] ?? 0) : 0;
+  return Math.round((goldRate + premium + labour) * weight * 100) / 100;
+}
 
 const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => {
   const qtyRaw = toNum(item.itemquantity);
@@ -225,8 +263,9 @@ const SalesInvoiceFormV2 = ({
 }) => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const config = getEnvironmentConfig();
 
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
@@ -357,6 +396,25 @@ const SalesInvoiceFormV2 = ({
   const [editMemo, { loading: savingEditMemo }] = useMutation(EDIT_MEMO_MUTATION);
   const [updateSOAfterInvoicing] = useMutation(UPDATE_SO_AFTER_INVOICING_MUTATION);
   const [updateMemoAfterInvoicing] = useMutation(UPDATE_MEMO_AFTER_INVOICING_MUTATION);
+
+  const { data: metalRatesQueryData } = useQuery(GET_CURRENT_METAL_RATES_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+  const currentRates = metalRatesQueryData?.getCurrentMetalRates ?? null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const ratesStale = !currentRates || currentRates.ratedate < todayStr;
+
+  const isNewDoc = !invoiceId && !viewInvoicenumber;
+  const [showHoldsPanel, setShowHoldsPanel] = useState(false);
+  const { data: holdsData, refetch: refetchHolds } = useQuery(GET_INVOICE_HOLDS_QUERY, {
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId || 0, doctype: documentType },
+    skip: !parsedStoreId || !isNewDoc,
+    fetchPolicy: "cache-and-network",
+  });
+  const activeHolds: any[] = holdsData?.getInvoiceHolds ?? [];
+  const [saveHoldMutation, { loading: savingHold }] = useMutation(SAVE_INVOICE_HOLD_MUTATION);
+  const [deleteHoldMutation] = useMutation(DELETE_INVOICE_HOLD_MUTATION);
 
   const saving =
     savingInvoice ||
@@ -905,15 +963,30 @@ const SalesInvoiceFormV2 = ({
         itemquantity: mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1,
       });
     } else {
+      const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+      const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
+      const premium = Number(selected.itempremium || 0);
+      const labour = Number(selected.broakerage || 0);
+      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+      const unitprice = isWt
+        ? calcWtUnitPrice(Math.abs(initQty), selected.itemmetal, currentRates, premium, labour)
+        : Number(selected.itemsellprice || 0);
       append({
         itemid,
         itemcode: selected.itemcode,
         itemdescription: selected.itemdescription,
         itemtaxable: toNum(selected.itemtaxable),
         itempcs: 0,
-        itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
-        unitprice: Number(selected.itemsellprice || 0),
+        itemquantity: initQty,
+        unitprice,
         discountpercent: discountPct,
+        itemmetal: selected.itemmetal,
+        itemunit: selected.itemunit,
+        itempremium: premium,
+        broakerage: labour,
+        goldprice_used: isWt ? goldRate : undefined,
+        premium_used: isWt ? premium : undefined,
+        labour_used: isWt ? labour : undefined,
       });
     }
     resetToolItem();
@@ -988,6 +1061,13 @@ const SalesInvoiceFormV2 = ({
       itemquantity: normalizedQty,
       unitprice: unitPrice,
       discountpercent: discountPct,
+      itemmetal: toolItem.itemmetal,
+      itemunit: toolItem.itemunit,
+      itempremium: toolItem.itempremium,
+      broakerage: toolItem.broakerage,
+      goldprice_used: toolItem.goldprice_used,
+      premium_used: toolItem.premium_used,
+      labour_used: toolItem.labour_used,
     };
 
     if (editingIndex == null) {
@@ -1010,6 +1090,8 @@ const SalesInvoiceFormV2 = ({
     const warehouseId = Number(formData.warehouseid);
     if (!parsedStoreId || !warehouseId) return;
 
+    const hasWtItems = (formData.items || []).some((it) => (it.itemunit ?? "").toLowerCase() === "wt");
+
     const items = (formData.items || []).map((it) => {
       const { qty, unit, disc, gross, discountAmt, net } = computeLine(it, mode);
       const taxable = toNum(it.itemtaxable);
@@ -1027,6 +1109,9 @@ const SalesInvoiceFormV2 = ({
         itemnontaxablesale: taxable === 1 ? 0 : net,
         itemtaxable: taxable,
         warehouseid: warehouseId,
+        goldprice_used: it.goldprice_used ?? undefined,
+        premium_used: it.premium_used ?? undefined,
+        labour_used: it.labour_used ?? undefined,
       };
     });
 
@@ -1078,6 +1163,20 @@ const SalesInvoiceFormV2 = ({
 
       taxablesale: totals.taxableSale,
       nontaxablesale: totals.nonTaxableSale,
+
+      goldrate_snapshot: hasWtItems && currentRates
+        ? {
+            ratedate: currentRates.ratedate,
+            gold10kt_gram: currentRates.gold10kt_gram,
+            gold14kt_gram: currentRates.gold14kt_gram,
+            gold18kt_gram: currentRates.gold18kt_gram,
+            gold22kt_gram: currentRates.gold22kt_gram,
+            silver_gram: currentRates.silver_gram,
+            platinum_gram: currentRates.platinum_gram,
+            rhodium_gram: currentRates.rhodium_gram,
+            source: currentRates.source,
+          }
+        : undefined,
 
       items,
     };
@@ -1299,12 +1398,153 @@ const SalesInvoiceFormV2 = ({
     );
   }
 
+  const handleHold = async () => {
+    const formValues = getValues();
+    const hasItems = (formValues.items ?? []).length > 0;
+    if (!hasItems) {
+      Swal.fire({ icon: "info", title: "Nothing to hold", text: "Add at least one item before holding.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    const customerName = formValues.invbilltocompanyname ?? "";
+    const itemCount = formValues.items.length;
+    const autoName = [customerName, `${itemCount} item${itemCount !== 1 ? "s" : ""}`].filter(Boolean).join(" — ");
+    const { value: holdName, isConfirmed } = await Swal.fire({
+      title: "Hold Invoice",
+      input: "text",
+      inputLabel: "Hold name (optional)",
+      inputValue: autoName,
+      showCancelButton: true,
+      confirmButtonText: "Hold",
+      cancelButtonText: "Cancel",
+      inputPlaceholder: "e.g. John Smith — ring + chain",
+    });
+    if (!isConfirmed) return;
+    const holdData = {
+      ...formValues,
+      saledate: formValues.saledate ? (formValues.saledate as any).toISOString?.() ?? String(formValues.saledate) : null,
+      shippingdate: formValues.shippingdate ? (formValues.shippingdate as any).toISOString?.() ?? String(formValues.shippingdate) : null,
+    };
+    try {
+      await saveHoldMutation({
+        variables: {
+          input: {
+            storeid: parsedStoreId,
+            outletid: parsedOutletId || 0,
+            doctype: documentType,
+            holdname: holdName || autoName,
+            customerid: formValues.customerid ?? null,
+            formdata: holdData,
+          },
+        },
+      });
+      reset();
+      refetchHolds();
+      Swal.fire({ icon: "success", title: "Invoice held", text: "You can resume it from the Held Invoices panel.", timer: 2000, showConfirmButton: false });
+    } catch {
+      Swal.fire("Error", "Failed to save hold. Please try again.", "error");
+    }
+  };
+
+  const handleResumeHold = async (hold: any) => {
+    const fd = hold.formdata ?? {};
+    reset({
+      ...fd,
+      saledate: fd.saledate ? dayjs(fd.saledate) : dayjs(),
+      shippingdate: fd.shippingdate ? dayjs(fd.shippingdate) : undefined,
+    });
+    await deleteHoldMutation({ variables: { holdid: hold.holdid, storeid: parsedStoreId } });
+    refetchHolds();
+    setShowHoldsPanel(false);
+  };
+
+  const handleDeleteHold = async (holdid: number) => {
+    const result = await Swal.fire({
+      title: "Discard hold?",
+      text: "This hold will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Discard",
+      confirmButtonColor: "#dc3545",
+    });
+    if (!result.isConfirmed) return;
+    await deleteHoldMutation({ variables: { holdid, storeid: parsedStoreId } });
+    refetchHolds();
+  };
+
   return (
     <>
     <form onSubmit={handleSubmit(onSubmit)}>
       {readOnly && (
         <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2">
           <strong>View Only</strong> â€" this record is displayed in read-only mode.
+        </div>
+      )}
+
+      {/* HELD INVOICES PANEL */}
+      {isNewDoc && activeHolds.length > 0 && (
+        <div className="card mb-3" style={{ border: "1px solid #f59e0b" }}>
+          <div
+            className="card-header d-flex align-items-center justify-content-between py-2 px-3"
+            style={{ background: "#fffbeb", cursor: "pointer", borderBottom: showHoldsPanel ? "1px solid #f59e0b" : "none" }}
+            onClick={() => setShowHoldsPanel((v) => !v)}
+          >
+            <div className="d-flex align-items-center gap-2">
+              <Bookmark size={14} style={{ color: "#d97706" }} />
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#92400e" }}>
+                Held {documentType === "MEMO" ? "Memos" : "Invoices"} ({activeHolds.length})
+              </span>
+            </div>
+            <span style={{ fontSize: 11, color: "#b45309" }}>{showHoldsPanel ? "▲ Hide" : "▼ Show"}</span>
+          </div>
+          {showHoldsPanel && (
+            <div className="card-body p-0">
+              <table className="table table-sm mb-0" style={{ fontSize: 12 }}>
+                <thead style={{ background: "#fef3c7" }}>
+                  <tr>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="py-2">Customer</th>
+                    <th className="py-2">Held At</th>
+                    <th className="py-2" style={{ width: 140 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeHolds.map((hold: any) => (
+                    <tr key={hold.holdid} style={{ borderBottom: "1px solid #fde68a" }}>
+                      <td className="px-3 fw-semibold" style={{ color: "#1e293b" }}>
+                        {hold.holdname || `Hold #${hold.holdid}`}
+                      </td>
+                      <td style={{ color: "#475569" }}>
+                        {hold.formdata?.invbilltocompanyname || "—"}
+                      </td>
+                      <td style={{ color: "#94a3b8" }}>
+                        {hold.createdat ? new Date(hold.createdat).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </td>
+                      <td>
+                        <div className="d-flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            style={{ fontSize: 11, padding: "2px 10px" }}
+                            onClick={() => handleResumeHold(hold)}
+                          >
+                            Resume
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            style={{ fontSize: 11, padding: "2px 10px" }}
+                            onClick={() => handleDeleteHold(hold.holdid)}
+                          >
+                            Discard
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
       <fieldset disabled={readOnly} style={readOnly ? { opacity: 0.85 } : undefined}>
@@ -1361,6 +1601,32 @@ const SalesInvoiceFormV2 = ({
                   </div>
                 </div>
               </>
+            )}
+
+            {isNewDoc && !readOnly && (
+              <div className="ms-auto d-flex align-items-center gap-2">
+                {activeHolds.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
+                    style={{ fontSize: 12 }}
+                    onClick={() => setShowHoldsPanel((v) => !v)}
+                  >
+                    <List size={13} />
+                    Held ({activeHolds.length})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                  style={{ fontSize: 12 }}
+                  onClick={handleHold}
+                  disabled={savingHold}
+                >
+                  <Bookmark size={13} />
+                  {savingHold ? "Saving…" : "Hold"}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1563,6 +1829,16 @@ const SalesInvoiceFormV2 = ({
       </div>
 
       {/* â"€â"€ LINE ITEMS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
+      {/* Gold rate warning */}
+      {ratesStale && (
+        <div
+          className="d-flex align-items-center gap-2 mb-2"
+          style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e", borderRadius: 8, fontSize: 12, padding: "8px 12px" }}
+        >
+          ⚠ Gold rates are not set for today — Wt-priced items will have $0 unit price. Update in System Settings → Metal Rates before adding weight-based items.
+        </div>
+      )}
+
       <div className="card mb-3">
         <div className="card-body">
 
@@ -1601,7 +1877,14 @@ const SalesInvoiceFormV2 = ({
                         <td>{item?.itemdescription || ""}</td>
                         <td className="text-center">{toNum(item?.itemtaxable) === 1 ? "Y" : "N"}</td>
                         {allowPcsEntry && <td className="text-end">{toNum(item?.itempcs) || 0}</td>}
-                        <td className="text-end">{line.qty}</td>
+                        <td className="text-end text-nowrap">
+                          {(item as any)?.itemunit && (
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 4px", borderRadius: 3, marginRight: 4, background: (item as any)?.itemunit?.toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (item as any)?.itemunit?.toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
+                              {(item as any)?.itemunit}
+                            </span>
+                          )}
+                          {line.qty}
+                        </td>
                         <td className="text-end">{formatMoney(line.unit)}</td>
                         <td className="text-end">{line.disc}</td>
                         <td className="text-end">{formatMoney(line.net)}</td>
@@ -1620,6 +1903,13 @@ const SalesInvoiceFormV2 = ({
                                 itemquantity: toNum(item?.itemquantity),
                                 unitprice: toNum(item?.unitprice),
                                 discountpercent: toNum(item?.discountpercent),
+                                itemunit: (item as any)?.itemunit,
+                                itemmetal: (item as any)?.itemmetal,
+                                itempremium: (item as any)?.itempremium,
+                                broakerage: (item as any)?.broakerage,
+                                goldprice_used: (item as any)?.goldprice_used,
+                                premium_used: (item as any)?.premium_used,
+                                labour_used: (item as any)?.labour_used,
                               });
                             }}
                           >
@@ -1671,15 +1961,30 @@ const SalesInvoiceFormV2 = ({
                         return;
                       }
                       if (allowCarriage) { autoAddItem(selected); return; }
+                      const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+                      const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
+                      const premium = Number(selected.itempremium || 0);
+                      const labour = Number(selected.broakerage || 0);
+                      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                      const unitprice = isWt
+                        ? calcWtUnitPrice(Math.abs(initQty), selected.itemmetal, currentRates, premium, labour)
+                        : Number(selected.itemsellprice || 0);
                       setToolItem((prev) => ({
                         ...prev,
                         itemid: Number(selected.itemid),
                         itemcode: selected.itemcode,
                         itemdescription: selected.itemdescription,
                         itemtaxable: toNum(selected.itemtaxable),
-                        itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
-                        unitprice: Number(selected.itemsellprice || 0),
+                        itemquantity: initQty,
+                        unitprice,
                         discountpercent: Number(watch("discountpercent") || 0),
+                        itemmetal: selected.itemmetal,
+                        itemunit: selected.itemunit,
+                        itempremium: premium,
+                        broakerage: labour,
+                        goldprice_used: isWt ? goldRate : undefined,
+                        premium_used: isWt ? premium : undefined,
+                        labour_used: isWt ? labour : undefined,
                       }));
                     }}
                     onNotFound={() => dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))}
@@ -1718,7 +2023,14 @@ const SalesInvoiceFormV2 = ({
                     onChange={(e) => {
                       const abs = Math.abs(Number(e.target.value || 0));
                       const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
-                      setToolItem((prev) => ({ ...prev, itemquantity: normalized }));
+                      setToolItem((prev) => {
+                        if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
+                          const goldRate = currentRates ? (currentRates[KARAT_RATE_FIELD[prev.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                          const newUnitPrice = calcWtUnitPrice(abs, prev.itemmetal, currentRates, prev.itempremium ?? 0, prev.broakerage ?? 0);
+                          return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
+                        }
+                        return { ...prev, itemquantity: normalized };
+                      });
                     }}
                   />
                 </div>
