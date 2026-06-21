@@ -22,6 +22,7 @@ export const EDIT_METAL_TYPE_MUTATION = gql`
   }
 `;
 
+
 export const DELETE_METAL_TYPE_MUTATION = gql`
   mutation DeleteMetalType($metaltypeid: Int!, $storeid: Int!) {
     deleteMetalType(metaltypeid: $metaltypeid, storeid: $storeid) {

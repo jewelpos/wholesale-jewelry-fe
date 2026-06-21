@@ -98,6 +98,7 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $excludeInternalEntries: Boolean
   ) {
     getCustomerLedgerReport(
       outletid: $outletid
@@ -110,6 +111,7 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      excludeInternalEntries: $excludeInternalEntries
     ) {
       total
       openingBalance

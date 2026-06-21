@@ -26,19 +26,24 @@ any) => {
     skip: !storeId,
   });
 
-  const metalTypeOptions: SelectOption[] = useMemo(() => {
+  const metalTypeOptions: (SelectOption & { metalcode?: string; ratescolumn?: string })[] = useMemo(() => {
     const list = data?.getMetalTypeList ?? [];
     const active = list.filter((m: any) => m.metalstatus === "Active");
     if (active.length > 0) {
-      return active.map((m: any) => ({ value: m.metalname, label: m.metalname }));
+      return active.map((m: any) => ({
+        value: m.metalname,
+        label: m.metalname,
+        metalcode: m.metalcode ?? undefined,
+        ratescolumn: m.ratescolumn ?? undefined,
+      }));
     }
     // Fallback to static options when DB has no data yet
     return [
-      { value: "10Kt", label: "10Kt" },
-      { value: "14Kt", label: "14Kt" },
-      { value: "18Kt", label: "18Kt" },
+      { value: "10Kt", label: "10Kt", ratescolumn: "gold10kt_gram" },
+      { value: "14Kt", label: "14Kt", ratescolumn: "gold14kt_gram" },
+      { value: "18Kt", label: "18Kt", ratescolumn: "gold18kt_gram" },
       { value: "21Kt", label: "21Kt" },
-      { value: "22Kt", label: "22Kt" },
+      { value: "22Kt", label: "22Kt", ratescolumn: "gold22kt_gram" },
       { value: "24Kt", label: "24Kt" },
     ];
   }, [data]);
@@ -61,7 +66,7 @@ any) => {
           : null
       }
       onChange={(option) => {
-        if (onChangeAdditional) onChangeAdditional(option?.value);
+        if (onChangeAdditional) onChangeAdditional(option);
         else {
           onChange(option?.value);
           trigger(field.name);

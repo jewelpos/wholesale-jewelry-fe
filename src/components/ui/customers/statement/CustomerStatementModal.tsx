@@ -126,6 +126,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           perpage: 10000,
           filters: [],
           sortModel: [],
+          excludeInternalEntries: true,
         },
       });
     } else {

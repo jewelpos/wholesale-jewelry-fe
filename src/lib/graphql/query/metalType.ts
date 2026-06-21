@@ -5,6 +5,8 @@ export const GET_METAL_TYPE_LIST_QUERY = gql`
     getMetalTypeList(storeid: $storeid) {
       metaltypeid
       metalname
+      metalcode
+      ratescolumn
       metalpercent
       metalstatus
       createddate

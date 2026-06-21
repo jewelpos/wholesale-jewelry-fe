@@ -41,6 +41,7 @@ import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION } from "@/lib/graphql/mutations/customer";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
+import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_INVOICE_HOLDS_QUERY } from "@/lib/graphql/query/invoiceHold";
 import { SAVE_INVOICE_HOLD_MUTATION, DELETE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
@@ -221,8 +222,13 @@ const KARAT_RATE_FIELD: Record<string, string> = {
   "22Kt": "gold22kt_gram",
 };
 
-function getRateField(metalType: string | undefined): string | undefined {
+function getRateField(metalType: string | undefined, metalTypeList?: any[]): string | undefined {
   if (!metalType) return undefined;
+  // DB lookup first — supports Silver, Rhodium, Platinum, custom metals
+  if (metalTypeList) {
+    const match = metalTypeList.find((m: any) => m.metalname === metalType);
+    if (match?.ratescolumn) return match.ratescolumn;
+  }
   if (KARAT_RATE_FIELD[metalType]) return KARAT_RATE_FIELD[metalType];
   const match = metalType.match(/(\d+)\s*k/i);
   if (match) {
@@ -236,10 +242,11 @@ function calcWtUnitPrice(
   metalType: string | undefined,
   rates: Record<string, number> | null | undefined,
   premium: number,
-  labour: number
+  labour: number,
+  metalTypeList?: any[]
 ): number {
   if (!metalType || !rates) return 0;
-  const rateField = getRateField(metalType);
+  const rateField = getRateField(metalType, metalTypeList);
   const goldRate = Number(rateField ? (rates[rateField] ?? 0) : 0);
   return Math.round((goldRate + premium + labour) * 100) / 100;
 }
@@ -475,6 +482,12 @@ const SalesInvoiceForm = ({
     skip: !parsedStoreId,
   });
   const currentRates = metalRatesQueryData?.getCurrentMetalRates ?? null;
+
+  const { data: metalTypeQueryData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+  const metalTypeList = metalTypeQueryData?.getMetalTypeList ?? undefined;
 
   const isNewDoc = !invoiceId && !viewInvoicenumber;
   const [showHoldsPanel, setShowHoldsPanel] = useState(false);
@@ -2300,9 +2313,9 @@ const SalesInvoiceForm = ({
                       const premium = Number((selected as any).itempremium || 0);
                       const labour = Number((selected as any).broakerage || 0);
                       const metalType = (selected as any).itemmetal;
-                      const goldRate = isWtItem && currentRates ? (getRateField(metalType) ? ((currentRates as any)[getRateField(metalType)!] ?? 0) : 0) : 0;
+                      const goldRate = isWtItem && currentRates ? (getRateField(metalType, metalTypeList) ? ((currentRates as any)[getRateField(metalType, metalTypeList)!] ?? 0) : 0) : 0;
                       const unitprice = isWtItem
-                        ? calcWtUnitPrice(metalType, currentRates as any, premium, labour)
+                        ? calcWtUnitPrice(metalType, currentRates as any, premium, labour, metalTypeList)
                         : Number(selected.itemsellprice || 0);
                       setToolItem((prev) => ({
                         ...prev,
@@ -2367,9 +2380,9 @@ const SalesInvoiceForm = ({
                       const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
                       setToolItem((prev) => {
                         if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
-                          const rateField = getRateField(prev.itemmetal);
+                          const rateField = getRateField(prev.itemmetal, metalTypeList);
                           const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
-                          const newUnitPrice = calcWtUnitPrice(prev.itemmetal, currentRates as any, prev.itempremium ?? 0, prev.broakerage ?? 0);
+                          const newUnitPrice = calcWtUnitPrice(prev.itemmetal, currentRates as any, prev.itempremium ?? 0, prev.broakerage ?? 0, metalTypeList);
                           return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
                         }
                         return { ...prev, itemquantity: normalized };

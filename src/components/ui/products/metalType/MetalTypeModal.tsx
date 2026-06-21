@@ -19,6 +19,8 @@ import { Layers } from "lucide-react";
 export interface MetalTypeRow {
   metaltypeid: number;
   metalname: string;
+  metalcode?: string | null;
+  ratescolumn?: string | null;
   metalpercent?: number | null;
   metalstatus: string;
 }
@@ -32,6 +34,8 @@ interface MetalTypeModalProps {
 
 interface MetalTypeFormData {
   metalname: string;
+  metalcode: string;
+  ratescolumn: string;
   metalpercent: string;
   metalstatus: string;
 }
@@ -52,17 +56,19 @@ const MetalTypeModal: React.FC<MetalTypeModalProps> = ({ isOpen, onClose, onSucc
   const [editMetalType] = useMutation(EDIT_METAL_TYPE_MUTATION);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<MetalTypeFormData>({
-    defaultValues: { metalname: "", metalpercent: "", metalstatus: "Active" },
+    defaultValues: { metalname: "", metalcode: "", ratescolumn: "", metalpercent: "", metalstatus: "Active" },
   });
 
   useEffect(() => {
     if (!isOpen) return;
     if (editData) {
       setValue("metalname", editData.metalname || "");
+      setValue("metalcode", editData.metalcode || "");
+      setValue("ratescolumn", editData.ratescolumn || "");
       setValue("metalpercent", editData.metalpercent != null ? String(editData.metalpercent) : "");
       setValue("metalstatus", editData.metalstatus || "Active");
     } else {
-      reset({ metalname: "", metalpercent: "", metalstatus: "Active" });
+      reset({ metalname: "", metalcode: "", ratescolumn: "", metalpercent: "", metalstatus: "Active" });
     }
   }, [isOpen, editData, setValue, reset]);
 
@@ -72,6 +78,8 @@ const MetalTypeModal: React.FC<MetalTypeModalProps> = ({ isOpen, onClose, onSucc
       const payload = {
         storeid: parsedStoreId,
         metalname: formData.metalname.trim(),
+        metalcode: formData.metalcode.trim() || null,
+        ratescolumn: formData.ratescolumn.trim() || null,
         metalpercent: formData.metalpercent ? parseFloat(formData.metalpercent) : null,
         metalstatus: formData.metalstatus,
       };
@@ -123,6 +131,29 @@ const MetalTypeModal: React.FC<MetalTypeModalProps> = ({ isOpen, onClose, onSucc
               {...register("metalname", { required: "Metal name is required" })}
             />
             {errors.metalname && <div className="invalid-feedback">{errors.metalname.message}</div>}
+          </div>
+
+          <div className="row g-2 mb-3">
+            <div className="col-6">
+              <FieldLabel>Metal Code</FieldLabel>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="e.g. 14Kt, SL, RH"
+                {...register("metalcode")}
+              />
+              <small className="text-muted" style={{ fontSize: 11 }}>Short code saved to products</small>
+            </div>
+            <div className="col-6">
+              <FieldLabel>Rates Column</FieldLabel>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="e.g. gold14kt_gram, silver_gram"
+                {...register("ratescolumn")}
+              />
+              <small className="text-muted" style={{ fontSize: 11 }}>Metal rates table column for live pricing</small>
+            </div>
           </div>
 
           <div className="mb-3">

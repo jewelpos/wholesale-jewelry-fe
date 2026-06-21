@@ -83,10 +83,12 @@ const MetalTypeComponent = () => {
 
   const columnDefs = useMemo<ColDef<MetalTypeRow>[]>(() => [
     { headerName: "Metal Name", field: "metalname", flex: 2, minWidth: 140 },
+    { headerName: "Code", field: "metalcode", width: 90, valueFormatter: (p) => p.value ?? "—" },
+    { headerName: "Rates Column", field: "ratescolumn", flex: 2, minWidth: 140, valueFormatter: (p) => p.value ?? "—" },
     {
       headerName: "Default %",
       field: "metalpercent",
-      width: 120,
+      width: 110,
       valueFormatter: (p) => p.value != null ? `${p.value}%` : "—",
     },
     {

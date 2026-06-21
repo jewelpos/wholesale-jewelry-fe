@@ -12,6 +12,7 @@ import {
 } from "react-hook-form";
 import { useQuery } from "@apollo/client";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
+import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { ProductFormType } from "@/types/product";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectItemCategory from "@/components/forms/SelectItemCategory";
@@ -31,6 +32,13 @@ import {
 } from "react-feather";
 
 /* ── helpers ───────────────────────────────────────────── */
+
+const KARAT_RATE_FIELD: Record<string, string> = {
+  "10Kt": "gold10kt_gram",
+  "14Kt": "gold14kt_gram",
+  "18Kt": "gold18kt_gram",
+  "22Kt": "gold22kt_gram",
+};
 
 const ACCENT_MAP = {
   indigo: "#6366f1",
@@ -122,11 +130,20 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   const itemAlert         = useWatch({ control, name: "itemalertwarning" });
   const profitpercent     = useWatch({ control, name: "profitpercent" });
   const itemmetal         = useWatch({ control, name: "itemmetal" });
+  const itempremium       = useWatch({ control, name: "itempremium" });
+  const broakerage        = useWatch({ control, name: "broakerage" });
+  const itemunit          = useWatch({ control, name: "itemunit" });
 
   const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
     variables: { storeid: storeId },
     skip: !storeId,
   });
+
+  const { data: metalRatesData } = useQuery(GET_CURRENT_METAL_RATES_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
+  const currentRates = metalRatesData?.getCurrentMetalRates ?? null;
 
   // Auto-fill Metal % from the selected metal type's default percent
   useEffect(() => {
@@ -136,6 +153,19 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
       setValue("itemmetalpercent", String(match.metalpercent));
     }
   }, [itemmetal, metalTypeData, setValue]);
+
+  // Auto-calculate sell price for Wt items when metal type, rates, premium or making charges change
+  useEffect(() => {
+    if ((itemunit ?? "").trim().toLowerCase() !== "wt") return;
+    if (!itemmetal || !currentRates) return;
+    const rateField = KARAT_RATE_FIELD[itemmetal];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const goldRate = rateField ? Number((currentRates as any)[rateField] ?? 0) : 0;
+    if (goldRate <= 0) return;
+    const premium = Number(itempremium || 0);
+    const labour  = Number(broakerage || 0);
+    setValue("itemsellprice", Math.round((goldRate + premium + labour) * 100) / 100);
+  }, [itemmetal, currentRates, itempremium, broakerage, itemunit, setValue]);
 
   useEffect(() => {
     if (outletId) fetchWarehouseByOutletId(Number(outletId));
