@@ -121,17 +121,24 @@ const KARAT_RATE_FIELD: Record<string, string> = {
   "22Kt": "gold22kt_gram",
 };
 
+function getRateField(metalType: string | undefined): string | undefined {
+  if (!metalType) return undefined;
+  if (KARAT_RATE_FIELD[metalType]) return KARAT_RATE_FIELD[metalType];
+  const match = metalType.match(/(\d+)\s*k/i);
+  if (match) { const key = `${parseInt(match[1], 10)}Kt`; return KARAT_RATE_FIELD[key]; }
+  return undefined;
+}
+
 function calcWtUnitPrice(
-  weight: number,
   metalType: string | undefined,
   rates: Record<string, number> | null | undefined,
   premium: number,
   labour: number
 ): number {
-  if (!weight || !metalType || !rates) return 0;
-  const rateField = KARAT_RATE_FIELD[metalType];
-  const goldRate = rateField ? (rates[rateField] ?? 0) : 0;
-  return Math.round((goldRate + premium + labour) * weight * 100) / 100;
+  if (!metalType || !rates) return 0;
+  const rateField = getRateField(metalType);
+  const goldRate = Number(rateField ? (rates[rateField] ?? 0) : 0);
+  return Math.round((goldRate + premium + labour) * 100) / 100;
 }
 
 const computeLine = (item: SalesOrderItemForm) => {
@@ -439,12 +446,13 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       const existing = currentItems[dupIndex];
       update(dupIndex, { ...existing, itemquantity: Number(existing.itemquantity || 0) + 1 });
     } else {
-      const isWt = selected.itemunit === "Wt";
+      const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
       const premium = Number(selected.itempremium || 0);
       const labour = Number(selected.broakerage || 0);
-      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+      const rateField = isWt ? getRateField(selected.itemmetal) : undefined;
+      const goldRate = isWt && currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
       const unitprice = isWt
-        ? calcWtUnitPrice(1, selected.itemmetal, currentRates, premium, labour)
+        ? calcWtUnitPrice(selected.itemmetal, currentRates as any, premium, labour)
         : Number(selected.itemsellprice || 0);
       append({
         itemid,
@@ -509,6 +517,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       append(newItem);
     }
     resetToolItem();
+    setProductClearKey((k) => k + 1);
   };
 
   const handleEditItem = (index: number) => {
@@ -1074,16 +1083,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         }));
                         return;
                       }
-                      const isWtItem = selected.itemunit === "Wt";
+                      const isWtItem = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
                       if (allowCarriage && !isWtItem) {
                         autoAddItem(selected);
                         return;
                       }
                       const premium = Number(selected.itempremium || 0);
                       const labour = Number(selected.broakerage || 0);
-                      const goldRate = isWtItem && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                      const rateField = isWtItem ? getRateField(selected.itemmetal) : undefined;
+                      const goldRate = isWtItem && currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
                       const unitprice = isWtItem
-                        ? calcWtUnitPrice(isWtItem ? 0 : 1, selected.itemmetal, currentRates, premium, labour)
+                        ? calcWtUnitPrice(selected.itemmetal, currentRates as any, premium, labour)
                         : Number(selected.itemsellprice || 0);
                       setToolItem((prev) => ({
                         ...prev,

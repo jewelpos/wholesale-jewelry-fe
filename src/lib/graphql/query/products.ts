@@ -285,6 +285,7 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
       itemid
       itemwarehouseid
       itemunit
+      itemmetal
       itemsellprice
       itempremium
       broakerage

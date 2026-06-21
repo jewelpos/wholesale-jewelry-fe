@@ -159,6 +159,7 @@ const SelectProduct = ({
       inputValue={inputText}
       onInputChange={(val, { action }) => {
         if (action === "input-change") setInputText(val);
+        if (action === "set-value" || action === "input-blur") setInputText("");
       }}
       onKeyDown={(e: React.KeyboardEvent) => {
         if (e.key === "Enter") {
