@@ -1617,31 +1617,6 @@ const SalesInvoiceFormV2 = ({
               </>
             )}
 
-            {isNewDoc && !readOnly && (
-              <div className="ms-auto d-flex align-items-center gap-2">
-                {activeHolds.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
-                    style={{ fontSize: 12 }}
-                    onClick={() => setShowHoldsPanel((v) => !v)}
-                  >
-                    <List size={13} />
-                    Held ({activeHolds.length})
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                  style={{ fontSize: 12 }}
-                  onClick={handleHold}
-                  disabled={savingHold}
-                >
-                  <Bookmark size={13} />
-                  {savingHold ? "Saving…" : "Hold"}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -2229,7 +2204,41 @@ const SalesInvoiceFormV2 = ({
           </div>
         </div>
       ) : (
-        <ActionFooter handleCancel={handleCancel}>
+        <ActionFooter
+          handleCancel={handleCancel}
+          leftContent={isNewDoc && (
+            <div className="d-flex align-items-center gap-2">
+              {currentRates ? (
+                <span style={{ fontSize: 11, color: "#64748b" }}>
+                  Gold 18Kt: <strong>${Number(currentRates.gold18kt_gram ?? 0).toFixed(2)}</strong>/g
+                </span>
+              ) : (
+                <span style={{ fontSize: 11, color: "#ef4444" }}>No gold rates</span>
+              )}
+              {activeHolds.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
+                  style={{ fontSize: 12 }}
+                  onClick={() => setShowHoldsPanel((v) => !v)}
+                >
+                  <List size={13} />
+                  Held ({activeHolds.length})
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                style={{ fontSize: 12 }}
+                onClick={handleHold}
+                disabled={savingHold}
+              >
+                <Bookmark size={13} />
+                {savingHold ? "Saving…" : "Hold"}
+              </button>
+            </div>
+          )}
+        >
           <ButtonLoader loading={saving} btnText="Save" loadingText="Saving ..." />
         </ActionFooter>
       )}
