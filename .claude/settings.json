@@ -4,7 +4,8 @@
       "Bash(curl -s --request GET --url 'https://metal-sentinel.p.rapidapi.com/metal-quote?symbol=RH&currency=USD&timestamp=1750000000' --header 'x-rapidapi-key: ec01fa4285msh74f7e116bd6febep16a4b9jsn260a10811637' --header 'x-rapidapi-host: metal-sentinel.p.rapidapi.com' --header 'Content-Type: application/json')",
       "Bash(node -e ' *)",
       "Bash(curl -s -X POST http://localhost:3001/database/migrate -H \"Content-Type: application/json\" -d \"{\\\\\"databaseName\\\\\": \\\\\"jewelpos_w478\\\\\"}\")",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npx vercel *)"
     ]
   }
 }

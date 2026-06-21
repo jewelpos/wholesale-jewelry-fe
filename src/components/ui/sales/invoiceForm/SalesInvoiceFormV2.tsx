@@ -211,6 +211,20 @@ const KARAT_RATE_FIELD: Record<string, string> = {
   "22Kt": "gold22kt_gram",
 };
 
+function getRateField(metalType: string | undefined): string | undefined {
+  if (!metalType) return undefined;
+  // Try exact match first
+  if (KARAT_RATE_FIELD[metalType]) return KARAT_RATE_FIELD[metalType];
+  // Extract karat number from any format: "18K", "18Kt", "18 Karat", "Gold 18kt", "18KT" etc.
+  const match = metalType.match(/(\d+)\s*k/i);
+  if (match) {
+    const kt = parseInt(match[1], 10);
+    const key = `${kt}Kt`;
+    return KARAT_RATE_FIELD[key];
+  }
+  return undefined;
+}
+
 function calcWtUnitPrice(
   weight: number,
   metalType: string | undefined,
@@ -219,7 +233,7 @@ function calcWtUnitPrice(
   labour: number
 ): number {
   if (!weight || !metalType || !rates) return 0;
-  const rateField = KARAT_RATE_FIELD[metalType];
+  const rateField = getRateField(metalType);
   const goldRate = rateField ? (rates[rateField] ?? 0) : 0;
   return Math.round((goldRate + premium + labour) * weight * 100) / 100;
 }
@@ -967,7 +981,7 @@ const SalesInvoiceFormV2 = ({
       const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
       const premium = Number(selected.itempremium || 0);
       const labour = Number(selected.broakerage || 0);
-      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+      const goldRate = isWt && currentRates ? ((getRateField(selected.itemmetal) ? (currentRates[getRateField(selected.itemmetal)!] ?? 0) : 0)) : 0;
       const unitprice = isWt
         ? calcWtUnitPrice(Math.abs(initQty), selected.itemmetal, currentRates, premium, labour)
         : Number(selected.itemsellprice || 0);
@@ -1965,7 +1979,7 @@ const SalesInvoiceFormV2 = ({
                       const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
                       const premium = Number(selected.itempremium || 0);
                       const labour = Number(selected.broakerage || 0);
-                      const goldRate = isWt && currentRates ? (currentRates[KARAT_RATE_FIELD[selected.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                      const goldRate = isWt && currentRates ? ((getRateField(selected.itemmetal) ? (currentRates[getRateField(selected.itemmetal)!] ?? 0) : 0)) : 0;
                       const unitprice = isWt
                         ? calcWtUnitPrice(Math.abs(initQty), selected.itemmetal, currentRates, premium, labour)
                         : Number(selected.itemsellprice || 0);
@@ -2025,7 +2039,7 @@ const SalesInvoiceFormV2 = ({
                       const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
                       setToolItem((prev) => {
                         if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
-                          const goldRate = currentRates ? (currentRates[KARAT_RATE_FIELD[prev.itemmetal ?? ""] ?? ""] ?? 0) : 0;
+                          const goldRate = currentRates ? ((getRateField(prev.itemmetal) ? (currentRates[getRateField(prev.itemmetal)!] ?? 0) : 0)) : 0;
                           const newUnitPrice = calcWtUnitPrice(abs, prev.itemmetal, currentRates, prev.itempremium ?? 0, prev.broakerage ?? 0);
                           return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
                         }
