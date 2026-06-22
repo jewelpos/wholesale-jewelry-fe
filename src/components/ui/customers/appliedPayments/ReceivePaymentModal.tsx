@@ -160,14 +160,19 @@ const OpenItemsTable = ({
   selected,
   onToggle,
   onAmountChange,
+  onSelectAll,
 }: {
   docs: ARDoc[];
   title: string;
   selected: Map<number, number>;
   onToggle: (invoicenumber: number, balancedue: number) => void;
   onAmountChange: (invoicenumber: number, amount: number) => void;
+  onSelectAll: (select: boolean) => void;
 }) => {
   if (!docs.length) return null;
+
+  const allSelected = docs.length > 0 && docs.every((d) => selected.has(d.invoicenumber));
+  const someSelected = docs.some((d) => selected.has(d.invoicenumber));
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -175,7 +180,16 @@ const OpenItemsTable = ({
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
         <thead>
           <tr style={{ background: "#f1f5f9" }}>
-            <th style={thStyle}></th>
+            <th style={thStyle}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+                title="Select all"
+                style={{ cursor: "pointer" }}
+              />
+            </th>
             <th style={thStyle}>Age</th>
             <th style={thStyle}>#</th>
             <th style={thStyle}>Date</th>
@@ -495,7 +509,7 @@ const ReceivePaymentModal = ({
     [selectedMemoCredits]
   );
   const remaining = useMemo(
-    () => Math.max(0, selectedTotal - invCreditsTotal - memoCreditsTotal - cashAmount),
+    () => selectedTotal - invCreditsTotal - memoCreditsTotal - cashAmount,
     [selectedTotal, invCreditsTotal, memoCreditsTotal, cashAmount]
   );
 
@@ -514,6 +528,7 @@ const ReceivePaymentModal = ({
     warehouseId > 0 &&
     (selectedInvoices.size > 0 || selectedMemos.size > 0) &&
     (invCreditsTotal > 0 || memoCreditsTotal > 0 || cashAmount > 0) &&
+    remaining >= 0 &&
     !saving;
 
   const handleSave = async () => {
@@ -691,6 +706,13 @@ const ReceivePaymentModal = ({
                     onAmountChange={(no, amt) =>
                       updateAmount(selectedInvoices, setSelectedInvoices, no, amt)
                     }
+                    onSelectAll={(select) => {
+                      if (select) {
+                        setSelectedInvoices(new Map(openInvoices.map((d) => [d.invoicenumber, Math.abs(d.balancedue)])));
+                      } else {
+                        setSelectedInvoices(new Map());
+                      }
+                    }}
                   />
                   <OpenItemsTable
                     docs={openMemos}
@@ -702,6 +724,13 @@ const ReceivePaymentModal = ({
                     onAmountChange={(no, amt) =>
                       updateAmount(selectedMemos, setSelectedMemos, no, amt)
                     }
+                    onSelectAll={(select) => {
+                      if (select) {
+                        setSelectedMemos(new Map(openMemos.map((d) => [d.invoicenumber, Math.abs(d.balancedue)])));
+                      } else {
+                        setSelectedMemos(new Map());
+                      }
+                    }}
                   />
                   {openInvoices.length === 0 && openMemos.length === 0 && (
                     <div style={{ textAlign: "center", padding: 20, color: "#94a3b8", fontSize: 12 }}>
@@ -918,7 +947,11 @@ const ReceivePaymentModal = ({
                       <SummaryRow label="Memo Credits" value={`– ${fmt(memoCreditsTotal)}`} valueColor="#16a34a" />
                     )}
                     {cashAmount > 0 && (
-                      <SummaryRow label="Cash Payment" value={`– ${fmt(cashAmount)}`} valueColor="#1d4ed8" />
+                      <SummaryRow
+                        label={paymentModeLabel && paymentModeLabel !== "Cash" ? `${paymentModeLabel} Amount` : "Cash Payment"}
+                        value={`– ${fmt(cashAmount)}`}
+                        valueColor="#1d4ed8"
+                      />
                     )}
                     <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 4, paddingTop: 6 }}>
                       <div style={{
@@ -926,11 +959,19 @@ const ReceivePaymentModal = ({
                         justifyContent: "space-between",
                         fontWeight: 700,
                         fontSize: 13,
-                        color: remaining === 0 ? "#16a34a" : "#92400e",
+                        color: remaining === 0 && selectedTotal > 0 ? "#16a34a" : remaining < 0 ? "#dc2626" : "#92400e",
                       }}>
-                        <span>Remaining</span>
-                        <span>{fmt(remaining)} {remaining === 0 && selectedTotal > 0 ? "✓" : ""}</span>
+                        <span>{remaining < 0 ? "Over-applied" : "Remaining"}</span>
+                        <span>
+                          {remaining < 0 ? `–${fmt(Math.abs(remaining))}` : fmt(remaining)}
+                          {remaining === 0 && selectedTotal > 0 ? " ✓" : ""}
+                        </span>
                       </div>
+                      {remaining < 0 && (
+                        <div style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>
+                          Reduce payment amount or deselect an item
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
