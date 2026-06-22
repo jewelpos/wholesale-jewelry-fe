@@ -7,11 +7,13 @@ import dayjs from "dayjs";
 import { DollarSign, X } from "react-feather";
 import { useDispatch } from "react-redux";
 
+import Select from "react-select/base";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import SelectCustomer from "@/components/forms/SelectCustomer";
 import SelectPaymentMode from "@/components/forms/SelectPaymentMode";
+import useCustomers from "@/hooks/useCustomers";
+import { selectStyles } from "@/lib/styles/selectStyles";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY } from "@/lib/graphql/query/customer";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION } from "@/lib/graphql/mutations/customer";
@@ -391,6 +393,33 @@ const ReceivePaymentModal = ({
   const [selectedInvCredits, setSelectedInvCredits] = useState<Map<number, number>>(new Map());
   const [selectedMemoCredits, setSelectedMemoCredits] = useState<Map<number, number>>(new Map());
 
+  // ── Customer list (filtered to balance ≠ 0) ──────────────────────────
+  const [custMenuOpen, setCustMenuOpen] = useState(false);
+  const [custInput, setCustInput] = useState("");
+  const { fetchCustomersByStoreId, customers, loading: customersLoading } = useCustomers();
+
+  useEffect(() => {
+    if (storeId) fetchCustomersByStoreId(storeId);
+  }, [storeId, fetchCustomersByStoreId]);
+
+  const customerOptions = useMemo(() => {
+    return (customers as any[])
+      .filter((c) => Number(c.balancedue ?? 0) !== 0)
+      .map((c) => ({
+        value: c.customerid,
+        label: `${c.custcompanyname}`,
+        custcompanyname: c.custcompanyname,
+        customerid: c.customerid,
+        balancedue: Number(c.balancedue ?? 0),
+        warehouseid: c.warehouseid,
+      }));
+  }, [customers]);
+
+  const selectedCustOption = useMemo(
+    () => customerOptions.find((o) => o.value === customerId) ?? null,
+    [customerOptions, customerId]
+  );
+
   // ── Queries ────────────────────────────────────────────────────────────
   const { data: customerData } = useQuery(GET_CUSTOMER_QUERY, {
     variables: { storeid: storeId, customerid: customerId },
@@ -678,14 +707,46 @@ const ReceivePaymentModal = ({
               background: "#f8fafc",
               borderRight: "1px solid #e2e8f0",
             }}>
-              {/* Customer select */}
+              {/* Customer select — filtered to balance ≠ 0 */}
               <div style={{ marginBottom: 12 }}>
                 <SectionLabel>Customer</SectionLabel>
-                <SelectCustomer
-                  storeId={storeId}
-                  value={customerId}
-                  onChange={handleCustomerChange}
-                  trigger={() => {}}
+                <Select
+                  isLoading={customersLoading}
+                  options={customerOptions}
+                  placeholder="Search customer with open balance…"
+                  isClearable
+                  value={selectedCustOption}
+                  onChange={(opt: any) => handleCustomerChange(opt?.value ? Number(opt.value) : 0)}
+                  menuIsOpen={custMenuOpen}
+                  onMenuOpen={() => setCustMenuOpen(true)}
+                  onMenuClose={() => setCustMenuOpen(false)}
+                  inputValue={custInput}
+                  onInputChange={setCustInput}
+                  filterOption={(candidate: any, raw: string) => {
+                    const q = (raw || "").toLowerCase();
+                    if (!q) return true;
+                    return (
+                      String(candidate.label || "").toLowerCase().includes(q) ||
+                      String(candidate.value || "").includes(q)
+                    );
+                  }}
+                  formatOptionLabel={(opt: any) => (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+                      <span>{opt.custcompanyname} <span style={{ color: "#94a3b8", fontSize: 11 }}>#{opt.customerid}</span></span>
+                      <span style={{
+                        fontWeight: 700,
+                        fontSize: 11,
+                        color: opt.balancedue > 0 ? "#dc2626" : "#16a34a",
+                        marginLeft: 8,
+                      }}>
+                        {opt.balancedue > 0 ? `Due $${opt.balancedue.toFixed(2)}` : `Cr $${Math.abs(opt.balancedue).toFixed(2)}`}
+                      </span>
+                    </div>
+                  )}
+                  menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                  menuPosition="fixed"
+                  styles={selectStyles}
+                  className="form-control p-0 select-form-custom"
                 />
               </div>
 
