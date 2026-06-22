@@ -8,6 +8,8 @@ export const GET_PAYMENT_MODE_LIST_QUERY = gql`
       paymodedescription
       warehouseid
       createddate
+      displayorder
+      status
     }
   }
 `;

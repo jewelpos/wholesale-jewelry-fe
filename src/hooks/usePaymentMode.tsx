@@ -12,6 +12,8 @@ export interface PaymentModeType {
   paymodedescription: string;
   warehouseid: number;
   createddate: string;
+  displayorder: number;
+  status: string;
 }
 
 const usePaymentMode = () => {
