@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -26,20 +26,23 @@ import { useParams } from "next/navigation";
 import SupplierAppliedPaymentComponent from "../appliedPayments/SupplierAppliedPaymentComponent";
 import SupplierPaymentActions from "./SupplierPaymentActions";
 import VoidPaymentModal from "../appliedPayments/VoidPaymentModal";
+import PaySupplierModal, { PAY_SUPPLIER } from "./PaySupplierModal";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const SupplierPaymentsComponent = () => {
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [getAPPaymentsList] = useLazyQuery(GET_SUPPLIER_PAYMENTS_QUERY);
   const dispatch = useAppDispatch();
-  const [selectedSupplier, setSelectedSupplier] = useState<number | undefined>(
-    -1
-  );
+  const [selectedSupplier, setSelectedSupplier] = useState<number | undefined>(-1);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+
+  // Pay Supplier modal
+  const [paymentModal, setPaymentModal] = useState<string>("");
 
   // Void payment modal state
   const [showVoidModal, setShowVoidModal] = useState(false);
@@ -55,7 +58,6 @@ const SupplierPaymentsComponent = () => {
   const handleCloseVoidModal = (value: boolean) => {
     setShowVoidModal(value);
     if (!value) {
-      // Refresh grid after void action
       gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
     }
   };
@@ -68,60 +70,29 @@ const SupplierPaymentsComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
-          params,
-          debouncedSearch,
-          "companyname, reference"
-        );
+        const filters = filterVariables(params, debouncedSearch, "companyname, reference");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let variables: any = {
-          storeid: parsedStoreId,
-        };
+        let variables: any = { storeid: parsedStoreId };
         if (selectedSupplier !== -1) {
-          variables = {
-            ...variables,
-            supplierid: selectedSupplier,
-          };
+          variables = { ...variables, supplierid: selectedSupplier };
         }
         const result = await handleTryCatch(async () => {
-          const { data } = await getAPPaymentsList({
-            variables: {
-              ...variables,
-              ...filters,
-            },
-          });
+          const { data } = await getAPPaymentsList({ variables: { ...variables, ...filters } });
           if (data.getAPPaymentsList) {
-            params.success({
-              rowData: data.getAPPaymentsList.data,
-              rowCount: data.getAPPaymentsList.total,
-            });
-            if (!data.getAPPaymentsList.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-            } else {
-              gridRef.current?.api?.hideOverlay();
-            }
+            params.success({ rowData: data.getAPPaymentsList.data, rowCount: data.getAPPaymentsList.total });
+            if (!data.getAPPaymentsList.data.length) gridRef.current?.api?.showNoRowsOverlay();
+            else gridRef.current?.api?.hideOverlay();
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+          dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
       },
     }),
-    [
-      parsedStoreId,
-      selectedSupplier,
-      dispatch,
-      getAPPaymentsList,
-      debouncedSearch,
-    ]
+    [parsedStoreId, selectedSupplier, dispatch, getAPPaymentsList, debouncedSearch]
   );
 
   const columnDefs = useMemo(() => {
@@ -129,14 +100,9 @@ const SupplierPaymentsComponent = () => {
       ...supplierPaymentColumnDefs,
       {
         headerName: "Actions",
-        field: "paymentid", // Using paymentid as the field since it's part of SupplierPayment type
+        field: "paymentid",
         cellRenderer: (params: ICellRendererParams<SupplierPayment>) =>
-          params.data ? (
-            <SupplierPaymentActions
-              data={params.data}
-              onVoid={handleVoidClick}
-            />
-          ) : null,
+          params.data ? <SupplierPaymentActions data={params.data} onVoid={handleVoidClick} /> : null,
         width: 120,
         sortable: false,
         filter: false,
@@ -167,9 +133,14 @@ const SupplierPaymentsComponent = () => {
     exportGridToExcel(gridRef.current?.api, { fileName: "supplier-payments", sheetName: "Supplier Payments" });
   }, []);
 
+  const handlePayModalClose = () => {
+    setPaymentModal("");
+    gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+  };
+
   return (
     <>
-      <SupplierPaymentsHeader onExport={handleExport} />
+      <SupplierPaymentsHeader setPaymentModal={setPaymentModal} onExport={handleExport} />
       <div className="card table-list-card">
         <div className="card-body p-2">
           <CustomFilterSections
@@ -184,9 +155,7 @@ const SupplierPaymentsComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
+              defaultColDef={{ filter: !debouncedSearch }}
               masterDetail
               detailCellRenderer={SupplierAppliedPaymentComponent}
               detailRowAutoHeight
@@ -194,6 +163,15 @@ const SupplierPaymentsComponent = () => {
           </div>
         </div>
       </div>
+
+      {paymentModal === PAY_SUPPLIER && (
+        <PaySupplierModal
+          storeId={parsedStoreId}
+          outletId={parsedOutletId}
+          closeModal={handlePayModalClose}
+        />
+      )}
+
       {showVoidModal && voidSupplierId && voidPaymentId && (
         <VoidPaymentModal
           setShowVoidModal={handleCloseVoidModal}
