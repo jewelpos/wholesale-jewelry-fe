@@ -32,10 +32,11 @@ type ARDoc = {
 
 type CreditDoc = ARDoc & { isCreditInvoice: boolean };
 
-// salemodeid: 2=Invoice, 5=Credit Invoice, 6=Memo/Credit Memo
+// salemodeid: 2=Invoice, 5=Credit Invoice, 6=Memo, 8=Memo Credit
 const SALEMODE_INVOICE = 2;
 const SALEMODE_CREDIT_INVOICE = 5;
 const SALEMODE_MEMO = 6;
+const SALEMODE_MEMO_CREDIT = 8;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -420,7 +421,7 @@ const ReceivePaymentModal = ({
     [allCredits]
   );
   const memoCredits = useMemo(
-    () => allCredits.filter((d) => d.salemodeid === SALEMODE_MEMO && d.balancedue < 0),
+    () => allCredits.filter((d) => d.salemodeid === SALEMODE_MEMO_CREDIT),
     [allCredits]
   );
 
