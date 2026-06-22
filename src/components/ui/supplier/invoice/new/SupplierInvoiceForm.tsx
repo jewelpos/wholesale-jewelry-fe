@@ -83,6 +83,14 @@ const SupplierInvoiceForm = ({
   const warehouseId = getValues("warehouseid");
   const savedAmount =
     invoiceData?.getSingleSupplierInvoice?.veninvoicetotal || 0;
+  const amountPaid =
+    invoiceData?.getSingleSupplierInvoice?.veninvamtpaid ?? null;
+  const amountBalance =
+    invoiceData?.getSingleSupplierInvoice?.veninvamtbalance ?? null;
+  const enteredBy =
+    invoiceData?.getSingleSupplierInvoice?.enteredbyname ?? null;
+  const lastModified =
+    invoiceData?.getSingleSupplierInvoice?.lastmodifieddate ?? null;
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -192,6 +200,10 @@ const SupplierInvoiceForm = ({
               storeId={parsedStoreId}
               savedAmount={savedAmount}
               setValue={setValue}
+              amountPaid={amountPaid}
+              amountBalance={amountBalance}
+              enteredBy={enteredBy}
+              lastModified={lastModified}
             />
           </div>
         )}
