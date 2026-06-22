@@ -6,7 +6,9 @@ import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
+import { DollarSign } from "react-feather";
 import { paymentModalTypes } from "@/lib/config/constants";
+import { RECEIVE_PAYMENT } from "./PaymentModal";
 
 const BUTTON_ORDER: Record<string, number> = {
   [paymentModalTypes.add_customer_payment]: 1,
@@ -46,6 +48,17 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
       showBreadcrumb
     >
       <div className="d-flex purchase-pg-btn">
+        <div className="page-btn d-none d-sm-block">
+          <button
+            type="button"
+            className="btn btn-added"
+            onClick={() => setPaymentModal(RECEIVE_PAYMENT)}
+            style={{ background: "#1d4ed8", borderColor: "#1d4ed8" }}
+          >
+            <DollarSign size={14} className="me-1" />
+            Receive Payment
+          </button>
+        </div>
         {!!currentMenu?.action?.length &&
           [...currentMenu.action]
             .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))

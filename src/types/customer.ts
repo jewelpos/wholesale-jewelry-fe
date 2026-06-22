@@ -286,6 +286,7 @@ export type CustomerBalanceDueInvoiceType = {
   amountreceived?: number;
   balancedue?: number;
   warehouseid?: number;
+  salemodeid?: number;
 };
 
 export type CustomerCreditApplyInvoice = {
@@ -297,6 +298,7 @@ export type CustomerCreditApplyInvoice = {
   balancedue?: number;
   warehouseid?: number;
   isCreditInvoice: boolean;
+  salemodeid?: number;
 };
 
 export type CustomerCreditApply = {

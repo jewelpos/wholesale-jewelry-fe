@@ -6,20 +6,42 @@ import { paymentModalTypes } from "@/lib/config/constants";
 import NewPaymentForm from "./NewPaymentForm";
 import CreditAdjustmentForm from "./CreditAdjustmentForm";
 import VoidCustomerPaymentForm from "./VoidCustomerPaymentForm";
+import ReceivePaymentModal from "./ReceivePaymentModal";
 import { CustomerPaymentListType } from "@/types/customer";
+
+const RECEIVE_PAYMENT = "receive_payment";
 
 const PaymentModal = ({
   setPaymentModal,
   paymentModal,
   voidRow,
+  prefillCustomerId,
+  prefillInvoiceNumber,
+  prefillCreditNumber,
 }: {
   setPaymentModal: (value: string) => void;
   paymentModal: string;
   voidRow?: CustomerPaymentListType | null;
+  prefillCustomerId?: number;
+  prefillInvoiceNumber?: number;
+  prefillCreditNumber?: number;
 }) => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+
+  if (paymentModal === RECEIVE_PAYMENT) {
+    return (
+      <ReceivePaymentModal
+        storeId={parsedStoreId}
+        outletId={parsedOutletId}
+        closeModal={() => setPaymentModal("")}
+        prefillCustomerId={prefillCustomerId}
+        prefillInvoiceNumber={prefillInvoiceNumber}
+        prefillCreditNumber={prefillCreditNumber}
+      />
+    );
+  }
 
   return (
     <div
@@ -86,5 +108,7 @@ const PaymentModal = ({
     </div>
   );
 };
+
+export { RECEIVE_PAYMENT };
 
 export default PaymentModal;

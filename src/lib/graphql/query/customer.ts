@@ -375,6 +375,7 @@ export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
       amountreceived
       balancedue
       warehouseid
+      salemodeid
     }
   }
 `;
@@ -401,6 +402,7 @@ export const GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY = gql`
         balancedue
         warehouseid
         isCreditInvoice
+        salemodeid
       }
       balanceDueInvoices {
         invoicenumber
@@ -411,6 +413,7 @@ export const GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY = gql`
         balancedue
         warehouseid
         isCreditInvoice
+        salemodeid
       }
     }
   }
