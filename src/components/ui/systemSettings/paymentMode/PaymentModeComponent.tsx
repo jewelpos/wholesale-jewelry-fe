@@ -27,7 +27,7 @@ const PaymentModeComponent = () => {
   const [editData, setEditData] = useState<PaymentModeRow | null>(null);
 
   const { data, loading, refetch } = useQuery(GET_PAYMENT_MODE_LIST_QUERY, {
-    variables: { storeid: parsedStoreId },
+    variables: { storeid: parsedStoreId, includeAll: true },
     skip: !parsedStoreId,
   });
 
@@ -66,8 +66,35 @@ const PaymentModeComponent = () => {
   }, [deletePaymentMode, parsedStoreId, dispatch, refetch]);
 
   const columnDefs = useMemo<ColDef<PaymentModeRow>[]>(() => [
-    { headerName: "Payment Mode", field: "paymode", flex: 2, minWidth: 160 },
-    { headerName: "Description", field: "paymodedescription", flex: 3, minWidth: 200 },
+    {
+      headerName: "Order",
+      field: "displayorder",
+      width: 80,
+      sort: "asc",
+      cellStyle: { textAlign: "center", fontWeight: 600, color: "#64748b" },
+    },
+    { headerName: "Payment Mode", field: "paymode", flex: 2, minWidth: 140 },
+    { headerName: "Description", field: "paymodedescription", flex: 3, minWidth: 180 },
+    {
+      headerName: "Status",
+      field: "status",
+      width: 110,
+      cellRenderer: (params: ICellRendererParams<PaymentModeRow>) => {
+        const active = (params.value ?? "Active") === "Active";
+        return (
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "2px 10px",
+            borderRadius: 20,
+            background: active ? "#dcfce7" : "#fee2e2",
+            color: active ? "#166534" : "#991b1b",
+          }}>
+            {active ? "Active" : "Inactive"}
+          </span>
+        );
+      },
+    },
     {
       headerName: "Actions",
       field: "paymentmodeid",
@@ -109,7 +136,7 @@ const PaymentModeComponent = () => {
           </button>
           <div className="page-title">
             <h4>Payment Modes</h4>
-            <h6>Manage payment methods used during checkout and invoicing</h6>
+            <h6>Manage payment methods — set order and active/inactive status</h6>
           </div>
         </div>
         <div className="page-btn">
