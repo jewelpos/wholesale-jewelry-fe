@@ -565,6 +565,7 @@ const ReceivePaymentModal = ({
 
   // ── On Hand Checks ─────────────────────────────────────────────────────
   const isCheckMode = paymentModeLabel.toLowerCase().includes("check");
+  const isWriteOff = paymentModeLabel.toLowerCase().includes("write off") || paymentModeLabel.toLowerCase().includes("writeoff");
 
   const [getOnHandChecks, { data: checkData, loading: checksLoading }] = useLazyQuery(
     GET_CUSTOMER_CHEQUE_LIST_QUERY
@@ -604,6 +605,7 @@ const ReceivePaymentModal = ({
     (selectedInvoices.size > 0 || selectedMemos.size > 0) &&
     (invCreditsTotal > 0 || memoCreditsTotal > 0 || cashAmount > 0) &&
     remaining >= 0 &&
+    (!isWriteOff || reference.trim().length > 0) &&
     !saving;
 
   const handleSave = async () => {
@@ -977,7 +979,7 @@ const ReceivePaymentModal = ({
                       type="text"
                       value={refNo}
                       onChange={(e) => setRefNo(e.target.value)}
-                      placeholder={paymentModeLabel && paymentModeLabel !== "Cash" ? "Required" : "Optional"}
+                      placeholder="Optional"
                       className="form-control"
                       style={{ fontSize: 12, height: 36 }}
                     />
@@ -1040,16 +1042,25 @@ const ReceivePaymentModal = ({
                     </div>
                   )}
                   <div>
-                    <label style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 3 }}>
-                      Memo / Notes
+                    <label style={{ fontSize: 11, color: isWriteOff ? "#dc2626" : "#475569", display: "block", marginBottom: 3, fontWeight: isWriteOff ? 600 : 400 }}>
+                      Memo / Notes{isWriteOff && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
                     </label>
                     <input
                       type="text"
                       value={reference}
                       onChange={(e) => setReference(e.target.value)}
+                      placeholder={isWriteOff ? "Required for write-off" : "Optional"}
                       className="form-control"
-                      style={{ fontSize: 12, height: 36 }}
+                      style={{
+                        fontSize: 12,
+                        height: 36,
+                        borderColor: isWriteOff && !reference.trim() ? "#dc2626" : undefined,
+                        outline: isWriteOff && !reference.trim() ? "1px solid #dc2626" : undefined,
+                      }}
                     />
+                    {isWriteOff && !reference.trim() && (
+                      <div style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>Required when payment mode is Write Off</div>
+                    )}
                   </div>
                 </div>
               </div>
