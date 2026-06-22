@@ -9,13 +9,13 @@ import { useDispatch } from "react-redux";
 
 import Select from "react-select/base";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
+import { CHECK_STATUS, NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import SelectPaymentMode from "@/components/forms/SelectPaymentMode";
 import { selectStyles } from "@/lib/styles/selectStyles";
-import { GET_CUSTOMER_QUERY, GET_CUSTOMERS_WITH_BALANCE_QUERY } from "@/lib/graphql/query/customer";
+import { GET_CUSTOMER_QUERY, GET_CUSTOMERS_WITH_BALANCE_QUERY, GET_CUSTOMER_CHEQUE_LIST_QUERY } from "@/lib/graphql/query/customer";
 import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY } from "@/lib/graphql/query/customer";
-import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION } from "@/lib/graphql/mutations/customer";
+import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION, CHANGE_ON_HAND_CHECK_STATUS_MUTATION } from "@/lib/graphql/mutations/customer";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -395,6 +395,9 @@ const ReceivePaymentModal = ({
   // ── Customer list from view (balance ≠ 0 only, includes last payment date) ──
   const [custMenuOpen, setCustMenuOpen] = useState(false);
   const [custInput, setCustInput] = useState("");
+  const [customercheckdetailid, setCustomercheckdetailid] = useState<number | null>(null);
+  const [checkMenuOpen, setCheckMenuOpen] = useState(false);
+  const [checkInput, setCheckInput] = useState("");
 
   const { data: custBalanceData, loading: customersLoading } = useQuery(GET_CUSTOMERS_WITH_BALANCE_QUERY, {
     variables: { storeid: storeId },
@@ -500,6 +503,8 @@ const ReceivePaymentModal = ({
     setSelectedInvCredits(new Map());
     setSelectedMemoCredits(new Map());
     setCashAmount(0);
+    setRefNo("");
+    setCustomercheckdetailid(null);
   }, []);
 
   // ── Toggle helpers ────────────────────────────────────────────────────
@@ -558,9 +563,40 @@ const ReceivePaymentModal = ({
     setCashAmount(Math.round(afterCredits * 100) / 100);
   };
 
+  // ── On Hand Checks ─────────────────────────────────────────────────────
+  const isCheckMode = paymentModeLabel.toLowerCase().includes("check");
+
+  const [getOnHandChecks, { data: checkData, loading: checksLoading }] = useLazyQuery(
+    GET_CUSTOMER_CHEQUE_LIST_QUERY
+  );
+
+  useEffect(() => {
+    if (!customerId || !isCheckMode) return;
+    getOnHandChecks({
+      variables: {
+        storeid: storeId,
+        customerid: customerId,
+        page: 1,
+        perpage: 200,
+        filters: [{ key: "checkstatus", value: { filterType: "text", type: "equals", filter: CHECK_STATUS.ON_HAND_CHECK } }],
+        sortModel: [],
+        rowGroupCols: [],
+        groupKeys: [],
+      },
+    });
+  }, [customerId, isCheckMode, storeId, getOnHandChecks]);
+
+  const onHandChecks: any[] = useMemo(
+    () => checkData?.getCustomerChequeList?.data ?? [],
+    [checkData]
+  );
+
+  const showCheckPicker = isCheckMode && customerId > 0 && onHandChecks.length > 0;
+
   // ── Mutations ──────────────────────────────────────────────────────────
   const [createCreditApply] = useMutation(CREATE_CUSTOMER_CREDIT_APPLY_MUTATION);
   const [createPayment] = useMutation(CREATE_CUSTOMER_PAYMENT_MUTATION);
+  const [changeCheckStatus] = useMutation(CHANGE_ON_HAND_CHECK_STATUS_MUTATION);
 
   const canSave =
     customerId > 0 &&
@@ -635,6 +671,17 @@ const ReceivePaymentModal = ({
             },
           },
         });
+
+        // 4. Mark O/H check as deposited if one was selected
+        if (customercheckdetailid) {
+          await changeCheckStatus({
+            variables: {
+              storeid: storeId,
+              customercheckdetailid,
+              status: CHECK_STATUS.DEPOSITED_TO_BANK,
+            },
+          });
+        }
       }
 
       return true;
@@ -935,6 +982,63 @@ const ReceivePaymentModal = ({
                       style={{ fontSize: 12, height: 36 }}
                     />
                   </div>
+                  {showCheckPicker && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ fontSize: 11, color: "#1d4ed8", fontWeight: 600, display: "block", marginBottom: 3 }}>
+                        On Hand Checks — pick to auto-fill
+                        {checksLoading && <span style={{ color: "#94a3b8", fontWeight: 400, marginLeft: 6 }}>Loading…</span>}
+                      </label>
+                      <Select
+                        isLoading={checksLoading}
+                        options={onHandChecks.map((c: any) => ({
+                          value: c.customercheckdetailid,
+                          label: `#${c.checkno}`,
+                          checkno: c.checkno,
+                          checkamount: Number(c.checkamount ?? 0),
+                          checkpostingdate: c.checkpostingdate,
+                          customercheckdetailid: c.customercheckdetailid,
+                        }))}
+                        placeholder="Select an on-hand check…"
+                        isClearable
+                        menuIsOpen={checkMenuOpen}
+                        onMenuOpen={() => setCheckMenuOpen(true)}
+                        onMenuClose={() => setCheckMenuOpen(false)}
+                        inputValue={checkInput}
+                        onInputChange={setCheckInput}
+                        value={customercheckdetailid
+                          ? onHandChecks
+                              .filter((c: any) => c.customercheckdetailid === customercheckdetailid)
+                              .map((c: any) => ({ value: c.customercheckdetailid, label: `#${c.checkno}` }))[0] ?? null
+                          : null}
+                        onChange={(opt: any) => {
+                          if (!opt) {
+                            setCustomercheckdetailid(null);
+                            setRefNo("");
+                            setCashAmount(0);
+                            return;
+                          }
+                          setCustomercheckdetailid(opt.customercheckdetailid);
+                          setRefNo(opt.checkno ?? "");
+                          setCashAmount(opt.checkamount ?? 0);
+                        }}
+                        formatOptionLabel={(opt: any) => (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+                            <span style={{ fontWeight: 600, color: "#1e40af" }}>#{opt.checkno}</span>
+                            <span style={{ fontWeight: 700, color: "#166534", margin: "0 12px" }}>
+                              ${Number(opt.checkamount ?? 0).toFixed(2)}
+                            </span>
+                            <span style={{ color: "#94a3b8", fontSize: 11 }}>
+                              {opt.checkpostingdate ? dayjs(opt.checkpostingdate).format("MMM D, YYYY") : "—"}
+                            </span>
+                          </div>
+                        )}
+                        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                        menuPosition="fixed"
+                        styles={selectStyles}
+                        className="form-control p-0 select-form-custom"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 3 }}>
                       Memo / Notes
