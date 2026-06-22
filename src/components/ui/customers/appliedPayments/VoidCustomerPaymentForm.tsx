@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
-import { AlertTriangle, Calendar } from "react-feather";
+import { AlertTriangle, Calendar, X } from "react-feather";
 import { useLazyQuery, useMutation } from "@apollo/client";
 
 import LabelLoader from "../../LabelLoader";
@@ -119,6 +119,48 @@ const VoidCustomerPaymentForm = ({
   };
 
   return (
+    <div
+      className="modal fade show"
+      style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+    >
+      <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ maxWidth: 620 }}>
+        <div className="modal-content" style={{ border: "none", borderRadius: 10, overflow: "hidden" }}>
+
+          {/* Blue header — same design as Receive Payment */}
+          <div style={{
+            background: "linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)",
+            padding: "14px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                background: "rgba(255,255,255,0.2)",
+                borderRadius: 8,
+                padding: "6px 8px",
+                display: "flex",
+                alignItems: "center",
+              }}>
+                <AlertTriangle size={16} color="#fff" />
+              </div>
+              <div>
+                <h5 style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 15 }}>Void Payment</h5>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>
+                  Reverse a recorded payment — this action cannot be undone
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closePaymentModal}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
+            >
+              <X size={18} color="rgba(255,255,255,0.8)" />
+            </button>
+          </div>
+
+          <div style={{ padding: "20px 24px" }}>
     <form onSubmit={handleSubmit(onSubmit)}>
       {/* Warning banner */}
       <div
@@ -281,6 +323,10 @@ const VoidCustomerPaymentForm = ({
         </div>
       )}
     </form>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

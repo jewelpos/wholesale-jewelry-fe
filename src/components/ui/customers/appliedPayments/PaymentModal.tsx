@@ -43,6 +43,21 @@ const PaymentModal = ({
     );
   }
 
+  if (paymentModal.includes(paymentModalTypes.add_void_payment) && voidRow) {
+    return (
+      <VoidCustomerPaymentForm
+        storeId={parsedStoreId}
+        closePaymentModal={() => setPaymentModal("")}
+        customerpaymentid={voidRow.customerpaymentid}
+        transactionno={voidRow.transactionno}
+        custcompanyname={voidRow.custcompanyname}
+        amountpaid={voidRow.amountpaid}
+        paymode={voidRow.paymode}
+        paymentdate={voidRow.paymentdate}
+      />
+    );
+  }
+
   return (
     <div
       className="modal fade show"
@@ -89,19 +104,6 @@ const PaymentModal = ({
               />
             )}
 
-            {paymentModal.includes(paymentModalTypes.add_void_payment) &&
-              voidRow && (
-                <VoidCustomerPaymentForm
-                  storeId={parsedStoreId}
-                  closePaymentModal={() => setPaymentModal("")}
-                  customerpaymentid={voidRow.customerpaymentid}
-                  transactionno={voidRow.transactionno}
-                  custcompanyname={voidRow.custcompanyname}
-                  amountpaid={voidRow.amountpaid}
-                  paymode={voidRow.paymode}
-                  paymentdate={voidRow.paymentdate}
-                />
-              )}
           </div>
         </div>
       </div>
