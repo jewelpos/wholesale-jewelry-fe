@@ -176,20 +176,32 @@ const OpenItemsTable = ({
 
   return (
     <div style={{ marginBottom: 14 }}>
-      <SectionLabel>{title}</SectionLabel>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8,
+        paddingBottom: 4,
+        borderBottom: "1px solid #e2e8f0",
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b" }}>
+          {title}
+        </span>
+        <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#1d4ed8", fontWeight: 600, userSelect: "none" }}>
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+            onChange={(e) => onSelectAll(e.target.checked)}
+            style={{ cursor: "pointer", width: 14, height: 14, accentColor: "#1d4ed8" }}
+          />
+          Select All
+        </label>
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
         <thead>
           <tr style={{ background: "#f1f5f9" }}>
-            <th style={thStyle}>
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                onChange={(e) => onSelectAll(e.target.checked)}
-                title="Select all"
-                style={{ cursor: "pointer" }}
-              />
-            </th>
+            <th style={thStyle}></th>
             <th style={thStyle}>Age</th>
             <th style={thStyle}>#</th>
             <th style={thStyle}>Date</th>
