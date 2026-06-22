@@ -11,6 +11,7 @@ import { paymentModalTypes } from "@/lib/config/constants";
 import { RECEIVE_PAYMENT } from "./PaymentModal";
 
 const BUTTON_ORDER: Record<string, number> = {
+  receive_payment: 0,
   [paymentModalTypes.add_customer_payment]: 1,
   [paymentModalTypes.add_credit_adjustment]: 2,
   [paymentModalTypes.add_invoice_credit_payment]: 3,
@@ -37,6 +38,7 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
   const { currentMenu } = useMenu();
 
   const isModalButton = (actionName: string) =>
+    actionName === RECEIVE_PAYMENT ||
     actionName.includes(paymentModalTypes.add_customer_payment) ||
     actionName.includes(paymentModalTypes.add_credit_adjustment) ||
     actionName.includes(paymentModalTypes.add_invoice_credit_payment);
@@ -48,39 +50,47 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
       showBreadcrumb
     >
       <div className="d-flex purchase-pg-btn">
-        <div className="page-btn d-none d-sm-block">
-          <button
-            type="button"
-            className="btn btn-added"
-            onClick={() => setPaymentModal(RECEIVE_PAYMENT)}
-            style={{ background: "#1d4ed8", borderColor: "#1d4ed8" }}
-          >
-            <DollarSign size={14} className="me-1" />
-            Receive Payment
-          </button>
-        </div>
         {!!currentMenu?.action?.length &&
           [...currentMenu.action]
             .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
             .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-
+              const isReceivePayment = btn.actionname === RECEIVE_PAYMENT;
               const isPrint = btn.actionname.includes("print");
               const isEmail = btn.actionname.toLowerCase().includes("email");
               const isExport = btn.actionname.includes("export");
 
-              const handleClick = isPrint
-                ? onPrint
-                : isEmail
-                  ? onEmail
-                  : isExport
-                    ? onExport
-                    : isModalButton(btn.actionname)
-                      ? () => setPaymentModal(btn.actionname)
-                      : undefined;
+              const handleClick = isReceivePayment
+                ? () => setPaymentModal(RECEIVE_PAYMENT)
+                : isPrint
+                  ? onPrint
+                  : isEmail
+                    ? onEmail
+                    : isExport
+                      ? onExport
+                      : isModalButton(btn.actionname)
+                        ? () => setPaymentModal(btn.actionname)
+                        : undefined;
 
               if (!handleClick) return null;
+
+              if (isReceivePayment) {
+                return (
+                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                    <button
+                      type="button"
+                      className="btn btn-added"
+                      onClick={handleClick}
+                      style={{ background: "#1d4ed8", borderColor: "#1d4ed8" }}
+                    >
+                      <DollarSign size={14} className="me-1" />
+                      {btn.actiondisplayname}
+                    </button>
+                  </div>
+                );
+              }
+
+              const btnColor = renderActionButtonColor(btn.actionname);
+              const iconName = renderActionButtonIconName(btn.actionname);
 
               return (
                 <div className="page-btn d-none d-sm-block" key={btn.actionname}>
