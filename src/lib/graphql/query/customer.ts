@@ -353,6 +353,19 @@ export const GET_CUSTOMER_QUERY = gql`
   }
 `;
 
+export const GET_CUSTOMERS_WITH_BALANCE_QUERY = gql`
+  query GetCustomersWithBalance($storeid: Int!) {
+    getCustomersWithBalance(storeid: $storeid) {
+      customerid
+      companyname
+      customername
+      total_due
+      last_sale_date
+      last_payment_date
+    }
+  }
+`;
+
 export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
   query GetCustomerBalanceDueInvoices(
     $storeid: Int!

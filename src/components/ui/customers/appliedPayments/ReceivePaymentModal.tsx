@@ -12,9 +12,8 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import SelectPaymentMode from "@/components/forms/SelectPaymentMode";
-import useCustomers from "@/hooks/useCustomers";
 import { selectStyles } from "@/lib/styles/selectStyles";
-import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
+import { GET_CUSTOMER_QUERY, GET_CUSTOMERS_WITH_BALANCE_QUERY } from "@/lib/graphql/query/customer";
 import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY } from "@/lib/graphql/query/customer";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION } from "@/lib/graphql/mutations/customer";
 
@@ -393,24 +392,26 @@ const ReceivePaymentModal = ({
   const [selectedInvCredits, setSelectedInvCredits] = useState<Map<number, number>>(new Map());
   const [selectedMemoCredits, setSelectedMemoCredits] = useState<Map<number, number>>(new Map());
 
-  // ── Customer list (filtered to balance ≠ 0) ──────────────────────────
+  // ── Customer list from view (balance ≠ 0 only, includes last payment date) ──
   const [custMenuOpen, setCustMenuOpen] = useState(false);
   const [custInput, setCustInput] = useState("");
-  const { fetchCustomersByStoreId, customers, loading: customersLoading } = useCustomers();
 
-  useEffect(() => {
-    if (storeId) fetchCustomersByStoreId(storeId);
-  }, [storeId, fetchCustomersByStoreId]);
+  const { data: custBalanceData, loading: customersLoading } = useQuery(GET_CUSTOMERS_WITH_BALANCE_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
 
   const customerOptions = useMemo(() => {
-    return (customers as any[]).map((c) => ({
+    return ((custBalanceData?.getCustomersWithBalance ?? []) as any[]).map((c) => ({
       value: c.customerid,
-      label: `${c.custcompanyname}`,
-      custcompanyname: c.custcompanyname,
+      label: c.companyname ?? c.customername ?? `Customer #${c.customerid}`,
+      companyname: c.companyname ?? c.customername ?? `Customer #${c.customerid}`,
       customerid: c.customerid,
-      warehouseid: c.warehouseid,
+      total_due: Number(c.total_due ?? 0),
+      last_sale_date: c.last_sale_date ?? null,
+      last_payment_date: c.last_payment_date ?? null,
     }));
-  }, [customers]);
+  }, [custBalanceData]);
 
   const selectedCustOption = useMemo(
     () => customerOptions.find((o) => o.value === customerId) ?? null,
@@ -704,40 +705,107 @@ const ReceivePaymentModal = ({
               background: "#f8fafc",
               borderRight: "1px solid #e2e8f0",
             }}>
-              {/* Customer select — filtered to balance ≠ 0 */}
+              {/* Customer select / selected card */}
               <div style={{ marginBottom: 12 }}>
-                <SectionLabel>Customer</SectionLabel>
-                <Select
-                  isLoading={customersLoading}
-                  options={customerOptions}
-                  placeholder="Search customer…"
-                  isClearable
-                  value={selectedCustOption}
-                  onChange={(opt: any) => handleCustomerChange(opt?.value ? Number(opt.value) : 0)}
-                  menuIsOpen={custMenuOpen}
-                  onMenuOpen={() => setCustMenuOpen(true)}
-                  onMenuClose={() => setCustMenuOpen(false)}
-                  inputValue={custInput}
-                  onInputChange={setCustInput}
-                  filterOption={(candidate: any, raw: string) => {
-                    const q = (raw || "").toLowerCase();
-                    if (!q) return true;
-                    return (
-                      String(candidate.label || "").toLowerCase().includes(q) ||
-                      String(candidate.value || "").includes(q)
-                    );
-                  }}
-                  formatOptionLabel={(opt: any) => (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                      <span style={{ color: "#94a3b8", fontSize: 11, minWidth: 40 }}>#{opt.customerid}</span>
-                      <span>{opt.custcompanyname}</span>
+                {!selectedCustOption ? (
+                  <>
+                    <SectionLabel>Customer — only showing accounts with open balance</SectionLabel>
+                    <Select
+                      isLoading={customersLoading}
+                      options={customerOptions}
+                      placeholder="Search by name or ID…"
+                      isClearable
+                      value={null}
+                      onChange={(opt: any) => handleCustomerChange(opt?.value ? Number(opt.value) : 0)}
+                      menuIsOpen={custMenuOpen}
+                      onMenuOpen={() => setCustMenuOpen(true)}
+                      onMenuClose={() => setCustMenuOpen(false)}
+                      inputValue={custInput}
+                      onInputChange={setCustInput}
+                      filterOption={(candidate: any, raw: string) => {
+                        const q = (raw || "").toLowerCase();
+                        if (!q) return true;
+                        return (
+                          String(candidate.label || "").toLowerCase().includes(q) ||
+                          String(candidate.value || "").includes(q)
+                        );
+                      }}
+                      formatOptionLabel={(opt: any) => (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ color: "#94a3b8", fontSize: 10, minWidth: 36 }}>#{opt.customerid}</span>
+                            <span>{opt.companyname}</span>
+                          </div>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: 11,
+                            color: opt.total_due > 0 ? "#dc2626" : "#16a34a",
+                            marginLeft: 12,
+                            whiteSpace: "nowrap",
+                          }}>
+                            {opt.total_due > 0 ? `Due $${opt.total_due.toFixed(2)}` : `Cr $${Math.abs(opt.total_due).toFixed(2)}`}
+                          </span>
+                        </div>
+                      )}
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                      menuPosition="fixed"
+                      styles={selectStyles}
+                      className="form-control p-0 select-form-custom"
+                    />
+                  </>
+                ) : (
+                  <div style={{
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", display: "flex", alignItems: "baseline", gap: 6 }}>
+                        {selectedCustOption.companyname}
+                        <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 400 }}>#{selectedCustOption.customerid}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 14, marginTop: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: selectedCustOption.total_due > 0 ? "#dc2626" : "#16a34a" }}>
+                          {selectedCustOption.total_due > 0
+                            ? `Balance Due: $${selectedCustOption.total_due.toFixed(2)}`
+                            : `Credit: $${Math.abs(selectedCustOption.total_due).toFixed(2)}`}
+                        </span>
+                        {selectedCustOption.last_payment_date && (
+                          <span style={{ fontSize: 11, color: "#475569" }}>
+                            Last payment: <strong>{dayjs(selectedCustOption.last_payment_date).format("MMM D, YYYY")}</strong>
+                          </span>
+                        )}
+                        {selectedCustOption.last_sale_date && (
+                          <span style={{ fontSize: 11, color: "#475569" }}>
+                            Last sale: <strong>{dayjs(selectedCustOption.last_sale_date).format("MMM D, YYYY")}</strong>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                  menuPosition="fixed"
-                  styles={selectStyles}
-                  className="form-control p-0 select-form-custom"
-                />
+                    <button
+                      type="button"
+                      onClick={() => handleCustomerChange(0)}
+                      style={{
+                        background: "#dbeafe",
+                        border: "1px solid #93c5fd",
+                        borderRadius: 6,
+                        padding: "4px 10px",
+                        fontSize: 11,
+                        color: "#1d4ed8",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Snapshot */}
