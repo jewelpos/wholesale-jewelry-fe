@@ -8,10 +8,11 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SupplierListType } from "@/types/supplier";
 import Link from "next/link";
-import { Edit, Eye, Trash2 } from "react-feather";
+import { Edit, Eye, FileText, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
+import SupplierStatementModal from "@/components/ui/supplier/statement/SupplierStatementModal";
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -26,6 +27,7 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [statementOpen, setStatementOpen] = useState(false);
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -68,6 +70,14 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
         >
           <Eye size={14} />
         </a>
+        <a
+          className="p-1"
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStatementOpen(true); }}
+          title="Vendor Statement"
+        >
+          <FileText size={14} />
+        </a>
         <Link
           className="p-1"
           href={`${basePath}/supplier/${data.supplierid}/edit`}
@@ -104,6 +114,12 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
         outletId={parsedOutletId}
         onClose={() => setDrawerOpen(false)}
         mode="drawer"
+      />
+    )}
+    {statementOpen && (
+      <SupplierStatementModal
+        supplier={data}
+        onClose={() => setStatementOpen(false)}
       />
     )}
     </>
