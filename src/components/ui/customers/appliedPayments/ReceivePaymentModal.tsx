@@ -908,7 +908,7 @@ const ReceivePaymentModal = ({
 
               {/* Cash Amount */}
               <div>
-                <SectionLabel>Cash / Check Amount</SectionLabel>
+                <SectionLabel>Amount</SectionLabel>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <input
                     type="number"
