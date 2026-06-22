@@ -403,16 +403,13 @@ const ReceivePaymentModal = ({
   }, [storeId, fetchCustomersByStoreId]);
 
   const customerOptions = useMemo(() => {
-    return (customers as any[])
-      .filter((c) => Number(c.balancedue ?? 0) !== 0)
-      .map((c) => ({
-        value: c.customerid,
-        label: `${c.custcompanyname}`,
-        custcompanyname: c.custcompanyname,
-        customerid: c.customerid,
-        balancedue: Number(c.balancedue ?? 0),
-        warehouseid: c.warehouseid,
-      }));
+    return (customers as any[]).map((c) => ({
+      value: c.customerid,
+      label: `${c.custcompanyname}`,
+      custcompanyname: c.custcompanyname,
+      customerid: c.customerid,
+      warehouseid: c.warehouseid,
+    }));
   }, [customers]);
 
   const selectedCustOption = useMemo(
@@ -713,7 +710,7 @@ const ReceivePaymentModal = ({
                 <Select
                   isLoading={customersLoading}
                   options={customerOptions}
-                  placeholder="Search customer with open balance…"
+                  placeholder="Search customer…"
                   isClearable
                   value={selectedCustOption}
                   onChange={(opt: any) => handleCustomerChange(opt?.value ? Number(opt.value) : 0)}
@@ -731,16 +728,9 @@ const ReceivePaymentModal = ({
                     );
                   }}
                   formatOptionLabel={(opt: any) => (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
-                      <span>{opt.custcompanyname} <span style={{ color: "#94a3b8", fontSize: 11 }}>#{opt.customerid}</span></span>
-                      <span style={{
-                        fontWeight: 700,
-                        fontSize: 11,
-                        color: opt.balancedue > 0 ? "#dc2626" : "#16a34a",
-                        marginLeft: 8,
-                      }}>
-                        {opt.balancedue > 0 ? `Due $${opt.balancedue.toFixed(2)}` : `Cr $${Math.abs(opt.balancedue).toFixed(2)}`}
-                      </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                      <span style={{ color: "#94a3b8", fontSize: 11, minWidth: 40 }}>#{opt.customerid}</span>
+                      <span>{opt.custcompanyname}</span>
                     </div>
                   )}
                   menuPortalTarget={typeof document !== "undefined" ? document.body : null}
