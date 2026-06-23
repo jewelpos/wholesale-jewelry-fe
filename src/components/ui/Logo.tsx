@@ -1,17 +1,20 @@
 import Image from "next/image";
+import React from "react";
 
 type Props = {
   width?: number;
   height?: number;
+  style?: React.CSSProperties;
 };
 
-const Logo = ({ width = 150, height = 45 }: Props) => {
+const Logo = ({ width = 787, height = 225, style }: Props) => {
   return (
     <Image
       src="/assets/img/logo.png"
-      alt="Application logo"
+      alt="JewelPOS logo"
       width={width}
       height={height}
+      style={style}
     />
   );
 };

@@ -115,6 +115,8 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
     const payload = {
       ...formData,
       supplierstatus: formData.supplierstatus ? 1 : 0,
+      warehouseid: formData.warehouseid ? Number(formData.warehouseid) : null,
+      shippimgmethod: formData.shippimgmethod ? Number(formData.shippimgmethod) : null,
       ...editPayload,
     };
 

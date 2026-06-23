@@ -464,6 +464,290 @@
     color: $primary !important;
   }
 }
+/* ── JewelPOS login form (jp- scoped) ── */
+.jp-auth-form {
+  width: 100%;
+
+  .jp-status-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px; border-radius: 999px;
+    background: #f3f5f9; border: 1px solid #e6e9f0;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: #5b6475;
+    .jp-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #1e9e6a; box-shadow: 0 0 0 3px rgba(30,158,106,.15);
+      display: inline-block;
+    }
+  }
+
+  .jp-heading {
+    margin: 16px 0 0; font-size: 1.75rem; line-height: 1.15;
+    font-weight: 700; letter-spacing: -.02em; color: #161b26;
+  }
+  .jp-subheading {
+    margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #6a7384;
+  }
+
+  .jp-form { margin-top: 28px; display: flex; flex-direction: column; gap: 16px; }
+
+  .jp-field {
+    display: flex; flex-direction: column;
+    label { font-size: 13px; font-weight: 600; color: #384152; margin-bottom: 7px; }
+  }
+
+  .jp-label-row {
+    display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px;
+    label { margin-bottom: 0; font-size: 13px; font-weight: 600; color: #384152; }
+  }
+
+  .jp-forgot {
+    font-size: 13px; font-weight: 600; color: #9a7636; text-decoration: none;
+    &:hover { text-decoration: underline; text-underline-offset: 2px; }
+  }
+
+  .jp-input-wrap {
+    position: relative;
+    .jp-input-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: #9aa2b1; pointer-events: none;
+    }
+    input {
+      width: 100%; height: 48px; padding: 0 16px 0 42px;
+      font-size: 14px; font-weight: 500; color: #1a2030;
+      background: #fbfcfe; border: 1px solid #e1e5ee; border-radius: 10px;
+      outline: none; transition: border-color .18s, box-shadow .18s, background .18s;
+      &::placeholder { color: #a8aebb; }
+      &:focus { border-color: #c9a961; background: #fff; box-shadow: 0 0 0 4px rgba(201,169,97,.16); }
+      &.jp-invalid { border-color: $danger; background: #fff8f8; }
+    }
+    &.has-eye input { padding-right: 48px; }
+  }
+
+  .jp-eye-btn {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; color: #9aa2b1; cursor: pointer;
+    border-radius: 8px; @include transition(all .15s ease);
+    &:hover { color: #384152; background: #f0f2f6; }
+  }
+
+  .jp-error { font-size: 12px; color: $danger; margin: 5px 0 0; }
+
+  .jp-remember {
+    display: inline-flex; align-items: center; gap: 9px;
+    cursor: pointer; user-select: none; font-size: 13.5px; font-weight: 500; color: #4b5566;
+    input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .jp-checkbox {
+      position: relative; width: 18px; height: 18px; flex: none;
+      border-radius: 5px; border: 1.5px solid #cdd3de; background: #fff;
+      @include transition(all .15s ease);
+      &::after {
+        content: ""; position: absolute; left: 5px; top: 2px;
+        width: 5px; height: 9px; border: solid #fff;
+        border-width: 0 2px 2px 0; transform: rotate(45deg); opacity: 0;
+        @include transition(all .15s ease);
+      }
+    }
+    input:checked + .jp-checkbox { background: #9a7636; border-color: #9a7636; }
+    input:checked + .jp-checkbox::after { opacity: 1; }
+  }
+
+  .jp-submit-btn {
+    margin-top: 4px; height: 50px; width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    border: none; border-radius: 11px; cursor: pointer;
+    font-size: 15px; font-weight: 700; letter-spacing: .01em;
+    color: #fff; background: #1c2230;
+    box-shadow: 0 10px 22px -12px rgba(20,28,48,.7);
+    @include transition(all .16s ease);
+    &:hover { background: #262e40; transform: translateY(-1px); box-shadow: 0 14px 28px -12px rgba(20,28,48,.75); }
+    &:active { transform: translateY(0); }
+    &:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+  }
+
+  .jp-form-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; margin-top: 24px;
+    font-size: 12px; color: #a8aebb;
+    .jp-ssl { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: #9aa2b1; }
+  }
+}
+
+/* ── JewelPOS split-panel login ── */
+.login-wrapper.login-split {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+
+  .login-split-form {
+    flex: 0 0 50%;
+    max-width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    overflow-y: auto;
+    background: $white;
+
+    @include respond-below(custom991) {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+
+    .login-split-inner {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    // Override global .login-logo max-width which defaults to 150px
+    .login-logo {
+      max-width: 360px;
+      margin: 0 0 8px;
+    }
+  }
+
+  .login-split-brand {
+    flex: 0 0 50%;
+    max-width: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(145deg, #092c4c 0%, #376fd0 100%);
+  }
+
+  .login-brand-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+  }
+
+  .login-brand-content {
+    color: $white;
+    max-width: 380px;
+
+    .login-brand-logo img {
+      mix-blend-mode: screen;
+      filter: brightness(1.15) contrast(1.1);
+    }
+  }
+
+  .login-brand-tagline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: $font-size-15;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.75);
+    margin: -18px 0 20px;
+    letter-spacing: 0.01em;
+    &::before {
+      content: "✓";
+      color: $success;
+      font-weight: 800;
+      font-size: $font-size-14;
+      font-style: normal;
+      flex-shrink: 0;
+    }
+  }
+
+  .login-brand-name {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: $white;
+  }
+
+  .login-brand-divider {
+    height: 3px;
+    width: 48px;
+    background: $primary;
+    border-radius: 2px;
+  }
+
+  .login-brand-headline {
+    font-size: 1.55rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: $white;
+    margin: 0;
+  }
+
+  .login-brand-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+      font-size: $font-size-15;
+      color: rgba(255, 255, 255, 0.85);
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &::before {
+        content: "✓";
+        color: $success;
+        font-weight: 800;
+        font-size: $font-size-14;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  .login-brand-contact {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 20px;
+  }
+
+  .login-brand-contact-label {
+    font-size: $font-size-13;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: $font-weight-semibold;
+    margin-bottom: 12px;
+  }
+
+  .login-brand-contact-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .login-brand-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: $font-size-14;
+    text-decoration: none;
+    @include transition(all 0.2s ease);
+
+    svg {
+      color: $primary;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      color: $white;
+      svg {
+        color: $success;
+      }
+    }
+  }
+}
+
 .login-body {
   display: table;
   height: 100vh;
