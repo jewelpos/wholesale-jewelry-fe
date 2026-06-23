@@ -15,6 +15,7 @@ import ButtonLoader from "../ButtonLoader";
 import OutletFormTypeB from "./OutletFormTypeB";
 import OutletFormTypeC from "./OutletFormTypeC";
 import OutletFormTypeD from "./OutletFormTypeD";
+import OutletLogoUpload from "./OutletLogoUpload";
 import ActionFooter from "../ActionFooter";
 import PlaceHolder from "../PlaceHolder";
 
@@ -40,6 +41,8 @@ const EditOutletForm = () => {
     getValues,
     trigger,
     reset,
+    setValue,
+    watch,
   } = useForm<CreateOutlet>();
 
   useEffect(() => {
@@ -58,6 +61,7 @@ const EditOutletForm = () => {
         storephone: outlet.storephone ?? "",
         storeemail: outlet.storeemail ?? "",
         contactperson: outlet.contactperson ?? "",
+        storelogo: outlet.storelogo ?? "",
       });
     }
   }, [outletsData, parsedOutletId, parsedStoreId, reset]);
@@ -77,6 +81,7 @@ const EditOutletForm = () => {
             storephone: formData.storephone,
             storeemail: formData.storeemail,
             contactperson: formData.contactperson,
+            storelogo: formData.storelogo ?? null,
           },
         },
       });
@@ -106,6 +111,25 @@ const EditOutletForm = () => {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <OutletFormTypeB register={register} errors={errors} />
+
+      {/* Store logo */}
+      <div className="card table-list-card">
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-5 mb-3">
+              <h4 className="mb-2">Store logo</h4>
+              <p>Upload your outlet logo. It will appear on receipts and invoices.</p>
+            </div>
+            <div className="col-md-7">
+              <OutletLogoUpload
+                value={watch("storelogo")}
+                onChange={(v) => setValue("storelogo", v ?? undefined)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <OutletFormTypeC register={register} errors={errors} />
       <OutletFormTypeD
         register={register}

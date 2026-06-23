@@ -9,6 +9,7 @@ export type CreateOutlet = {
   storephone: string;
   storeemail: string;
   contactperson: string;
+  storelogo?: string;
 };
 
 export type UpdateOutlet = {
@@ -23,6 +24,7 @@ export type UpdateOutlet = {
   storeemail: string;
   storewebsite?: string;
   contactperson: string;
+  storelogo?: string;
 };
 
 export type OutletType = {

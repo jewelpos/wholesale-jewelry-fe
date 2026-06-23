@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { useDispatch } from "react-redux";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -67,6 +67,7 @@ const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
 
 const StoreSettingsForm = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const router = useRouter();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const dispatch = useDispatch();
@@ -188,11 +189,18 @@ const StoreSettingsForm = () => {
     <div style={{ padding: "4px 0 32px" }}>
       {/* Header */}
       <div className="page-header" style={{ marginBottom: 0 }}>
-        <div className="add-item d-flex justify-content-between align-items-center">
+        <div className="add-item d-flex justify-content-between align-items-center w-100">
           <div className="page-title">
             <h4>Store Settings</h4>
             <h6>Configure per-warehouse price codes, sale settings, and store policy</h6>
           </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => router.back()}
+          >
+            ← Back
+          </button>
         </div>
       </div>
 

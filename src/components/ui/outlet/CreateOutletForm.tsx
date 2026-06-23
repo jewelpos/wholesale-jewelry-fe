@@ -18,6 +18,7 @@ import OutletFormTypeA from "./OutletFormTypeA";
 import OutletFormTypeB from "./OutletFormTypeB";
 import OutletFormTypeC from "./OutletFormTypeC";
 import OutletFormTypeD from "./OutletFormTypeD";
+import OutletLogoUpload from "./OutletLogoUpload";
 import ActionFooter from "../ActionFooter";
 
 type CreateOutletResponse = {
@@ -45,6 +46,8 @@ const CreateOutletForm = () => {
     control,
     getValues,
     trigger,
+    setValue,
+    watch,
   } = useForm<CreateOutlet>({
     defaultValues: { storeid: parsedStoreId },
   });
@@ -112,6 +115,25 @@ const CreateOutletForm = () => {
         storesLoading={storesLoading}
       />
       <OutletFormTypeB register={register} errors={errors} />
+
+      {/* Store logo */}
+      <div className="card table-list-card">
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-5 mb-3">
+              <h4 className="mb-2">Store logo</h4>
+              <p>Upload your outlet logo. It will appear on receipts and invoices.</p>
+            </div>
+            <div className="col-md-7">
+              <OutletLogoUpload
+                value={watch("storelogo")}
+                onChange={(v) => setValue("storelogo", v ?? undefined)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <OutletFormTypeC register={register} errors={errors} />
       <OutletFormTypeD
         register={register}
