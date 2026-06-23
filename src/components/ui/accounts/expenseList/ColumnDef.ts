@@ -5,7 +5,10 @@ import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import ActionCellRenderer from "../../grid/ActionRenderer";
 
-export const expenseListColumnDefs: ColDef<AccountsExpenseListType>[] = [
+export const getExpenseListColumnDefs = (
+  onEdit: (data: AccountsExpenseListType) => void,
+  onDelete: (data: AccountsExpenseListType) => void
+): ColDef<AccountsExpenseListType>[] => [
   {
     headerName: "Amount",
     field: "expenseamount",
@@ -39,22 +42,15 @@ export const expenseListColumnDefs: ColDef<AccountsExpenseListType>[] = [
   {
     headerName: "Actions",
     cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
+    maxWidth: 120,
     pinned: "right",
     suppressSizeToFit: false,
     sortable: false,
     filter: false,
     suppressHeaderMenuButton: true,
     cellRendererParams: {
-      onEdit: (data: AccountsExpenseListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: AccountsExpenseListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: AccountsExpenseListType) => {
-        console.log("View clicked", data);
-      },
+      onEdit,
+      onDelete,
     },
   },
 ];

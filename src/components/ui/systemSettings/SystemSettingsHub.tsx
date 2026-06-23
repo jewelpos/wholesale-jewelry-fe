@@ -4,12 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client";
-import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, LucideIcon } from "lucide-react";
+import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
 import { GET_ALL_INVENTORY_TAG_LABELS_QUERY } from "@/lib/graphql/query/products";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
+import { GET_EXPENSE_CODE_QUERY } from "@/lib/graphql/query/accounts";
 
 interface SettingTile {
   title: string;
@@ -141,11 +142,16 @@ const SystemSettingsHub = () => {
     variables: { storeid: storeIdInt },
     skip: !storeIdParam,
   });
+  const { data: expenseCodeData } = useQuery(GET_EXPENSE_CODE_QUERY, {
+    variables: { storeid: storeIdInt },
+    skip: !storeIdParam,
+  });
 
   const metalTypeCount = metalTypeData?.getMetalTypeList?.length ?? null;
   const shippingCount = shippingData?.getShippingModes?.length ?? null;
   const paymentCount = paymentData?.getPaymentExpenseModes?.length ?? null;
   const labelCount = labelData?.getAllInventoryTagLabels?.length ?? null;
+  const expenseCodeCount = expenseCodeData?.getExpenseCode?.length ?? null;
   const todayStr = new Date().toISOString().slice(0, 10);
   const ratesData = metalRatesData?.getCurrentMetalRates;
   const metalRatesLabel = ratesData
@@ -241,29 +247,21 @@ const SystemSettingsHub = () => {
             <TileCard tile={tile} />
           </div>
         ))}
+      </div>
 
-        {/* Placeholder tile — shows where future items will go */}
+      {/* Finance Configuration section */}
+      <SectionHeader title="Finance Configuration" />
+      <div className="row g-3">
         <div className="col-xl-3 col-lg-4 col-md-6">
-          <div
-            style={{
-              border: "1.5px dashed #e2e8f0",
-              borderRadius: 12,
-              padding: "20px 22px",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              minHeight: 140,
-              color: "#cbd5e1",
-            }}
-          >
-            <span style={{ fontSize: 22 }}>+</span>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              More coming soon
-            </span>
-          </div>
+          <TileCard tile={{
+            title: "Expense Codes",
+            description: "Manage expense categories used when recording business expenses.",
+            href: `${base}/expense_codes`,
+            icon: Receipt,
+            accent: "#ef4444",
+            count: expenseCodeCount,
+            countLabel: "codes",
+          }} />
         </div>
       </div>
     </div>

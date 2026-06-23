@@ -2,6 +2,7 @@ export type AccountsExpenseListType = {
   expenseid: number;
   expensedate: string;
   accountdescription: string;
+  expensecodeid: number;
   expensedetail: string;
   expenseamount: number;
   expensemode: string;

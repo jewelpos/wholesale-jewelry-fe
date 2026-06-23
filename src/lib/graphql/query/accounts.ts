@@ -8,6 +8,7 @@ export const GET_EXPENSE_LIST_QUERY = gql`
         expenseid
         expensedate
         accountdescription
+        expensecodeid
         expensedetail
         expenseamount
         expensemode
@@ -20,6 +21,26 @@ export const GET_EXPENSE_LIST_QUERY = gql`
         lastmodifiedbyid
         lastmodifieddate
       }
+    }
+  }
+`;
+
+export const GET_EXPENSE_CODE_QUERY = gql`
+  query GetExpenseCode($storeid: Int!) {
+    getExpenseCode(storeid: $storeid) {
+      expensecode
+      accountdescription
+      accounttype
+    }
+  }
+`;
+
+export const GET_PAYMENT_EXPENSE_MODES_QUERY = gql`
+  query GetPaymentExpenseModes($storeid: Int!) {
+    getPaymentExpenseModes(storeid: $storeid) {
+      paymentmodeid
+      paymode
+      paymodedescription
     }
   }
 `;
