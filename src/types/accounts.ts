@@ -14,6 +14,9 @@ export type AccountsExpenseListType = {
   outletid: number;
   lastmodifiedbyid: number;
   lastmodifieddate: string;
+  approvalstatus: string;
+  approvedbyid: number;
+  approveddate: string;
 };
 
 export type AccountsExpenseListResponseType = {

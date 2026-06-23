@@ -36,7 +36,23 @@ export const GET_EXPENSE_LIST_QUERY = gql`
         outletid
         lastmodifiedbyid
         lastmodifieddate
+        approvalstatus
+        approvedbyid
+        approveddate
       }
+    }
+  }
+`;
+
+export const GET_EXPENSE_DAILY_SUMMARY_QUERY = gql`
+  query GetExpenseDailySummary($outletid: Int!) {
+    getExpenseDailySummary(outletid: $outletid) {
+      total_today
+      paid_today
+      pending_today
+      voided_today
+      revenue_today
+      avg_today
     }
   }
 `;
