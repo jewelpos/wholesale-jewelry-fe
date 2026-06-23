@@ -18,7 +18,6 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import { GridApi, IRowNode } from "ag-grid-community";
 import axiosApi from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
@@ -35,8 +34,6 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [statuses, setStatuses] = useState<{ orderstatusid: number; statusname: string }[]>([]);
@@ -71,7 +68,7 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
     setPrinting(true);
     try {
       const response = await axiosApi.post(
-        `${config.apiUrl}/store/sales-order/print`,
+        `/store/sales-order/print`,
         { storeid: parsedStoreId, salesordernumbers: [Number(data.salesorderno)] },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );

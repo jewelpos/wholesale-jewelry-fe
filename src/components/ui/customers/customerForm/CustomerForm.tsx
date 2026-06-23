@@ -11,7 +11,6 @@ import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { CustomerFormType } from "@/types/customer";
 import CustomerInputsA from "./CustomerInputsA";
 import CustomerInputsB from "./CustomerInputsB";
@@ -23,7 +22,6 @@ import useWarehouse from "@/hooks/useWarehouse";
 
 const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const { customerId } = useParams();
-  const config = getEnvironmentConfig();
   const dispatch = useDispatch();
   const router = useRouter();
   const { storeId: storeIdParam } = useParams();
@@ -144,12 +142,12 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
         let response;
         if (customerId) {
           response = await api.put(
-            `${config.apiUrl}/store/customer/edit`,
+            `/store/customer/edit`,
             form
           );
         } else {
           response = await api.post(
-            `${config.apiUrl}/store/customer/add`,
+            `/store/customer/add`,
             form
           );
         }

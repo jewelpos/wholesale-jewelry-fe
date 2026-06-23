@@ -28,7 +28,6 @@ import PurchaseOrderListHeader from "./PurchaseOrderListHeader";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PurchaseOrderActions from "./PurchaseOrderActions";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
@@ -56,8 +55,6 @@ const PurchaseOrderListComponent = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const knownStatusesRef = useRef(new Set<string>());
   const [knownStatuses, setKnownStatuses] = useState<string[]>([]);
-
-  const config = getEnvironmentConfig();
 
   const handleOnGridReady = (params: GridReadyEvent<PurchaseOrder>) => {
     setGridReady(true);
@@ -179,7 +176,7 @@ const PurchaseOrderListComponent = () => {
           })
         );
         const response = await api.post(
-          `${config.apiUrl}/store/purchase-order/print`,
+          `/store/purchase-order/print`,
           updatedPayload,
           {
             responseType: "blob", // <== CRITICAL

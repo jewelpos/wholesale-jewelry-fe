@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { X, Send } from "react-feather";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 
 interface SalesOrderEmailModalProps {
@@ -25,7 +24,6 @@ const SalesOrderEmailModal = ({
   onSent,
   onError,
 }: SalesOrderEmailModalProps) => {
-  const config = getEnvironmentConfig();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [emails, setEmails] = useState<string[]>([]);
@@ -38,7 +36,7 @@ const SalesOrderEmailModal = ({
     const fetchEmails = async () => {
       setLoading(true);
       const result = await handleTryCatch(async () => {
-        const { data } = await api.post(`${config.apiUrl}/store/sales-order/customer-emails`, {
+        const { data } = await api.post(`/store/sales-order/customer-emails`, {
           storeid: storeId,
           salesordernumbers: salesOrderNumbers,
         });
@@ -96,7 +94,7 @@ const SalesOrderEmailModal = ({
 
     setSending(true);
     const result = await handleTryCatch(async () => {
-      const { data } = await api.post(`${config.apiUrl}/store/sales-order/email`, {
+      const { data } = await api.post(`/store/sales-order/email`, {
         storeid: storeId,
         salesordernumbers: salesOrderNumbers,
         toEmails: finalEmails,

@@ -32,7 +32,6 @@ import StatusFilterChips from "@/components/ui/grid/StatusFilterChips";
 import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 import { GET_MEMO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import DocumentEmailModal from "../DocumentEmailModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
@@ -116,8 +115,6 @@ const MemoListComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const debouncedSearchRef = useRef(debouncedSearch);
   const selectedWarehouseRef = useRef(selectedWarehouse);
   const statusFilterRef = useRef(statusFilter);
@@ -217,7 +214,7 @@ const MemoListComponent = () => {
 
     const result = await handleTryCatch(
       async () => {
-        const response = await api.post(`${config.apiUrl}/store/memo/print`, payload, {
+        const response = await api.post(`/store/memo/print`, payload, {
           responseType: "blob",
           headers: {
             "Content-Type": "application/json",
@@ -251,7 +248,7 @@ const MemoListComponent = () => {
         })
       );
     }
-  }, [config.apiUrl, dispatch, parsedStoreId, selectedMemoNumbers]);
+  }, [dispatch, parsedStoreId, selectedMemoNumbers]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("memo-list");
 

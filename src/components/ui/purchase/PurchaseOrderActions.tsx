@@ -12,7 +12,6 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { PurchaseOrder } from "@/types/purchase";
 import { DELETE_PURCHASE_ORDER_MUTATION } from "@/lib/graphql/mutations/purchase";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
@@ -27,8 +26,6 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showEmail, setShowEmail] = useState(false);
@@ -42,7 +39,7 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
     setPrinting(true);
     try {
       const response = await api.post(
-        `${config.apiUrl}/store/purchase-order/print`,
+        `/store/purchase-order/print`,
         { storeid: parsedStoreId, ponumbers: [Number(data.ponumber)] },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );

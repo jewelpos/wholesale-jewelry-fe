@@ -25,3 +25,39 @@ export const GET_WAREHOUSES_BY_OUTLET_ID_QUERY = gql`
     }
   }
 `;
+
+const WAREHOUSE_SETTINGS_FIELDS = `
+  warehouseid
+  warehousename
+  saletagkey
+  tagpricekey
+  pricecodeone
+  pricecodetwo
+  pricecodethree
+  pricecodefour
+  pricecodefive
+  pricecodesix
+  pricecodeseven
+  pricecodeeight
+  pricecodenine
+  pricecodezero
+  allowpcsentry
+  allowcarriage
+  storepolicy
+`;
+
+export const GET_ALL_WAREHOUSE_SETTINGS_QUERY = gql`
+  query GetAllWarehouseSettings($storeid: Int!) {
+    getAllWarehouseSettings(storeid: $storeid) {
+      ${WAREHOUSE_SETTINGS_FIELDS}
+    }
+  }
+`;
+
+export const GET_WAREHOUSE_SETTINGS_QUERY = gql`
+  query GetWarehouseSettings($storeid: Int!, $warehouseid: Int!) {
+    getWarehouseSettings(storeid: $storeid, warehouseid: $warehouseid) {
+      ${WAREHOUSE_SETTINGS_FIELDS}
+    }
+  }
+`;

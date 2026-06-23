@@ -10,7 +10,6 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { MemoSummary } from "@/types/sales";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
@@ -23,8 +22,6 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
   const dispatch = useAppDispatch();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showEmail, setShowEmail] = useState(false);
@@ -50,7 +47,7 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
     setPrinting(true);
     try {
       const response = await api.post(
-        `${config.apiUrl}/store/memo/print`,
+        `/store/memo/print`,
         { storeid: parsedStoreId, memonumbers: [Number(data.memonumber)] },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );

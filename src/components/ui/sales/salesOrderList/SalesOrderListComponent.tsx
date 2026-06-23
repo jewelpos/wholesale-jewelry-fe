@@ -27,7 +27,6 @@ import { GET_SO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { useParams, useRouter } from "next/navigation";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
@@ -49,8 +48,6 @@ const SalesOrderListComponent = () => {
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
-  const config = getEnvironmentConfig();
-
   useEffect(() => { if (parsedOutletId) setSelectedOutlet(parsedOutletId); }, [parsedOutletId]);
 
   const selectedOutletRef = useRef(selectedOutlet);
@@ -134,7 +131,7 @@ const SalesOrderListComponent = () => {
 
     const result = await handleTryCatch(async () => {
       const response = await api.post(
-        `${config.apiUrl}/store/sales-order/print`,
+        `/store/sales-order/print`,
         payload,
         {
           responseType: "blob",
@@ -167,7 +164,7 @@ const SalesOrderListComponent = () => {
         })
       );
     }
-  }, [config.apiUrl, dispatch, parsedStoreId, selectedSalesOrderNumbers]);
+  }, [dispatch, parsedStoreId, selectedSalesOrderNumbers]);
 
   const [showEmailModal, setShowEmailModal] = useState(false);
 

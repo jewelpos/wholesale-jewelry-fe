@@ -39,7 +39,6 @@ import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ReportSummaryCards from "../../reports/shared/ReportSummaryCards";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 
 const NO_FILTER: never[] = [];
@@ -106,7 +105,6 @@ const CustomerListComponent = () => {
     }
   );
   const selectedCustomer: CustomerType = customerData?.getCustomer;
-  const config = getEnvironmentConfig();
   const [loading, setLoading] = useState(false);
 
   const selectedOutletRef = useRef(selectedOutlet);
@@ -215,7 +213,7 @@ const CustomerListComponent = () => {
     const result = await handleTryCatch(
       async () => {
         const response = await api.post(
-          `${config.apiUrl}/store/customer/statement`,
+          `/store/customer/statement`,
           updatedPayload,
           {
             responseType: "blob", // <== CRITICAL

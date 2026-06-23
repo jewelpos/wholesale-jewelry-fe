@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client";
-import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, LucideIcon } from "lucide-react";
+import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
@@ -154,6 +154,16 @@ const SystemSettingsHub = () => {
       : "Stale rates"
     : "Not set";
 
+  const storeConfig: SettingTile[] = [
+    {
+      title: "Store Settings",
+      description: "Configure per-warehouse price codes, sale tag keys, and store policy that prints on documents.",
+      href: `${base}/store_settings`,
+      icon: Settings2,
+      accent: "#376fd0",
+    },
+  ];
+
   const productMasters: SettingTile[] = [
     {
       title: "Metal Types",
@@ -211,6 +221,16 @@ const SystemSettingsHub = () => {
             <h6>Manage master data and system-wide configuration</h6>
           </div>
         </div>
+      </div>
+
+      {/* Store Configuration section */}
+      <SectionHeader title="Store Configuration" />
+      <div className="row g-3">
+        {storeConfig.map((tile) => (
+          <div key={tile.href} className="col-xl-3 col-lg-4 col-md-6">
+            <TileCard tile={tile} />
+          </div>
+        ))}
       </div>
 
       {/* Product Masters section */}

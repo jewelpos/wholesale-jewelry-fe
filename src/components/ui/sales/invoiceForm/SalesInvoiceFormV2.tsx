@@ -46,7 +46,6 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
@@ -280,8 +279,6 @@ const SalesInvoiceFormV2 = ({
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
     variables: { storeid: parsedStoreId, warehouiseid: 0 },
     skip: !parsedStoreId,
@@ -308,7 +305,7 @@ const SalesInvoiceFormV2 = ({
     const result = await handleTryCatch(async () => {
       const urlPath =
         documentType === "MEMO" ? "/store/memo/print" : "/store/invoice/print";
-      const response = await api.post(`${config.apiUrl}${urlPath}`, payload, {
+      const response = await api.post(urlPath, payload, {
         responseType: "blob",
         headers: {
           "Content-Type": "application/json",

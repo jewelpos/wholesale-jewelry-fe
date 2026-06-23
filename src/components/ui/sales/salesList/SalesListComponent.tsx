@@ -30,7 +30,6 @@ import SalesListHeader from "./SalesListHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import SalesActions from "./SalesActions";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { useParams } from "next/navigation";
 import DocumentEmailModal from "../DocumentEmailModal";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
@@ -48,7 +47,6 @@ const SalesListComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const config = getEnvironmentConfig();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
   const gridRef = useRef<AgGridReact<SalesInvoiceListType>>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
@@ -157,7 +155,7 @@ const SalesListComponent = () => {
     const result = await handleTryCatch(
       async () => {
         const response = await api.post(
-          `${config.apiUrl}/store/invoice/print`,
+          `/store/invoice/print`,
           payload,
           {
             responseType: "blob",
@@ -194,7 +192,7 @@ const SalesListComponent = () => {
         })
       );
     }
-  }, [config.apiUrl, dispatch, parsedStoreId, selectedInvoiceNumbers]);
+  }, [dispatch, parsedStoreId, selectedInvoiceNumbers]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [

@@ -36,7 +36,6 @@ import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 const MySwal = withReactContent(Swal);
@@ -166,7 +165,6 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const config = getEnvironmentConfig();
   const [emailModalSONumber, setEmailModalSONumber] = useState<number | null>(null);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
 
@@ -643,7 +641,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
       if (popupResult.isConfirmed && soNumber) {
         await handleTryCatch(async () => {
-          const response = await api.post(`${config.apiUrl}/store/sales-order/print`, { storeid: parsedStoreId, salesordernumbers: [soNumber] }, { responseType: "blob" });
+          const response = await api.post(`/store/sales-order/print`, { storeid: parsedStoreId, salesordernumbers: [soNumber] }, { responseType: "blob" });
           if (response.data) {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
             setPdfPreview({ url, filename: `sales-order-${soNumber}.pdf` });

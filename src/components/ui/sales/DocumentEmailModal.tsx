@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { X, Send } from "react-feather";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 
 type DocumentType = "INVOICE" | "MEMO" | "SALES_ORDER" | "PURCHASE_ORDER";
@@ -43,7 +42,6 @@ const DocumentEmailModal = ({
   onSent,
   onError,
 }: DocumentEmailModalProps) => {
-  const config = getEnvironmentConfig();
   const inputRef = useRef<HTMLInputElement>(null);
   const ep = endpointMap[documentType];
   const label = labelMap[documentType];
@@ -58,7 +56,7 @@ const DocumentEmailModal = ({
     const fetchEmails = async () => {
       setLoading(true);
       const result = await handleTryCatch(async () => {
-        const { data } = await api.post(`${config.apiUrl}${ep.customerEmail}`, {
+        const { data } = await api.post(ep.customerEmail, {
           storeid: storeId,
           [ep.numberKey]: documentNumbers,
         });
@@ -101,7 +99,7 @@ const DocumentEmailModal = ({
 
     setSending(true);
     const result = await handleTryCatch(async () => {
-      const { data } = await api.post(`${config.apiUrl}${ep.send}`, {
+      const { data } = await api.post(ep.send, {
         storeid: storeId,
         [ep.numberKey]: documentNumbers,
         toEmails: finalEmails,

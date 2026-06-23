@@ -49,7 +49,6 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
@@ -475,8 +474,6 @@ const SalesInvoiceForm = ({
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const { data: metalRatesQueryData } = useQuery(GET_CURRENT_METAL_RATES_QUERY, {
     variables: { storeid: parsedStoreId },
     skip: !parsedStoreId,
@@ -527,7 +524,7 @@ const SalesInvoiceForm = ({
     const result = await handleTryCatch(async () => {
       const urlPath =
         documentType === "MEMO" ? "/store/memo/print" : "/store/invoice/print";
-      const response = await api.post(`${config.apiUrl}${urlPath}`, payload, {
+      const response = await api.post(urlPath, payload, {
         responseType: "blob",
         headers: {
           "Content-Type": "application/json",
@@ -1609,7 +1606,7 @@ const SalesInvoiceForm = ({
             dispatch(showNotification({ message: response?.message || "Invoice saved successfully", type: NOTIFICATION_TYPES.SUCCESS }));
             if (smsSendClicked && num) {
               try {
-                await api.post(`${config.apiUrl}/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: num });
+                await api.post(`/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: num });
                 dispatch(showNotification({ message: `SMS sent for Invoice #${num}`, type: NOTIFICATION_TYPES.SUCCESS }));
               } catch {
                 dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
@@ -1672,7 +1669,7 @@ const SalesInvoiceForm = ({
 
       if (smsSendClicked && documentNumber) {
         try {
-          await api.post(`${config.apiUrl}/store/invoice/sms`, {
+          await api.post(`/store/invoice/sms`, {
             storeid: parsedStoreId,
             invoicenumber: documentNumber,
           });

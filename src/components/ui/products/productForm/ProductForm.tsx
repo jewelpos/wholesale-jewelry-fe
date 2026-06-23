@@ -13,7 +13,6 @@ import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { ProductFormType } from "@/types/product";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import {
   GET_PRODUCT_BY_ITEMCODE_QUERY,
   GET_PRODUCT_SETTINGS_INFO_QUERY,
@@ -24,7 +23,6 @@ import PlaceHolder from "../../PlaceHolder";
 
 const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const { itemcode } = useParams();
-  const config = getEnvironmentConfig();
   const dispatch = useDispatch();
   const router = useRouter();
   const { storeId: storeIdParam } = useParams();
@@ -224,8 +222,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
     const result = await handleTryCatch(async () => {
       const response = itemcode && productData
-        ? await api.put(`${config.apiUrl}/store/product/edit`, form)
-        : await api.post(`${config.apiUrl}/store/product/add`, form);
+        ? await api.put(`/store/product/edit`, form)
+        : await api.post(`/store/product/add`, form);
       const { data } = response;
       if (data) {
         dispatch(showNotification({ message: data.message, type: NOTIFICATION_TYPES.SUCCESS }));

@@ -15,7 +15,6 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import { IRowNode } from "ag-grid-community";
 import api from "@/lib/axios";
-import { getEnvironmentConfig } from "@/lib/config/environment";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
@@ -30,8 +29,6 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const config = getEnvironmentConfig();
-
   const [smsSending, setSmsSending] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -40,7 +37,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const handleSendSMS = async () => {
     setSmsSending(true);
     try {
-      await api.post(`${config.apiUrl}/store/invoice/sms`, {
+      await api.post(`/store/invoice/sms`, {
         storeid: parsedStoreId,
         invoicenumber: data.invoicenumber,
       });
@@ -56,7 +53,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     setPrinting(true);
     try {
       const response = await api.post(
-        `${config.apiUrl}/store/invoice/print`,
+        `/store/invoice/print`,
         { storeid: parsedStoreId, invoicenumbers: [data.invoicenumber] },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );
