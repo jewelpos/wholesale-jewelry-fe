@@ -15,7 +15,6 @@ import { GET_EXPENSE_CODE_QUERY } from "@/lib/graphql/query/accounts";
 import { DELETE_EXPENSE_CODE_MUTATION } from "@/lib/graphql/mutations/expenses";
 import POSGridClient from "../../grid/POSGridClient";
 import ExpenseCodeModal, { ExpenseCodeRow } from "./ExpenseCodeModal";
-import useOutlets from "@/hooks/useOutlets";
 
 const ExpenseCodeComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();

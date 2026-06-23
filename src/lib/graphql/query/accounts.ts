@@ -1,8 +1,24 @@
 import { gql } from "@apollo/client";
 
 export const GET_EXPENSE_LIST_QUERY = gql`
-  query GetExpenseList($outletid: Int!, $page: Int!, $perpage: Int!) {
-    getExpenseList(outletid: $outletid, page: $page, perpage: $perpage) {
+  query GetExpenseList(
+    $outletid: Int!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getExpenseList(
+      outletid: $outletid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
       total
       data {
         expenseid
