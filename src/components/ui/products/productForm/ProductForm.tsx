@@ -7,18 +7,22 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { ProductFormType } from "@/types/product";
+import { BulkDiscountTierRow } from "@/types/promotion";
 import api from "@/lib/axios";
 import {
   GET_PRODUCT_BY_ITEMCODE_QUERY,
   GET_PRODUCT_SETTINGS_INFO_QUERY,
 } from "@/lib/graphql/query/products";
+import { GET_PRODUCT_BULK_DISCOUNTS_QUERY } from "@/lib/graphql/query/bulkDiscounts";
+import { SAVE_PRODUCT_BULK_DISCOUNTS_MUTATION } from "@/lib/graphql/mutations/bulkDiscounts";
 import ProductInformationTab from "./ProductInformationTab";
 import ProductStoneDetailsTab from "./ProductStoneDetailsTab";
+import ProductBulkPricingCard from "./ProductBulkPricingCard";
 import PlaceHolder from "../../PlaceHolder";
 
 const ProductForm = ({ disableField }: { disableField?: boolean }) => {
@@ -34,6 +38,10 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const [productData, setProductData] = useState<any>(null);
   const [getProductByItemCode] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [bulkTiers, setBulkTiers] = useState<BulkDiscountTierRow[]>([]);
+  const [bulkTiersDirty, setBulkTiersDirty] = useState(false);
+  const [getBulkDiscounts] = useLazyQuery(GET_PRODUCT_BULK_DISCOUNTS_QUERY);
+  const [saveBulkDiscounts] = useMutation(SAVE_PRODUCT_BULK_DISCOUNTS_MUTATION);
 
   const {
     register,
@@ -226,6 +234,22 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
         : await api.post(`/store/product/add`, form);
       const { data } = response;
       if (data) {
+        if (productData?.itemid && bulkTiersDirty) {
+          await saveBulkDiscounts({
+            variables: {
+              storeid: parsedStoreId,
+              itemid: String(productData.itemid),
+              tiers: bulkTiers.map(t => ({
+                bulkdiscountid: t.bulkdiscountid ?? null,
+                minquantity: Number(t.minquantity) || 0,
+                maxquantity: Number(t.maxquantity) || 0,
+                discountamount: Number(t.discountamount) || 0,
+                discounttype: t.discounttype,
+                warehouseid: t.warehouseid ?? null,
+              })),
+            },
+          });
+        }
         dispatch(showNotification({ message: data.message, type: NOTIFICATION_TYPES.SUCCESS }));
         router.back();
       }
@@ -273,6 +297,18 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
             } catch { /* ignore image load errors */ }
           }
           reset({ ...product, storeid: parsedStoreId, supplierid: Number(product.supplierid) });
+          if (product.itemid) {
+            const bd = await getBulkDiscounts({ variables: { storeid: parsedStoreId, itemid: String(product.itemid) } });
+            const rows = bd.data?.getProductBulkDiscounts ?? [];
+            setBulkTiers(rows.map((r: any) => ({
+              bulkdiscountid: r.bulkdiscountid,
+              minquantity: r.minquantity ?? 0,
+              maxquantity: r.maxquantity ?? 0,
+              discountamount: r.discountamount ?? 0,
+              discounttype: r.discounttype ?? "percent",
+              warehouseid: r.warehouseid ?? null,
+            })));
+          }
         }
         return true;
       });
@@ -281,7 +317,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       }
     };
     fetchProduct();
-  }, [itemcode, parsedStoreId, getProductByItemCode, reset, dispatch]);
+  }, [itemcode, parsedStoreId, getProductByItemCode, getBulkDiscounts, reset, dispatch]);
 
   if (loading) return <>{[1, 2, 3, 4, 5].map(i => <PlaceHolder key={i} />)}</>;
 
@@ -310,6 +346,13 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
           setValue={setValue}
           disableField={disableField}
         />
+        {isEdit && (
+          <ProductBulkPricingCard
+            tiers={bulkTiers}
+            onChange={(t) => { setBulkTiers(t); setBulkTiersDirty(true); }}
+            disabled={!!disableField}
+          />
+        )}
         {!disableField && (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader loading={saveLoading} btnText="Save Product" loadingText="Saving..." />
