@@ -36,7 +36,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const [productImages, setProductImages] = useState<File[]>([]);
   const [loading] = useState(false);
   const [productData, setProductData] = useState<any>(null);
-  const [getProductByItemCode] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY);
+  const [getProductByItemCode] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY, { fetchPolicy: 'network-only' });
   const [saveLoading, setSaveLoading] = useState(false);
   const [bulkTiers, setBulkTiers] = useState<BulkDiscountTierRow[]>([]);
   const [bulkTiersDirty, setBulkTiersDirty] = useState(false);
@@ -266,7 +266,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!itemcode) return;
+      if (!itemcode || !parsedStoreId || isNaN(parsedStoreId)) return;
       const result = await handleTryCatch(async () => {
         const { data } = await getProductByItemCode({
           variables: { itemcode: itemcode as string, storeid: parsedStoreId },
