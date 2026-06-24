@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
@@ -8,7 +8,7 @@ import withReactContent from "sweetalert2-react-content";
 import dayjs, { Dayjs } from "dayjs";
 import { Controller, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -30,6 +30,9 @@ import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
+import { GET_PROMOTION_LIST_QUERY } from "@/lib/graphql/query/promotions";
+import { GET_PRODUCT_BULK_DISCOUNTS_QUERY } from "@/lib/graphql/query/bulkDiscounts";
+import { resolveDiscount, type BulkDiscountTier, type ActivePromotion } from "@/lib/utils/discountResolver";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
@@ -50,6 +53,8 @@ type SalesOrderItemForm = {
   itemquantity?: number;
   unitprice?: number;
   discountpercent?: number;
+  discountsource?: string | null;
+  discountpromotionid?: number | null;
   invoicepcs?: number;
   invoiceqty?: number;
   bordpcs?: number;
@@ -78,6 +83,8 @@ type ToolItem = {
   goldprice_used?: number;
   premium_used?: number;
   labour_used?: number;
+  _itemdiscount?: number;
+  _itemcategoryid?: number | null;
 };
 
 type SalesOrderFormType = {
@@ -176,6 +183,23 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
+
+  // ─── Discount resolution ────────────────────────────────────────────────
+  const { data: promotionsData } = useQuery(GET_PROMOTION_LIST_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId || !!salesordernoEdit,
+  });
+  const activePromotions: ActivePromotion[] = promotionsData?.getPromotionList ?? [];
+  const [fetchBulkDiscounts] = useLazyQuery(GET_PRODUCT_BULK_DISCOUNTS_QUERY);
+  const bulkDiscountCache = useRef<Map<number, BulkDiscountTier[]>>(new Map());
+
+  const getBulkTiers = useCallback(async (itemid: number): Promise<BulkDiscountTier[]> => {
+    if (bulkDiscountCache.current.has(itemid)) return bulkDiscountCache.current.get(itemid)!;
+    const { data } = await fetchBulkDiscounts({ variables: { storeid: parsedStoreId, itemid: String(itemid) } });
+    const tiers: BulkDiscountTier[] = data?.getProductBulkDiscounts ?? [];
+    bulkDiscountCache.current.set(itemid, tiers);
+    return tiers;
+  }, [fetchBulkDiscounts, parsedStoreId]);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") return { formatFixed: (n: number) => n.toFixed(2) };
@@ -328,6 +352,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        discountsource: it.discountsource ?? null,
+        discountpromotionid: it.discountpromotionid ?? null,
         invoicepcs: toNum(it.invoicepcs),
         invoiceqty: toNum(it.invoiceqty),
         bordpcs: toNum(it.bordpcs),
@@ -449,23 +475,53 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     });
   };
 
-  const autoAddItem = (selected: ItemDetails) => {
+  const autoAddItem = async (selected: ItemDetails) => {
     const itemid = Number(selected.itemid);
-    const discountPct = Math.min(100, Math.max(0, Number(watch("discountpercent") || 0)));
+    const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+    const premium = Number(selected.itempremium || 0);
+    const labour = Number(selected.broakerage || 0);
+    const rateField = isWt ? getRateField(selected.itemmetal, metalTypeList) : undefined;
+    const goldRate = isWt && currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+    const unitprice = isWt
+      ? calcWtUnitPrice(selected.itemmetal, currentRates as any, premium, labour, metalTypeList)
+      : Number(selected.itemsellprice || 0);
     const currentItems: SalesOrderItemForm[] = getValues("items") || [];
     const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
-      update(dupIndex, { ...existing, itemquantity: Number(existing.itemquantity || 0) + 1 });
+      const newQty = Number(existing.itemquantity || 0) + 1;
+      if (!existing.discountsource || existing.discountsource !== 'manual') {
+        const bulkTiers = await getBulkTiers(itemid);
+        const resolved = resolveDiscount({
+          itemDiscount: toNum(selected.itemdiscount),
+          unitprice,
+          qty: Math.abs(newQty),
+          bulkTiers,
+          activePromotions,
+          itemid,
+          categoryid: selected.itemcategoryid ?? null,
+          warehouseid: getValues('warehouseid'),
+        });
+        const prevDisc = toNum(existing.discountpercent);
+        update(dupIndex, { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid });
+        if (resolved.discountpercent !== prevDisc && resolved.discountsource) {
+          dispatch(showNotification({ message: `Discount updated: ${resolved.label}`, type: NOTIFICATION_TYPES.SUCCESS }));
+        }
+      } else {
+        update(dupIndex, { ...existing, itemquantity: newQty });
+      }
     } else {
-      const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
-      const premium = Number(selected.itempremium || 0);
-      const labour = Number(selected.broakerage || 0);
-      const rateField = isWt ? getRateField(selected.itemmetal, metalTypeList) : undefined;
-      const goldRate = isWt && currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
-      const unitprice = isWt
-        ? calcWtUnitPrice(selected.itemmetal, currentRates as any, premium, labour, metalTypeList)
-        : Number(selected.itemsellprice || 0);
+      const bulkTiers = await getBulkTiers(itemid);
+      const resolved = resolveDiscount({
+        itemDiscount: toNum(selected.itemdiscount),
+        unitprice,
+        qty: 1,
+        bulkTiers,
+        activePromotions,
+        itemid,
+        categoryid: selected.itemcategoryid ?? null,
+        warehouseid: getValues('warehouseid'),
+      });
       append({
         itemid,
         itemcode: selected.itemcode,
@@ -475,7 +531,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itempcs: 0,
         itemquantity: 1,
         unitprice,
-        discountpercent: discountPct,
+        discountpercent: resolved.discountpercent,
+        discountsource: resolved.discountsource,
+        discountpromotionid: resolved.discountpromotionid,
         itemmetal: selected.itemmetal,
         itempremium: premium,
         broakerage: labour,
@@ -488,7 +546,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     setProductClearKey((k) => k + 1);
   };
 
-  const handleSaveToolItem = () => {
+  const handleSaveToolItem = async () => {
     const customerIdNumber = Number(getValues("customerid"));
     if (!Number.isFinite(customerIdNumber) || customerIdNumber <= 0) {
       dispatch(showNotification({ message: "Please select a customer first", type: NOTIFICATION_TYPES.ERROR }));
@@ -504,6 +562,35 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       return;
     }
 
+    const discountPct = Math.min(100, Math.max(0, toNum(toolItem.discountpercent)));
+    let resolvedSource: string | null = null;
+    let resolvedPromotionId: number | null = null;
+
+    if (editingIndex == null) {
+      const bulkTiers = toolItem.itemid ? await getBulkTiers(toolItem.itemid) : [];
+      const resolved = resolveDiscount({
+        itemDiscount: toolItem._itemdiscount ?? 0,
+        unitprice: toNum(toolItem.unitprice),
+        qty,
+        bulkTiers,
+        activePromotions,
+        itemid: toolItem.itemid!,
+        categoryid: toolItem._itemcategoryid ?? null,
+        warehouseid: getValues('warehouseid'),
+      });
+      resolvedSource = resolved.discountsource;
+      resolvedPromotionId = resolved.discountpromotionid;
+    } else {
+      const existingItem = getValues(`items.${editingIndex}`);
+      if (discountPct !== toNum(existingItem?.discountpercent)) {
+        resolvedSource = 'manual';
+        resolvedPromotionId = null;
+      } else {
+        resolvedSource = (existingItem as any)?.discountsource ?? null;
+        resolvedPromotionId = (existingItem as any)?.discountpromotionid ?? null;
+      }
+    }
+
     const newItem: SalesOrderItemForm = {
       itemid: toolItem.itemid,
       itemcode: toolItem.itemcode,
@@ -513,7 +600,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itempcs: toNum(toolItem.itempcs),
       itemquantity: qty,
       unitprice: toNum(toolItem.unitprice),
-      discountpercent: toNum(toolItem.discountpercent),
+      discountpercent: discountPct,
+      discountsource: resolvedSource,
+      discountpromotionid: resolvedPromotionId,
       itemmetal: toolItem.itemmetal,
       itempremium: toolItem.itempremium,
       broakerage: toolItem.broakerage,
@@ -607,6 +696,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        discountsource: it.discountsource ?? null,
+        discountpromotionid: it.discountpromotionid ?? null,
         goldprice_used: it.goldprice_used ?? undefined,
         premium_used: it.premium_used ?? undefined,
         labour_used: it.labour_used ?? undefined,
@@ -1031,7 +1122,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
                         {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
                         <td className="text-end">{formatMoney(item.unitprice)}</td>
-                        <td className="text-end">{toNum(item.discountpercent).toFixed(1)}%</td>
+                        <td className="text-end">
+                          <div>{toNum(item.discountpercent).toFixed(1)}%</div>
+                          {item.discountsource && item.discountsource !== 'item' && (
+                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                            </span>
+                          )}
+                        </td>
                         <td className="text-end">{formatMoney(line.net)}</td>
                         <td className="text-center">
                           <button
@@ -1123,6 +1221,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         goldprice_used: isWtItem ? goldRate : undefined,
                         premium_used: isWtItem ? premium : undefined,
                         labour_used: isWtItem ? labour : undefined,
+                        _itemdiscount: toNum(selected.itemdiscount),
+                        _itemcategoryid: selected.itemcategoryid ?? null,
                       }));
                     }}
                     onNotFound={() =>

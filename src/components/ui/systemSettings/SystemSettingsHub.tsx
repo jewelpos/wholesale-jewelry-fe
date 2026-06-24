@@ -4,13 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client";
-import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, LucideIcon } from "lucide-react";
+import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
 import { GET_ALL_INVENTORY_TAG_LABELS_QUERY } from "@/lib/graphql/query/products";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { GET_EXPENSE_CODE_QUERY } from "@/lib/graphql/query/accounts";
+import { GET_WAREHOUSES_FOR_CRUD_QUERY } from "@/lib/graphql/query/warehouse";
 
 interface SettingTile {
   title: string;
@@ -146,12 +147,17 @@ const SystemSettingsHub = () => {
     variables: { storeid: storeIdInt },
     skip: !storeIdParam,
   });
+  const { data: warehouseData } = useQuery(GET_WAREHOUSES_FOR_CRUD_QUERY, {
+    variables: { storeid: storeIdInt },
+    skip: !storeIdParam,
+  });
 
   const metalTypeCount = metalTypeData?.getMetalTypeList?.length ?? null;
   const shippingCount = shippingData?.getShippingModes?.length ?? null;
   const paymentCount = paymentData?.getPaymentExpenseModes?.length ?? null;
   const labelCount = labelData?.getAllInventoryTagLabels?.length ?? null;
   const expenseCodeCount = expenseCodeData?.getExpenseCode?.length ?? null;
+  const warehouseCount = warehouseData?.getWarehousesForCRUD?.filter((w: any) => !w.isdeletedat).length ?? null;
   const todayStr = new Date().toISOString().slice(0, 10);
   const ratesData = metalRatesData?.getCurrentMetalRates;
   const metalRatesLabel = ratesData
@@ -163,10 +169,19 @@ const SystemSettingsHub = () => {
   const storeConfig: SettingTile[] = [
     {
       title: "Store Settings",
-      description: "Configure per-warehouse price codes, sale tag keys, and store policy that prints on documents.",
+      description: "Configure per-warehouse price codes, sale tag keys, default tax rate, and store policy that prints on documents.",
       href: `${base}/store_settings`,
       icon: Settings2,
       accent: "#376fd0",
+    },
+    {
+      title: "Warehouses",
+      description: "Manage store warehouses. System warehouses cannot be deleted.",
+      href: `${base}/warehouses`,
+      icon: Warehouse,
+      accent: "#0ea5e9",
+      count: warehouseCount,
+      countLabel: "active",
     },
   ];
 
@@ -195,15 +210,6 @@ const SystemSettingsHub = () => {
       icon: Truck,
       accent: "#0ea5e9",
       count: shippingCount,
-      countLabel: "modes",
-    },
-    {
-      title: "Payment Modes",
-      description: "Manage payment methods accepted during checkout and invoicing.",
-      href: `${base}/payment_modes`,
-      icon: CreditCard,
-      accent: "#10b981",
-      count: paymentCount,
       countLabel: "modes",
     },
     {
@@ -252,6 +258,17 @@ const SystemSettingsHub = () => {
       {/* Finance Configuration section */}
       <SectionHeader title="Finance Configuration" />
       <div className="row g-3">
+        <div className="col-xl-3 col-lg-4 col-md-6">
+          <TileCard tile={{
+            title: "Payment Modes",
+            description: "Manage payment methods accepted during checkout and invoicing.",
+            href: `${base}/payment_modes`,
+            icon: CreditCard,
+            accent: "#10b981",
+            count: paymentCount,
+            countLabel: "modes",
+          }} />
+        </div>
         <div className="col-xl-3 col-lg-4 col-md-6">
           <TileCard tile={{
             title: "Expense Codes",

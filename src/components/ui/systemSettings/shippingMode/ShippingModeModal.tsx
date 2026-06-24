@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useMutation } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { useDispatch } from "react-redux";
+import { X, Check, RefreshCw } from "react-feather";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -99,8 +100,12 @@ const ShippingModeModal = ({ isOpen, onClose, onSuccess, editData }: Props) => {
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-light" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn btn-primary">{editData ? "Update" : "Add"}</button>
+              <button type="button" className="btn btn-cancel me-2" onClick={onClose}>
+                <X size={14} className="me-1" />Cancel
+              </button>
+              <button type="submit" className="btn btn-submit">
+                {editData ? <><RefreshCw size={14} className="me-1" />Update</> : <><Check size={14} className="me-1" />Add</>}
+              </button>
             </div>
           </form>
         </div>

@@ -163,6 +163,8 @@ export const GET_SALES_ORDER_QUERY = gql`
         invoiceqty
         bordpcs
         bordqty
+        discountsource
+        discountpromotionid
       }
     }
   }
@@ -215,6 +217,8 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
         memoqtyremain
         unitprice
         discountpercent
+        discountsource
+        discountpromotionid
       }
     }
   }
@@ -263,6 +267,8 @@ export const GET_MEMO_DETAIL_QUERY = gql`
         memoqtyremain
         unitprice
         discountpercent
+        discountsource
+        discountpromotionid
       }
     }
   }

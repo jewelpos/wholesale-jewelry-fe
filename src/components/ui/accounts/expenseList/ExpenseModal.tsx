@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { useDispatch } from "react-redux";
+import { X, Check, RefreshCw } from "react-feather";
 import dayjs from "dayjs";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
@@ -248,11 +249,16 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn btn-light" onClick={onClose}>
+              <button type="button" className="btn btn-cancel me-2" onClick={onClose}>
+                <X size={14} className="me-1" />
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary">
-                {editData ? "Update Expense" : "Add Expense"}
+              <button type="submit" className="btn btn-submit">
+                {editData ? (
+                  <><RefreshCw size={14} className="me-1" />Update Expense</>
+                ) : (
+                  <><Check size={14} className="me-1" />Add Expense</>
+                )}
               </button>
             </div>
           </form>

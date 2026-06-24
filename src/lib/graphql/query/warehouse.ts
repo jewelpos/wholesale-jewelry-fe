@@ -44,6 +44,7 @@ const WAREHOUSE_SETTINGS_FIELDS = `
   allowpcsentry
   allowcarriage
   storepolicy
+  defaultsalestaxrate
 `;
 
 export const GET_ALL_WAREHOUSE_SETTINGS_QUERY = gql`
@@ -58,6 +59,20 @@ export const GET_WAREHOUSE_SETTINGS_QUERY = gql`
   query GetWarehouseSettings($storeid: Int!, $warehouseid: Int!) {
     getWarehouseSettings(storeid: $storeid, warehouseid: $warehouseid) {
       ${WAREHOUSE_SETTINGS_FIELDS}
+    }
+  }
+`;
+
+export const GET_WAREHOUSES_FOR_CRUD_QUERY = gql`
+  query GetWarehousesForCRUD($storeid: Int!) {
+    getWarehousesForCRUD(storeid: $storeid) {
+      warehouseid
+      outletid
+      warehousename
+      warehouseaddress
+      warehousephone
+      issystem
+      isdeletedat
     }
   }
 `;

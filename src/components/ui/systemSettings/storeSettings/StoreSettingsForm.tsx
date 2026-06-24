@@ -30,6 +30,7 @@ interface WarehouseSettingsRow {
   allowpcsentry: number | null;
   allowcarriage: number | null;
   storepolicy: string | null;
+  defaultsalestaxrate: number | null;
 }
 
 type SettingsFormValues = Omit<WarehouseSettingsRow, "warehouseid" | "warehousename">;
@@ -50,6 +51,7 @@ const emptySettings = (): SettingsFormValues => ({
   allowpcsentry: null,
   allowcarriage: null,
   storepolicy: "",
+  defaultsalestaxrate: null,
 });
 
 const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
@@ -129,6 +131,7 @@ const StoreSettingsForm = () => {
           allowpcsentry: row.allowpcsentry,
           allowcarriage: row.allowcarriage,
           storepolicy: row.storepolicy ?? "",
+          defaultsalestaxrate: row.defaultsalestaxrate ?? null,
         });
         setDirty(false);
       }
@@ -167,6 +170,7 @@ const StoreSettingsForm = () => {
             allowpcsentry: form.allowpcsentry,
             allowcarriage: form.allowcarriage,
             storepolicy: form.storepolicy || null,
+            defaultsalestaxrate: form.defaultsalestaxrate != null ? Number(form.defaultsalestaxrate) : null,
           },
         },
       });
@@ -275,6 +279,20 @@ const StoreSettingsForm = () => {
                         onChange={e => set("tagpricekey", e.target.value === "" ? null : Number(e.target.value))}
                         placeholder="e.g. 1"
                       />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Default Sales Tax Rate (%)</label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        max="100"
+                        className="form-control form-control-sm"
+                        value={form.defaultsalestaxrate ?? ""}
+                        onChange={e => set("defaultsalestaxrate", e.target.value === "" ? null : Number(e.target.value))}
+                        placeholder="e.g. 8.875"
+                      />
+                      <div className="form-text" style={{ fontSize: 11 }}>Auto-filled on new invoices when no customer rate is set</div>
                     </div>
                     <div className="col-md-4 d-flex gap-4 align-items-end pb-1">
                       <div className="form-check">

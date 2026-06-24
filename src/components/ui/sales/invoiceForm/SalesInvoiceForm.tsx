@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bookmark, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
@@ -8,7 +8,7 @@ import withReactContent from "sweetalert2-react-content";
 import dayjs, { Dayjs } from "dayjs";
 import { Controller, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
-import { isApolloError, useMutation, useQuery } from "@apollo/client";
+import { isApolloError, useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -36,6 +36,7 @@ import {
   UPDATE_MEMO_AFTER_INVOICING_MUTATION,
 } from "@/lib/graphql/mutations/sales";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
+import { GET_ALL_WAREHOUSE_SETTINGS_QUERY } from "@/lib/graphql/query/warehouse";
 import { GET_INVOICE_BY_NUMBER_QUERY, GET_MEMO_DETAIL_QUERY, GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION } from "@/lib/graphql/mutations/customer";
@@ -45,6 +46,9 @@ import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_INVOICE_HOLDS_QUERY } from "@/lib/graphql/query/invoiceHold";
 import { SAVE_INVOICE_HOLD_MUTATION, DELETE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
+import { GET_PROMOTION_LIST_QUERY } from "@/lib/graphql/query/promotions";
+import { GET_PRODUCT_BULK_DISCOUNTS_QUERY } from "@/lib/graphql/query/bulkDiscounts";
+import { resolveDiscount, type BulkDiscountTier, type ActivePromotion } from "@/lib/utils/discountResolver";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { detectUserCurrency } from "@/lib/utils/currencyFormat";
@@ -81,6 +85,8 @@ type SalesInvoiceItemForm = {
   memoqtyremain?: number;
   unitprice?: number;
   discountpercent?: number;
+  discountsource?: string | null;
+  discountpromotionid?: number | null;
   maxpcs?: number;
   maxqty?: number;
   goldprice_used?: number;
@@ -207,6 +213,9 @@ type ToolItem = {
   itemquantity: number;
   unitprice: number;
   discountpercent?: number;
+  // discount metadata (not persisted to form)
+  _itemdiscount?: number;
+  _itemcategoryid?: number | null;
 };
 
 const toNum = (v: unknown) => {
@@ -506,6 +515,23 @@ const SalesInvoiceForm = ({
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
+
+  // ─── Discount resolution ────────────────────────────────────────────────
+  const { data: promotionsData } = useQuery(GET_PROMOTION_LIST_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId || !!invoiceId,
+  });
+  const activePromotions: ActivePromotion[] = promotionsData?.getPromotionList ?? [];
+  const [fetchBulkDiscounts] = useLazyQuery(GET_PRODUCT_BULK_DISCOUNTS_QUERY);
+  const bulkDiscountCache = useRef<Map<number, BulkDiscountTier[]>>(new Map());
+
+  const getBulkTiers = useCallback(async (itemid: number): Promise<BulkDiscountTier[]> => {
+    if (bulkDiscountCache.current.has(itemid)) return bulkDiscountCache.current.get(itemid)!;
+    const { data } = await fetchBulkDiscounts({ variables: { storeid: parsedStoreId, itemid: String(itemid) } });
+    const tiers: BulkDiscountTier[] = data?.getProductBulkDiscounts ?? [];
+    bulkDiscountCache.current.set(itemid, tiers);
+    return tiers;
+  }, [fetchBulkDiscounts, parsedStoreId]);
 
   const handlePrintDocumentNumber = async (documentNumber: number) => {
     if (!parsedStoreId || !documentNumber) return;
@@ -921,6 +947,8 @@ const SalesInvoiceForm = ({
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        discountsource: it.discountsource ?? null,
+        discountpromotionid: it.discountpromotionid ?? null,
       })),
     });
   }, [viewInvoiceQueryData, parsedStoreId, reset]);
@@ -991,6 +1019,11 @@ const SalesInvoiceForm = ({
     return Number.isFinite(n) ? n : undefined;
   }, [watchedWarehouseId]);
 
+  const { data: warehouseSettingsData } = useQuery(GET_ALL_WAREHOUSE_SETTINGS_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId || !!invoiceId,
+  });
+
   const customerId = watch("customerid");
   const shipSameAsBill = watch("shipSameAsBill");
   const { data: customerData } = useQuery(GET_CUSTOMER_QUERY, {
@@ -1052,6 +1085,19 @@ const SalesInvoiceForm = ({
       if (Number.isFinite(parsed)) setValue("invshippingmethod", parsed);
     }
 
+    // Auto-populate tax rate on new docs only: customer rate takes priority over warehouse default
+    if (!invoiceId) {
+      const customerRate = Number(c.custsalestax);
+      if (customerRate > 0) {
+        setValue("salestaxrate", customerRate);
+      } else {
+        const allSettings: any[] = warehouseSettingsData?.getAllWarehouseSettings ?? [];
+        const wSetting = allSettings.find((s: any) => s.warehouseid === parsedWarehouseId);
+        const warehouseRate = Number(wSetting?.defaultsalestaxrate ?? 0);
+        if (warehouseRate > 0) setValue("salestaxrate", warehouseRate);
+      }
+    }
+
     if (shipSameAsBill) {
       setValue("shiptocustomerid", customerId, {
         shouldDirty: false,
@@ -1064,7 +1110,7 @@ const SalesInvoiceForm = ({
       setValue("invshiptozip", c.custzip ?? "");
       setValue("invshiptophone", c.custphone1 ?? c.custphone2 ?? "");
     }
-  }, [customerData, customerId, setValue, shipSameAsBill]);
+  }, [customerData, customerId, setValue, shipSameAsBill, invoiceId, warehouseSettingsData, parsedWarehouseId]);
   useEffect(() => {
     if (!shipSameAsBill) return;
 
@@ -1191,20 +1237,50 @@ const SalesInvoiceForm = ({
     });
   };
 
-  const autoAddItem = (selected: ItemDetails) => {
+  const autoAddItem = async (selected: ItemDetails) => {
     const itemid = Number(selected.itemid);
-    const discountPct = Math.min(100, Math.max(0, Number(watch("discountpercent") || 0)));
+    const unitprice = Number(selected.itemsellprice || 0);
     const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
     const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
 
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
       const existingQty = Number(existing.itemquantity || 0);
-      update(dupIndex, {
-        ...existing,
-        itemquantity: mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1,
-      });
+      const newQty = mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1;
+      // Re-evaluate discount if not manually set
+      if (!existing.discountsource || existing.discountsource !== 'manual') {
+        const bulkTiers = await getBulkTiers(itemid);
+        const resolved = resolveDiscount({
+          itemDiscount: toNum(selected.itemdiscount),
+          unitprice,
+          qty: Math.abs(newQty),
+          bulkTiers,
+          activePromotions,
+          itemid,
+          categoryid: selected.itemcategoryid ?? null,
+          warehouseid: getValues('warehouseid'),
+        });
+        const prevDisc = toNum(existing.discountpercent);
+        const updated = { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid };
+        update(dupIndex, updated);
+        if (resolved.discountpercent !== prevDisc && resolved.discountsource) {
+          dispatch(showNotification({ message: `Discount updated: ${resolved.label}`, type: NOTIFICATION_TYPES.SUCCESS }));
+        }
+      } else {
+        update(dupIndex, { ...existing, itemquantity: newQty });
+      }
     } else {
+      const bulkTiers = await getBulkTiers(itemid);
+      const resolved = resolveDiscount({
+        itemDiscount: toNum(selected.itemdiscount),
+        unitprice,
+        qty: 1,
+        bulkTiers,
+        activePromotions,
+        itemid,
+        categoryid: selected.itemcategoryid ?? null,
+        warehouseid: getValues('warehouseid'),
+      });
       append({
         itemid,
         itemcode: selected.itemcode,
@@ -1213,15 +1289,17 @@ const SalesInvoiceForm = ({
         itemunit: selected.itemunit,
         itempcs: 0,
         itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
-        unitprice: Number(selected.itemsellprice || 0),
-        discountpercent: discountPct,
+        unitprice,
+        discountpercent: resolved.discountpercent,
+        discountsource: resolved.discountsource,
+        discountpromotionid: resolved.discountpromotionid,
       });
     }
     resetToolItem();
     setProductClearKey((k) => k + 1);
   };
 
-  const handleSaveToolItem = () => {
+  const handleSaveToolItem = async () => {
     const customerIdNumber = Number(getValues("customerid"));
     if (!Number.isFinite(customerIdNumber) || customerIdNumber <= 0) {
       dispatch(
@@ -1280,6 +1358,37 @@ const SalesInvoiceForm = ({
     const discountPctRaw = Number(toolItem.discountpercent || 0);
     const discountPct = Math.min(100, Math.max(0, discountPctRaw));
 
+    // Resolve discount for new items; for edits detect manual override
+    let resolvedSource: string | null = null;
+    let resolvedPromotionId: number | null = null;
+
+    if (editingIndex == null) {
+      // New line: resolve discount from item data + bulk + promotions
+      const bulkTiers = await getBulkTiers(Number(toolItem.itemid));
+      const resolved = resolveDiscount({
+        itemDiscount: toolItem._itemdiscount ?? 0,
+        unitprice: unitPrice,
+        qty: Math.abs(normalizedQty),
+        bulkTiers,
+        activePromotions,
+        itemid: Number(toolItem.itemid),
+        categoryid: toolItem._itemcategoryid ?? null,
+        warehouseid: getValues('warehouseid'),
+      });
+      resolvedSource = resolved.discountsource;
+      resolvedPromotionId = resolved.discountpromotionid;
+    } else {
+      // Edit: if discount was changed by user vs existing, mark manual
+      const existingItem = getValues(`items.${editingIndex}`);
+      if (discountPct !== toNum(existingItem?.discountpercent)) {
+        resolvedSource = 'manual';
+        resolvedPromotionId = null;
+      } else {
+        resolvedSource = (existingItem as any)?.discountsource ?? null;
+        resolvedPromotionId = (existingItem as any)?.discountpromotionid ?? null;
+      }
+    }
+
     const nextItem: SalesInvoiceItemForm = {
       itemid: Number(toolItem.itemid),
       itemcode: toolItem.itemcode,
@@ -1296,6 +1405,8 @@ const SalesInvoiceForm = ({
       itemquantity: normalizedQty,
       unitprice: unitPrice,
       discountpercent: discountPct,
+      discountsource: resolvedSource,
+      discountpromotionid: resolvedPromotionId,
     };
 
     if (editingIndex == null) {
@@ -1362,8 +1473,35 @@ const SalesInvoiceForm = ({
         itemnontaxablesale: taxable === 1 ? 0 : net,
         itemtaxable: taxable,
         warehouseid: warehouseId,
+        discountsource: it.discountsource ?? null,
+        discountpromotionid: it.discountpromotionid ?? null,
       };
     });
+
+    // Auto-append discount summary to remarks (bulk + promo only, new invoices only)
+    const resolvedRemarks = (() => {
+      if (invoiceId) return formData.remarks ?? '';
+      const bulkItems = items.filter(i => i.discountsource === 'bulk');
+      const promoItems = items.filter(i => i.discountsource === 'promotion');
+      const parts: string[] = [];
+      if (bulkItems.length) parts.push(`Bulk discount applied on ${bulkItems.length} item(s)`);
+      if (promoItems.length) {
+        const byPromo: Record<string, number> = {};
+        promoItems.forEach(i => {
+          const key = String(i.discountpromotionid ?? 'promo');
+          byPromo[key] = (byPromo[key] ?? 0) + 1;
+        });
+        Object.entries(byPromo).forEach(([, count]) => {
+          const promoName = activePromotions.find(p => promoItems.some(pi => pi.discountpromotionid === p.promotionid))?.promotionname ?? 'Promotion';
+          parts.push(`${promoName} promo applied on ${count} item(s)`);
+        });
+      }
+      if (!parts.length) return formData.remarks ?? '';
+      const note = parts.join('; ') + '.';
+      const existing = (formData.remarks ?? '').trim();
+      if (existing.includes(note)) return existing;
+      return [existing, note].filter(Boolean).join(' ');
+    })();
 
     const payload = {
       storeid: parsedStoreId,
@@ -1382,7 +1520,7 @@ const SalesInvoiceForm = ({
       discountpercent: toNum(formData.discountpercent),
 
       invoicereference: formData.invoicereference,
-      remarks: formData.remarks,
+      remarks: resolvedRemarks,
 
       invbilltocompanyname: formData.invbilltocompanyname,
       invbilltoadd1: formData.invbilltoadd1,
@@ -2234,7 +2372,14 @@ const SalesInvoiceForm = ({
                         {isMemoView && <td className="text-end">{toNum(item?.memoqtyreturn) || 0}</td>}
                         {isMemoView && <td className="text-end">{toNum(item?.memoqtyremain) || 0}</td>}
                         <td className="text-end">{formatMoney(line.unit)}</td>
-                        <td className="text-end">{line.disc}</td>
+                        <td className="text-end">
+                          <div>{line.disc}</div>
+                          {item?.discountsource && item.discountsource !== 'item' && (
+                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                            </span>
+                          )}
+                        </td>
                         <td className="text-end">{formatMoney(line.net)}</td>
                         {!readOnly && (
                           <td className="text-center">
@@ -2330,6 +2475,8 @@ const SalesInvoiceForm = ({
                         goldprice_used: isWtItem ? goldRate : undefined,
                         premium_used: isWtItem ? premium : undefined,
                         labour_used: isWtItem ? labour : undefined,
+                        _itemdiscount: toNum(selected.itemdiscount),
+                        _itemcategoryid: selected.itemcategoryid ?? null,
                       }));
                     }}
                     onNotFound={() => dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))}
