@@ -18,7 +18,7 @@ const dateRenderer = (params: ICellRendererParams) =>
   params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "";
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
-  { headerName: "Item ID",            field: "itemid",             filter: "agNumberColumnFilter", hide: true },
+  { headerName: "Item ID",            field: "itemid",             filter: "agNumberColumnFilter", hide: true, sort: 'desc' },
   { headerName: "Item Code",          field: "itemcode",           filter: "agTextColumnFilter",   hide: false },
   { headerName: "Description",        field: "itemdescription",    filter: "agTextColumnFilter",   hide: false, resizable: true, tooltipField: "itemdescription" },
   { headerName: "Barcode ID",         field: "itembarcodeid",      filter: "agTextColumnFilter",   hide: false },
