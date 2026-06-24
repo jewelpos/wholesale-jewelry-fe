@@ -4,6 +4,7 @@ import { ColDef, ICellRendererParams } from "ag-grid-community";
 import ActionCellRenderer from "../../grid/ActionRenderer";
 import dayjs from "dayjs";
 import { TIME_FORMAT } from "@/lib/config/constants";
+import ItemCodeCellRenderer from "./ItemCodeCellRenderer";
 
 export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   if (params.value === null || params.value === undefined) return null;
@@ -19,7 +20,7 @@ const dateRenderer = (params: ICellRendererParams) =>
 
 export const productListColumnDefs: ColDef<ProductListType>[] = [
   { headerName: "Item ID",            field: "itemid",             filter: "agNumberColumnFilter", hide: true, sort: 'desc' },
-  { headerName: "Item Code",          field: "itemcode",           filter: "agTextColumnFilter",   hide: false },
+  { headerName: "Item Code",          field: "itemcode",           filter: "agTextColumnFilter",   hide: false, cellRenderer: ItemCodeCellRenderer, width: 160, minWidth: 120 },
   { headerName: "Description",        field: "itemdescription",    filter: "agTextColumnFilter",   hide: false, resizable: true, tooltipField: "itemdescription" },
   { headerName: "Barcode ID",         field: "itembarcodeid",      filter: "agTextColumnFilter",   hide: false },
   { headerName: "Sell Price",         field: "itemsellprice",      filter: "agNumberColumnFilter", hide: false, cellRenderer: currencyFormattedCellRenderer },

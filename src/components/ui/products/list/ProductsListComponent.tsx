@@ -168,8 +168,8 @@ const ProductsListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 240,
-        minWidth: 240,
+        width: 185,
+        minWidth: 185,
         suppressAutoSize: true,
         sortable: false,
         filter: false,
