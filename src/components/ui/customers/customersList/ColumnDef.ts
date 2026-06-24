@@ -3,12 +3,17 @@ import { CustomersListType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import CustomerIdCellRenderer from "./CustomerIdCellRenderer";
 export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
-    headerName: "Customer id",
+    headerName: "Customer ID",
     field: "customerid",
     filter: "agNumberColumnFilter",
     enableRowGroup: false,
+    sort: "desc",
+    width: 140,
+    minWidth: 110,
+    cellRenderer: CustomerIdCellRenderer,
   },
   {
     headerName: "Name",
