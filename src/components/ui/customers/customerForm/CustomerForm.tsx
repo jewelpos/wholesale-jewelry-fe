@@ -14,6 +14,7 @@ import api from "@/lib/axios";
 import { CustomerFormType } from "@/types/customer";
 import CustomerInputsA from "./CustomerInputsA";
 import CustomerInputsB from "./CustomerInputsB";
+import CustomerDocumentsSection from "./CustomerDocumentsSection";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { useQuery } from "@apollo/client";
 import PlaceHolder from "../../PlaceHolder";
@@ -299,6 +300,16 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Documents section — edit mode only (customerid exists) */}
+        {parsedCustomerId && !isNaN(parsedCustomerId) && !customerLoading && (
+          <div className="container-fluid">
+            <CustomerDocumentsSection
+              customerid={parsedCustomerId}
+              storeid={parsedStoreId}
+            />
           </div>
         )}
 

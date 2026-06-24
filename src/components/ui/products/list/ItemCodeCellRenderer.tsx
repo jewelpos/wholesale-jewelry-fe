@@ -95,10 +95,14 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
       )}
 
       {!!data.hasbulkdiscount && (
-        <Tag size={11} style={{ color: "#2563eb", flexShrink: 0 }} title="Bulk discount available" />
+        <span title="Bulk discount available" style={{ display: "flex", flexShrink: 0 }}>
+          <Tag size={11} style={{ color: "#2563eb" }} />
+        </span>
       )}
       {!!data.haspromotion && (
-        <Star size={11} style={{ color: "#d97706", flexShrink: 0 }} title="Active promotion" />
+        <span title="Active promotion" style={{ display: "flex", flexShrink: 0 }}>
+          <Star size={11} style={{ color: "#d97706" }} />
+        </span>
       )}
 
       <a
