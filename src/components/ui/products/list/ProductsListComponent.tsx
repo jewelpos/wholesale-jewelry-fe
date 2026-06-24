@@ -33,6 +33,7 @@ import ProductActions from "./ProductActions";
 import ProductListSummaryCards from "./ProductListSummaryCards";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
+import ProductFilterPills from "./ProductFilterPills";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -46,6 +47,24 @@ const ProductsListComponent = () => {
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const { currentMenu } = useMenu();
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  const SOLD_GROUP = ["soldtoday", "soldweek", "soldmonth"];
+
+  const handlePillToggle = useCallback((key: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (SOLD_GROUP.includes(key)) {
+        SOLD_GROUP.forEach(k => next.delete(k));
+        if (!prev.has(key)) next.add(key);
+      } else {
+        next.has(key) ? next.delete(key) : next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handlePillClear = useCallback(() => setActiveFilters(new Set()), []);
 
   const handleOnGridReady = (params: GridReadyEvent<ProductListType>) => {
     setGridReady(true);
@@ -95,6 +114,21 @@ const ProductsListComponent = () => {
             ],
           };
         }
+        // Merge pill-driven filters
+        const extraFilters: any[] = [];
+        if (activeFilters.has("bulk"))
+          extraFilters.push({ key: "hasbulkdiscount", value: { filterType: "number", type: "greaterThan", filter: 0 } });
+        if (activeFilters.has("promo"))
+          extraFilters.push({ key: "haspromotion", value: { filterType: "number", type: "greaterThan", filter: 0 } });
+        if (activeFilters.has("zerostock"))
+          extraFilters.push({ key: "itemquantityinhand", value: { filterType: "number", type: "lessThanOrEqual", filter: 0 } });
+        const qfKeys = ["new", "soldtoday", "soldweek", "soldmonth"].filter(k => activeFilters.has(k));
+        if (qfKeys.length > 0)
+          extraFilters.push({ key: "__quickfilter__", value: { filterType: "text", type: "equals", filter: qfKeys.join(",") } });
+
+        if (extraFilters.length > 0)
+          filtersMain = { ...filtersMain, filters: [...filtersMain.filters, ...extraFilters] };
+
         const result = await handleTryCatch(async () => {
           const { data } = await getProductList({
             variables: {
@@ -133,6 +167,7 @@ const ProductsListComponent = () => {
       dispatch,
       getProductList,
       debouncedSearch,
+      activeFilters,
     ]
   );
 
@@ -203,6 +238,11 @@ const ProductsListComponent = () => {
             setSelectedOutlet={setSelectedOutlet}
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
+          />
+          <ProductFilterPills
+            activeFilters={activeFilters}
+            onToggle={handlePillToggle}
+            onClear={handlePillClear}
           />
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid

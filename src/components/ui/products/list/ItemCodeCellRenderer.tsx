@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ICellRendererParams } from "ag-grid-community";
-import { Camera, X } from "react-feather";
+import { Camera, Tag, Star, X } from "react-feather";
 import { createPortal } from "react-dom";
 import { ProductListType } from "@/types/product";
 
@@ -92,6 +92,13 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
         }}>
           NEW
         </span>
+      )}
+
+      {!!data.hasbulkdiscount && (
+        <Tag size={11} style={{ color: "#2563eb", flexShrink: 0 }} title="Bulk discount available" />
+      )}
+      {!!data.haspromotion && (
+        <Star size={11} style={{ color: "#d97706", flexShrink: 0 }} title="Active promotion" />
       )}
 
       <a

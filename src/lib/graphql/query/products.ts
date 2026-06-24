@@ -389,6 +389,8 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         adjustedby
         lasttransferdate
         transferby
+        hasbulkdiscount
+        haspromotion
       }
     }
   }
