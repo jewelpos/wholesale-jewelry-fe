@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ICellRendererParams } from "ag-grid-community";
+import { Paperclip } from "lucide-react";
 import { CustomersListType } from "@/types/customer";
 
 const NEW_DAYS = 30;
@@ -30,6 +31,11 @@ const CustomerIdCellRenderer = (params: ICellRendererParams<CustomersListType>) 
           flexShrink: 0, textTransform: "uppercase",
         }}>
           NEW
+        </span>
+      )}
+      {!!data.hasdocuments && (
+        <span title="Has documents" style={{ display: "flex", flexShrink: 0 }}>
+          <Paperclip size={11} style={{ color: "#6c757d" }} />
         </span>
       )}
     </div>

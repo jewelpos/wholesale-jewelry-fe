@@ -173,6 +173,7 @@ export type CustomersListType = {
   custstate: string;
   custzip: string;
   custaddress: string;
+  hasdocuments?: number;
 };
 
 export type CustomersListResponseType = {

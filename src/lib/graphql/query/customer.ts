@@ -289,6 +289,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
         warehousename
         warehouseid
         outletid
+        hasdocuments
       }
     }
   }
