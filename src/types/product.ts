@@ -79,6 +79,7 @@ export type ProductListType = {
   adjustedby?: string;
   lasttransferdate?: string;
   transferby?: string;
+  itemunit?: string;
   itemmetal?: string;
   itemmetalpercent?: string;
   itempremium?: string;
