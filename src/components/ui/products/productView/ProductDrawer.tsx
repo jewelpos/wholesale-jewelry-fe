@@ -791,34 +791,24 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
                 </div>
               ) : (
                 <>
-                  <div style={{ marginBottom: 10 }}>
+                  <div style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Sold</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 0", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                      {[
-                        { label: "Qty Sold", value: stats?.totalsoldqty != null ? String(stats.totalsoldqty) : "—" },
-                        { label: "Pcs Sold", value: stats?.pcssold != null ? String(stats.pcssold) : "—" },
-                        { label: "Revenue", value: stats?.totalsoldvalue != null ? fmt(stats.totalsoldvalue) : "—" },
-                        ...(isAtLeastManager ? [
-                          { label: "Cost", value: stats?.totalsoldcost != null ? fmt(stats.totalsoldcost) : "—" },
-                          { label: "Profit", value: stats?.totalsoldprofit != null ? fmt(stats.totalsoldprofit) : "—" },
-                        ] : []),
-                        { label: "Last Sale", value: stats?.lastsaledate ? new Date(Number(stats.lastsaledate)).toLocaleDateString() : "—" },
-                      ].map((s, i, arr) => (
-                        <StatBox key={s.label} label={s.label} value={s.value} borderRight={i < arr.length - 1} />
-                      ))}
-                    </div>
+                    <DetailRow label="Qty Sold"  value={stats?.totalsoldqty  != null ? String(stats.totalsoldqty)  : "—"} />
+                    <DetailRow label="Pcs Sold"  value={stats?.pcssold       != null ? String(stats.pcssold)       : "—"} />
+                    <DetailRow label="Revenue"   value={stats?.totalsoldvalue != null ? fmt(stats.totalsoldvalue)   : "—"} />
+                    {isAtLeastManager && <>
+                      <DetailRow label="Cost"   value={stats?.totalsoldcost   != null ? fmt(stats.totalsoldcost)   : "—"} />
+                      <DetailRow label="Profit" value={stats?.totalsoldprofit != null ? fmt(stats.totalsoldprofit) : "—"} />
+                    </>}
+                    <DetailRow label="Last Sale" value={stats?.lastsaledate ? new Date(Number(stats.lastsaledate)).toLocaleDateString() : "—"} />
                   </div>
                   <div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Purchases</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 0", background: "#f0f4f8", borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                      {[
-                        { label: "Qty Received", value: stats?.qtypurchased != null ? String(stats.qtypurchased) : "—" },
-                        ...(isAtLeastManager ? [{ label: "Avg Cost", value: stats?.avgpurchasecost != null ? fmt(stats.avgpurchasecost) : "—" }] : []),
-                        { label: "Last Received", value: stats?.lastpurchasedate ? new Date(Number(stats.lastpurchasedate)).toLocaleDateString() : "—" },
-                      ].map((s, i, arr) => (
-                        <StatBox key={s.label} label={s.label} value={s.value} borderRight={i < arr.length - 1} />
-                      ))}
-                    </div>
+                    <DetailRow label="Qty Received"  value={stats?.qtypurchased    != null ? String(stats.qtypurchased)    : "—"} />
+                    {isAtLeastManager &&
+                      <DetailRow label="Avg Cost"    value={stats?.avgpurchasecost != null ? fmt(stats.avgpurchasecost)   : "—"} />
+                    }
+                    <DetailRow label="Last Received" value={stats?.lastpurchasedate ? new Date(Number(stats.lastpurchasedate)).toLocaleDateString() : "—"} />
                   </div>
                 </>
               )}
