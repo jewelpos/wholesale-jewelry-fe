@@ -86,6 +86,7 @@ export type ProductListType = {
   broakeragepercent?: number;
   hasbulkdiscount?: number;
   haspromotion?: number;
+  hastransactions?: boolean;
 };
 
 export type ProductListTypeResponseType = {

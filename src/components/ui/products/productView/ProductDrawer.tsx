@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQuery } from "@apollo/client";
+import { useQuery, useLazyQuery } from "@apollo/client";
 import { X, Edit, Printer, Package, ArrowLeft } from "react-feather";
 import { useRouter } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   GET_ITEM_CATEGORIES_QUERY,
   GET_ITEM_SUBCATEGORIES_QUERY,
   GET_PRODUCT_LIST_QUERY,
+  GET_PRODUCT_STATS_QUERY,
 } from "@/lib/graphql/query/products";
 import { useUserRole } from "@/hooks/useUserRole";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
@@ -147,6 +148,13 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
+  const [statsLoaded, setStatsLoaded] = useState(false);
+
+  const [fetchStats, { data: statsData, loading: statsLoading }] = useLazyQuery(GET_PRODUCT_STATS_QUERY, {
+    fetchPolicy: "cache-first",
+  });
+
+  const stats = statsData?.getProductStats;
   const { basePath } = useDefaultRoute();
   const router = useRouter();
   const { isAtLeastManager } = useUserRole();
@@ -758,6 +766,63 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
                 )}
               </div>
             )}
+
+            {/* Sales Analytics — lazy loaded on demand */}
+            <div style={{ borderTop: "1px solid #e2e8f0", padding: "14px 14px 4px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "#94a3b8" }}>
+                  Sales Analytics
+                </div>
+                {!statsLoaded && (
+                  <button
+                    onClick={() => { setStatsLoaded(true); fetchStats({ variables: { itemcode, outletid: outletId } }); }}
+                    style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", color: "#475569" }}
+                  >
+                    Load
+                  </button>
+                )}
+              </div>
+              {!statsLoaded ? (
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>Click Load to fetch sold &amp; purchase analytics for this item.</div>
+              ) : statsLoading ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
+                  <div className="spinner-border spinner-border-sm text-secondary" />
+                  <span style={{ fontSize: 12, color: "#94a3b8" }}>Loading…</span>
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Sold</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 0", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+                      {[
+                        { label: "Qty Sold", value: stats?.totalsoldqty != null ? String(stats.totalsoldqty) : "—" },
+                        { label: "Pcs Sold", value: stats?.pcssold != null ? String(stats.pcssold) : "—" },
+                        { label: "Revenue", value: stats?.totalsoldvalue != null ? fmt(stats.totalsoldvalue) : "—" },
+                        ...(isAtLeastManager ? [
+                          { label: "Cost", value: stats?.totalsoldcost != null ? fmt(stats.totalsoldcost) : "—" },
+                          { label: "Profit", value: stats?.totalsoldprofit != null ? fmt(stats.totalsoldprofit) : "—" },
+                        ] : []),
+                        { label: "Last Sale", value: stats?.lastsaledate ? new Date(Number(stats.lastsaledate)).toLocaleDateString() : "—" },
+                      ].map((s, i, arr) => (
+                        <StatBox key={s.label} label={s.label} value={s.value} borderRight={i < arr.length - 1} />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Purchases</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 0", background: "#f0f4f8", borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+                      {[
+                        { label: "Qty Received", value: stats?.qtypurchased != null ? String(stats.qtypurchased) : "—" },
+                        ...(isAtLeastManager ? [{ label: "Avg Cost", value: stats?.avgpurchasecost != null ? fmt(stats.avgpurchasecost) : "—" }] : []),
+                        { label: "Last Received", value: stats?.lastpurchasedate ? new Date(Number(stats.lastpurchasedate)).toLocaleDateString() : "—" },
+                      ].map((s, i, arr) => (
+                        <StatBox key={s.label} label={s.label} value={s.value} borderRight={i < arr.length - 1} />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div style={{ height: 28 }} />
           </>

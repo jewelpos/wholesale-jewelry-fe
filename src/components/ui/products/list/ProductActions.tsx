@@ -89,10 +89,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   };
 
   const hasTransactions = !!(
-    Number(data.qtypurchased    ?? 0) !== 0 ||
+    data.hastransactions ||
     Number(data.itemquantityinhand ?? 0) !== 0 ||
-    Number(data.totalsoldqty    ?? 0) !== 0 ||
-    Number(data.overall_qty     ?? 0) !== 0
+    Number(data.overall_qty ?? 0) !== 0
   );
 
   const handleAdjustment = (e?: React.MouseEvent) => {
@@ -162,6 +161,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({
           href="#"
           onClick={handleAdjustment}
           scroll={false}
+          title="Adjust Stock"
         >
           <Settings className="feather-view" />
         </Link>

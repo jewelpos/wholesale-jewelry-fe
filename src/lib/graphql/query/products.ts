@@ -318,6 +318,12 @@ export const GET_ALL_INVENTORY_TAG_LABELS_QUERY = gql`
   }
 `;
 
+export const GET_DISTINCT_PRODUCT_LIST_VALUES = gql`
+  query GetDistinctProductListValues($outletid: Int!, $field: String!) {
+    getDistinctProductListValues(outletid: $outletid, field: $field)
+  }
+`;
+
 export const GET_PRODUCT_LIST_SUMMARY_QUERY = gql`
   query GetProductListSummary($outletid: Int!) {
     getProductListSummary(outletid: $outletid) {
@@ -354,6 +360,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         itemid
         itemdescription
         itembarcodeid
+        itemunit
         itemsellprice
         categoryname
         subcategoryname
@@ -391,7 +398,24 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         transferby
         hasbulkdiscount
         haspromotion
+        hastransactions
       }
+    }
+  }
+`;
+
+export const GET_PRODUCT_STATS_QUERY = gql`
+  query GetProductStats($itemcode: String!, $outletid: Int!) {
+    getProductStats(itemcode: $itemcode, outletid: $outletid) {
+      totalsoldqty
+      pcssold
+      totalsoldvalue
+      totalsoldcost
+      totalsoldprofit
+      lastsaledate
+      qtypurchased
+      avgpurchasecost
+      lastpurchasedate
     }
   }
 `;
