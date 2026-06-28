@@ -9,14 +9,16 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_PROMOTION_QUERY } from "@/lib/graphql/query/promotions";
 import { GET_ITEM_CATEGORIES_QUERY } from "@/lib/graphql/query/products";
-import { GET_PRODUCT_BY_ITEMCODE_QUERY } from "@/lib/graphql/query/products";
 import { CREATE_PROMOTION_MUTATION, UPDATE_PROMOTION_MUTATION } from "@/lib/graphql/mutations/promotions";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { PromotionItem } from "@/types/promotion";
 import ButtonLoader from "@/components/ui/ButtonLoader";
+import SelectProduct from "@/components/forms/SelectProduct";
 
 const emptyRule = (): PromotionItem => ({
   itemid: null,
+  itemcode: null,
+  itemname: null,
   categoryid: null,
   pricerangemin: null,
   pricerangemax: null,
@@ -42,12 +44,11 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
   const [isactive, setIsactive] = useState(1);
   const [description, setDescription] = useState("");
   const [rules, setRules] = useState<PromotionItem[]>([emptyRule()]);
-  const [itemcodeInputs, setItemcodeInputs] = useState<string[]>([""]);
   const [saving, setSaving] = useState(false);
+  const [loadingPromo, setLoadingPromo] = useState(isEdit);
 
   const [getPromotion] = useLazyQuery(GET_PROMOTION_QUERY, { fetchPolicy: "network-only" });
   const [getCategories] = useLazyQuery(GET_ITEM_CATEGORIES_QUERY);
-  const [lookupProduct] = useLazyQuery(GET_PRODUCT_BY_ITEMCODE_QUERY, { fetchPolicy: "network-only" });
   const [categories, setCategories] = useState<{ categoryid: number; categoryname: string }[]>([]);
 
   const [createPromotion] = useMutation(CREATE_PROMOTION_MUTATION);
@@ -61,9 +62,18 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
 
   useEffect(() => {
     if (!isEdit || !promotionId) return;
+    setLoadingPromo(true);
     getPromotion({ variables: { storeid: parsedStoreId, promotionid: promotionId } }).then(r => {
+      setLoadingPromo(false);
+      if (r.error) {
+        dispatch(showNotification({ message: `Failed to load promotion: ${r.error.message}`, type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
       const p = r.data?.getPromotion;
-      if (!p) return;
+      if (!p) {
+        dispatch(showNotification({ message: "Promotion not found", type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
       setName(p.promotionname ?? "");
       setStartdate(p.startdate ? p.startdate.slice(0, 10) : "");
       setEnddate(p.enddate ? p.enddate.slice(0, 10) : "");
@@ -71,34 +81,39 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
       setDescription(p.description ?? "");
       const loaded = (p.items ?? []).map((i: any) => ({ ...i }));
       setRules(loaded.length > 0 ? loaded : [emptyRule()]);
-      setItemcodeInputs((p.items ?? []).map((i: any) => i.itemid ?? "").concat(loaded.length === 0 ? [""] : []));
     });
-  }, [isEdit, promotionId, parsedStoreId, getPromotion]);
+  }, [isEdit, promotionId, parsedStoreId, getPromotion, dispatch]);
 
   const updateRule = (idx: number, field: keyof PromotionItem, value: any) => {
     setRules(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
   };
 
-  const handleItemcodeBlur = async (idx: number, code: string) => {
-    if (!code.trim()) { updateRule(idx, "itemid", null); updateRule(idx, "itemname", null); return; }
-    const r = await lookupProduct({ variables: { itemcode: code.trim(), storeid: parsedStoreId } });
-    const p = r.data?.getProductByItemCode;
-    if (p) {
-      updateRule(idx, "itemid", String(p.itemid));
-      updateRule(idx, "itemname", p.itemdescription);
-    } else {
-      dispatch(showNotification({ message: `Item "${code}" not found`, type: NOTIFICATION_TYPES.ERROR }));
+  // Called when user selects a product from SelectProduct dropdown
+  const handleProductSelect = (idx: number, data: any) => {
+    if (!data) {
+      setRules(prev => prev.map((r, i) =>
+        i === idx ? { ...r, itemid: null, itemcode: null, itemname: null } : r
+      ));
+      return;
     }
+    setRules(prev => prev.map((r, i) =>
+      i === idx ? {
+        ...r,
+        itemid: String(data.itemid),
+        itemcode: data.itemcode,
+        itemname: data.itemdescription,
+        // Clear category when item is selected
+        categoryid: null,
+      } : r
+    ));
   };
 
   const addRule = () => {
     setRules(prev => [...prev, emptyRule()]);
-    setItemcodeInputs(prev => [...prev, ""]);
   };
 
   const removeRule = (idx: number) => {
     setRules(prev => prev.filter((_, i) => i !== idx));
-    setItemcodeInputs(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleSave = async () => {
@@ -196,16 +211,22 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
       <div className="card mt-3" style={{ border: "1px solid #e2e8f0", borderRadius: 8 }}>
         <div className="card-body">
           <h6 style={{ fontWeight: 700, fontSize: 14, color: "#1e293b", marginBottom: 4 }}>Discount Rules</h6>
+          {loadingPromo && (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "#64748b", fontSize: 13 }}>
+              <span className="spinner-border spinner-border-sm me-2" style={{ width: 14, height: 14 }} />
+              Loading promotion data...
+            </div>
+          )}
+          {!loadingPromo && (<>
           <p style={{ fontSize: 12, color: "#64748b", marginBottom: 14 }}>
-            Each rule applies a discount to a specific item or category. Enter the item code to look up the product, or select a category.
+            Each rule applies a discount to a specific item or category. Search by item code, description, or barcode — or select a category.
           </p>
           <div style={{ overflowX: "auto" }}>
-            <table className="table table-sm" style={{ fontSize: 12, minWidth: 820 }}>
+            <table className="table table-sm" style={{ fontSize: 12, minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#f8fafc" }}>
-                  <th style={{ fontWeight: 600, color: "#475569", width: 130 }}>Item Code</th>
-                  <th style={{ fontWeight: 600, color: "#475569" }}>Item Name</th>
-                  <th style={{ fontWeight: 600, color: "#475569", width: 140 }}>Category</th>
+                  <th style={{ fontWeight: 600, color: "#475569", minWidth: 260 }}>Item (search by code / name / barcode)</th>
+                  <th style={{ fontWeight: 600, color: "#475569", width: 150 }}>— or — Category</th>
                   <th style={{ fontWeight: 600, color: "#475569", width: 90 }}>Min Price</th>
                   <th style={{ fontWeight: 600, color: "#475569", width: 90 }}>Max Price</th>
                   <th style={{ fontWeight: 600, color: "#475569", width: 80 }}>Req Qty</th>
@@ -218,25 +239,42 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
                 {rules.map((rule, idx) => (
                   <tr key={idx}>
                     <td style={{ padding: "4px 6px" }}>
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        value={itemcodeInputs[idx] ?? ""}
-                        onChange={e => setItemcodeInputs(prev => prev.map((v, i) => i === idx ? e.target.value : v))}
-                        onBlur={e => handleItemcodeBlur(idx, e.target.value)}
-                        placeholder="Itemcode"
+                      <SelectProduct
+                        storeId={parsedStoreId}
+                        hasWarehouseId={false}
+                        value={rule.itemid ? Number(rule.itemid) : null}
+                        initialLabel={
+                          rule.itemid && (rule.itemcode || rule.itemname)
+                            ? `${rule.itemcode ?? ""}${rule.itemname ? ` - ${rule.itemname}` : ""}`
+                            : undefined
+                        }
+                        onChange={(itemid: number | null) => {
+                          if (!itemid) handleProductSelect(idx, null);
+                        }}
+                        onChangeAdditional={(data: any) => {
+                          if (data) handleProductSelect(idx, data);
+                          else handleProductSelect(idx, null);
+                        }}
+                        disableField={!!rule.categoryid}
+                        className=""
                       />
-                    </td>
-                    <td style={{ padding: "4px 6px", verticalAlign: "middle" }}>
-                      <span style={{ fontSize: 11, color: rule.itemname ? "#1e293b" : "#94a3b8", fontStyle: rule.itemname ? "normal" : "italic" }}>
-                        {rule.itemname || (rule.itemid ? `ID: ${rule.itemid}` : "—")}
-                      </span>
                     </td>
                     <td style={{ padding: "4px 6px" }}>
                       <select
                         className="form-select form-select-sm"
                         value={rule.categoryid ?? ""}
-                        onChange={e => updateRule(idx, "categoryid", e.target.value ? Number(e.target.value) : null)}
+                        onChange={e => {
+                          const val = e.target.value ? Number(e.target.value) : null;
+                          updateRule(idx, "categoryid", val);
+                          // Clear item when category is selected
+                          if (val) {
+                            setRules(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, categoryid: val, itemid: null, itemcode: null, itemname: null } : r
+                            ));
+                          } else {
+                            updateRule(idx, "categoryid", null);
+                          }
+                        }}
                         disabled={!!rule.itemid}
                       >
                         <option value="">— Any —</option>
@@ -278,6 +316,7 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
           <button type="button" className="btn btn-sm btn-outline-primary" onClick={addRule}>
             <PlusCircle size={12} style={{ marginRight: 5 }} />Add Rule
           </button>
+          </>)}
         </div>
       </div>
 

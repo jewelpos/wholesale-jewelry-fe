@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -155,8 +155,7 @@ const SupplierPaymentsComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{ filter: !debouncedSearch }}
-              masterDetail
+                            masterDetail
               detailCellRenderer={SupplierAppliedPaymentComponent}
               detailRowAutoHeight
             />

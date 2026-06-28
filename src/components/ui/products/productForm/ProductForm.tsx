@@ -246,6 +246,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
                 discountamount: Number(t.discountamount) || 0,
                 discounttype: t.discounttype,
                 warehouseid: t.warehouseid ?? null,
+                startdate: t.startdate || null,
+                enddate: t.enddate || null,
               })),
             },
           });
@@ -307,6 +309,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
               discountamount: r.discountamount ?? 0,
               discounttype: r.discounttype ?? "percent",
               warehouseid: r.warehouseid ?? null,
+              startdate: r.startdate ?? null,
+              enddate: r.enddate ?? null,
             })));
           }
         }

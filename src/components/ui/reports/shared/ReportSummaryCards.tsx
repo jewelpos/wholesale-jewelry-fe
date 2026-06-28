@@ -22,7 +22,8 @@ const fmt = {
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(v),
   number: (v: number) => new Intl.NumberFormat("en-US").format(Math.round(v)),
   percent: (v: number) => `${Number(v).toFixed(1)}%`,

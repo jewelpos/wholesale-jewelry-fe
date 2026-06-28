@@ -1,8 +1,9 @@
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import React, { forwardRef } from "react";
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 import CustomLoadingOverlay from "./CustomLoadingOverlay";
 import CustomNoRowsOverlay from "./CustomNoRowsOverlay";
 import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
+import { useFloatingFilter } from "./FloatingFilterContext";
 
 interface POSGridProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,16 +30,76 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       columnDefs,
       gridOptions,
       onGridReady,
-      defaultColDef = { filter: true, floatingFilter: false },
+      defaultColDef = { filter: true },
       rowSelection,
       domLayout = "normal",
       heightOffset = 300,
       fillHeight = false,
       ...props
     },
-    ref
+    forwardedRef
   ) => {
     const { autoSizeStrategy } = useAutoSizeAggrid();
+    const { showFilters } = useFloatingFilter();
+
+    const effectiveDefaultColDef = useMemo(() => ({
+      sortable: true,
+      enableRowGroup: true,
+      minWidth: 200,
+      ...defaultColDef,
+      floatingFilter: defaultColDef?.floatingFilter ?? showFilters,
+    }), [defaultColDef, showFilters]);
+
+    // Internal ref needed to access grid API for column state restore
+    const internalRef = useRef<AgGridReact>(null);
+
+    // Track user-set column visibility so we can restore it if AG Grid resets
+    const savedColStateRef = useRef<any[] | null>(null);
+    const isRestoringRef = useRef(false);
+
+    // Combine forwarded ref with internal ref
+    const combinedRef = useCallback(
+      (node: AgGridReact | null) => {
+        (internalRef as React.MutableRefObject<AgGridReact | null>).current = node;
+        if (typeof forwardedRef === "function") {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          (forwardedRef as React.MutableRefObject<AgGridReact | null>).current = node;
+        }
+      },
+      [forwardedRef]
+    );
+
+    // Save column state whenever the user toggles column visibility
+    const handleColumnVisible = useCallback(
+      (e: any) => {
+        if (!isRestoringRef.current) {
+          savedColStateRef.current = e.api.getColumnState();
+        }
+        // Forward to any parent-supplied handler
+        (props as any).onColumnVisible?.(e);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      []
+    );
+
+    // After columnDefs or defaultColDef changes, restore saved user column visibility.
+    // AG Grid re-applies defaults on prop changes which can reset user-set hide state.
+    useEffect(() => {
+      if (!savedColStateRef.current) return;
+      const api = internalRef.current?.api;
+      if (!api) return;
+      const saved = savedColStateRef.current;
+      const raf = requestAnimationFrame(() => {
+        isRestoringRef.current = true;
+        api.applyColumnState({ state: saved, applyOrder: false });
+        // Clear flag after AG Grid finishes processing
+        setTimeout(() => { isRestoringRef.current = false; }, 0);
+      });
+      return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [columnDefs, effectiveDefaultColDef]);
+
     return (
       <div
         className="ag-theme-quartz custom-theme"
@@ -48,14 +109,9 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
         }}
       >
         <AgGridReact
-          ref={ref}
+          ref={combinedRef}
           columnDefs={columnDefs}
-          defaultColDef={{
-            sortable: true,
-            enableRowGroup: true,
-            minWidth: 200,
-            ...defaultColDef,
-          }}
+          defaultColDef={effectiveDefaultColDef}
           rowHeight={28}
           headerHeight={32}
           gridOptions={{
@@ -100,6 +156,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           }}
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
+          onColumnVisible={handleColumnVisible}
           {...props}
         />
       </div>

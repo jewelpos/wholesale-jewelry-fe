@@ -318,10 +318,7 @@ const SalesListComponent = () => {
               onGridReady={handleOnGridReady}
               onSelectionChanged={handleSelectionChanged}
               fillHeight
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
+                            rowSelection={{
                 mode: "multiRow",
                 checkboxes: true,
                 headerCheckbox: true,

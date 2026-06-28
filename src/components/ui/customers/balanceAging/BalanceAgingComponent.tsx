@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -222,8 +222,7 @@ const BalanceAgingComponent = () => {
               columnDefs={balanceAgingColumnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
-              defaultColDef={{ filter: !debouncedSearch }}
-            />
+                          />
           </div>
         </div>
       </div>

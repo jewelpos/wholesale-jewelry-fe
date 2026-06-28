@@ -4,6 +4,7 @@ export type PromotionItem = {
   promotionitemid?: number;
   promotionid?: number;
   itemid?: string | null;
+  itemcode?: string | null;
   categoryid?: number | null;
   pricerangemin?: number | null;
   pricerangemax?: number | null;
@@ -33,4 +34,6 @@ export type BulkDiscountTierRow = {
   discountamount: number | string;
   discounttype: string;
   warehouseid?: number | null;
+  startdate?: string | null;
+  enddate?: string | null;
 };

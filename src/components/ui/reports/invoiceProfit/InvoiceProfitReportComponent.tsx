@@ -171,8 +171,7 @@ const InvoiceProfitReportComponent = () => {
               columnDefs={invoiceProfitColumnDefs}
               fillHeight
               onGridReady={handleOnGridReady}
-              defaultColDef={{ filter: !debouncedSearch }}
-              masterDetail
+                            masterDetail
               detailCellRenderer={InvoiceProfitItemsComponent}
               detailRowAutoHeight
             />

@@ -37,6 +37,35 @@ import dayjs from "dayjs";
 
 const NO_FILTER: never[] = [];
 
+// ── Date period pills ──────────────────────────────────────────────────────────
+type DatePill = "today" | "week" | "month" | "year";
+
+const DATE_PILLS: { key: DatePill; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "week",  label: "This Week" },
+  { key: "month", label: "This Month" },
+  { key: "year",  label: "This Year" },
+];
+
+const DATE_PILL_LABEL: Record<DatePill, string> = {
+  today: "Today",
+  week:  "This Week",
+  month: "This Month",
+  year:  "This Year",
+};
+
+function getDateRange(pill: DatePill): { startDate: string; endDate: string } {
+  const today = dayjs();
+  if (pill === "today")
+    return { startDate: today.format("YYYY-MM-DD"), endDate: today.format("YYYY-MM-DD") };
+  if (pill === "week")
+    return { startDate: today.startOf("week").format("YYYY-MM-DD"), endDate: today.format("YYYY-MM-DD") };
+  if (pill === "month")
+    return { startDate: today.startOf("month").format("YYYY-MM-DD"), endDate: today.format("YYYY-MM-DD") };
+  return { startDate: today.startOf("year").format("YYYY-MM-DD"), endDate: today.format("YYYY-MM-DD") };
+}
+
+// ── Payment mode pills ─────────────────────────────────────────────────────────
 type ModePill = "all" | "Check" | "Cash" | "Charge" | "CashChk" | "MnyOrd" | "CrdInv" | "WireTrn" | "ReDep" | "NSF" | "Void" | "WriteOff";
 
 const MODE_PILLS: { key: ModePill; label: string }[] = [
@@ -77,6 +106,7 @@ const AppliedPaymentsComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const [voidRow, setVoidRow] = useState<CustomerPaymentListType | null>(null);
   const [modePill, setModePill] = useState<ModePill>("all");
+  const [datePill, setDatePill] = useState<DatePill>("week");
 
   useEffect(() => {
     if (parsedOutletId) setSelectedOutlet(parsedOutletId);
@@ -84,9 +114,28 @@ const AppliedPaymentsComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("applied-payments");
 
-  const outletFilter = selectedOutlet
-    ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutlet } }]
-    : NO_FILTER;
+  // Compute current date range from selected pill
+  const dateRange = useMemo(() => getDateRange(datePill), [datePill]);
+
+  const dateFilter = useMemo(() => ([
+    {
+      key: "paymentdate",
+      value: {
+        filterType: "date",
+        type: "inRange",
+        dateFrom: dateRange.startDate,
+        dateTo: dateRange.endDate,
+      },
+    },
+  ]), [dateRange]);
+
+  const outletFilter = useMemo(() => selectedOutlet
+    ? [
+        { key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutlet } },
+        ...dateFilter,
+      ]
+    : NO_FILTER,
+  [selectedOutlet, dateFilter]);
 
   const { data: statsData, loading: statsLoading } = useQuery(GET_CUSTOMER_PAYMENT_LIST_QUERY, {
     variables: {
@@ -105,7 +154,9 @@ const AppliedPaymentsComponent = () => {
   const paymentStats = useMemo(() => {
     const rows: CustomerPaymentListType[] = statsData?.getCustomerPaymentList?.data ?? [];
     let totalCollected = 0, voidCount = 0, voidValue = 0, validCount = 0;
-    const monthlyMap: Record<string, number> = {};
+    // Group by day for today/week/month, by month for year
+    const useMonthly = datePill === "year";
+    const bucketMap: Record<string, number> = {};
 
     for (const r of rows) {
       const amt = Number(r.amountpaid) || 0;
@@ -115,29 +166,34 @@ const AppliedPaymentsComponent = () => {
       } else {
         totalCollected += amt;
         validCount++;
-        const month = r.paymentdate ? dayjs(r.paymentdate).format("MMM YYYY") : "Unknown";
-        monthlyMap[month] = (monthlyMap[month] || 0) + amt;
+        const bucket = r.paymentdate
+          ? useMonthly
+            ? dayjs(r.paymentdate).format("MMM YYYY")
+            : dayjs(r.paymentdate).format("DD MMM")
+          : "Unknown";
+        bucketMap[bucket] = (bucketMap[bucket] || 0) + amt;
       }
     }
 
-    const sortedMonths = Object.keys(monthlyMap).sort((a, b) =>
-      dayjs(a, "MMM YYYY").valueOf() - dayjs(b, "MMM YYYY").valueOf()
-    );
-    const monthlyLabels = sortedMonths.slice(-12);
-    const monthlyValues = monthlyLabels.map((m) => monthlyMap[m] || 0);
+    const sortedKeys = Object.keys(bucketMap).sort((a, b) => {
+      const fmt = useMonthly ? "MMM YYYY" : "DD MMM";
+      return dayjs(a, fmt).valueOf() - dayjs(b, fmt).valueOf();
+    });
+    const chartLabels = sortedKeys.slice(-31);
+    const chartValues = chartLabels.map((k) => bucketMap[k] || 0);
 
     return {
       totalCollected,
       voidCount,
       voidValue,
       avgPayment: validCount > 0 ? totalCollected / validCount : 0,
-      monthlyLabels,
-      monthlyValues,
+      chartLabels,
+      chartValues,
     };
-  }, [statsData]);
+  }, [statsData, datePill]);
 
   const summaryCards: SummaryCardDef[] = [
-    { label: "Total Collected", value: paymentStats.totalCollected, format: "currency" },
+    { label: `Collected (${DATE_PILL_LABEL[datePill]})`, value: paymentStats.totalCollected, format: "currency" },
     { label: "# Void Payments", value: paymentStats.voidCount, format: "number" },
     { label: "Void Value", value: paymentStats.voidValue, format: "currency" },
     { label: "Avg Payment", value: paymentStats.avgPayment, format: "currency" },
@@ -174,9 +230,11 @@ const AppliedPaymentsComponent = () => {
 
   const selectedOutletRef = useRef(selectedOutlet);
   const modePillRef = useRef(modePill);
+  const datePillRef = useRef(datePill);
   const debouncedSearchRef = useRef(debouncedSearch);
   useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { modePillRef.current = modePill; }, [modePill]);
+  useEffect(() => { datePillRef.current = datePill; }, [datePill]);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
 
   const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
@@ -190,6 +248,11 @@ const AppliedPaymentsComponent = () => {
         ? [{ key: "paymode", value: { filterType: "text", type: "equals", filter: mode } }]
         : [];
 
+    const { startDate, endDate } = getDateRange(datePillRef.current);
+    const dateExtra = [
+      { key: "paymentdate", value: { filterType: "date", type: "inRange", dateFrom: startDate, dateTo: endDate } },
+    ];
+
     const result = await handleTryCatch(async () => {
       const { data } = await getCustomerPaymentList({
         variables: {
@@ -198,6 +261,7 @@ const AppliedPaymentsComponent = () => {
           filters: [
             ...filtersMain.filters,
             ...modeExtra,
+            ...dateExtra,
             { key: "outletid", value: { filterType: "number", type: "equals", filter: outlet } },
           ],
         },
@@ -251,7 +315,7 @@ const AppliedPaymentsComponent = () => {
     if (!gridReady) return;
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOutlet, modePill, debouncedSearch]);
+  }, [selectedOutlet, modePill, datePill, debouncedSearch]);
 
   const fetchAndPrint = async (customerid: number) => {
     setPrintLoading(true);
@@ -292,6 +356,17 @@ const AppliedPaymentsComponent = () => {
     gridRef.current?.api?.exportDataAsCsv({ fileName: `payments-${Date.now()}.csv` });
   };
 
+  const pillStyle = (active: boolean, color = "#10b981") => ({
+    fontSize: 11,
+    padding: "3px 12px",
+    borderRadius: 20,
+    fontWeight: active ? 600 : 400,
+    backgroundColor: active ? color : "var(--surface-muted)",
+    color: active ? "#fff" : "var(--text-secondary)",
+    border: `1px solid ${active ? color : "var(--border-subtle)"}`,
+    cursor: "pointer",
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <AppliedPaymentHeader
@@ -305,9 +380,9 @@ const AppliedPaymentsComponent = () => {
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Payment Summary">
           <ReportSummaryCards cards={summaryCards} loading={statsLoading && !statsData} />
           <ReportMiniChart
-            labels={paymentStats.monthlyLabels}
-            values={paymentStats.monthlyValues}
-            title="Monthly Collections"
+            labels={paymentStats.chartLabels}
+            values={paymentStats.chartValues}
+            title={`Collections — ${DATE_PILL_LABEL[datePill]}`}
             type="area"
             color="#10b981"
             height={120}
@@ -327,22 +402,28 @@ const AppliedPaymentsComponent = () => {
             setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
           />
 
+          {/* Date period pills */}
+          <div className="d-flex gap-1 flex-wrap mb-1">
+            {DATE_PILLS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setDatePill(p.key)}
+                style={pillStyle(datePill === p.key, "#3b82f6")}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Payment mode pills */}
           <div className="d-flex gap-1 flex-wrap mb-2">
             {MODE_PILLS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 onClick={() => setModePill(p.key)}
-                style={{
-                  fontSize: 11,
-                  padding: "3px 12px",
-                  borderRadius: 20,
-                  fontWeight: modePill === p.key ? 600 : 400,
-                  backgroundColor: modePill === p.key ? "#10b981" : "var(--surface-muted)",
-                  color: modePill === p.key ? "#fff" : "var(--text-secondary)",
-                  border: `1px solid ${modePill === p.key ? "#10b981" : "var(--border-subtle)"}`,
-                  cursor: "pointer",
-                }}
+                style={pillStyle(modePill === p.key)}
               >
                 {p.label}
               </button>
@@ -355,7 +436,6 @@ const AppliedPaymentsComponent = () => {
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
-              defaultColDef={{ filter: !debouncedSearch }}
               masterDetail
               detailCellRenderer={CustomerAppliedPaymentComponent}
               detailRowAutoHeight

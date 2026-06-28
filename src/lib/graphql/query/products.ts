@@ -662,3 +662,75 @@ export const GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY = gql`
     }
   }
 `;
+
+export const GET_INVENTORY_MATRIX_QUERY = gql`
+  query GetInventoryMatrix(
+    $storeid: Int!
+    $outletids: [Int!]!
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $includeSoldQty: Boolean
+  ) {
+    getInventoryMatrix(
+      storeid: $storeid
+      outletids: $outletids
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      includeSoldQty: $includeSoldQty
+    ) {
+      total
+      columns {
+        outletid
+        outletname
+        warehouses {
+          warehouseid
+          warehousename
+        }
+      }
+      data {
+        itemcode
+        itemdescription
+        categoryname
+        subcategoryname
+        itemunit
+        overall_qty
+        avg_daily_sales
+        reorderpoint
+        maxstock
+        outlets {
+          outletid
+          onhandqty
+          availableqty
+          soldqty
+          warehouses {
+            warehouseid
+            onhandqty
+            availableqty
+            soldqty
+          }
+        }
+      }
+      totalsRows {
+        itemunit
+        itemcount
+        overall_qty
+        outlets {
+          outletid
+          onhandqty
+          availableqty
+          soldqty
+          warehouses {
+            warehouseid
+            onhandqty
+            availableqty
+            soldqty
+          }
+        }
+      }
+    }
+  }
+`;

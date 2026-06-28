@@ -137,10 +137,7 @@ const ProductAgingComponent = () => {
                 columnDefs={productAgingColumnDefs}
                 onGridReady={handleOnGridReady}
                 fillHeight
-                defaultColDef={{
-                  filter: !debouncedSearch,
-                }}
-              />
+                              />
             </div>
           </div>
         </div>

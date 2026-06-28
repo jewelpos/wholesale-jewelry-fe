@@ -26,7 +26,7 @@ const useMenu = () => {
     return selectedMenu;
   }, [menus, parentPath, childPath]);
 
-  return { currentMenu, currentPath };
+  return { currentMenu, currentPath, basePath };
 };
 
 export default useMenu;

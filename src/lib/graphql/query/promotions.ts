@@ -4,6 +4,7 @@ const PROMOTION_ITEM_FIELDS = `
   promotionitemid
   promotionid
   itemid
+  itemcode
   categoryid
   pricerangemin
   pricerangemax

@@ -38,12 +38,13 @@ const SalesListHeader = ({
           [...currentMenu.action]
             .sort((a: MenuAction, b: MenuAction) => {
               const rank = (name: string) => {
-                if (name === "add_new_invoice") return 0;
-                if (name === "add_new_return")  return 1;
-                if (name.includes("print"))     return 2;
-                if (name.includes("email"))     return 3;
-                if (name.includes("export"))    return 4;
-                return 5;
+                if (name === "add_new_invoice")      return 0;
+                if (name === "add_new_return")       return 1;
+                if (name.includes("print"))          return 2;
+                if (name.includes("email"))          return 3;
+                if (name.includes("export"))         return 4;
+                if (name.includes("sales_matrix"))   return 5;
+                return 6;
               };
               return rank(a.actionname) - rank(b.actionname);
             })
@@ -54,9 +55,24 @@ const SalesListHeader = ({
               const isExportButton = btn.actionname.includes("export");
               const isEmailButton = btn.actionname.includes("email");
               const isActionButton = isPrintButton || isExportButton || isEmailButton;
+              const isSalesMatrix = btn.actionname.includes("sales_matrix");
 
               const isAddNewInvoiceAction = btn.actionname === "add_new_invoice";
               const isAddNewReturnAction = btn.actionname === "add_new_return";
+
+              if (isSalesMatrix) {
+                return (
+                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                    <Link
+                      href={`${basePath}/sales/sales_matrix`}
+                      className={`btn btn-added ${btnColor}`}
+                    >
+                      {iconName && <FeatherIcon icon={iconName} />}
+                      {btn.actiondisplayname}
+                    </Link>
+                  </div>
+                );
+              }
 
               // Export is always enabled; print and email require a selection
               const disabledButton =

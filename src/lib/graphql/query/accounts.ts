@@ -89,3 +89,40 @@ export const GET_BANK_LIST_QUERY = gql`
     }
   }
 `;
+
+export const GET_PAYMENT_COLLECTION_MATRIX_QUERY = gql`
+  query GetPaymentCollectionMatrix(
+    $storeid: Int!
+    $outletids: [Int!]!
+    $startdate: String!
+    $enddate: String!
+  ) {
+    getPaymentCollectionMatrix(
+      storeid: $storeid
+      outletids: $outletids
+      startdate: $startdate
+      enddate: $enddate
+    ) {
+      columns {
+        outletid
+        outletname
+      }
+      data {
+        paymentmode
+        paymentmodename
+        outlets {
+          outletid
+          totalamount
+          paycount
+          avgamount
+        }
+      }
+      totals {
+        outletid
+        totalamount
+        paycount
+        avgamount
+      }
+    }
+  }
+`;

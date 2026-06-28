@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
@@ -44,7 +44,7 @@ const MonthlyProfitComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [totals, setTotals] = useState<Partial<WarehouseSalesSummary> | null>(null);
-  const [yearRange, setYearRange] = useState<[number, number]>([YEAR_MIN, YEAR_MAX]);
+  const [yearRange, setYearRange] = useState<[number, number]>([YEAR_MAX, YEAR_MAX]);
 
   const handleOnGridReady = (params: GridReadyEvent<WarehouseSalesSummary>) => {
     setGridReady(true);
@@ -171,8 +171,7 @@ const MonthlyProfitComponent = () => {
               columnDefs={monthlyProfitColumnDefs}
               fillHeight
               onGridReady={handleOnGridReady}
-              defaultColDef={{ filter: !debouncedSearch }}
-              getRowStyle={(params) =>
+                            getRowStyle={(params) =>
                 params.node.rowPinned === "bottom"
                   ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
                   : undefined

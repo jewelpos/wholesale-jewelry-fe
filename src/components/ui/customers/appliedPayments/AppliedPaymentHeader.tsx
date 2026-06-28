@@ -9,6 +9,7 @@ import FeatherIcon from "../../FeatherIcon";
 import { DollarSign } from "react-feather";
 import { paymentModalTypes } from "@/lib/config/constants";
 import { RECEIVE_PAYMENT } from "./PaymentModal";
+import Link from "next/link";
 
 const BUTTON_ORDER: Record<string, number> = {
   receive_payment: 0,
@@ -35,7 +36,7 @@ interface AppliedPaymentHeaderProps {
 }
 
 const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: AppliedPaymentHeaderProps) => {
-  const { currentMenu } = useMenu();
+  const { currentMenu, basePath } = useMenu();
 
   const isModalButton = (actionName: string) =>
     actionName === RECEIVE_PAYMENT ||
@@ -58,6 +59,24 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
               const isPrint = btn.actionname.includes("print");
               const isEmail = btn.actionname.toLowerCase().includes("email");
               const isExport = btn.actionname.includes("export");
+
+              const isPaymentMatrix = btn.actionname.includes("payment_matrix");
+
+              if (isPaymentMatrix) {
+                const btnColor = renderActionButtonColor(btn.actionname);
+                const iconName = renderActionButtonIconName(btn.actionname);
+                return (
+                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                    <Link
+                      href={`${basePath}/accounts/payment_matrix`}
+                      className={`btn btn-added ${btnColor}`}
+                    >
+                      {iconName && <FeatherIcon icon={iconName} />}
+                      {btn.actiondisplayname}
+                    </Link>
+                  </div>
+                );
+              }
 
               const handleClick = isReceivePayment
                 ? () => setPaymentModal(RECEIVE_PAYMENT)

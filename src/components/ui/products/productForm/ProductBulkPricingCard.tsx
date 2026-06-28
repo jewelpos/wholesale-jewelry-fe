@@ -15,6 +15,8 @@ const emptyTier = (): BulkDiscountTierRow => ({
   maxquantity: "",
   discountamount: "",
   discounttype: "percent",
+  startdate: null,
+  enddate: null,
 });
 
 const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = false }) => {
@@ -34,8 +36,8 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
           <div className="col-md-5 mb-3">
             <h4 className="mb-1">Bulk Pricing Tiers</h4>
             <p style={{ fontSize: 13, color: "#64748b" }}>
-              Set quantity-based discounts for this product. Customers buying more
-              units automatically receive the matching tier discount.
+              Set quantity-based discounts. Leave dates empty for always-active tiers,
+              or set a date range to make the discount time-bound.
             </p>
           </div>
           <div className="col-md-7">
@@ -62,6 +64,8 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
                       <th style={{ fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>Qty to (0=∞)</th>
                       <th style={{ fontWeight: 600, color: "#475569" }}>Discount</th>
                       <th style={{ fontWeight: 600, color: "#475569" }}>Type</th>
+                      <th style={{ fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>Start date</th>
+                      <th style={{ fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>End date</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -76,7 +80,7 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
                             min={0}
                             onChange={e => update(idx, "minquantity", e.target.value)}
                             disabled={disabled}
-                            style={{ width: 80 }}
+                            style={{ width: 75 }}
                           />
                         </td>
                         <td style={{ padding: "4px 6px" }}>
@@ -87,7 +91,7 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
                             min={0}
                             onChange={e => update(idx, "maxquantity", e.target.value)}
                             disabled={disabled}
-                            style={{ width: 80 }}
+                            style={{ width: 75 }}
                             placeholder="0=∞"
                           />
                         </td>
@@ -100,7 +104,7 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
                             step="0.01"
                             onChange={e => update(idx, "discountamount", e.target.value)}
                             disabled={disabled}
-                            style={{ width: 80 }}
+                            style={{ width: 75 }}
                           />
                         </td>
                         <td style={{ padding: "4px 6px" }}>
@@ -109,11 +113,31 @@ const ProductBulkPricingCard: React.FC<Props> = ({ tiers, onChange, disabled = f
                             value={tier.discounttype}
                             onChange={e => update(idx, "discounttype", e.target.value)}
                             disabled={disabled}
-                            style={{ width: 90 }}
+                            style={{ width: 85 }}
                           >
                             <option value="percent">% off</option>
                             <option value="amount">$ off</option>
                           </select>
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="date"
+                            className="form-control form-control-sm"
+                            value={tier.startdate ?? ""}
+                            onChange={e => update(idx, "startdate", e.target.value || null)}
+                            disabled={disabled}
+                            style={{ width: 130 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="date"
+                            className="form-control form-control-sm"
+                            value={tier.enddate ?? ""}
+                            onChange={e => update(idx, "enddate", e.target.value || null)}
+                            disabled={disabled}
+                            style={{ width: 130 }}
+                          />
                         </td>
                         <td style={{ padding: "4px 6px", verticalAlign: "middle" }}>
                           {!disabled && (

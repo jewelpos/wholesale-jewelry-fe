@@ -52,14 +52,21 @@ const SupplierListComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
+  // Refs so datasource closure always reads the latest values without recreating
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const selectedOutletRef = useRef(selectedOutlet);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
+
+  // Stable datasource — created once, reads filters from refs
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "companyname");
+        const filters = filterVariables(params, debouncedSearchRef.current, "companyname");
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierList({
             variables: {
-              outletid: selectedOutlet,
+              outletid: selectedOutletRef.current,
               ...filters,
             },
           });
@@ -88,27 +95,28 @@ const SupplierListComponent = () => {
         }
       },
     }),
-    [selectedOutlet, dispatch, getSupplierList, debouncedSearch]
+    [dispatch, getSupplierList]
   );
 
   const handleDeleteSuccess = useCallback(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    if (gridReady) {
+      gridRef.current?.api?.refreshServerSide({ purge: true });
     }
-  }, [datasource, gridReady, selectedOutlet]);
+  }, [gridReady]);
 
+  // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
     if (selectedOutlet && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, selectedOutlet, gridReady]);
+  }, [gridReady, datasource, selectedOutlet]);
 
+  // Refresh data when filters change — no setGridOption, preserves column state
   useEffect(() => {
-    if (debouncedSearch && gridReady) {
-      gridRef?.current?.api?.setFilterModel(null);
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, gridReady, debouncedSearch]);
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [debouncedSearch, selectedOutlet, gridReady]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("supplier-list");
 
@@ -165,10 +173,7 @@ const SupplierListComponent = () => {
                 columnDefs={columnDefs}
                 onGridReady={handleOnGridReady}
                 fillHeight
-                defaultColDef={{
-                  filter: !debouncedSearch,
-                }}
-                rowSelection={{
+                                rowSelection={{
                   mode: "singleRow",
                   checkboxes: false,
                   enableClickSelection: true,

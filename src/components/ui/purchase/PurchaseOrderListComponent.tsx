@@ -61,24 +61,33 @@ const PurchaseOrderListComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
+  // Refs so datasource closure always reads the latest filter values without recreating
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const selectedSupplierRef = useRef(selectedSupplier);
+  const statusFilterRef = useRef(statusFilter);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { selectedSupplierRef.current = selectedSupplier; }, [selectedSupplier]);
+  useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
+
+  // Stable datasource — created once, reads filters from refs
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(
           params,
-          debouncedSearch,
+          debouncedSearchRef.current,
           "ponumber, suppliername"
         );
-        if (statusFilter) {
+        if (statusFilterRef.current) {
           filters.filters = [
             ...filters.filters,
-            { key: "status", value: { filterType: "text", type: "equals", filter: statusFilter } },
+            { key: "status", value: { filterType: "text", type: "equals", filter: statusFilterRef.current } },
           ];
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let variables: any = { storeid: parsedStoreId };
-        if (selectedSupplier !== -1) {
-          variables = { ...variables, supplierid: selectedSupplier };
+        if (selectedSupplierRef.current !== -1) {
+          variables = { ...variables, supplierid: selectedSupplierRef.current };
         }
         const result = await handleTryCatch(async () => {
           const { data } = await getPurchaseOrdersList({
@@ -111,14 +120,14 @@ const PurchaseOrderListComponent = () => {
         }
       },
     }),
-    [parsedStoreId, selectedSupplier, dispatch, getPurchaseOrdersList, debouncedSearch, statusFilter]
+    [parsedStoreId, dispatch, getPurchaseOrdersList]
   );
 
   const handleDeleteSuccess = useCallback(() => {
-    if (parsedStoreId && gridReady) {
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    if (gridReady) {
+      gridRef.current?.api?.refreshServerSide({ purge: true });
     }
-  }, [datasource, gridReady, parsedStoreId]);
+  }, [gridReady]);
 
   const columnDefs = useMemo<ColDef<PurchaseOrder>[]>(
     () => [
@@ -146,18 +155,19 @@ const PurchaseOrderListComponent = () => {
     [handleDeleteSuccess]
   );
 
+  // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
     if (parsedStoreId && gridReady && gridRef.current?.api) {
       gridRef.current.api.setGridOption("serverSideDatasource", datasource);
     }
-  }, [datasource, selectedSupplier, gridReady, parsedStoreId]);
+  }, [gridReady, datasource, parsedStoreId]);
 
+  // Refresh data when filters change — no setGridOption, preserves column state
   useEffect(() => {
-    if (debouncedSearch && gridReady && gridRef.current?.api) {
-      gridRef.current.api.setFilterModel(null);
-      gridRef.current.api.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [datasource, gridReady, debouncedSearch]);
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [debouncedSearch, selectedSupplier, statusFilter, gridReady]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 
@@ -282,9 +292,6 @@ const PurchaseOrderListComponent = () => {
                 columnDefs={columnDefs}
                 onGridReady={handleOnGridReady}
                 fillHeight
-                defaultColDef={{
-                  filter: !debouncedSearch,
-                }}
                 rowSelection={{
                   mode: "multiRow",
                   checkboxes: true,

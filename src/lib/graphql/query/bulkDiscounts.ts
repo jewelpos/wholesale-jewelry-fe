@@ -10,6 +10,8 @@ export const GET_PRODUCT_BULK_DISCOUNTS_QUERY = gql`
       discountamount
       discounttype
       warehouseid
+      startdate
+      enddate
     }
   }
 `;

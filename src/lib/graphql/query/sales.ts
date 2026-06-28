@@ -392,3 +392,43 @@ export const GET_CASH_DRAWER_SESSION_QUERY = gql`
     }
   }
 `;
+
+export const GET_SALES_MATRIX_QUERY = gql`
+  query GetSalesMatrix(
+    $storeid: Int!
+    $outletids: [Int!]!
+    $startdate: String!
+    $enddate: String!
+    $granularity: String!
+  ) {
+    getSalesMatrix(
+      storeid: $storeid
+      outletids: $outletids
+      startdate: $startdate
+      enddate: $enddate
+      granularity: $granularity
+    ) {
+      columns {
+        outletid
+        outletname
+      }
+      data {
+        period_key
+        period_label
+        outlets {
+          outletid
+          totalsales
+          salecount
+          avgsale
+        }
+      }
+      totals {
+        outletid
+        outletname
+        totalsales
+        salecount
+        avgsale
+      }
+    }
+  }
+`;

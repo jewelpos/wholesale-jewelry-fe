@@ -224,10 +224,7 @@ const SubCategoryComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-            />
+                          />
           </div>
         </div>
       </div>

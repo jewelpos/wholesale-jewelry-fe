@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import OutletsFilter from "./OutletsFilter";
 import useOutlets from "@/hooks/useOutlets";
 import WarehouseFilter from "./WarehouseFilter";
@@ -7,6 +7,7 @@ import SupplierFilter from "./SupplierFilter";
 import useSupplier from "@/hooks/useSupplier";
 import useWarehouse from "@/hooks/useWarehouse";
 import { AgGridReact } from "ag-grid-react";
+import { useFloatingFilter } from "./FloatingFilterContext";
 
 interface Props {
   search?: string;
@@ -51,7 +52,7 @@ const CustomFilterSections = ({
     suppliers,
   } = useSupplier();
 
-  const [showFilters, setShowFilters] = useState(false);
+  const { showFilters, setShowFilters } = useFloatingFilter();
 
   const fetchWarehousesList = useCallback(() => {
     if (selectedOutlet) {
@@ -66,22 +67,8 @@ const CustomFilterSections = ({
     parsedStoreId,
   ]);
 
-  // Sync floating filter visibility: hide when search is active, restore when cleared
-  useEffect(() => {
-    if (!gridRef?.current?.api) return;
-    const active = showFilters && !search;
-    gridRef.current.api.updateGridOptions({
-      defaultColDef: { floatingFilter: active },
-    });
-  }, [search, showFilters, gridRef]);
-
   const handleFilterToggle = (show: boolean) => {
     setShowFilters(show);
-    if (!search) {
-      gridRef?.current?.api?.updateGridOptions({
-        defaultColDef: { floatingFilter: show },
-      });
-    }
   };
 
   return (

@@ -44,7 +44,7 @@ const SupplierMonthlySalesComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [totals, setTotals] = useState<Partial<SupplierSalesPurchaseSummary> | null>(null);
-  const [yearRange, setYearRange] = useState<[number, number]>([YEAR_MIN, YEAR_MAX]);
+  const [yearRange, setYearRange] = useState<[number, number]>([YEAR_MAX, YEAR_MAX]);
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierSalesPurchaseSummary>) => {
     setGridReady(true);
@@ -167,8 +167,7 @@ const SupplierMonthlySalesComponent = () => {
               columnDefs={supplierMonthlySalesColumnDefs}
               fillHeight
               onGridReady={handleOnGridReady}
-              defaultColDef={{ filter: !debouncedSearch }}
-              getRowStyle={(params) =>
+                            getRowStyle={(params) =>
                 params.node.rowPinned === "bottom"
                   ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
                   : undefined

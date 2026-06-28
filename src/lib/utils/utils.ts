@@ -11,6 +11,9 @@ export const renderActionButtonColor = (actionName: string) => {
     if (actionName.includes("email")) {
       return "btn-warning";
     }
+    if (actionName.includes("outlet_matrix")) {
+      return "btn-info";
+    }
     return "btn-dark";
   };
 
@@ -27,7 +30,17 @@ export const renderActionButtonColor = (actionName: string) => {
     if (actionName.includes("email")) {
       return "mail";
     }
+    if (actionName.includes("outlet_matrix")) {
+      return "grid";
+    }
     return "";
+  };
+
+  export const renderActionButtonUrl = (actionName: string, basePath: string) => {
+    if (actionName.includes("outlet_matrix")) {
+      return `${basePath}/inventory_pivot`;
+    }
+    return `${basePath}/new`;
   };
 
 

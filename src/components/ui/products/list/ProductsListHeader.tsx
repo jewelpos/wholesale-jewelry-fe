@@ -8,6 +8,7 @@ import { MenuAction } from "@/types/permissions";
 import {
   renderActionButtonColor,
   renderActionButtonIconName,
+  renderActionButtonUrl,
 } from "@/lib/utils/utils";
 import FeatherIcon from "../../FeatherIcon";
 
@@ -38,7 +39,7 @@ const ProductsListHeader: React.FC = () => {
                   key={btn.actionname}
                 >
                   <Link
-                    href={`${currentPath}/new`}
+                    href={renderActionButtonUrl(btn.actionname, currentPath)}
                     className={`btn btn-added ${btnColor}`}
                   >
                     {iconName && <FeatherIcon icon={iconName} />}

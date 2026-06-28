@@ -156,8 +156,7 @@ const MonthlyPaymentsReportComponent = () => {
               columnDefs={monthlyPaymentsReportColumnDefs}
               fillHeight
               onGridReady={handleOnGridReady}
-              defaultColDef={{ filter: !debouncedSearch }}
-              getRowStyle={(params) =>
+                            getRowStyle={(params) =>
                 params.node.rowPinned === "bottom"
                   ? { fontWeight: "bold", backgroundColor: "#f5f5f5" }
                   : undefined

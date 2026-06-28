@@ -119,10 +119,7 @@ const ChecksListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
+                            rowSelection={{
                 mode: "multiRow",
                 checkboxes: true,
                 headerCheckbox: true,

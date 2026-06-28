@@ -319,10 +319,7 @@ const MemoListComponent = () => {
               onGridReady={handleGridReady}
               onSelectionChanged={handleSelectionChanged}
               fillHeight
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
+                            rowSelection={{
                 mode: "multiRow",
                 checkboxes: true,
                 headerCheckbox: true,

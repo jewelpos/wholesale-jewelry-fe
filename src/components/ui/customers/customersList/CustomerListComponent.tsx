@@ -318,10 +318,7 @@ const CustomerListComponent = () => {
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              rowSelection={{
+                            rowSelection={{
                 mode: "singleRow",
                 checkboxes: true,
                 headerCheckbox: true,

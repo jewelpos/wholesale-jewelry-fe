@@ -236,10 +236,7 @@ const InventoryTransferListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
-              masterDetail
+                            masterDetail
               detailCellRenderer={InventoryTransferItemsComponent}
               detailRowAutoHeight
             />

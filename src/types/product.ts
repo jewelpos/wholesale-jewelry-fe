@@ -450,3 +450,58 @@ export type ItemAgingSummary = {
   warehouseid: number;
   outletid: number;
 };
+
+// --- Inventory Matrix (Pivot) types ---
+
+export type WarehouseMatrixColumn = { warehouseid: number; warehousename: string };
+export type OutletMatrixColumn = { outletid: number; outletname: string; warehouses: WarehouseMatrixColumn[] };
+
+export type WarehouseMatrixQty = {
+  warehouseid: number;
+  onhandqty: number;
+  availableqty: number;
+  soldqty: number | null;
+};
+
+export type OutletMatrixQty = {
+  outletid: number;
+  onhandqty: number;
+  availableqty: number;
+  soldqty: number | null;
+  warehouses: WarehouseMatrixQty[];
+};
+
+export type InventoryMatrixRow = {
+  itemcode: string;
+  itemdescription: string;
+  categoryname: string;
+  subcategoryname: string;
+  itemunit: string;
+  overall_qty: number;
+  avg_daily_sales: number;
+  reorderpoint: number | null;
+  maxstock: number | null;
+  outlets: OutletMatrixQty[];
+};
+
+export type InventoryMatrixTotals = {
+  overall_qty: number;
+  outlets: OutletMatrixQty[];
+};
+
+export type InventoryMatrixUnitTotals = {
+  itemunit: string;
+  itemcount: number;
+  overall_qty: number;
+  outlets: OutletMatrixQty[];
+};
+
+export type InventoryMatrixResponse = {
+  total: number;
+  columns: OutletMatrixColumn[];
+  data: InventoryMatrixRow[];
+  totalsRows: InventoryMatrixUnitTotals[];
+};
+
+export type MatrixMetricMode = "onhand" | "available" | "days_of_stock" | "sold_qty";
+export type MatrixThresholdMode = "range" | "reorder_point";

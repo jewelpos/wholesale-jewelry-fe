@@ -52,12 +52,17 @@ const SupplierInvoiceListComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
+  // Ref so datasource closure always reads the latest search without recreating
+  const debouncedSearchRef = useRef(debouncedSearch);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+
+  // Stable datasource — created once, reads search from ref
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
         const filters = filterVariables(
           params,
-          debouncedSearch,
+          debouncedSearchRef.current,
           "veninvoiceno"
         );
         const result = await handleTryCatch(async () => {
@@ -92,27 +97,28 @@ const SupplierInvoiceListComponent = () => {
         }
       },
     }),
-    [parsedStoreId, dispatch, getSupplierInvoiceList, debouncedSearch]
+    [parsedStoreId, dispatch, getSupplierInvoiceList]
   );
 
   const handleRefreshInvoice = useCallback(() => {
-    if (parsedStoreId && gridReady) {
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
+    if (gridReady) {
+      gridRef.current?.api?.refreshServerSide({ purge: true });
     }
-  }, [datasource, gridReady, parsedStoreId]);
+  }, [gridReady]);
 
+  // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
     if (parsedStoreId && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridRef, datasource, parsedStoreId, gridReady]);
+  }, [gridReady, datasource, parsedStoreId]);
 
+  // Refresh data on search change — no setGridOption, preserves column state
   useEffect(() => {
-    if (debouncedSearch && gridReady) {
-      gridRef?.current?.api?.setFilterModel(null);
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, gridReady, debouncedSearch]);
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [debouncedSearch, gridReady]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
@@ -153,9 +159,6 @@ const SupplierInvoiceListComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
               rowSelection={{
                 mode: "multiRow",
                 checkboxes: true,
