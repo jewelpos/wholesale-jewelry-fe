@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useApolloClient, useLazyQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -25,7 +25,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import useMenu from "@/hooks/useMenu";
 import { GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
-import { productListColumnDefs } from "./columnDef";
+import { makeProductColumnDefs } from "./columnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import ProductsListHeader from "./ProductsListHeader";
@@ -47,6 +47,8 @@ const ProductsListComponent = () => {
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const { currentMenu } = useMenu();
+  const apolloClient = useApolloClient();
+  const apolloClientRef = useRef(apolloClient);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   const SOLD_GROUP = ["soldtoday", "soldweek", "soldmonth"];
@@ -71,128 +73,99 @@ const ProductsListComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
+  // Refs to hold latest filter values — avoids recreating the datasource on every filter change
+  const selectedOutletRef = useRef(selectedOutlet);
+  const selectedWarehouseRef = useRef(selectedWarehouse);
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const activeFiltersRef = useRef(activeFilters);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
+  useEffect(() => { selectedWarehouseRef.current = selectedWarehouse; }, [selectedWarehouse]);
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { activeFiltersRef.current = activeFilters; }, [activeFilters]);
+
+  // Stable datasource — created once, reads from refs so getRows always sees fresh values
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        if (!selectedOutlet || selectedWarehouse === -1) {
+        const outlet = selectedOutletRef.current;
+        const warehouse = selectedWarehouseRef.current;
+        const search = debouncedSearchRef.current;
+        const filters = activeFiltersRef.current;
+
+        if (!outlet || warehouse === -1) {
+          params.success({ rowData: [], rowCount: 0 });
           return;
         }
-        let filtersMain = filterVariables(
-          params,
-          debouncedSearch,
-          "itemcode, itemdescription"
-        );
-        if (selectedOutlet) {
+        let filtersMain = filterVariables(params, search, "itemcode, itemdescription");
+        filtersMain = {
+          ...filtersMain,
+          filters: [
+            ...filtersMain.filters,
+            { key: "outletid", value: { filterType: "text", type: "equals", filter: outlet } },
+          ],
+        };
+        if (warehouse !== -1 && warehouse !== undefined) {
           filtersMain = {
             ...filtersMain,
             filters: [
               ...filtersMain.filters,
-              {
-                key: "outletid",
-                value: {
-                  filterType: "text",
-                  type: "equals",
-                  filter: selectedOutlet,
-                },
-              },
-            ],
-          };
-        }
-        if (selectedWarehouse !== -1) {
-          filtersMain = {
-            ...filtersMain,
-            filters: [
-              ...filtersMain.filters,
-              {
-                key: "itemwarehouseid",
-                value: {
-                  filterType: "text",
-                  type: "equals",
-                  filter: selectedWarehouse,
-                },
-              },
+              { key: "itemwarehouseid", value: { filterType: "text", type: "equals", filter: warehouse } },
             ],
           };
         }
         // Merge pill-driven filters
         const extraFilters: any[] = [];
-        if (activeFilters.has("bulk"))
+        if (filters.has("bulk"))
           extraFilters.push({ key: "hasbulkdiscount", value: { filterType: "number", type: "greaterThan", filter: 0 } });
-        if (activeFilters.has("promo"))
+        if (filters.has("promo"))
           extraFilters.push({ key: "haspromotion", value: { filterType: "number", type: "greaterThan", filter: 0 } });
-        if (activeFilters.has("zerostock"))
+        if (filters.has("zerostock"))
           extraFilters.push({ key: "itemquantityinhand", value: { filterType: "number", type: "lessThanOrEqual", filter: 0 } });
-        const qfKeys = ["new", "soldtoday", "soldweek", "soldmonth"].filter(k => activeFilters.has(k));
+        const qfKeys = ["new", "soldtoday", "soldweek", "soldmonth"].filter(k => filters.has(k));
         if (qfKeys.length > 0)
           extraFilters.push({ key: "__quickfilter__", value: { filterType: "text", type: "equals", filter: qfKeys.join(",") } });
-
         if (extraFilters.length > 0)
           filtersMain = { ...filtersMain, filters: [...filtersMain.filters, ...extraFilters] };
 
         const result = await handleTryCatch(async () => {
-          const { data } = await getProductList({
-            variables: {
-              outletid: selectedOutlet,
-              ...filtersMain,
-            },
-          });
+          const { data } = await getProductList({ variables: { outletid: outlet, ...filtersMain } });
           if (data.getProductListNew) {
-            params.success({
-              rowData: data.getProductListNew.data,
-              rowCount: data.getProductListNew.total,
-            });
-            if (!data.getProductListNew.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-            } else {
-              gridRef.current?.api?.hideOverlay();
-            }
+            params.success({ rowData: data.getProductListNew.data, rowCount: data.getProductListNew.total });
+            data.getProductListNew.data.length
+              ? gridRef.current?.api?.hideOverlay()
+              : gridRef.current?.api?.showNoRowsOverlay();
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+          dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
       },
     }),
-    [
-      selectedOutlet,
-      selectedWarehouse,
-      dispatch,
-      getProductList,
-      debouncedSearch,
-      activeFilters,
-    ]
+    [dispatch, getProductList]
   );
 
   const handleDeleteSuccess = useCallback(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [datasource, gridReady, selectedOutlet]);
+    if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [gridReady]);
 
+  // Set datasource once when grid is ready
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, selectedOutlet, selectedWarehouse, gridReady]);
+    if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+  }, [gridReady, datasource]);
 
+  // Refresh data when any filter/search/outlet changes — never recreates datasource
   useEffect(() => {
-    if (debouncedSearch && gridReady) {
-      gridRef?.current?.api?.setFilterModel(null);
-      gridRef?.current?.api?.setGridOption("serverSideDatasource", datasource);
-    }
-  }, [gridRef, datasource, gridReady, debouncedSearch]);
+    if (!gridReady) return;
+    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, [debouncedSearch, activeFilters, selectedOutlet, selectedWarehouse, gridReady]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      ...productListColumnDefs.filter((col) => col.headerName !== "Actions"),
+      ...makeProductColumnDefs(selectedOutletRef, apolloClientRef).filter((col) => col.headerName !== "Actions"),
       {
         headerName: "Actions",
         field: "actions",
@@ -251,9 +224,6 @@ const ProductsListComponent = () => {
               onGridReady={handleOnGridReady}
               fillHeight
               rowSelection="single"
-              defaultColDef={{
-                filter: !debouncedSearch,
-              }}
             />
           </div>
         </div>
