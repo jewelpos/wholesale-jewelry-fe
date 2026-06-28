@@ -198,43 +198,47 @@ const SalesMatrixComponent = () => {
             },
           });
 
-          if (data?.getSalesMatrix) {
-            const { columns, data: rows, totals: newTotals } = data.getSalesMatrix;
+          if (!data?.getSalesMatrix) {
+            params.success({ rowData: [], rowCount: 0 });
+            gridRef.current?.api?.showNoRowsOverlay();
+            return true;
+          }
 
-            const newKey = columns
-              .map((c: SalesMatrixColumn) => c.outletid)
-              .join(",");
-            const curKey = matrixColumnsRef.current
-              .map((c) => c.outletid)
-              .join(",");
-            matrixColumnsRef.current = columns;
+          const { columns, data: rows, totals: newTotals } = data.getSalesMatrix;
 
-            if (newKey !== curKey) {
-              setMatrixColumns(columns);
-            } else {
-              gridRef.current?.api?.applyColumnState({
-                state: getSalesColumnStateForMode(columns, metricModeRef.current),
-                applyOrder: false,
-              });
-            }
+          const newKey = columns
+            .map((c: SalesMatrixColumn) => c.outletid)
+            .join(",");
+          const curKey = matrixColumnsRef.current
+            .map((c) => c.outletid)
+            .join(",");
+          matrixColumnsRef.current = columns;
 
-            params.success({ rowData: rows, rowCount: rows.length });
-            setTotals(newTotals ?? []);
-            setChartRows(rows ?? []);
-            setChartColumns(columns ?? []);
+          if (newKey !== curKey) {
+            setMatrixColumns(columns);
+          } else {
+            gridRef.current?.api?.applyColumnState({
+              state: getSalesColumnStateForMode(columns, metricModeRef.current),
+              applyOrder: false,
+            });
+          }
 
-            if (!rows.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-            } else {
-              gridRef.current?.api?.hideOverlay();
-              gridRef.current?.api?.setGridOption(
-                "pinnedBottomRowData",
-                newTotals?.length
-                  ? [buildSalesPinnedRow(newTotals as SalesMatrixTotals[])]
-                  : []
-              );
-            }
+          params.success({ rowData: rows, rowCount: rows.length });
+          setTotals(newTotals ?? []);
+          setChartRows(rows ?? []);
+          setChartColumns(columns ?? []);
+
+          if (!rows.length) {
+            gridRef.current?.api?.showNoRowsOverlay();
+            gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
+          } else {
+            gridRef.current?.api?.hideOverlay();
+            gridRef.current?.api?.setGridOption(
+              "pinnedBottomRowData",
+              newTotals?.length
+                ? [buildSalesPinnedRow(newTotals as SalesMatrixTotals[])]
+                : []
+            );
           }
           return true;
         });
