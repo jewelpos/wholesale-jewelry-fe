@@ -73,6 +73,8 @@ export type SalesMatrixOutletData = {
   totalsales: number;
   salecount: number;
   avgsale: number;
+  amountreceived?: number;
+  balancedue?: number;
 };
 
 export type SalesMatrixRow = {
@@ -92,6 +94,8 @@ export type SalesMatrixTotals = {
   totalsales: number;
   salecount: number;
   avgsale: number;
+  amountreceived?: number;
+  balancedue?: number;
 };
 
 export type SalesMatrixResponse = {

@@ -41,6 +41,38 @@ import { GET_INVOICE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
+type DatePreset = "today" | "week" | "month" | "quarter" | "year";
+
+const DATE_PRESET_LABELS: Record<DatePreset, string> = {
+  today: "Today",
+  week: "This Week",
+  month: "This Month",
+  quarter: "This Qtr",
+  year: "This Year",
+};
+
+function getDateRange(preset: DatePreset): { startdate: string; enddate: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = fmt(now);
+
+  if (preset === "today") return { startdate: today, enddate: today };
+  if (preset === "week") {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    return { startdate: fmt(start), enddate: today };
+  }
+  if (preset === "month") {
+    return { startdate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, enddate: today };
+  }
+  if (preset === "quarter") {
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    return { startdate: fmt(qStart), enddate: today };
+  }
+  return { startdate: `${now.getFullYear()}-01-01`, enddate: today };
+}
+
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
@@ -57,15 +89,18 @@ const SalesListComponent = () => {
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState<DatePreset>("month");
 
   useEffect(() => { if (parsedOutletId) setSelectedOutlet(parsedOutletId); }, [parsedOutletId]);
 
   const selectedOutletRef = useRef(selectedOutlet);
   const debouncedSearchRef = useRef(debouncedSearch);
   const statusFilterRef = useRef(statusFilter);
+  const datePresetRef = useRef(datePreset);
   useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
   useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
+  useEffect(() => { datePresetRef.current = datePreset; }, [datePreset]);
 
   const handleOnGridReady = (params: GridReadyEvent<SalesInvoiceListType>) => {
     setGridReady(true);
@@ -80,12 +115,29 @@ const SalesListComponent = () => {
     }
     const filters = filterVariables(params, debouncedSearchRef.current, "invoicenumber, customerid, companyname");
     const sf = statusFilterRef.current;
-    if (sf) {
+    if (sf === "paid") {
       filters.filters = [
         ...filters.filters,
-        { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } },
+        { key: "balancedue", value: { filterType: "number", type: "lessThanOrEqual", filter: 0 } },
+        { key: "statusname", value: { filterType: "text", type: "notContains", filter: "void" } },
+      ];
+    } else if (sf === "open") {
+      filters.filters = [
+        ...filters.filters,
+        { key: "balancedue", value: { filterType: "number", type: "greaterThan", filter: 0 } },
+        { key: "statusname", value: { filterType: "text", type: "notContains", filter: "void" } },
+      ];
+    } else if (sf === "void") {
+      filters.filters = [
+        ...filters.filters,
+        { key: "statusname", value: { filterType: "text", type: "contains", filter: "void" } },
       ];
     }
+    const { startdate, enddate } = getDateRange(datePresetRef.current);
+    filters.filters = [
+      ...filters.filters,
+      { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: startdate, dateTo: enddate } },
+    ];
     const result = await handleTryCatch(async () => {
       const { data } = await getInvoiceList({
         variables: { outletid: selectedOutletRef.current, ...filters },
@@ -239,7 +291,7 @@ const SalesListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOutlet, debouncedSearch, statusFilter]);
+  }, [selectedOutlet, debouncedSearch, statusFilter, datePreset]);
 
   const handleEmailInvoice = useCallback(() => {
     if (selectedInvoiceNumbers.length > 0) setEmailModalOpen(true);
@@ -251,11 +303,13 @@ const SalesListComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("invoice-list");
 
+  const { startdate, enddate } = getDateRange(datePreset);
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_INVOICE_DAILY_SUMMARY_QUERY, {
-    variables: { outletid: selectedOutlet },
+    variables: { outletid: selectedOutlet, startdate, enddate },
     skip: !selectedOutlet,
   });
   const summary = summaryData?.getInvoiceDailySummary ?? null;
+  const periodLabel = DATE_PRESET_LABELS[datePreset];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
@@ -281,11 +335,16 @@ const SalesListComponent = () => {
         />
       )}
       {isAdmin && (
-        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Invoice Daily Summary">
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Invoice Summary">
           <DailyStatusCards
             data={summary}
             loading={summaryLoading}
-            labelOverrides={{ revenue: "Revenue Today", total: "Invoices Today", avg: "Avg Invoice", open: "Open Today" }}
+            labelOverrides={{
+              revenue: `Revenue — ${periodLabel}`,
+              total: `Invoices — ${periodLabel}`,
+              avg: `Avg Invoice — ${periodLabel}`,
+              open: `Open — ${periodLabel}`,
+            }}
           />
         </SummaryPanelWrapper>
       )}
@@ -298,19 +357,34 @@ const SalesListComponent = () => {
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
           />
-          <StatusFilterChips
-            active={statusFilter}
-            onChange={(v) => {
-              setStatusFilter(v);
-              gridRef.current?.api?.refreshServerSide({ purge: true });
-            }}
-            counts={{
-              total: summary?.total_today ?? 0,
-              paid: summary?.paid_today ?? 0,
-              pending: summary?.pending_today ?? 0,
-              voided: summary?.voided_today ?? 0,
-            }}
-          />
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ marginBottom: 8 }}>
+            <StatusFilterChips
+              active={statusFilter}
+              onChange={(v) => {
+                setStatusFilter(v);
+                gridRef.current?.api?.refreshServerSide({ purge: true });
+              }}
+              counts={{
+                total: summary?.total_today ?? 0,
+                paid: summary?.paid_today ?? 0,
+                pending: summary?.pending_today ?? 0,
+                voided: summary?.voided_today ?? 0,
+              }}
+            />
+            <div className="btn-group btn-group-sm">
+              {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`btn ${datePreset === p ? "btn-secondary" : "btn-outline-secondary"}`}
+                  style={{ fontSize: 11, padding: "3px 10px" }}
+                  onClick={() => setDatePreset(p)}
+                >
+                  {DATE_PRESET_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}

@@ -31,7 +31,7 @@ const StatusFilterChips: React.FC<Props> = ({ active, onChange, counts }) => {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   return (
-    <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       {CHIPS.map((chip) => {
         const isActive = active === chip.filter;
         const count = counts[chip.key] ?? 0;

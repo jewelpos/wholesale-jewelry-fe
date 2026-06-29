@@ -7,6 +7,7 @@ interface Props {
   isCollapsed: boolean;
   onToggle: () => void;
   title?: string;
+  titleRight?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -14,6 +15,7 @@ const SummaryPanelWrapper: React.FC<Props> = ({
   isCollapsed,
   onToggle,
   title = "Daily Summary",
+  titleRight,
   children,
 }) => {
   return (
@@ -22,6 +24,8 @@ const SummaryPanelWrapper: React.FC<Props> = ({
         <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.5px", textTransform: "uppercase" }}>
           {isCollapsed ? title : ""}
         </span>
+        <div className="d-flex align-items-center gap-2">
+          {!isCollapsed && titleRight}
         <button
           type="button"
           onClick={onToggle}
@@ -42,6 +46,7 @@ const SummaryPanelWrapper: React.FC<Props> = ({
           {isCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
           {isCollapsed ? "Show Summary" : "Hide Summary"}
         </button>
+        </div>
       </div>
       {!isCollapsed && children}
     </div>

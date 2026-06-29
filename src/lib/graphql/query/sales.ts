@@ -334,8 +334,8 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
 
 
 export const GET_INVOICE_DAILY_SUMMARY_QUERY = gql`
-  query GetInvoiceDailySummary($outletid: Int!) {
-    getInvoiceDailySummary(outletid: $outletid) {
+  query GetInvoiceDailySummary($outletid: Int!, $startdate: String, $enddate: String) {
+    getInvoiceDailySummary(outletid: $outletid, startdate: $startdate, enddate: $enddate) {
       total_today paid_today pending_today voided_today revenue_today avg_today
     }
   }
@@ -420,6 +420,8 @@ export const GET_SALES_MATRIX_QUERY = gql`
           totalsales
           salecount
           avgsale
+          amountreceived
+          balancedue
         }
       }
       totals {
@@ -428,6 +430,8 @@ export const GET_SALES_MATRIX_QUERY = gql`
         totalsales
         salecount
         avgsale
+        amountreceived
+        balancedue
       }
     }
   }

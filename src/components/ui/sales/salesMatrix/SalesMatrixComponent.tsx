@@ -43,8 +43,15 @@ import SummaryPanelWrapper from "@/components/ui/grid/SummaryPanelWrapper";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const METRIC_LABELS: Record<SalesMetricMode, string> = {
-  totalsales: "Amount",
+type ChartMetric = "totalsales" | "amountreceived" | "balancedue";
+
+const CHART_METRIC_LABELS: Record<ChartMetric, string> = {
+  totalsales: "Sales by Period",
+  amountreceived: "Payment by Period",
+  balancedue: "Balance by Period",
+};
+
+const TOGGLE_METRIC_LABELS: Partial<Record<SalesMetricMode, string>> = {
   salecount: "Count",
   avgsale: "Avg",
 };
@@ -114,6 +121,7 @@ const SalesMatrixComponent = () => {
   const [datePreset, setDatePreset] = useState("year");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("totalsales");
 
   const [matrixColumns, setMatrixColumns] = useState<SalesMatrixColumn[]>([]);
   const matrixColumnsRef = useRef<SalesMatrixColumn[]>([]);
@@ -159,15 +167,17 @@ const SalesMatrixComponent = () => {
   const stableDefaultColDef = useMemo(() => ({ filter: true }), []);
 
   const handleMetricChange = useCallback((mode: SalesMetricMode) => {
-    metricModeRef.current = mode;
+    // Clicking the active toggle button deselects it (back to default = no extra columns)
+    const next = metricModeRef.current === mode ? "totalsales" : mode;
+    metricModeRef.current = next;
     if (gridReadyRef.current && matrixColumnsRef.current.length) {
       gridRef.current?.api?.applyColumnState({
-        state: getSalesColumnStateForMode(matrixColumnsRef.current, mode),
+        state: getSalesColumnStateForMode(matrixColumnsRef.current, next),
         applyOrder: false,
       });
       gridRef.current?.api?.refreshCells({ force: true });
     }
-    setMetricMode(mode);
+    setMetricMode(next);
   }, []);
 
   const handleOutletChange = useCallback((ids: number[]) => {
@@ -277,10 +287,20 @@ const SalesMatrixComponent = () => {
   // Summary card derivations
   const totalSales = totals.reduce((s, t) => s + (t.totalsales ?? 0), 0);
   const totalCount = totals.reduce((s, t) => s + (t.salecount ?? 0), 0);
+  const totalReceived = totals.reduce((s, t) => s + (t.amountreceived ?? 0), 0);
+  const totalBalance = totals.reduce((s, t) => s + (t.balancedue ?? 0), 0);
   const avgPerInvoice = totalCount > 0 ? totalSales / totalCount : null;
   const bestOutlet = totals.length
     ? totals.reduce((best, t) => (t.totalsales > best.totalsales ? t : best), totals[0])
     : null;
+  const collectionRate = totalSales > 0 ? (totalReceived / totalSales) * 100 : null;
+  const rateSubtext = !collectionRate
+    ? undefined
+    : collectionRate >= 80
+    ? "Healthy collection"
+    : collectionRate >= 50
+    ? "Follow-up needed"
+    : "Critical AR risk";
 
   const summaryCards: SummaryCardDef[] = [
     {
@@ -290,10 +310,29 @@ const SalesMatrixComponent = () => {
       accent: "#6366f1",
     },
     {
+      label: "Total Received",
+      value: totalReceived || null,
+      format: "currency",
+      accent: "#10b981",
+    },
+    {
+      label: "Balance Due",
+      value: totalBalance || null,
+      format: "currency",
+      accent: "#ef4444",
+    },
+    {
+      label: "Collection Rate",
+      value: collectionRate,
+      format: "percent",
+      subtext: rateSubtext,
+      accent: "#f59e0b",
+    },
+    {
       label: bestOutlet ? `Best: ${bestOutlet.outletname}` : "Best Outlet",
       value: bestOutlet?.totalsales || null,
       format: "currency",
-      accent: "#10b981",
+      accent: "#8b5cf6",
     },
     {
       label: "Invoice Count",
@@ -301,15 +340,9 @@ const SalesMatrixComponent = () => {
       format: "number",
       accent: "#0ea5e9",
     },
-    {
-      label: "Avg per Invoice",
-      value: avgPerInvoice,
-      format: "currency",
-      accent: "#8b5cf6",
-    },
   ];
 
-  // Stacked bar chart data (one dataset per outlet, values = totalsales per period)
+  // Stacked bar chart — series driven by chartMetric selection
   const chartData = useMemo(() => {
     if (!chartRows.length || !chartColumns.length) return null;
     return {
@@ -317,8 +350,7 @@ const SalesMatrixComponent = () => {
       datasets: chartColumns.map((col, i) => ({
         label: col.outletname,
         data: chartRows.map(
-          (r) =>
-            r.outlets.find((o) => o.outletid === col.outletid)?.totalsales ?? 0
+          (r) => (r.outlets.find((o) => o.outletid === col.outletid) as any)?.[chartMetric] ?? 0
         ),
         backgroundColor: OUTLET_COLORS[i % OUTLET_COLORS.length] + "99",
         borderColor: OUTLET_COLORS[i % OUTLET_COLORS.length],
@@ -327,7 +359,7 @@ const SalesMatrixComponent = () => {
         borderSkipped: false as const,
       })),
     };
-  }, [chartRows, chartColumns]);
+  }, [chartRows, chartColumns, chartMetric]);
 
   const chartOptions = useMemo(
     () => ({
@@ -404,7 +436,7 @@ const SalesMatrixComponent = () => {
       {/* Summary cards — admin only, toggle panel */}
       {isAdmin && totals.length > 0 && (
         <SummaryPanelWrapper isCollapsed={cardsCollapsed} onToggle={toggleCards} title="Sales Summary">
-          <ReportSummaryCards cards={summaryCards} loading={false} />
+          <ReportSummaryCards cards={summaryCards} loading={false} singleRow />
         </SummaryPanelWrapper>
       )}
 
@@ -417,27 +449,44 @@ const SalesMatrixComponent = () => {
             onClick={toggleChart}
           >
             <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Sales by Period
+              {CHART_METRIC_LABELS[chartMetric]}
             </span>
-            <button
-              type="button"
-              style={{
-                background: "none",
-                border: "1px solid #e2e8f0",
-                borderRadius: 6,
-                padding: "2px 10px",
-                fontSize: 11,
-                color: "#64748b",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                lineHeight: 1.6,
-              }}
-            >
-              {chartCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
-              {chartCollapsed ? "Show Chart" : "Hide Chart"}
-            </button>
+            <div className="d-flex align-items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              {/* Chart series toggle */}
+              <div className="btn-group btn-group-sm">
+                {(["totalsales", "amountreceived", "balancedue"] as ChartMetric[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`btn ${chartMetric === m ? "btn-secondary" : "btn-outline-secondary"}`}
+                    style={{ fontSize: 10, padding: "1px 8px" }}
+                    onClick={() => setChartMetric(m)}
+                  >
+                    {m === "totalsales" ? "Sales" : m === "amountreceived" ? "Payment" : "Balance"}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                style={{
+                  background: "none",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 6,
+                  padding: "2px 10px",
+                  fontSize: 11,
+                  color: "#64748b",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  lineHeight: 1.6,
+                }}
+                onClick={toggleChart}
+              >
+                {chartCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+                {chartCollapsed ? "Show Chart" : "Hide Chart"}
+              </button>
+            </div>
           </div>
           {!chartCollapsed && (
             <div style={{ padding: "10px 16px", height: 160 }}>
@@ -547,10 +596,10 @@ const SalesMatrixComponent = () => {
           >
             <div className="d-flex align-items-center gap-2">
               <span className="text-muted" style={{ fontSize: 12, fontWeight: 600 }}>
-                Show:
+                Also show:
               </span>
               <div className="btn-group btn-group-sm">
-                {(Object.keys(METRIC_LABELS) as SalesMetricMode[]).map((mode) => (
+                {(Object.keys(TOGGLE_METRIC_LABELS) as SalesMetricMode[]).map((mode) => (
                   <button
                     key={mode}
                     className={`btn ${
@@ -558,7 +607,7 @@ const SalesMatrixComponent = () => {
                     }`}
                     onClick={() => handleMetricChange(mode)}
                   >
-                    {METRIC_LABELS[mode]}
+                    {TOGGLE_METRIC_LABELS[mode]}
                   </button>
                 ))}
               </div>
