@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { ChevronDown, ChevronUp } from "react-feather";
 import { ColDef, ColGroupDef, GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
 import "ag-grid-enterprise";
 import { useParams, useRouter } from "next/navigation";
@@ -37,6 +38,8 @@ import {
   getSalesColumnStateForMode,
 } from "./salesMatrixColumnDef";
 import MultiOutletSelect from "@/components/ui/products/inventoryPivot/MultiOutletSelect";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "@/components/ui/grid/SummaryPanelWrapper";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -122,6 +125,9 @@ const SalesMatrixComponent = () => {
 
   const { fetchOutletsList, outlets, loading: outletsLoading } = useOutlets();
   const [getSalesMatrix] = useLazyQuery(GET_SALES_MATRIX_QUERY);
+
+  const { isAdmin, isCollapsed: cardsCollapsed, toggle: toggleCards } = useSummaryPanel("sales-matrix");
+  const { isCollapsed: chartCollapsed, toggle: toggleChart } = useSummaryPanel("sales-matrix-chart");
 
   const resolvedDates = useMemo(() => {
     if (datePreset === "custom" && customStart && customEnd) {
@@ -395,22 +401,49 @@ const SalesMatrixComponent = () => {
         }
       />
 
-      {/* Summary cards — shown once data loads */}
-      {totals.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
+      {/* Summary cards — admin only, toggle panel */}
+      {isAdmin && totals.length > 0 && (
+        <SummaryPanelWrapper isCollapsed={cardsCollapsed} onToggle={toggleCards} title="Sales Summary">
           <ReportSummaryCards cards={summaryCards} loading={false} />
-        </div>
+        </SummaryPanelWrapper>
       )}
 
-      {/* Stacked bar chart — hidden when only 1 period */}
+      {/* Stacked bar chart — collapsible panel, hidden when only 1 period */}
       {chartData && chartRows.length > 1 && (
-        <div
-          className="card"
-          style={{ padding: "10px 16px", marginBottom: 8, flexShrink: 0 }}
-        >
-          <div style={{ height: 140 }}>
-            <Bar data={chartData} options={chartOptions} />
+        <div className="card" style={{ marginBottom: 8, flexShrink: 0 }}>
+          <div
+            className="d-flex align-items-center justify-content-between px-3"
+            style={{ height: 36, borderBottom: chartCollapsed ? "none" : "1px solid #e2e8f0", cursor: "pointer" }}
+            onClick={toggleChart}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Sales by Period
+            </span>
+            <button
+              type="button"
+              style={{
+                background: "none",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 11,
+                color: "#64748b",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                lineHeight: 1.6,
+              }}
+            >
+              {chartCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+              {chartCollapsed ? "Show Chart" : "Hide Chart"}
+            </button>
           </div>
+          {!chartCollapsed && (
+            <div style={{ padding: "10px 16px", height: 160 }}>
+              <Bar data={chartData} options={chartOptions} />
+            </div>
+          )}
         </div>
       )}
 
