@@ -17,7 +17,6 @@ const StoreDropdown = ({ storeLoading }: Props) => {
   const user = useAppSelector((state) => state.user.data);
   const { outletId } = useParams();
   const pathname = usePathname();
-  // Track which store item is currently hovered so its submenu stays open
   const [hoveredStoreId, setHoveredStoreId] = useState<string | number | null>(
     null
   );
@@ -31,30 +30,34 @@ const StoreDropdown = ({ storeLoading }: Props) => {
     return <></>;
   }
 
+  const role = user?.role?.toLowerCase() ?? "";
+  const isRestricted = role === "manager" || role === "cashier";
+
+  const totalOutlets = stores.reduce(
+    (sum, s) => sum + (s.outlets?.filter((o) => o.isenabled).length ?? 0),
+    0
+  );
+
+  // Non-restricted roles (owner/admin/etc) always see dropdown.
+  // Manager/cashier only see it if they have multiple outlets assigned.
+  const showDropdown = !isRestricted || totalOutlets > 1;
+
+  const defaultOutletName = (() => {
+    for (const storeItem of stores) {
+      const o = storeItem.outlets?.find((o) => o.isenabled && o.isdefaultoutlet);
+      if (o) return o.outletname;
+    }
+    return stores[0]?.outlets?.[0]?.outletname ?? "No outlet available";
+  })();
+
   return (
     <>
-      {user?.roleid !== 1 && (
+      {!showDropdown && (
         <li className="nav-item d-flex align-items-center">
-          <span className="nav-link text-dark">
-            {(() => {
-              // Find the default outlet across all stores
-              for (const storeItem of stores) {
-                const defaultOutlet = storeItem.outlets?.find(
-                  (outlet) => outlet.isenabled && outlet.isdefaultoutlet
-                );
-                if (defaultOutlet) {
-                  return defaultOutlet.outletname;
-                }
-              }
-              // Fallback to first available outlet if no default found
-              return stores[0]?.outlets?.[0]
-                ? stores[0].outlets[0].outletname
-                : "No outlet available";
-            })()}
-          </span>
+          <span className="nav-link text-dark">{defaultOutletName}</span>
         </li>
       )}
-      {user?.roleid === 1 && (
+      {showDropdown && (
         <Dropdown
           as="li"
           className="nav-item has-arrow main-drop select-store-dropdown store-with-label d-flex align-items-center"
@@ -98,7 +101,13 @@ const StoreDropdown = ({ storeLoading }: Props) => {
 
           <Dropdown.Menu align="end" className="dropdown-menu-right">
             {stores?.map((str) => {
-              const active = str.storeid === store?.storeid;
+              const isCurrentStore = str.storeid === store?.storeid;
+              // GetStore (singular) returns all user-accessible outlets;
+              // GetStores (plural) only returns the default outlet per store.
+              // Use the richer store.outlets for the active store.
+              const outlets = isCurrentStore
+                ? (store?.outlets ?? str.outlets)
+                : str.outlets;
               return (
                 <Dropdown
                   key={str.storeid}
@@ -113,21 +122,21 @@ const StoreDropdown = ({ storeLoading }: Props) => {
                     as={Link}
                     href="#"
                     className={`dropdown-item d-flex align-items-center justify-content-between ${
-                      active ? "active" : ""
+                      isCurrentStore ? "active" : ""
                     }`}
                   >
                     <span>{str.storename}</span>
-                    {str.outlets?.length ? (
+                    {outlets?.length ? (
                       <ChevronRight
                         size={14}
-                        className={`ms-auto ${active ? "text-white" : ""}`}
+                        className={`ms-auto ${isCurrentStore ? "text-white" : ""}`}
                       />
                     ) : null}
                   </Dropdown.Toggle>
 
-                  {str.outlets?.length ? (
+                  {outlets?.length ? (
                     <Dropdown.Menu className="active">
-                      {str.outlets
+                      {outlets
                         .filter((o) => o.isenabled)
                         .map((o) => {
                           const active = o.outletid === Number(outletId);

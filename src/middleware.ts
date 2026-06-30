@@ -26,6 +26,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // /unauthorized must always be reachable regardless of auth state
+  if (pathname === "/unauthorized") {
+    return NextResponse.next();
+  }
+
   // If accessing a public route while authenticated, redirect to dashboard
   if (token && publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/jw/home", request.url));

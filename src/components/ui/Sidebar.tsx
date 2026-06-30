@@ -1,3 +1,5 @@
+"use client";
+
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { Menus } from "@/types/permissions";
 import Link from "next/link";
@@ -26,6 +28,32 @@ const Sidebar = ({ menus }: Props) => {
 
   const [subOpen, setSubopen] = useState<string>("");
   const [subsidebar, setSubsidebar] = useState("");
+  const [isMini, setIsMini] = useState(false);
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMini(document.body.classList.contains("mini-sidebar"));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (isMini) {
+      document.body.classList.add("expand-menu");
+      setIsHoverExpanded(true);
+    }
+  };
+  const handleMouseLeave = () => {
+    if (isMini) {
+      document.body.classList.remove("expand-menu");
+      setIsHoverExpanded(false);
+    }
+  };
+
+  // Submenus collapsed only when mini AND not hover-expanded
+  const subCollapsed = isMini && !isHoverExpanded;
 
   useEffect(() => {
     if (!menus) return;
@@ -62,7 +90,12 @@ const Sidebar = ({ menus }: Props) => {
 
   return (
     <div>
-      <div className="sidebar" id="sidebar">
+      <div
+        className="sidebar"
+        id="sidebar"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <Scrollbar>
           <div className="sidebar-inner slimscroll">
             <div id="sidebar-menu" className="sidebar-menu">
@@ -114,7 +147,7 @@ const Sidebar = ({ menus }: Props) => {
                               style={{
                                 display: "block",
                                 overflow: "hidden",
-                                maxHeight: isOpen ? "1000px" : "0px",
+                                maxHeight: !subCollapsed && isOpen ? "1000px" : "0px",
                                 transition: "max-height 0.28s ease-in-out",
                               }}
                             >
@@ -169,7 +202,7 @@ const Sidebar = ({ menus }: Props) => {
                                           display: "block",
                                           overflow: "hidden",
                                           maxHeight:
-                                            subsidebar === item.menuname
+                                            !subCollapsed && subsidebar === item.menuname
                                               ? "600px"
                                               : "0px",
                                           transition:

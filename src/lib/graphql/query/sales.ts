@@ -342,16 +342,16 @@ export const GET_INVOICE_DAILY_SUMMARY_QUERY = gql`
 `;
 
 export const GET_MEMO_DAILY_SUMMARY_QUERY = gql`
-  query GetMemoDailySummary($outletid: Int!) {
-    getMemoDailySummary(outletid: $outletid) {
+  query GetMemoDailySummary($outletid: Int!, $startdate: String, $enddate: String) {
+    getMemoDailySummary(outletid: $outletid, startdate: $startdate, enddate: $enddate) {
       total_today paid_today pending_today voided_today revenue_today avg_today
     }
   }
 `;
 
 export const GET_SO_DAILY_SUMMARY_QUERY = gql`
-  query GetSODailySummary($outletid: Int!) {
-    getSODailySummary(outletid: $outletid) {
+  query GetSODailySummary($outletid: Int!, $startdate: String, $enddate: String) {
+    getSODailySummary(outletid: $outletid, startdate: $startdate, enddate: $enddate) {
       total_today paid_today pending_today voided_today revenue_today avg_today
     }
   }

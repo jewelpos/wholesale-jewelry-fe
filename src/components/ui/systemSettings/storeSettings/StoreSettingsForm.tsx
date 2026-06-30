@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client";
 import { useDispatch } from "react-redux";
@@ -94,13 +94,19 @@ const StoreSettingsForm = () => {
 
   const [upsertSettings] = useMutation(UPSERT_WAREHOUSE_SETTINGS_MUTATION);
 
-  const allRows: WarehouseSettingsRow[] = allData?.getAllWarehouseSettings ?? [];
-  const outletWarehouses: { warehouseid: number; warehousename: string }[] = outletData?.getWarehousesByOutletId ?? [];
+  const allRowsRaw = allData?.getAllWarehouseSettings;
+  const outletWarehousesRaw = outletData?.getWarehousesByOutletId;
 
-  // Warehouse list to display in selector
-  const warehouseOptions = isAdmin
-    ? allRows.map(r => ({ warehouseid: r.warehouseid, warehousename: r.warehousename }))
-    : outletWarehouses;
+  const allRows: WarehouseSettingsRow[] = useMemo(() => allRowsRaw ?? [], [allRowsRaw]);
+  const outletWarehouses: { warehouseid: number; warehousename: string }[] = useMemo(() => outletWarehousesRaw ?? [], [outletWarehousesRaw]);
+
+  // Warehouse list to display in selector — memoized so the useEffect dep is stable
+  const warehouseOptions = useMemo(
+    () => isAdmin
+      ? allRows.map(r => ({ warehouseid: r.warehouseid, warehousename: r.warehousename }))
+      : outletWarehouses,
+    [isAdmin, allRows, outletWarehouses]
+  );
 
   // Auto-select first warehouse on load
   useEffect(() => {

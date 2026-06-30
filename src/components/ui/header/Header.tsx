@@ -1,6 +1,8 @@
 "use client";
 
 import { useAppSelector } from "@/lib/store/hook";
+import { GET_OUTLETS_QUERY } from "@/lib/graphql/query/outlet";
+import { useQuery } from "@apollo/client";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -16,8 +18,51 @@ type Props = {
 const Header = ({ onLogout, storeLoading }: Props) => {
   const { storeId, outletId } = useParams();
   const [toggle, SetToggle] = useState(false);
-  // const [isFullscreen, setIsFullscreen] = useState(false);
   const user = useAppSelector((state) => state.user.data);
+  const stores = useAppSelector((state) => state.stores.data);
+
+  // Resolve current outlet name from Redux (available immediately after stores load)
+  const currentOutletName = (() => {
+    if (outletId) {
+      for (const s of stores) {
+        const o = s.outlets?.find((o) => o.outletid === Number(outletId));
+        if (o) return o.outletname;
+      }
+    }
+    for (const s of stores) {
+      const o = s.outlets?.find((o) => o.isenabled && o.isdefaultoutlet);
+      if (o) return o.outletname;
+    }
+    return stores[0]?.outlets?.[0]?.outletname ?? null;
+  })();
+
+  // Fetch full outlet details for logo only
+  const currentStoreId = storeId
+    ? parseInt(storeId as string, 10)
+    : stores[0]?.storeid
+    ? Number(stores[0].storeid)
+    : null;
+
+  const currentOutletId = outletId ? Number(outletId) : null;
+
+  const { data: outletsData } = useQuery(GET_OUTLETS_QUERY, {
+    variables: { storeid: [currentStoreId] },
+    skip: !currentStoreId,
+    fetchPolicy: "cache-first",
+  });
+
+  const currentOutletDetail = outletsData?.getOutlets?.find(
+    (o: { outletid: number }) =>
+      o.outletid === (currentOutletId ?? outletsData.getOutlets[0]?.outletid)
+  ) ?? null;
+
+  const outletLogo: string | null = currentOutletDetail?.storelogo ?? null;
+  const outletAddress: string | null = [
+    currentOutletDetail?.address,
+    currentOutletDetail?.city,
+  ]
+    .filter(Boolean)
+    .join(", ") || null;
 
   const defaultPage = (() => {
     if (!storeId || !outletId) return `/jw/home`;
@@ -160,6 +205,57 @@ const Header = ({ onLogout, storeLoading }: Props) => {
           </Link>
         </div>
         {/* /Logo */}
+        {/* Outlet title */}
+        {currentOutletName && (
+          <div
+            style={{
+              float: "left",
+              height: "66px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              paddingLeft: 20,
+              paddingRight: 20,
+            }}
+          >
+            {outletLogo && (
+              <Image
+                src={outletLogo}
+                alt={currentOutletName}
+                width={40}
+                height={40}
+                unoptimized
+                style={{ objectFit: "contain", borderRadius: 6 }}
+              />
+            )}
+            <div style={{ lineHeight: 1.2 }}>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  letterSpacing: "-0.3px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {currentOutletName}
+              </div>
+              {outletAddress && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#6c757d",
+                    whiteSpace: "nowrap",
+                    marginTop: 1,
+                  }}
+                >
+                  {outletAddress}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {/* /Outlet title */}
         <Link
           id="mobile_btn"
           className="mobile_btn"

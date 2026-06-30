@@ -41,9 +41,10 @@ import { GET_INVOICE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
-type DatePreset = "today" | "week" | "month" | "quarter" | "year";
+type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
 
 const DATE_PRESET_LABELS: Record<DatePreset, string> = {
+  all: "All",
   today: "Today",
   week: "This Week",
   month: "This Month",
@@ -51,7 +52,8 @@ const DATE_PRESET_LABELS: Record<DatePreset, string> = {
   year: "This Year",
 };
 
-function getDateRange(preset: DatePreset): { startdate: string; enddate: string } {
+function getDateRange(preset: DatePreset): { startdate: string; enddate: string } | null {
+  if (preset === "all") return null;
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -133,11 +135,13 @@ const SalesListComponent = () => {
         { key: "statusname", value: { filterType: "text", type: "contains", filter: "void" } },
       ];
     }
-    const { startdate, enddate } = getDateRange(datePresetRef.current);
-    filters.filters = [
-      ...filters.filters,
-      { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: startdate, dateTo: enddate } },
-    ];
+    const dateRange = getDateRange(datePresetRef.current);
+    if (dateRange) {
+      filters.filters = [
+        ...filters.filters,
+        { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } },
+      ];
+    }
     const result = await handleTryCatch(async () => {
       const { data } = await getInvoiceList({
         variables: { outletid: selectedOutletRef.current, ...filters },
@@ -303,9 +307,11 @@ const SalesListComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("invoice-list");
 
-  const { startdate, enddate } = getDateRange(datePreset);
+  const dateRange = getDateRange(datePreset);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const summaryRange = dateRange ?? { startdate: "2000-01-01", enddate: todayStr };
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_INVOICE_DAILY_SUMMARY_QUERY, {
-    variables: { outletid: selectedOutlet, startdate, enddate },
+    variables: { outletid: selectedOutlet, startdate: summaryRange.startdate, enddate: summaryRange.enddate },
     skip: !selectedOutlet,
   });
   const summary = summaryData?.getInvoiceDailySummary ?? null;

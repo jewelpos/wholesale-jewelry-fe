@@ -41,6 +41,30 @@ const dateRenderer = (params: ICellRendererParams) =>
     ? ""
     : dayjs(Number(params.value)).format(TIME_FORMAT);
 
+type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
+const DATE_PRESET_LABELS: Record<DatePreset, string> = {
+  all: "All", today: "Today", week: "This Week",
+  month: "This Month", quarter: "This Qtr", year: "This Year",
+};
+function getDateRange(preset: DatePreset): { startdate: string; enddate: string } | null {
+  if (preset === "all") return null;
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const end = fmt(today);
+  if (preset === "today") return { startdate: end, enddate: end };
+  if (preset === "week") {
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay());
+    return { startdate: fmt(start), enddate: end };
+  }
+  if (preset === "month") return { startdate: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), enddate: end };
+  if (preset === "quarter") {
+    const q = Math.floor(today.getMonth() / 3);
+    return { startdate: fmt(new Date(today.getFullYear(), q * 3, 1)), enddate: end };
+  }
+  return { startdate: fmt(new Date(today.getFullYear(), 0, 1)), enddate: end };
+}
+
 const memoColumnDefs: ColDef<MemoSummary>[] = [
   { headerName: "Memo #",   field: "memonumber",  filter: "agNumberColumnFilter" },
   {
@@ -111,6 +135,9 @@ const MemoListComponent = () => {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [gridReady, setGridReady] = useState(false);
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const datePresetRef = useRef<DatePreset>("all");
+  useEffect(() => { datePresetRef.current = datePreset; }, [datePreset]);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -129,6 +156,13 @@ const MemoListComponent = () => {
       filters.filters = [
         ...filters.filters,
         { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } },
+      ];
+    }
+    const dateRange = getDateRange(datePresetRef.current);
+    if (dateRange) {
+      filters.filters = [
+        ...filters.filters,
+        { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } },
       ];
     }
     const result = await handleTryCatch(async () => {
@@ -185,7 +219,7 @@ const MemoListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWarehouse, debouncedSearch, statusFilter]);
+  }, [selectedWarehouse, debouncedSearch, statusFilter, datePreset]);
 
   const handleSelectionChanged = useCallback(() => {
     const selected = gridRef.current?.api?.getSelectedRows?.() || [];
@@ -252,8 +286,11 @@ const MemoListComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("memo-list");
 
+  const memoDateRange = getDateRange(datePreset);
+  const memoTodayStr = new Date().toISOString().slice(0, 10);
+  const memoSummaryRange = memoDateRange ?? { startdate: "2000-01-01", enddate: memoTodayStr };
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_MEMO_DAILY_SUMMARY_QUERY, {
-    variables: { outletid: parsedOutletId },
+    variables: { outletid: parsedOutletId, startdate: memoSummaryRange.startdate, enddate: memoSummaryRange.enddate },
     skip: !parsedOutletId,
   });
   const summary = summaryData?.getMemoDailySummary ?? null;
@@ -282,7 +319,7 @@ const MemoListComponent = () => {
         />
       )}
       {isAdmin && (
-        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Memo Daily Summary">
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title={`Memo Summary — ${DATE_PRESET_LABELS[datePreset]}`}>
           <DailyStatusCards
             data={summary}
             loading={summaryLoading}
@@ -299,19 +336,34 @@ const MemoListComponent = () => {
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
           />
-          <StatusFilterChips
-            active={statusFilter}
-            onChange={(v) => {
-              setStatusFilter(v);
-              gridRef.current?.api?.refreshServerSide({ purge: true });
-            }}
-            counts={{
-              total: summary?.total_today ?? 0,
-              paid: summary?.paid_today ?? 0,
-              pending: summary?.pending_today ?? 0,
-              voided: summary?.voided_today ?? 0,
-            }}
-          />
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ marginBottom: 8 }}>
+            <StatusFilterChips
+              active={statusFilter}
+              onChange={(v) => {
+                setStatusFilter(v);
+                gridRef.current?.api?.refreshServerSide({ purge: true });
+              }}
+              counts={{
+                total: summary?.total_today ?? 0,
+                paid: summary?.paid_today ?? 0,
+                pending: summary?.pending_today ?? 0,
+                voided: summary?.voided_today ?? 0,
+              }}
+            />
+            <div className="btn-group btn-group-sm">
+              {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`btn ${datePreset === p ? "btn-secondary" : "btn-outline-secondary"}`}
+                  style={{ fontSize: 11, padding: "3px 10px" }}
+                  onClick={() => setDatePreset(p)}
+                >
+                  {DATE_PRESET_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}

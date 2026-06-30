@@ -5,7 +5,7 @@ import { useAppSelector } from "@/lib/store/hook";
 
 export function useSummaryPanel(key: string, panelHeight = 175) {
   const user = useAppSelector((state) => state.user.data);
-  const isAdmin = user?.roleid === 1;
+  const isAdmin = !!user;
 
   const storageKey = `summary_panel_${key}`;
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {

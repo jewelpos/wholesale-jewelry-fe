@@ -1,15 +1,10 @@
-import MainHomeComponent from "@/components/ui/home/MainHomeComponent";
+import Content from "@/components/layout/Content";
+import WarehouseListComponent from "@/components/ui/systemSettings/warehouses/WarehouseListComponent";
 
 const SettingsStoreSetupPage = () => (
-  <div className="page-wrapper">
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-md-12">
-          <MainHomeComponent />
-        </div>
-      </div>
-    </div>
-  </div>
+  <Content>
+    <WarehouseListComponent />
+  </Content>
 );
 
 export default SettingsStoreSetupPage;
