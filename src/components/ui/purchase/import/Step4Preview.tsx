@@ -5,7 +5,7 @@ import { useLazyQuery } from '@apollo/client';
 import { cleanCell, cleanNumeric, RawSheet } from '@/lib/utils/poImportParser';
 import { ColumnMapping } from './Step3ColumnMap';
 import { GET_INVENTORY_ITEMS_BY_ITEMCODES } from '@/lib/graphql/query/poImport';
-import api from '@/lib/axios';
+import { getAccessToken } from '@/lib/authStorage';
 
 export interface ImportedPOItem {
   itemid?: number;
@@ -252,8 +252,22 @@ export default function Step4Preview({
           })),
         };
 
-        const res = await api.post('/store/product/batch-add', payload);
-        const json = res.data;
+        const token = await getAccessToken();
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/store/product/batch-add`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}: ${await res.text()}`);
+        }
+        const json = await res.json();
 
         setBatchResult(json);
         for (const c of json.created ?? []) {
@@ -292,7 +306,6 @@ export default function Step4Preview({
     // Fire-and-forget via raw fetch (NOT Apollo) — bypasses global errorLink so no logout on failure
     void (async () => {
       try {
-        const { getAccessToken } = await import('@/lib/authStorage');
         const token = await getAccessToken();
         await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
           method: 'POST',
