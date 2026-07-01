@@ -37,10 +37,12 @@ const EMPTY_MAPPING: ColumnMapping = {
   defaultUnit: 'Pc',
 };
 
-const REQUIRED_FIELDS: (keyof ColumnMapping)[] = ['itemcode', 'itemdescription', 'qtyordered', 'orderunitcost'];
+const REQUIRED_FIELDS: StringColumnKey[] = ['itemcode', 'itemdescription', 'qtyordered', 'orderunitcost'];
+
+type StringColumnKey = { [K in keyof ColumnMapping]: ColumnMapping[K] extends string ? K : never }[keyof ColumnMapping];
 
 interface FieldDef {
-  key: keyof ColumnMapping;
+  key: StringColumnKey;
   label: string;
   required: boolean;
 }
