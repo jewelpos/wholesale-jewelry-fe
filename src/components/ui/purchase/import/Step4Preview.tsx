@@ -40,6 +40,7 @@ interface MappedRow {
 interface Props {
   storeId: number;
   userId: number;
+  warehouseId?: number;
   fileName: string;
   sheet: RawSheet;
   startRow: number;
@@ -65,6 +66,7 @@ function getCell(row: string[], letter: string): string {
 export default function Step4Preview({
   storeId,
   userId,
+  warehouseId,
   fileName,
   sheet,
   startRow,
@@ -87,6 +89,7 @@ export default function Step4Preview({
     fetchPolicy: 'network-only',
   });
 
+
   // Build raw mapped rows from the sheet
   const rawRows: MappedRow[] = useMemo(() => {
     const dataRows = sheet.rows.slice(startRow);
@@ -98,8 +101,7 @@ export default function Step4Preview({
       const itemdescription = cleanCell(getCell(row, mapping.itemdescription));
       const qtyordered = cleanNumeric(getCell(row, mapping.qtyordered));
       const orderunitcost = cleanNumeric(getCell(row, mapping.orderunitcost));
-      const rawUnit = mapping.itemunit ? cleanCell(getCell(row, mapping.itemunit)) : '';
-      const itemunit = rawUnit || mapping.defaultUnit || 'Pc';
+      const itemunit = mapping.defaultUnit || 'Pc';
       const orddiscount = mapping.orddiscount ? cleanNumeric(getCell(row, mapping.orddiscount)) : null;
       const imageurl = mapping.imageurl ? cleanCell(getCell(row, mapping.imageurl)) : '';
 
@@ -244,11 +246,15 @@ export default function Step4Preview({
       try {
         const payload = {
           storeid: storeId,
+          warehouseid: warehouseId,
+          categoryid: mapping.categoryid,
+          subcategoryid: mapping.subcategoryid,
           items: newRows.map((r) => ({
             itemcode: r.itemcode,
             itemdescription: r.itemdescription || r.itemcode,
             itemunit: r.itemunit,
             itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
+            itempurchaseprice: r.orderunitcost ?? 0,
           })),
         };
 
@@ -395,8 +401,31 @@ export default function Step4Preview({
       {/* Duplicate SKU action selectors */}
       {Object.keys(dupGroups).length > 0 && (
         <div className="alert alert-warning py-2 mb-3">
-          <strong>Duplicate SKUs — choose action per group:</strong>
-          <div className="mt-2">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <strong>Duplicate SKUs — choose action per group:</strong>
+            <div className="d-flex gap-1">
+              <span className="small text-muted me-1">Apply to all:</span>
+              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
+                onClick={() => {
+                  const all: Record<string, DupAction> = {};
+                  Object.keys(dupGroups).forEach((c) => { all[c] = 'merge'; });
+                  setDupActions(all);
+                }}>Sum Qty</button>
+              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
+                onClick={() => {
+                  const all: Record<string, DupAction> = {};
+                  Object.keys(dupGroups).forEach((c) => { all[c] = 'keepall'; });
+                  setDupActions(all);
+                }}>Keep All</button>
+              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
+                onClick={() => {
+                  const all: Record<string, DupAction> = {};
+                  Object.keys(dupGroups).forEach((c) => { all[c] = 'removeextras'; });
+                  setDupActions(all);
+                }}>Remove Extras</button>
+            </div>
+          </div>
+          <div className="mt-1">
             {Object.entries(dupGroups).map(([code, rows]) => (
               <div key={code} className="d-flex align-items-center gap-2 mb-1 flex-wrap">
                 <span className="small fw-semibold">{code}</span>

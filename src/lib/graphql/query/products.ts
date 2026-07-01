@@ -610,6 +610,7 @@ export const GET_INVENTORY_TRANSFER_ITEM_QUERY = gql`
       itemcode
       itemdescription
       transferquantity
+      quantityrequest
       transferdate
       username
       warehousename

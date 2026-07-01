@@ -39,6 +39,8 @@ import ButtonLoader from "../../ButtonLoader";
 import PageHeader from "@/components/ui/PageHeader";
 import { PurchaseOrderFormType, Status } from "@/types/purchase";
 import { ItemDetails } from "@/hooks/useProducts";
+import POSupplierInvoiceModal, { POSupplierInvoiceInitialData } from "./POSupplierInvoiceModal";
+import POImportWizard from "@/components/ui/purchase/import/POImportWizard";
 
 const PURCHASE_ORDER_SAVE_MODE = {
   BACKORDER: "SAVE_AS_BACKORDER",
@@ -69,6 +71,9 @@ const PurchaseOrderForm = ({
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [removedItemIds, setRemovedItemIds] = useState<number[]>([]);
   const [returnOrderPoNumber, setReturnOrderPoNumber] = useState<number>(0);
+  const [showAPModal, setShowAPModal] = useState(false);
+  const [apInitialData, setApInitialData] = useState<POSupplierInvoiceInitialData | null>(null);
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -894,6 +899,39 @@ const PurchaseOrderForm = ({
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
+
+        // Only prompt for AP invoice on new PO create (not edit / return)
+        if (!isEdit && !isReturnOrder) {
+          const apResult = await MySwal.fire({
+            icon: "question",
+            title: "Create Supplier Invoice?",
+            html: "<div class=\"text-muted\" style=\"font-size:0.9rem\">Do you want to create an AP invoice for this Purchase Order?</div>",
+            showCancelButton: true,
+            confirmButtonText: "Yes, Create Invoice",
+            cancelButtonText: "No, Skip",
+            buttonsStyling: false,
+            customClass: {
+              confirmButton: "btn btn-success me-2",
+              cancelButton: "btn btn-light",
+              actions: "d-flex justify-content-center gap-2 mt-0",
+            },
+          });
+
+          if (apResult.isConfirmed) {
+            const poNumber = successData.data?.ponumber;
+            setApInitialData({
+              supplierid: Number(formData.supplierid),
+              supplierName: watch("poordtocompanyname") || "",
+              veninvoiceno: poNumber ? String(poNumber) : "",
+              refponumber: poNumber ? String(poNumber) : "",
+              veninvoicetotal: String(formData.pototal || ""),
+              termsid: formData.termsid ? Number(formData.termsid) : 1,
+            });
+            setShowAPModal(true);
+            return true; // AP modal handles navigation
+          }
+        }
+
         router.back();
       }
       return true;
@@ -995,7 +1033,7 @@ const PurchaseOrderForm = ({
                     value={selectedDate || null}
                     onChange={handleDateChange}
                     className="filterdatepicker"
-                    format="DD-MM-YYYY"
+                    format="MM/DD/YYYY"
                     placeholder="Choose Date"
                     allowClear={false}
                     disabled={disableField}
@@ -1015,7 +1053,7 @@ const PurchaseOrderForm = ({
                         value={field.value || null}
                         onChange={(date) => field.onChange(date)}
                         className="filterdatepicker"
-                        format="DD-MM-YYYY"
+                        format="MM/DD/YYYY"
                         placeholder="Choose Date"
                         allowClear
                         disabled={disableField}
@@ -1476,8 +1514,19 @@ const PurchaseOrderForm = ({
               {/* Add / Edit item row */}
               {!disableField && (
                 <div className="border-top pt-3 mt-1">
-                  <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
-                    {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                      {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
+                    </div>
+                    {editingIndex == null && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => setShowImportWizard(true)}
+                      >
+                        Import from File
+                      </button>
+                    )}
                   </div>
                   <div className="row g-2 align-items-end">
                     <div className="col-lg-4 col-md-6 col-sm-12">
@@ -1864,6 +1913,41 @@ const PurchaseOrderForm = ({
           </ActionFooter>
         )}
       </form>
+
+      {showAPModal && apInitialData && (
+        <POSupplierInvoiceModal
+          storeId={parsedStoreId}
+          initialData={apInitialData}
+          onDone={() => {
+            setShowAPModal(false);
+            router.back();
+          }}
+        />
+      )}
+
+      {showImportWizard && (
+        <POImportWizard
+          storeId={parsedStoreId}
+          userId={0}
+          warehouseId={parsedWarehouseId}
+          onClose={() => setShowImportWizard(false)}
+          onDone={(importedItems) => {
+            importedItems.forEach((item) =>
+              append({
+                itemid: item.itemid,
+                itemcode: item.itemcode ?? "",
+                itemdescription: item.itemdescription,
+                itemunit: item.itemunit,
+                qtyordered: item.qtyordered,
+                orderunitcost: item.orderunitcost,
+                orddiscount: item.orddiscount,
+                ordextendedprice: item.qtyordered * item.orderunitcost * (1 - (item.orddiscount ?? 0) / 100),
+              })
+            );
+            setShowImportWizard(false);
+          }}
+        />
+      )}
     </>
   );
 };
