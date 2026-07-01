@@ -37,6 +37,7 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const imgContainerRef = useRef<HTMLDivElement>(null);
+  const prevOpenRef = useRef(false);
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -45,8 +46,13 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [lightboxOpen]);
 
+  // Reset zoom/pan only when lightbox transitions true→false (closing), not on every mount
   useEffect(() => {
-    if (!lightboxOpen) { setScale(1); setTranslate({ x: 0, y: 0 }); }
+    if (prevOpenRef.current && !lightboxOpen) {
+      setScale(1);
+      setTranslate({ x: 0, y: 0 });
+    }
+    prevOpenRef.current = lightboxOpen;
   }, [lightboxOpen]);
 
   useEffect(() => {
