@@ -289,9 +289,25 @@ export default function Step4Preview({
       itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
     }));
 
-    // TODO: re-enable after running migration AddPOImportTablesAndHistory1750000000027 on jewelpos_w478
-    // saveRecord fires via Apollo which triggers the global errorLink on any failure → logout.
-    // Skipping for now; table doesn't exist yet.
+    // Fire-and-forget via raw fetch (NOT Apollo) — bypasses global errorLink so no logout on failure
+    void (async () => {
+      try {
+        const { getAccessToken } = await import('@/lib/authStorage');
+        const token = await getAccessToken();
+        await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            query: `mutation { saveImportFileRecord(storeid: ${storeId}, filename: ${JSON.stringify(fileName)}, importedby: ${userId}, recordcount: ${items.length}) }`,
+          }),
+        });
+      } catch {
+        // ignore — history logging is best-effort
+      }
+    })();
 
     setImporting(false);
     onDone(items);
