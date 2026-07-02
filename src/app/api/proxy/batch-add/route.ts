@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_BASE = process.env.BACKEND_ORIGIN ?? "http://104.248.51.192:3129";
+const BACKEND_BASE = process.env.BACKEND_ORIGIN ?? "http://147.182.246.110:3129";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -12,12 +12,23 @@ export async function POST(request: NextRequest) {
   const auth = request.headers.get("authorization");
   if (auth) headers["authorization"] = auth;
 
-  const response = await fetch(`${BACKEND_BASE}/store/product/batch-add`, {
-    method: "POST",
-    headers,
-    body,
-  });
+  try {
+    const response = await fetch(`${BACKEND_BASE}/store/product/batch-add`, {
+      method: "POST",
+      headers,
+      body,
+    });
 
-  const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
+    const text = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text };
+    }
+    return NextResponse.json(data, { status: response.status });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ created: [], failed: [{ itemcode: "batch", reason: `Proxy error: ${msg}` }] }, { status: 502 });
+  }
 }
