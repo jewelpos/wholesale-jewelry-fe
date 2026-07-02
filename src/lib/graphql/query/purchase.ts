@@ -159,6 +159,7 @@ export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
         poitemid
         ponumber
         itemcode
+        itemdescription
         itemunit
         qtyordered
         orderunitcost
