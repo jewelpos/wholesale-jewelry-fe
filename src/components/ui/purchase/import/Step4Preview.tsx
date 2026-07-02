@@ -55,6 +55,7 @@ interface Props {
   onBack: () => void;
   onDone: (items: ImportedPOItem[]) => void;
   onImportStart?: () => void;
+  onImportError?: () => void;
 }
 
 interface CategoryItem { categoryid: number; categoryname: string; }
@@ -85,6 +86,7 @@ export default function Step4Preview({
   onBack,
   onDone,
   onImportStart,
+  onImportError,
 }: Props) {
   const [dupActions, setDupActions] = useState<Record<string, DupAction>>({});
   const [includedNoDesc, setIncludedNoDesc] = useState<Set<number>>(new Set());
@@ -357,6 +359,7 @@ export default function Step4Preview({
         if ((json.failed ?? []).length > 0) {
           setPartialError(true);
           setImporting(false);
+          onImportError?.();
           return;
         }
       } catch (err: unknown) {
@@ -364,6 +367,7 @@ export default function Step4Preview({
         setBatchResult({ created: [], failed: [{ itemcode: 'batch', reason: msg }] });
         setPartialError(true);
         setImporting(false);
+        onImportError?.();
         return;
       }
     }

@@ -34,6 +34,7 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
 
   // Called by Step4 the moment the user clicks Import — before the server call
   const handleImportStart = () => setProcessingPhase('creating');
+  const handleImportError = () => setProcessingPhase(null);
 
   // Called by Step4 via onDone after server call completes
   const handleDone = (items: ImportedPOItem[]) => {
@@ -151,6 +152,7 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
               mapping={mapping}
               onBack={() => setStep(3)}
               onImportStart={handleImportStart}
+              onImportError={handleImportError}
               onDone={handleDone}
             />
           )}
