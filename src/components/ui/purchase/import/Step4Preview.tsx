@@ -336,7 +336,7 @@ export default function Step4Preview({
 
         const token = await getAccessToken();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/store/product/batch-add`,
+          `/api/proxy/batch-add`,
           {
             method: 'POST',
             headers: {
