@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_GRAPHQL_URL = `${process.env.BACKEND_ORIGIN ?? "http://api.jewelpos.com:3129"}/graphql`;
+const BACKEND_GRAPHQL_URL = `${process.env.BACKEND_PUBLIC_URL ?? process.env.BACKEND_ORIGIN ?? "https://api.jewelpos.com"}/graphql`;
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
