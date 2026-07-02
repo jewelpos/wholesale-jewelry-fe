@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_BASE = process.env.BACKEND_ORIGIN ?? "http://147.182.246.110:3129";
+const BACKEND_BASE = process.env.BACKEND_ORIGIN ?? "http://api.jewelpos.com:3129";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
