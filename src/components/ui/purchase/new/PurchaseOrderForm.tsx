@@ -859,8 +859,8 @@ const PurchaseOrderForm = ({
           item.orderunitcost,
           item.orddiscount
         ),
-        additionalcost: item.additionalcost ?? undefined,
-        finalunitcost: item.finalunitcost ?? undefined,
+        additionalcost: itemFields[index]?.additionalcost ?? undefined,
+        finalunitcost: itemFields[index]?.finalunitcost ?? undefined,
       })) || [],
     };
 
@@ -1485,11 +1485,9 @@ const PurchaseOrderForm = ({
                               {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
                             </td>
                             <td className="text-end text-muted">
-                              <input type="hidden" {...register(`items.${index}.additionalcost` as const, { valueAsNumber: true })} />
                               {additionalcost > 0 ? additionalcost.toFixed(3) : "—"}
                             </td>
                             <td className="text-end text-muted">
-                              <input type="hidden" {...register(`items.${index}.finalunitcost` as const, { valueAsNumber: true })} />
                               {finalunitcost > 0 ? finalunitcost.toFixed(3) : "—"}
                             </td>
                             {!disableField && (

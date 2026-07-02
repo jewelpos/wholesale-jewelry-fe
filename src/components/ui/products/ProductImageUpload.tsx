@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { Plus, X } from "react-feather";
+import { Plus, X, RefreshCw } from "react-feather";
 
 interface ProductImageUploadProps {
   images: File[];
@@ -22,48 +22,83 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newImages = [...images, ...files].slice(0, maxImages);
-    onChange(newImages);
+  // Camera device selection
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [cameraMode, setCameraMode] = useState<"usb" | "ip">("usb");
 
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  // IP camera
+  const [ipCameraUrl, setIpCameraUrl] = useState("");
+  const [ipPreviewSrc, setIpPreviewSrc] = useState("");
+  const [ipLoading, setIpLoading] = useState(false);
+  const [ipError, setIpError] = useState("");
+
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
   };
 
-  const handleAddClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index);
-    onChange(newImages);
-  };
-
-  const handleOpenCamera = async () => {
-    setShowCamera(true);
+  const openStream = useCallback(async (deviceId?: string) => {
+    stopStream();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       streamRef.current = stream;
-    } catch (err) {
-      alert("Unable to access camera.");
-      setShowCamera(false);
+    } catch {
+      alert("Unable to access camera. Please allow camera permissions or select a different device.");
     }
+  }, []);
+
+  const enumerateCameras = useCallback(async () => {
+    try {
+      // Request permission first so labels are populated
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      tempStream.getTracks().forEach((t) => t.stop());
+    } catch {
+      // ignore — labels may still be empty but we'll show deviceId fallback
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((d) => d.kind === "videoinput");
+    setAvailableCameras(videoDevices);
+    return videoDevices;
+  }, []);
+
+  const handleOpenCamera = async () => {
+    setShowCamera(true);
+    setCameraMode("usb");
+    setIpPreviewSrc("");
+    setIpError("");
+    const videoDevices = await enumerateCameras();
+    const firstId = videoDevices[0]?.deviceId || "";
+    setSelectedDeviceId(firstId);
+    await openStream(firstId || undefined);
+  };
+
+  const handleRefreshCameras = async () => {
+    const videoDevices = await enumerateCameras();
+    if (videoDevices.length > 0) {
+      const firstId = videoDevices[0].deviceId;
+      setSelectedDeviceId(firstId);
+      await openStream(firstId);
+    }
+  };
+
+  const handleDeviceChange = async (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    await openStream(deviceId);
   };
 
   const handleCloseCamera = () => {
     setShowCamera(false);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
+    stopStream();
+    setIpPreviewSrc("");
+    setIpError("");
   };
 
   const handleCapture = () => {
@@ -76,7 +111,6 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/png");
-      // Convert dataUrl to File
       fetch(dataUrl)
         .then((res) => res.arrayBuffer())
         .then((buf) => {
@@ -90,9 +124,48 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
     handleCloseCamera();
   };
 
-  const handleBackdropClick = (
-    e: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
+  // IP Camera handlers
+  const handleIpPreview = async () => {
+    if (!ipCameraUrl.trim()) return;
+    setIpLoading(true);
+    setIpError("");
+    setIpPreviewSrc("");
+    try {
+      const proxied = `/api/camera-proxy?url=${encodeURIComponent(ipCameraUrl.trim())}`;
+      // Append timestamp to bust cache for live snapshots
+      const res = await fetch(`${proxied}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`Camera returned ${res.status}`);
+      const blob = await res.blob();
+      setIpPreviewSrc(URL.createObjectURL(blob));
+    } catch (e: any) {
+      setIpError(e.message || "Failed to load snapshot. Check the URL and camera connection.");
+    } finally {
+      setIpLoading(false);
+    }
+  };
+
+  const handleIpUsePhoto = async () => {
+    if (!ipPreviewSrc) return;
+    const res = await fetch(ipPreviewSrc);
+    const blob = await res.blob();
+    const file = new File([blob], `ip-camera-${Date.now()}.jpg`, {
+      type: blob.type || "image/jpeg",
+    });
+    const newImages = [...images, file].slice(0, maxImages);
+    onChange(newImages);
+    handleCloseCamera();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newImages = [...images, ...files].slice(0, maxImages);
+    onChange(newImages);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       handleCloseCamera();
     }
@@ -103,7 +176,6 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
       <div className="mb-3">
         <label className="form-label">Images</label>
         <div className="row g-3">
-          {/* Add Images Button */}
           {images.length < maxImages && !disabled && (
             <div className="col-auto">
               <div
@@ -116,7 +188,7 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                   cursor: "pointer",
                   backgroundColor: "#f8f9fa",
                 }}
-                onClick={handleAddClick}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Plus size={24} className="text-muted mb-2" />
                 <span className="text-muted small">Add Images</span>
@@ -132,11 +204,9 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
             </div>
           )}
 
-          {/* Image Previews */}
           {images.map((image, index) => (
             <div key={index} className="col-auto position-relative">
               <div
-                className="product-image-preview"
                 style={{
                   width: "120px",
                   height: "120px",
@@ -168,7 +238,7 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                       justifyContent: "center",
                       borderRadius: "50%",
                     }}
-                    onClick={() => handleRemoveImage(index)}
+                    onClick={() => onChange(images.filter((_, i) => i !== index))}
                   >
                     <X size={14} />
                   </button>
@@ -178,7 +248,6 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
           ))}
         </div>
 
-        {/* Camera Capture Button */}
         {images.length < maxImages && !disabled && (
           <div className="mt-3">
             <button
@@ -201,13 +270,13 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
       {showCamera && (
         <div
           className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1055 }}
           tabIndex={-1}
           role="dialog"
           aria-modal="true"
           onClick={handleBackdropClick}
         >
-          <div className="modal-dialog modal-dialog-centered" role="document">
+          <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Capture Product Photo</h5>
@@ -216,31 +285,151 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                   className="btn-close"
                   aria-label="Close"
                   onClick={handleCloseCamera}
-                ></button>
-              </div>
-              <div className="modal-body text-center">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  width={320}
-                  height={240}
-                  style={{ borderRadius: 8, background: "#222" }}
                 />
               </div>
+
+              {/* Mode tabs */}
+              <div className="modal-body pb-0">
+                <ul className="nav nav-tabs mb-3">
+                  <li className="nav-item">
+                    <button
+                      className={`nav-link${cameraMode === "usb" ? " active" : ""}`}
+                      type="button"
+                      onClick={() => { setCameraMode("usb"); openStream(selectedDeviceId || undefined); }}
+                    >
+                      USB / Webcam
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button
+                      className={`nav-link${cameraMode === "ip" ? " active" : ""}`}
+                      type="button"
+                      onClick={() => { setCameraMode("ip"); stopStream(); }}
+                    >
+                      IP Camera
+                    </button>
+                  </li>
+                </ul>
+
+                {/* USB mode */}
+                {cameraMode === "usb" && (
+                  <>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <select
+                        className="form-select form-select-sm"
+                        value={selectedDeviceId}
+                        onChange={(e) => handleDeviceChange(e.target.value)}
+                        style={{ maxWidth: 360 }}
+                      >
+                        {availableCameras.length === 0 && (
+                          <option value="">No cameras found</option>
+                        )}
+                        {availableCameras.map((cam, i) => (
+                          <option key={cam.deviceId} value={cam.deviceId}>
+                            {cam.label || `Camera ${i + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                        onClick={handleRefreshCameras}
+                        title="Refresh camera list"
+                      >
+                        <RefreshCw size={14} />
+                        Refresh
+                      </button>
+                    </div>
+                    <div className="text-center">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{
+                          width: "100%",
+                          maxWidth: 480,
+                          borderRadius: 8,
+                          background: "#222",
+                          aspectRatio: "4/3",
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* IP Camera mode */}
+                {cameraMode === "ip" && (
+                  <>
+                    <div className="mb-2">
+                      <label className="form-label small mb-1">
+                        Camera Snapshot URL
+                        <span className="text-muted ms-1 fw-normal">(e.g. http://192.168.1.50/snapshot.jpg)</span>
+                      </label>
+                      <div className="input-group input-group-sm">
+                        <input
+                          type="url"
+                          className="form-control"
+                          placeholder="http://192.168.x.x/snapshot.jpg"
+                          value={ipCameraUrl}
+                          onChange={(e) => setIpCameraUrl(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleIpPreview()}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary"
+                          onClick={handleIpPreview}
+                          disabled={ipLoading || !ipCameraUrl.trim()}
+                        >
+                          {ipLoading ? "Loading…" : "Load Preview"}
+                        </button>
+                      </div>
+                    </div>
+                    {ipError && (
+                      <div className="alert alert-danger py-2 small">{ipError}</div>
+                    )}
+                    {ipPreviewSrc && (
+                      <div className="text-center mt-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={ipPreviewSrc}
+                          alt="IP camera snapshot"
+                          style={{ maxWidth: "100%", maxHeight: 320, borderRadius: 8, border: "1px solid #ddd" }}
+                        />
+                      </div>
+                    )}
+                    {!ipPreviewSrc && !ipError && (
+                      <div
+                        className="text-center text-muted d-flex align-items-center justify-content-center"
+                        style={{ height: 200, background: "#f8f9fa", borderRadius: 8, border: "1px solid #ddd" }}
+                      >
+                        <span>Enter snapshot URL above and click Load Preview</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-success me-2"
-                  onClick={handleCapture}
-                >
-                  Capture
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleCloseCamera}
-                >
+                {cameraMode === "usb" && (
+                  <button
+                    type="button"
+                    className="btn btn-success me-2"
+                    onClick={handleCapture}
+                  >
+                    Capture
+                  </button>
+                )}
+                {cameraMode === "ip" && (
+                  <button
+                    type="button"
+                    className="btn btn-success me-2"
+                    onClick={handleIpUsePhoto}
+                    disabled={!ipPreviewSrc}
+                  >
+                    Use This Photo
+                  </button>
+                )}
+                <button type="button" className="btn btn-secondary" onClick={handleCloseCamera}>
                   Cancel
                 </button>
               </div>

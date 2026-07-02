@@ -254,7 +254,7 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
 
       {/* Global options — Unit, Category, Sub-Category */}
       <div className="border rounded p-2 mb-3 bg-light">
-        <div className="small fw-semibold mb-2 text-secondary">Applied to all imported items:</div>
+        <div className="small fw-semibold mb-2 text-secondary">Default values (can be changed per-item in Step 4):</div>
         <div className="d-flex gap-3 flex-wrap align-items-center">
           <div className="d-flex align-items-center gap-2">
             <span className="small text-muted">Unit:</span>

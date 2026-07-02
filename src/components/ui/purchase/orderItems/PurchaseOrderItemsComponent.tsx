@@ -22,7 +22,8 @@ interface Props {
 
 const PurchaseOrderItemsComponent = ({ data }: Props) => {
   const [getPurchaseOrderItemsList] = useLazyQuery(
-    GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY
+    GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY,
+    { fetchPolicy: 'network-only' }
   );
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);

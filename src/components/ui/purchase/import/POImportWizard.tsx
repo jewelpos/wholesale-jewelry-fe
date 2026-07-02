@@ -21,12 +21,35 @@ type Step = 1 | 2 | 3 | 4;
 
 const STEP_LABELS = ['Upload', 'Preview', 'Map Columns', 'Import'];
 
+// Two-phase overlay messages
+type ProcessingPhase = 'creating' | 'adding' | null;
+
 export default function POImportWizard({ storeId, userId, warehouseId, onClose, onDone }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [sheet, setSheet] = useState<RawSheet | null>(null);
   const [fileName, setFileName] = useState('');
   const [startRow, setStartRow] = useState(1);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
+  const [processingPhase, setProcessingPhase] = useState<ProcessingPhase>(null);
+
+  // Called by Step4 the moment the user clicks Import — before the server call
+  const handleImportStart = () => setProcessingPhase('creating');
+
+  // Called by Step4 via onDone after server call completes
+  const handleDone = (items: ImportedPOItem[]) => {
+    setProcessingPhase('adding');
+    // Small timeout so the "Adding to PO" message paints before the heavy append loop
+    setTimeout(() => {
+      onDone(items);
+    }, 80);
+  };
+
+  const overlayMessage =
+    processingPhase === 'creating'
+      ? { spinner: 'text-primary', title: 'Creating items on server…', sub: 'This may take a moment. Please do not close this window.' }
+      : processingPhase === 'adding'
+      ? { spinner: 'text-success', title: 'Adding items to Purchase Order…', sub: 'Almost done, please wait.' }
+      : null;
 
   const content = (
     <div
@@ -41,15 +64,41 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
         padding: '1rem',
       }}
     >
+      {/* Modal card — position: relative so overlay can fill it exactly */}
       <div
         className="bg-white rounded shadow-lg d-flex flex-column"
-        style={{ width: '100%', maxWidth: 900, maxHeight: '92vh', overflow: 'hidden' }}
+        style={{ width: '100%', maxWidth: 900, maxHeight: '92vh', overflow: 'hidden', position: 'relative' }}
       >
+        {/* Processing overlay — covers the entire card (header + body), always in view */}
+        {overlayMessage && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 50,
+              background: 'rgba(255,255,255,0.93)',
+              borderRadius: 'inherit',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 16,
+            }}
+          >
+            <div
+              className={`spinner-border ${overlayMessage.spinner}`}
+              style={{ width: 52, height: 52, borderWidth: 5 }}
+              role="status"
+            />
+            <div className="fw-semibold" style={{ fontSize: 17 }}>{overlayMessage.title}</div>
+            <div className="text-muted small">{overlayMessage.sub}</div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
           <div>
             <h5 className="mb-0 fw-bold">Import from File</h5>
-            {/* Step indicator */}
             <div className="d-flex gap-1 mt-1">
               {STEP_LABELS.map((label, i) => (
                 <span
@@ -62,7 +111,7 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
               ))}
             </div>
           </div>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onClose} disabled={!!processingPhase}>
             <X size={16} />
           </button>
         </div>
@@ -101,7 +150,8 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
               startRow={startRow}
               mapping={mapping}
               onBack={() => setStep(3)}
-              onDone={onDone}
+              onImportStart={handleImportStart}
+              onDone={handleDone}
             />
           )}
         </div>

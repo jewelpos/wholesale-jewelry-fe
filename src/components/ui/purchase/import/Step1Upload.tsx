@@ -5,7 +5,7 @@ import { Clock, Download, Upload, X } from 'lucide-react';
 import { useLazyQuery } from '@apollo/client';
 import * as ExcelJS from 'exceljs';
 import { loadExcelSheets, parseCsvFile, RawSheet } from '@/lib/utils/poImportParser';
-import { CHECK_IMPORT_ITEMCODES_ON_RECENT_POS } from '@/lib/graphql/query/poImport';
+import { CHECK_IMPORT_ITEMCODES_ON_RECENT_POS, GET_IMPORT_HISTORY } from '@/lib/graphql/query/poImport';
 import ImportHistoryDrawer from './ImportHistoryDrawer';
 
 interface RecentPOMatch {
@@ -33,8 +33,13 @@ export default function Step1Upload({ storeId, onNext }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [recentMatches, setRecentMatches] = useState<RecentPOMatch[]>([]);
   const [pendingSheet, setPendingSheet] = useState<RawSheet | null>(null);
+  const [filenameWarning, setFilenameWarning] = useState<{ importedat: string; recordcount: number } | null>(null);
+  const [pendingSheetForFilenameCheck, setPendingSheetForFilenameCheck] = useState<RawSheet | null>(null);
 
   const [checkRecentPOs] = useLazyQuery(CHECK_IMPORT_ITEMCODES_ON_RECENT_POS, {
+    fetchPolicy: 'network-only',
+  });
+  const [fetchHistory] = useLazyQuery(GET_IMPORT_HISTORY, {
     fetchPolicy: 'network-only',
   });
 
@@ -45,6 +50,8 @@ export default function Step1Upload({ storeId, onNext }: Props) {
     setParsedFile(null);
     setPendingSheet(null);
     setRecentMatches([]);
+    setFilenameWarning(null);
+    setPendingSheetForFilenameCheck(null);
     setFileName('');
     if (fileRef.current) fileRef.current.value = '';
   }
@@ -69,7 +76,7 @@ export default function Step1Upload({ storeId, onNext }: Props) {
     try {
       if (isCsv) {
         const sheet = await parseCsvFile(file);
-        await runDuplicateCheck(sheet, file.name, sheet);
+        await checkFilenameAndProceed(sheet, file.name);
       } else {
         const sheetNames = await loadExcelSheets(file);
         setParsedFile(file);
@@ -89,12 +96,24 @@ export default function Step1Upload({ storeId, onNext }: Props) {
     try {
       const { loadSheetData } = await import('@/lib/utils/poImportParser');
       const sheet = await loadSheetData(parsedFile, selectedSheet);
-      await runDuplicateCheck(sheet, fileName, sheet);
+      await checkFilenameAndProceed(sheet, fileName);
     } catch (err: unknown) {
       setFileError(`Failed to load sheet: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function checkFilenameAndProceed(sheet: RawSheet, name: string) {
+    const { data } = await fetchHistory({ variables: { storeid: storeId } });
+    const history: { filename: string; importedat: string; recordcount: number }[] = data?.getImportHistory ?? [];
+    const prior = history.find((h) => h.filename === name);
+    if (prior) {
+      setFilenameWarning({ importedat: prior.importedat, recordcount: prior.recordcount });
+      setPendingSheetForFilenameCheck(sheet);
+      return;
+    }
+    await runDuplicateCheck(sheet, name, sheet);
   }
 
   async function runDuplicateCheck(sheet: RawSheet, name: string, sheetData: RawSheet) {
@@ -116,11 +135,11 @@ export default function Step1Upload({ storeId, onNext }: Props) {
   function downloadTemplate() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('PO Import');
-    ws.addRow(['Item Code', 'Description', 'Qty', 'Unit Cost', 'Unit', 'Discount %', 'Image URL']);
+    ws.addRow(['Item Code', 'Description', 'Qty', 'Unit Cost', 'Discount %', 'Image URL']);
     ws.getRow(1).font = { bold: true };
     ws.columns = [
       { width: 15 }, { width: 30 }, { width: 8 }, { width: 12 },
-      { width: 8 }, { width: 12 }, { width: 40 },
+      { width: 12 }, { width: 40 },
     ];
     wb.xlsx.writeBuffer().then((buf) => {
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -241,6 +260,37 @@ export default function Step1Upload({ storeId, onNext }: Props) {
           >
             Continue with "{selectedSheet}"
           </button>
+        </div>
+      )}
+
+      {/* Already-imported filename warning */}
+      {filenameWarning && pendingSheetForFilenameCheck && (
+        <div className="alert alert-warning py-2">
+          <strong>⚠ This file has already been imported.</strong>
+          <div className="small mt-1 mb-2">
+            <strong>{fileName}</strong> was previously imported on{' '}
+            <strong>{new Date(filenameWarning.importedat).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</strong>
+            {' '}({filenameWarning.recordcount} item{filenameWarning.recordcount !== 1 ? 's' : ''}).
+            Importing again may create duplicate PO lines.
+          </div>
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={async () => {
+                const sheet = pendingSheetForFilenameCheck;
+                const name = fileName;
+                setFilenameWarning(null);
+                setPendingSheetForFilenameCheck(null);
+                await runDuplicateCheck(sheet, name, sheet);
+              }}
+            >
+              Import Anyway
+            </button>
+            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={resetFile}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 

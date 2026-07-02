@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useLazyQuery } from '@apollo/client';
-import { cleanCell, cleanNumeric, RawSheet } from '@/lib/utils/poImportParser';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLazyQuery, useQuery } from '@apollo/client';
+import { cleanCell, cleanNumeric, DEFAULT_UNITS, RawSheet } from '@/lib/utils/poImportParser';
 import { ColumnMapping } from './Step3ColumnMap';
 import { GET_INVENTORY_ITEMS_BY_ITEMCODES } from '@/lib/graphql/query/poImport';
+import { GET_ITEM_CATEGORIES_QUERY, GET_ITEM_SUBCATEGORIES_QUERY } from '@/lib/graphql/query/products';
 import { getAccessToken } from '@/lib/authStorage';
 
 export interface ImportedPOItem {
@@ -25,16 +26,22 @@ interface MappedRow {
   itemcode: string;
   itemdescription: string;
   itemunit: string;
+  categoryid: number | null;
+  subcategoryid: number | null;
   qtyordered: number | null;
   orderunitcost: number | null;
   orddiscount: number | null;
   imageurl: string;
-  // hard error — missing qty or cost; always excluded
   hasHardError: boolean;
-  // soft warning — description missing but qty+cost are present; user can opt-in
   missingDescOnly: boolean;
   itemid?: number;
   isNew?: boolean;
+}
+
+interface RowOverride {
+  itemunit?: string;
+  categoryid?: number | null;
+  subcategoryid?: number | null;
 }
 
 interface Props {
@@ -47,7 +54,11 @@ interface Props {
   mapping: ColumnMapping;
   onBack: () => void;
   onDone: (items: ImportedPOItem[]) => void;
+  onImportStart?: () => void;
 }
+
+interface CategoryItem { categoryid: number; categoryname: string; }
+interface SubcategoryItem { subcategoryid: number; subcategoryname: string; }
 
 function getColIndex(letter: string): number {
   if (!letter) return -1;
@@ -73,9 +84,9 @@ export default function Step4Preview({
   mapping,
   onBack,
   onDone,
+  onImportStart,
 }: Props) {
   const [dupActions, setDupActions] = useState<Record<string, DupAction>>({});
-  // Set of rowNums the user has opted to include despite missing description
   const [includedNoDesc, setIncludedNoDesc] = useState<Set<number>>(new Set());
   const [batchResult, setBatchResult] = useState<{
     created: { itemcode: string; itemid: number }[];
@@ -85,10 +96,47 @@ export default function Step4Preview({
   const [partialError, setPartialError] = useState(false);
   const [itemIdMap, setItemIdMap] = useState<Record<string, number>>({});
 
+  // Per-row overrides for unit / category / subcategory
+  const [rowOverrides, setRowOverrides] = useState<Record<number, RowOverride>>({});
+
+  // Bulk-apply values
+  const [bulkUnit, setBulkUnit] = useState(mapping.defaultUnit || 'Pc');
+  const [bulkCategoryId, setBulkCategoryId] = useState<number | null>(mapping.categoryid ?? null);
+  const [bulkSubcategoryId, setBulkSubcategoryId] = useState<number | null>(mapping.subcategoryid ?? null);
+
+  // Subcategory cache keyed by categoryid
+  const [subCatCache, setSubCatCache] = useState<Record<number, SubcategoryItem[]>>({});
+  const fetchingSubcats = useRef<Set<number>>(new Set());
+
   const [fetchItems, { loading: loadingItems }] = useLazyQuery(GET_INVENTORY_ITEMS_BY_ITEMCODES, {
     fetchPolicy: 'network-only',
   });
 
+  const { data: categoriesData } = useQuery(GET_ITEM_CATEGORIES_QUERY, {
+    variables: { storeid: storeId },
+    fetchPolicy: 'cache-first',
+  });
+  const categories: CategoryItem[] = categoriesData?.getItemCategories ?? [];
+
+  const [fetchSubcats] = useLazyQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
+    fetchPolicy: 'cache-first',
+  });
+
+  const ensureSubcats = (catId: number | null) => {
+    if (!catId || subCatCache[catId] !== undefined || fetchingSubcats.current.has(catId)) return;
+    fetchingSubcats.current.add(catId);
+    fetchSubcats({ variables: { storeid: storeId, categoryid: catId } }).then(({ data }) => {
+      const list: SubcategoryItem[] = data?.getItemSubcategories ?? [];
+      setSubCatCache((prev) => ({ ...prev, [catId]: list }));
+    });
+  };
+
+  // Pre-load subcategories for the bulk category and the default mapping category
+  useEffect(() => {
+    if (bulkCategoryId) ensureSubcats(bulkCategoryId);
+    if (mapping.categoryid) ensureSubcats(mapping.categoryid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkCategoryId, mapping.categoryid]);
 
   // Build raw mapped rows from the sheet
   const rawRows: MappedRow[] = useMemo(() => {
@@ -105,7 +153,6 @@ export default function Step4Preview({
       const orddiscount = mapping.orddiscount ? cleanNumeric(getCell(row, mapping.orddiscount)) : null;
       const imageurl = mapping.imageurl ? cleanCell(getCell(row, mapping.imageurl)) : '';
 
-      // Skip entirely empty rows
       if (!itemcode && !itemdescription && qtyordered === null && orderunitcost === null) continue;
 
       const hasHardError = qtyordered === null || orderunitcost === null;
@@ -116,6 +163,8 @@ export default function Step4Preview({
         itemcode,
         itemdescription,
         itemunit,
+        categoryid: mapping.categoryid ?? null,
+        subcategoryid: mapping.subcategoryid ?? null,
         qtyordered,
         orderunitcost,
         orddiscount,
@@ -149,14 +198,19 @@ export default function Step4Preview({
     }));
   }, [rawRows, itemIdMap]);
 
-  // Rows that are fully valid (no hard error, description present)
-  const validRows = taggedRows.filter((r) => !r.hasHardError && !r.missingDescOnly);
-  // Rows missing description only — user can opt-in
-  const noDescRows = taggedRows.filter((r) => r.missingDescOnly);
-  // Rows with hard errors (missing qty/cost) — always excluded
-  const hardErrorRows = taggedRows.filter((r) => r.hasHardError);
+  // Merge per-row overrides
+  const effectiveRow = (r: MappedRow): MappedRow => {
+    const ov = rowOverrides[r.rowNum];
+    if (!ov) return r;
+    return { ...r, ...ov };
+  };
 
-  // Duplicate SKU groups (across valid + opted-in no-desc rows)
+  const effectiveRows = useMemo(() => taggedRows.map(effectiveRow), [taggedRows, rowOverrides]);
+
+  const validRows = effectiveRows.filter((r) => !r.hasHardError && !r.missingDescOnly);
+  const noDescRows = effectiveRows.filter((r) => r.missingDescOnly);
+  const hardErrorRows = effectiveRows.filter((r) => r.hasHardError);
+
   const eligibleRows = useMemo(
     () => [...validRows, ...noDescRows.filter((r) => includedNoDesc.has(r.rowNum))],
     [validRows, noDescRows, includedNoDesc],
@@ -187,12 +241,32 @@ export default function Step4Preview({
     setIncludedNoDesc(include ? new Set(noDescRows.map((r) => r.rowNum)) : new Set());
   }
 
+  function updateRowOverride(rowNum: number, patch: Partial<RowOverride>) {
+    setRowOverrides((prev) => ({
+      ...prev,
+      [rowNum]: { ...(prev[rowNum] ?? {}), ...patch },
+    }));
+  }
+
+  function applyToAll() {
+    const patch: RowOverride = {
+      itemunit: bulkUnit,
+      categoryid: bulkCategoryId,
+      subcategoryid: bulkSubcategoryId,
+    };
+    setRowOverrides((prev) => {
+      const next = { ...prev };
+      taggedRows.forEach((r) => {
+        next[r.rowNum] = { ...(next[r.rowNum] ?? {}), ...patch };
+      });
+      return next;
+    });
+  }
+
   // Resolve final rows after dup actions
   function resolveFinal(): MappedRow[] {
     const rows = eligibleRows.map((r) =>
-      r.missingDescOnly
-        ? { ...r, itemdescription: r.itemcode || 'No description' } // fallback
-        : r,
+      r.missingDescOnly ? { ...r, itemdescription: r.itemcode || 'No description' } : r,
     );
 
     const final: MappedRow[] = [];
@@ -214,7 +288,6 @@ export default function Step4Preview({
         seen[code] = true;
       }
     }
-    // Merge groups
     for (const [code, dupRows] of Object.entries(dupGroups)) {
       const action: DupAction = dupActions[code] ?? 'merge';
       if (action === 'merge') {
@@ -236,6 +309,7 @@ export default function Step4Preview({
     const finalRows = overrideRows ?? resolveFinal();
     const newRows = finalRows.filter((r) => r.isNew && r.itemcode);
 
+    onImportStart?.();
     setImporting(true);
     setPartialError(false);
     setBatchResult(null);
@@ -247,14 +321,14 @@ export default function Step4Preview({
         const payload = {
           storeid: storeId,
           warehouseid: warehouseId,
-          categoryid: mapping.categoryid,
-          subcategoryid: mapping.subcategoryid,
           items: newRows.map((r) => ({
             itemcode: r.itemcode,
             itemdescription: r.itemdescription || r.itemcode,
             itemunit: r.itemunit,
             itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
             itempurchaseprice: r.orderunitcost ?? 0,
+            categoryid: r.categoryid ?? undefined,
+            subcategoryid: r.subcategoryid ?? undefined,
           })),
         };
 
@@ -309,7 +383,6 @@ export default function Step4Preview({
       itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
     }));
 
-    // Fire-and-forget via raw fetch (NOT Apollo) — bypasses global errorLink so no logout on failure
     void (async () => {
       try {
         const token = await getAccessToken();
@@ -324,7 +397,7 @@ export default function Step4Preview({
           }),
         });
       } catch {
-        // ignore — history logging is best-effort
+        // history logging is best-effort
       }
     })();
 
@@ -335,6 +408,13 @@ export default function Step4Preview({
   const totalImport = eligibleRows.length;
   const newCount = validRows.filter((r) => r.isNew).length + noDescRows.filter((r) => includedNoDesc.has(r.rowNum) && r.isNew).length;
   const existCount = validRows.filter((r) => !r.isNew).length + noDescRows.filter((r) => includedNoDesc.has(r.rowNum) && !r.isNew).length;
+
+  // Helper: category name lookup
+  const catName = (id: number | null) => categories.find((c) => c.categoryid === id)?.categoryname ?? '—';
+  const subCatName = (catId: number | null, subId: number | null) => {
+    if (!catId || !subId) return '—';
+    return subCatCache[catId]?.find((s) => s.subcategoryid === subId)?.subcategoryname ?? '—';
+  };
 
   return (
     <div>
@@ -361,6 +441,57 @@ export default function Step4Preview({
         {Object.keys(dupGroups).length > 0 && (
           <span className="badge bg-warning text-dark">{Object.keys(dupGroups).length} duplicate SKU group(s)</span>
         )}
+      </div>
+
+      {/* Apply-to-All toolbar */}
+      <div className="border rounded p-2 mb-3 bg-light d-flex flex-wrap gap-2 align-items-center">
+        <span className="small fw-semibold text-secondary me-1">Apply to all rows:</span>
+        <select
+          className="form-select form-select-sm"
+          style={{ width: 'auto' }}
+          value={bulkUnit}
+          onChange={(e) => setBulkUnit(e.target.value)}
+        >
+          {DEFAULT_UNITS.map((u) => (
+            <option key={u.value} value={u.value}>{u.label}</option>
+          ))}
+        </select>
+        <select
+          className="form-select form-select-sm"
+          style={{ width: 160 }}
+          value={bulkCategoryId ?? ''}
+          onChange={(e) => {
+            const v = e.target.value ? Number(e.target.value) : null;
+            setBulkCategoryId(v);
+            setBulkSubcategoryId(null);
+            if (v) ensureSubcats(v);
+          }}
+        >
+          <option value="">— Category —</option>
+          {categories.map((c) => (
+            <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>
+          ))}
+        </select>
+        {bulkCategoryId && (
+          <select
+            className="form-select form-select-sm"
+            style={{ width: 160 }}
+            value={bulkSubcategoryId ?? ''}
+            onChange={(e) => setBulkSubcategoryId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">— Sub-Category —</option>
+            {(subCatCache[bulkCategoryId] ?? []).map((s) => (
+              <option key={s.subcategoryid} value={s.subcategoryid}>{s.subcategoryname}</option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm btn-primary"
+          onClick={applyToAll}
+        >
+          Apply to All Rows
+        </button>
       </div>
 
       {/* Missing-description rows — opt-in panel */}
@@ -405,24 +536,16 @@ export default function Step4Preview({
             <strong>Duplicate SKUs — choose action per group:</strong>
             <div className="d-flex gap-1">
               <span className="small text-muted me-1">Apply to all:</span>
-              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
-                onClick={() => {
-                  const all: Record<string, DupAction> = {};
-                  Object.keys(dupGroups).forEach((c) => { all[c] = 'merge'; });
-                  setDupActions(all);
-                }}>Sum Qty</button>
-              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
-                onClick={() => {
-                  const all: Record<string, DupAction> = {};
-                  Object.keys(dupGroups).forEach((c) => { all[c] = 'keepall'; });
-                  setDupActions(all);
-                }}>Keep All</button>
-              <button type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
-                onClick={() => {
-                  const all: Record<string, DupAction> = {};
-                  Object.keys(dupGroups).forEach((c) => { all[c] = 'removeextras'; });
-                  setDupActions(all);
-                }}>Remove Extras</button>
+              {(['merge', 'keepall', 'removeextras'] as DupAction[]).map((a) => (
+                <button key={a} type="button" className="btn btn-xs btn-outline-secondary py-0 px-2" style={{ fontSize: 11 }}
+                  onClick={() => {
+                    const all: Record<string, DupAction> = {};
+                    Object.keys(dupGroups).forEach((c) => { all[c] = a; });
+                    setDupActions(all);
+                  }}>
+                  {a === 'merge' ? 'Sum Qty' : a === 'keepall' ? 'Keep All' : 'Remove Extras'}
+                </button>
+              ))}
             </div>
           </div>
           <div className="mt-1">
@@ -484,7 +607,7 @@ export default function Step4Preview({
       )}
 
       {/* Preview table */}
-      <div style={{ overflowX: 'auto', maxHeight: 300, overflowY: 'auto', fontSize: 12 }}>
+      <div style={{ overflowX: 'auto', maxHeight: 340, overflowY: 'auto', fontSize: 12 }}>
         <table className="table table-sm table-bordered mb-0">
           <thead className="table-light sticky-top">
             <tr>
@@ -492,19 +615,22 @@ export default function Step4Preview({
               <th>Status</th>
               <th>Item Code</th>
               <th>Description</th>
-              <th>Unit</th>
+              <th style={{ minWidth: 80 }}>Unit</th>
+              <th style={{ minWidth: 150 }}>Category</th>
+              <th style={{ minWidth: 150 }}>Sub-Category</th>
               <th className="text-end">Qty</th>
               <th className="text-end">Unit Cost</th>
               <th className="text-end">Disc %</th>
             </tr>
           </thead>
           <tbody>
-            {taggedRows.map((r, i) => {
+            {effectiveRows.map((r, i) => {
               const isOptedIn = includedNoDesc.has(r.rowNum);
               let rowClass = '';
               if (r.hasHardError) rowClass = 'table-warning';
               else if (r.missingDescOnly && !isOptedIn) rowClass = 'table-warning';
-              else if (r.missingDescOnly && isOptedIn) rowClass = '';
+
+              const subcats = r.categoryid ? (subCatCache[r.categoryid] ?? []) : [];
 
               return (
                 <tr key={i} className={rowClass}>
@@ -527,14 +653,66 @@ export default function Step4Preview({
                     )}
                   </td>
                   <td>{r.itemcode || <span className="text-muted">—</span>}</td>
-                  <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.itemdescription
                       ? r.itemdescription
                       : r.missingDescOnly
                         ? <span className="text-muted fst-italic">{isOptedIn ? `(using: ${r.itemcode})` : '—'}</span>
                         : <span className="text-muted">—</span>}
                   </td>
-                  <td>{r.itemunit}</td>
+
+                  {/* Unit per row */}
+                  <td>
+                    <select
+                      className="form-select form-select-sm py-0"
+                      style={{ fontSize: 11, minWidth: 70 }}
+                      value={r.itemunit}
+                      onChange={(e) => updateRowOverride(r.rowNum, { itemunit: e.target.value })}
+                    >
+                      {DEFAULT_UNITS.map((u) => (
+                        <option key={u.value} value={u.value}>{u.value}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  {/* Category per row */}
+                  <td>
+                    <select
+                      className="form-select form-select-sm py-0"
+                      style={{ fontSize: 11, minWidth: 130 }}
+                      value={r.categoryid ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : null;
+                        updateRowOverride(r.rowNum, { categoryid: v, subcategoryid: null });
+                        if (v) ensureSubcats(v);
+                      }}
+                    >
+                      <option value="">— None —</option>
+                      {categories.map((c) => (
+                        <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  {/* Sub-Category per row */}
+                  <td>
+                    {r.categoryid ? (
+                      <select
+                        className="form-select form-select-sm py-0"
+                        style={{ fontSize: 11, minWidth: 130 }}
+                        value={r.subcategoryid ?? ''}
+                        onChange={(e) => updateRowOverride(r.rowNum, { subcategoryid: e.target.value ? Number(e.target.value) : null })}
+                      >
+                        <option value="">— None —</option>
+                        {subcats.map((s) => (
+                          <option key={s.subcategoryid} value={s.subcategoryid}>{s.subcategoryname}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: 11 }}>—</span>
+                    )}
+                  </td>
+
                   <td className="text-end">{r.qtyordered ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orderunitcost ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orddiscount ?? 0}</td>
