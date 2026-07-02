@@ -1,103 +1,76 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AgGridReact } from "ag-grid-react";
+import React, { useEffect } from "react";
 import { useLazyQuery } from "@apollo/client";
-import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
-import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import { useAppDispatch } from "@/lib/store/hook";
-import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import "ag-grid-enterprise";
-import { filterVariables } from "@/lib/utils/gridFilters";
-import POSGrid from "../../../grid/POSGrid";
 import { useParams } from "next/navigation";
-import {
-  InventoryTransfer,
-  InventoryItemTransferDetail,
-} from "@/types/product";
-import { GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY } from "@/lib/graphql/query/products";
-import inventoryTransferItemsColumnDefs from "./ColumnDef";
+import { InventoryTransfer } from "@/types/product";
+import { GET_INVENTORY_TRANSFER_ITEM_QUERY } from "@/lib/graphql/query/products";
 
 interface Props {
   data: InventoryTransfer;
 }
 
 const InventoryTransferItemsComponent = ({ data }: Props) => {
-  const [getInventoryTransferItem] = useLazyQuery(
-    GET_INVENTORY_TRANSFER_ITEM_PAGED_QUERY
-  );
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const dispatch = useAppDispatch();
-  const gridRef = useRef<AgGridReact>(null);
-  const [gridReady, setGridReady] = useState<boolean>(false);
 
-  const handleOnGridReady = (
-    params: GridReadyEvent<InventoryItemTransferDetail>
-  ) => {
-    setGridReady(true);
-    params?.api?.autoSizeAllColumns?.();
-  };
-
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params);
-        const result = await handleTryCatch(async () => {
-          const { data: transferItemData } = await getInventoryTransferItem({
-            variables: {
-              inventoryitemtransferid: data.inventoryitemtransferid,
-              storeid: parsedStoreId,
-              ...filters,
-            },
-          });
-          if (transferItemData.getInventoryTransferItem) {
-            params.success({
-              rowData: transferItemData.getInventoryTransferItem.data,
-              rowCount: transferItemData.getInventoryTransferItem.total,
-            });
-            if (!transferItemData.getInventoryTransferItem.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-            } else {
-              gridRef.current?.api?.hideOverlay();
-            }
-          }
-          return true;
-        });
-        if (result.error) {
-          gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
-          params.fail();
-        }
-      },
-    }),
-    [dispatch, getInventoryTransferItem, data.inventoryitemtransferid, parsedStoreId]
+  const [fetchItems, { data: result, loading }] = useLazyQuery(
+    GET_INVENTORY_TRANSFER_ITEM_QUERY,
+    { fetchPolicy: "no-cache" }
   );
 
   useEffect(() => {
-    if (data.inventoryitemtransferid && parsedStoreId && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+    if (data.inventoryitemtransferid && parsedStoreId) {
+      fetchItems({
+        variables: {
+          storeid: parsedStoreId,
+          inventoryitemtransferid: data.inventoryitemtransferid,
+        },
+      });
     }
-  }, [gridRef, datasource, gridReady, data.inventoryitemtransferid, parsedStoreId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.inventoryitemtransferid, parsedStoreId]);
+
+  const items: any[] = result?.getInventoryTransferItemList ?? [];
 
   return (
-    <div className="card table-list-card bg-gray-200">
-      <div className="card-body p-2">
-        <div className="ag-theme-quartz custom-theme">
-          <POSGrid
-            ref={gridRef}
-            columnDefs={inventoryTransferItemsColumnDefs}
-            onGridReady={handleOnGridReady}
-            domLayout="autoHeight"
-          />
-        </div>
-      </div>
+    <div className="px-4 py-3" style={{ background: "#f8f9fa" }}>
+      {loading ? (
+        <div className="text-muted" style={{ fontSize: 12 }}>Loading items...</div>
+      ) : !items.length ? (
+        <div className="text-muted" style={{ fontSize: 12 }}>No items found.</div>
+      ) : (
+        <table className="table table-sm mb-0" style={{ fontSize: 12 }}>
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>#</th>
+              <th>Item Code</th>
+              <th>Description</th>
+              <th className="text-end">Qty Transferred</th>
+              <th className="text-end">Qty Received</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, idx) => (
+              <tr key={item.inventoryitemtransferdetailid ?? idx}>
+                <td className="text-muted">{idx + 1}</td>
+                <td className="fw-semibold">{item.itemcode}</td>
+                <td>{item.itemdescription}</td>
+                <td className="text-end">{item.transferquantity}</td>
+                <td className="text-end">{item.quantityreceived ?? "—"}</td>
+                <td>
+                  {item.itemreceived ? (
+                    <span className="badge bg-success" style={{ fontSize: 10 }}>Received</span>
+                  ) : (
+                    <span className="badge bg-secondary" style={{ fontSize: 10 }}>Pending</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };

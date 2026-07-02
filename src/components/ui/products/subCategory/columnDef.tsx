@@ -9,6 +9,12 @@ export const subCategoryColumnDefs: ColDef<ProductSubItemCategoryType>[] = [
     flex: 1,
   },
   {
+    headerName: "Category",
+    field: "categoryname",
+    filter: "agTextColumnFilter",
+    flex: 1,
+  },
+  {
     headerName: "Description",
     field: "subcategorydescription",
     filter: "agTextColumnFilter",

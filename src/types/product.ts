@@ -22,6 +22,7 @@ export type ProductSubItemCategoryType = {
   subcategoryname: string;
   subcategorydescription: string;
   categoryid: number;
+  categoryname: string;
   warehousename: string;
   createdby: string;
   warehouseid: number;

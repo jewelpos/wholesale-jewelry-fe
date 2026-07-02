@@ -205,6 +205,7 @@ export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
         subcategoryname
         subcategorydescription
         categoryid
+        categoryname
         warehousename
         createdby
         warehouseid

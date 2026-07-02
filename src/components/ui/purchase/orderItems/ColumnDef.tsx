@@ -51,6 +51,20 @@ const purchaseOrderItemsColumnDefs: ColDef<PurchaseOrderItem>[] = [
     flex: 1,
   },
   {
+    headerName: "Add. Cost",
+    field: "additionalcost",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    width: 110,
+  },
+  {
+    headerName: "Final Cost",
+    field: "finalunitcost",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    width: 110,
+  },
+  {
     headerName: "Status",
     field: "status",
     filter: "agTextColumnFilter",

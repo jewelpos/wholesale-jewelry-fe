@@ -97,6 +97,8 @@ export type PurchaseOrderItemInput = {
   orderunitcost: number;
   orddiscount: number;
   ordextendedprice: number;
+  additionalcost?: number;
+  finalunitcost?: number;
 };
 
 // Form-specific type used by react-hook-form, keeps string/number flexibility for inputs
@@ -188,6 +190,8 @@ export type PurchaseOrderItem = {
   orderunitcost?: number;
   orddiscount?: number;
   ordextendedprice?: number;
+  additionalcost?: number;
+  finalunitcost?: number;
   lastmodifieddate?: string;
   status?: string;
   suppliername?: string;

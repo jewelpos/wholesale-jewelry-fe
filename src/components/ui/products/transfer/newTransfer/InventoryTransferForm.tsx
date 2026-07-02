@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { PlusCircle, Trash2 } from "react-feather";
+import { ArrowRight, PlusCircle, Trash2 } from "react-feather";
 import { Controller, useForm } from "react-hook-form";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
@@ -252,10 +252,6 @@ const InventoryTransferForm = () => {
     await loadRequestLines(id);
   };
 
-  const resolveSystemWarehouseId = (warehouses: WarehouseType[]) => {
-    const sys = warehouses.find((w) => w.issystem);
-    return sys?.warehouseid;
-  };
 
   useEffect(() => {
     if (parsedOutletId) {
@@ -591,418 +587,374 @@ const InventoryTransferForm = () => {
     return opt?.label || (toOutletId ? String(toOutletId) : "");
   }, [toOutletId, outletOptions]);
 
+  const sectionLabel: React.CSSProperties = {
+    fontSize: "0.65rem",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    fontWeight: 600,
+    color: "#6b7280",
+    marginBottom: 4,
+  };
+
+  const selectedProduct = productById.get(Number(toolItem.itemid || 0));
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="card">
+
+      {/* ── CARD 1: Transfer Details ─────────────────────── */}
+      <div className="card mb-3">
         <div className="card-body">
-          <div className="row g-3">
-            <div className="col-lg-12 col-md-12 col-sm-12">
-              <div className="input-blocks mb-0 row align-items-center">
-                <label className="col-form-label col-md-4">Transfer Type</label>
-                <div className="col-md-8 d-flex gap-3">
-                  <Controller
-                    control={control}
-                    name="transferType"
-                    render={({ field }) => (
-                      <>
-                        <label className="d-flex align-items-center gap-2">
-                          <input
-                            type="radio"
-                            checked={field.value === "REQUEST"}
-                            onChange={() => {
-                              field.onChange("REQUEST");
-                              setValue("transferRequestId", undefined);
-                              setValue("fromOutletId", undefined);
-                              setValue("toOutletId", undefined);
-                              setValue("fromWarehouseId", undefined);
-                              setValue("toWarehouseId", undefined);
-                              setRows([]);
-                            }}
-                          />
-                          Select by Transfer Request
-                        </label>
-                        <label className="d-flex align-items-center gap-2">
-                          <input
-                            type="radio"
-                            checked={field.value === "INTERNAL"}
-                            onChange={() => {
-                              field.onChange("INTERNAL");
-                              setValue("transferRequestId", undefined);
-                              setValue("fromOutletId", undefined);
-                              setValue("toOutletId", undefined);
-                              setRows([]);
-                            }}
-                          />
-                          Transfer between Internal Warehouses
-                        </label>
-                      </>
-                    )}
-                  />
+
+          {/* Transfer Type Toggle */}
+          <div className="d-flex align-items-center gap-3 mb-4">
+            <span style={sectionLabel}>Transfer Type</span>
+            <Controller
+              control={control}
+              name="transferType"
+              render={({ field }) => (
+                <div className="btn-group btn-group-sm" role="group">
+                  <button
+                    type="button"
+                    className={`btn ${field.value === "REQUEST" ? "btn-primary" : "btn-outline-secondary"}`}
+                    style={{ fontSize: 12, padding: "5px 16px" }}
+                    onClick={() => {
+                      field.onChange("REQUEST");
+                      setValue("transferRequestId", undefined);
+                      setValue("fromOutletId", undefined);
+                      setValue("toOutletId", undefined);
+                      setValue("fromWarehouseId", undefined);
+                      setValue("toWarehouseId", undefined);
+                      setRows([]);
+                    }}
+                  >
+                    Fulfill Transfer Request
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${field.value === "INTERNAL" ? "btn-primary" : "btn-outline-secondary"}`}
+                    style={{ fontSize: 12, padding: "5px 16px" }}
+                    onClick={() => {
+                      field.onChange("INTERNAL");
+                      setValue("transferRequestId", undefined);
+                      setValue("fromOutletId", undefined);
+                      setValue("toOutletId", undefined);
+                      setRows([]);
+                    }}
+                  >
+                    Internal Warehouse Transfer
+                  </button>
                 </div>
-              </div>
-            </div>
+              )}
+            />
           </div>
 
+          {/* ── REQUEST flow ── */}
           {transferType === "REQUEST" && (
-            <div className="mt-4">
-              <h5 className="mb-3">1. Select by Transfer Request</h5>
+            <div className="row g-3 align-items-start">
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div style={sectionLabel}>Transfer Request *</div>
+                <Controller
+                  control={control}
+                  name="transferRequestId"
+                  render={({ field }) => (
+                    <SelectTransferRequest
+                      storeId={parsedStoreId}
+                      transferstatusid={2}
+                      value={field.value}
+                      onChange={(v) => {
+                        field.onChange(v);
+                        const id = Number(v);
+                        if (!Number.isFinite(id) || id <= 0) clearRequestSelection();
+                      }}
+                      onChangeAdditional={(selected) => {
+                        if (!selected) { clearRequestSelection(); return; }
+                        void applyRequestSelection(selected);
+                      }}
+                      className=""
+                    />
+                  )}
+                />
+              </div>
 
-              <div className="row g-3">
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">Transfer Request</label>
-                    <div className="col-md-8">
-                      <Controller
-                        control={control}
-                        name="transferRequestId"
-                        render={({ field }) => (
-                          <SelectTransferRequest
-                            storeId={parsedStoreId}
-                            transferstatusid={2}
-                            value={field.value}
-                            onChange={(v) => {
-                              field.onChange(v);
-                              const id = Number(v);
-                              if (!Number.isFinite(id) || id <= 0) {
-                                clearRequestSelection();
-                              }
-                            }}
-                            onChangeAdditional={(selected) => {
-                              if (!selected) {
-                                clearRequestSelection();
-                                return;
-                              }
-                              void applyRequestSelection(selected);
-                            }}
-                            className=""
-                          />
-                        )}
-                      />
-                    </div>
+              {/* Source → Destination */}
+              <div className="col-lg-8 col-md-6 col-sm-12">
+                <div style={sectionLabel}>Route</div>
+                <div
+                  className="d-flex align-items-center gap-3 rounded px-4 py-3"
+                  style={{ background: "#f8f9fa", border: "1px solid #e5e7eb" }}
+                >
+                  <div className="text-center" style={{ minWidth: 120 }}>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>FROM OUTLET</div>
+                    <div className="fw-semibold" style={{ fontSize: 13 }}>{fromOutletLabel || "—"}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>FROM WAREHOUSE</div>
+                    <div className="fw-semibold" style={{ fontSize: 13 }}>{fromWarehouseLabel || "—"}</div>
                   </div>
-                </div>
-
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">From Outlet</label>
-                    <div className="col-md-8">
-                      <input className="form-control" value={fromOutletLabel} disabled />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">To Outlet</label>
-                    <div className="col-md-8">
-                      <input className="form-control" value={toOutletLabel} disabled />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">From Warehouse</label>
-                    <div className="col-md-8">
-                      <input className="form-control" value={fromWarehouseLabel} disabled />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">To Warehouse</label>
-                    <div className="col-md-8">
-                      <input className="form-control" value={toWarehouseLabel} disabled />
-                    </div>
+                  <ArrowRight size={20} color="#6b7280" />
+                  <div className="text-center" style={{ minWidth: 120 }}>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>TO OUTLET</div>
+                    <div className="fw-semibold" style={{ fontSize: 13 }}>{toOutletLabel || "—"}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>TO WAREHOUSE</div>
+                    <div className="fw-semibold" style={{ fontSize: 13 }}>{toWarehouseLabel || "—"}</div>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
+          {/* ── INTERNAL flow ── */}
           {transferType === "INTERNAL" && (
-            <div className="mt-4">
-              <h5 className="mb-3">2. Transfer between Internal Warehouses</h5>
-              <div className="row g-3">
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">From Warehouse</label>
-                    <div className="col-md-8">
-                      <Controller
-                        control={control}
-                        name="fromWarehouseId"
-                        render={({ field }) => (
-                          <Select<SelectOption>
-                            options={warehouseOptionsForDefaultOutlet}
-                            value={warehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
-                            onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
-                            isClearable
-                            className="form-control p-0 select-form-custom"
-                            menuPortalTarget={portalTarget}
-                            menuPosition="fixed"
-                            styles={{
-                              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                              menu: (base) => ({ ...base, zIndex: 9999 }),
-                            }}
-                            menuIsOpen={fromWarehouseMenuIsOpen}
-                            onMenuOpen={() => setFromWarehouseMenuIsOpen(true)}
-                            onMenuClose={() => setFromWarehouseMenuIsOpen(false)}
-                            inputValue={fromWarehouseInput}
-                            onInputChange={setFromWarehouseInput}
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
+            <div className="row g-3 align-items-end">
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div style={sectionLabel}>From Warehouse *</div>
+                <Controller
+                  control={control}
+                  name="fromWarehouseId"
+                  render={({ field }) => (
+                    <Select<SelectOption>
+                      options={warehouseOptionsForDefaultOutlet}
+                      value={warehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
+                      onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                      isClearable
+                      placeholder="Select warehouse..."
+                      className="form-control p-0 select-form-custom"
+                      menuPortalTarget={portalTarget}
+                      menuPosition="fixed"
+                      styles={{
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                        menu: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
+                      menuIsOpen={fromWarehouseMenuIsOpen}
+                      onMenuOpen={() => setFromWarehouseMenuIsOpen(true)}
+                      onMenuClose={() => setFromWarehouseMenuIsOpen(false)}
+                      inputValue={fromWarehouseInput}
+                      onInputChange={setFromWarehouseInput}
+                    />
+                  )}
+                />
+              </div>
 
-                <div className="col-lg-6 col-md-6 col-sm-12">
-                  <div className="input-blocks mb-0 row align-items-center">
-                    <label className="col-form-label col-md-4">To Warehouse</label>
-                    <div className="col-md-8">
-                      <Controller
-                        control={control}
-                        name="toWarehouseId"
-                        render={({ field }) => (
-                          <Select<SelectOption>
-                            options={toWarehouseOptionsForDefaultOutlet}
-                            value={toWarehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
-                            onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
-                            isClearable
-                            className="form-control p-0 select-form-custom"
-                            menuPortalTarget={portalTarget}
-                            menuPosition="fixed"
-                            styles={{
-                              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                              menu: (base) => ({ ...base, zIndex: 9999 }),
-                            }}
-                            menuIsOpen={toWarehouseMenuIsOpen}
-                            onMenuOpen={() => setToWarehouseMenuIsOpen(true)}
-                            onMenuClose={() => setToWarehouseMenuIsOpen(false)}
-                            inputValue={toWarehouseInput}
-                            onInputChange={setToWarehouseInput}
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div className="col-auto d-flex align-items-center" style={{ paddingBottom: 2 }}>
+                <ArrowRight size={20} color="#6b7280" />
+              </div>
+
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div style={sectionLabel}>To Warehouse *</div>
+                <Controller
+                  control={control}
+                  name="toWarehouseId"
+                  render={({ field }) => (
+                    <Select<SelectOption>
+                      options={toWarehouseOptionsForDefaultOutlet}
+                      value={toWarehouseOptionsForDefaultOutlet.find((o) => Number(o.value) === Number(field.value)) || null}
+                      onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                      isClearable
+                      placeholder="Select warehouse..."
+                      className="form-control p-0 select-form-custom"
+                      menuPortalTarget={portalTarget}
+                      menuPosition="fixed"
+                      styles={{
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                        menu: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
+                      menuIsOpen={toWarehouseMenuIsOpen}
+                      onMenuOpen={() => setToWarehouseMenuIsOpen(true)}
+                      onMenuClose={() => setToWarehouseMenuIsOpen(false)}
+                      inputValue={toWarehouseInput}
+                      onInputChange={setToWarehouseInput}
+                    />
+                  )}
+                />
               </div>
             </div>
           )}
-<hr />
+
+          {/* Remarks */}
           <div className="mt-4">
-            <div className="row g-3 mt-1">
-              <div className="col-lg-12">
-                <div className="border rounded p-3">
-                  <div className="table-responsive">
-                    <div className="row g-3 align-items-end">
-                      <div className="col-lg-5 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Search/Scan Item/Barcode *</label>
-                          <Select<SelectOption>
-                            isLoading={productsLoading}
-                            options={productOptions}
-                            value={selectedProductOption}
-                            onChange={(opt) => {
-                              const selected = products.find(
-                                (p) => p.itemid === Number((opt as SelectOption | null)?.value)
-                              );
-                              if (!selected) {
-                                setToolItem((prev) => ({
-                                  ...prev,
-                                  itemid: undefined,
-                                  itemcode: undefined,
-                                }));
-                                return;
-                              }
-                              setToolItem((prev) => ({
-                                ...prev,
-                                itemid: Number(selected.itemid),
-                                itemcode: String(selected.itemcode || ""),
-                              }));
-                            }}
-                            isClearable
-                            className="form-control p-0 select-form-custom"
-                            menuPortalTarget={portalTarget}
-                            menuPosition="fixed"
-                            styles={{
-                              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                              menu: (base) => ({ ...base, zIndex: 9999 }),
-                            }}
-                            menuIsOpen={productMenuIsOpen}
-                            onMenuOpen={() => setProductMenuIsOpen(true)}
-                            onMenuClose={() => setProductMenuIsOpen(false)}
-                            inputValue={productInput}
-                            onInputChange={setProductInput}
-                          />
-                        </div>
-                      </div>
+            <div style={sectionLabel}>Remarks</div>
+            <Controller
+              control={control}
+              name="remarks"
+              render={({ field }) => (
+                <textarea className="form-control" rows={2} placeholder="Optional notes..." {...field} />
+              )}
+            />
+          </div>
+        </div>
+      </div>
 
-                      <div className="col-lg-4 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Description</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={productById.get(Number(toolItem.itemid || 0))?.itemdescription || ""}
-                            readOnly
-                          />
-                        </div>
-                      </div>
+      {/* ── CARD 2: Items ────────────────────────────────── */}
+      <div className="card mb-3">
+        <div className="card-body p-0">
 
-                      <div className="col-lg-2 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Quantity *</label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            min={0}
-                            className="form-control px-1 text-end"
-                            value={toolItem.transferquantity}
-                            onChange={(e) => {
-                              const n = Number(e.target.value || 0);
-                              const normalized = Math.round(Math.abs(n) * 1000) / 1000;
-                              setToolItem((prev) => ({
-                                ...prev,
-                                transferquantity: normalized,
-                              }));
-                            }}
-                          />
-                        </div>
-                      </div>
+          {/* Add-item bar */}
+          <div
+            className="px-3 py-3"
+            style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", borderRadius: "8px 8px 0 0" }}
+          >
+            <div className="row g-2 align-items-end">
+              <div className="col-lg-5 col-md-12">
+                <div style={sectionLabel}>Search / Scan Item</div>
+                <Select<SelectOption>
+                  isLoading={productsLoading}
+                  options={productOptions}
+                  value={selectedProductOption}
+                  onChange={(opt) => {
+                    const selected = products.find(
+                      (p) => p.itemid === Number((opt as SelectOption | null)?.value)
+                    );
+                    if (!selected) {
+                      setToolItem((prev) => ({ ...prev, itemid: undefined, itemcode: undefined }));
+                      return;
+                    }
+                    setToolItem((prev) => ({
+                      ...prev,
+                      itemid: Number(selected.itemid),
+                      itemcode: String(selected.itemcode || ""),
+                    }));
+                  }}
+                  isClearable
+                  placeholder="Item code or description..."
+                  className="form-control p-0 select-form-custom"
+                  menuPortalTarget={portalTarget}
+                  menuPosition="fixed"
+                  styles={{
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                    menu: (base) => ({ ...base, zIndex: 9999 }),
+                  }}
+                  menuIsOpen={productMenuIsOpen}
+                  onMenuOpen={() => setProductMenuIsOpen(true)}
+                  onMenuClose={() => setProductMenuIsOpen(false)}
+                  inputValue={productInput}
+                  onInputChange={setProductInput}
+                />
+              </div>
 
-                      <div className="col-lg-1 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>&nbsp;</label>
-                          <button
-                            type="button"
-                            className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
-                            onClick={addRow}
-                          >
-                            <PlusCircle />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+              <div className="col-lg-3 col-md-6">
+                <div style={sectionLabel}>Description</div>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={selectedProduct?.itemdescription || ""}
+                  readOnly
+                  placeholder="—"
+                />
+              </div>
 
-                    <div className="row g-3 mt-2">
-                      <div className="col-lg-6 col-md-6 col-sm-12">
-                        <div className="input-blocks">
-                          <label>Quantity on Hand</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={String(productById.get(Number(toolItem.itemid || 0))?.availableqty ?? "")}
-                            readOnly
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ maxHeight: 480, overflowY: "auto" }}>
-                      <table className="table datanew mt-3 mb-0">
-                        <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
-                          <tr>
-                            <th className="text-nowrap">#</th>
-                            <th className="text-nowrap">Item Code</th>
-                            <th>Description</th>
-                            <th className="text-end text-nowrap">Qty</th>
-                            <th className="text-center text-nowrap">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {!rows.length ? (
-                            <tr>
-                              <td colSpan={5} className="text-center">
-                                No items
-                              </td>
-                            </tr>
-                          ) : (
-                            rows.map((r, index) => (
-                              <tr key={r.itemid} className="align-middle">
-                                <td>{index + 1}</td>
-                                <td className="text-nowrap">{r.itemcode}</td>
-                                <td>{r.itemdescription}</td>
-                                <td className="text-end" style={{ width: 140 }}>
-                                  <input
-                                    type="number"
-                                    step="0.001"
-                                    min={0}
-                                    className="form-control form-control-sm px-1 text-end"
-                                    value={r.transferquantity}
-                                    onChange={(e) => {
-                                      const n = Number(e.target.value || 0);
-                                      const normalized = Math.round(Math.abs(n) * 1000) / 1000;
-                                      setRows((prev) =>
-                                        prev.map((x) =>
-                                          x.itemid === r.itemid
-                                            ? {
-                                                ...x,
-                                                transferquantity: normalized,
-                                              }
-                                            : x
-                                        )
-                                      );
-                                    }}
-                                  />
-                                </td>
-                                <td className="text-center">
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-danger"
-                                    onClick={() => deleteRow(r.itemid)}
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              <div className="col-lg-2 col-md-4" style={{ maxWidth: 160 }}>
+                <div style={sectionLabel}>
+                  Qty{selectedProduct ? ` (avail: ${selectedProduct.availableqty})` : ""}
                 </div>
+                <input
+                  type="number"
+                  step="0.001"
+                  min={0}
+                  className="form-control text-end"
+                  value={toolItem.transferquantity}
+                  onChange={(e) => {
+                    const n = Number(e.target.value || 0);
+                    setToolItem((prev) => ({ ...prev, transferquantity: Math.round(Math.abs(n) * 1000) / 1000 }));
+                  }}
+                />
+              </div>
+
+              <div className="col-auto">
+                <button
+                  type="button"
+                  className="btn btn-primary d-flex align-items-center gap-1"
+                  onClick={addRow}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  <PlusCircle size={15} />
+                  Add
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="row mt-3">
-            <div className="col-md-6"></div>
-            <div className="col-md-6">
-              <div className="d-flex justify-content-between">
-                <div>Total Items:</div>
-                <div>{totalItemTransfered}</div>
-              </div>
-              <div className="d-flex justify-content-between">
-                <div>Total Quantities:</div>
-                <div>{totalQuantities}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="input-blocks mb-0">
-              <label className="form-label">Remarks</label>
-              <Controller
-                control={control}
-                name="remarks"
-                render={({ field }) => (
-                  <textarea className="form-control" rows={3} {...field} />
+          {/* Items table */}
+          <div style={{ maxHeight: 440, overflowY: "auto" }}>
+            <table className="table datanew mb-0" style={{ fontSize: 12 }}>
+              <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
+                <tr>
+                  <th style={{ width: 36 }}>#</th>
+                  <th className="text-nowrap">Item Code</th>
+                  <th>Description</th>
+                  <th className="text-end text-nowrap" style={{ width: 120 }}>Qty to Transfer</th>
+                  <th className="text-center" style={{ width: 60 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {!rows.length ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4 text-muted" style={{ fontSize: 13 }}>
+                      No items added yet
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r, index) => (
+                    <tr key={r.itemid} className="align-middle">
+                      <td className="text-muted">{index + 1}</td>
+                      <td className="text-nowrap fw-semibold">{r.itemcode}</td>
+                      <td className="text-muted">{r.itemdescription}</td>
+                      <td style={{ width: 120 }}>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min={0}
+                          className="form-control form-control-sm px-1 text-end"
+                          value={r.transferquantity}
+                          onChange={(e) => {
+                            const n = Number(e.target.value || 0);
+                            const normalized = Math.round(Math.abs(n) * 1000) / 1000;
+                            setRows((prev) =>
+                              prev.map((x) =>
+                                x.itemid === r.itemid ? { ...x, transferquantity: normalized } : x
+                              )
+                            );
+                          }}
+                        />
+                      </td>
+                      <td className="text-center">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deleteRow(r.itemid)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
-              />
-            </div>
+              </tbody>
+            </table>
           </div>
+
+          {/* Summary footer */}
+          {rows.length > 0 && (
+            <div
+              className="d-flex justify-content-end gap-4 px-4 py-2"
+              style={{ borderTop: "1px solid #e5e7eb", background: "#fafafa", borderRadius: "0 0 8px 8px" }}
+            >
+              <div className="text-end">
+                <div style={{ fontSize: 11, color: "#6b7280" }}>TOTAL ITEMS</div>
+                <div className="fw-bold" style={{ fontSize: 16 }}>{totalItemTransfered}</div>
+              </div>
+              <div className="vr" />
+              <div className="text-end">
+                <div style={{ fontSize: 11, color: "#6b7280" }}>TOTAL QTY</div>
+                <div className="fw-bold" style={{ fontSize: 16 }}>{totalQuantities}</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <ActionFooter handleCancel={() => router.back()}>
         <ButtonLoader
           loading={saving}
-          btnText="Transfer"
-          loadingText="Transfer..."
+          btnText="Save Transfer"
+          loadingText="Saving..."
           className="btn btn-primary"
           disabled={!isValid}
         />

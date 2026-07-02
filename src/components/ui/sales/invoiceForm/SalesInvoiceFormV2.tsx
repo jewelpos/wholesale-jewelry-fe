@@ -1576,7 +1576,7 @@ const SalesInvoiceFormV2 = ({
                     onChange={(date) => field.onChange(date ?? dayjs())}
                     className="filterdatepicker"
                     style={{ width: 160 }}
-                    format="DD-MM-YYYY"
+                    format="MM/DD/YYYY"
                     placeholder="Choose Date"
                     allowClear
                   />
@@ -2096,7 +2096,7 @@ const SalesInvoiceFormV2 = ({
                         value={field.value || null}
                         onChange={(date) => field.onChange(date ?? undefined)}
                         className="filterdatepicker w-100"
-                        format="DD-MM-YYYY"
+                        format="MM/DD/YYYY"
                         placeholder="Choose Date"
                         allowClear
                       />

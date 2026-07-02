@@ -164,6 +164,8 @@ export const GET_SINGLE_PURCHASE_ORDER_QUERY = gql`
         orderunitcost
         orddiscount
         ordextendedprice
+        additionalcost
+        finalunitcost
         orderactualcost
         poposting
         itemqtybackorder
@@ -227,6 +229,8 @@ export const GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY = gql`
         orderunitcost
         orddiscount
         ordextendedprice
+        additionalcost
+        finalunitcost
         lastmodifieddate
         status
         suppliername

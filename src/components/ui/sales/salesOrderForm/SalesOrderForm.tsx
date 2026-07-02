@@ -807,7 +807,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     style={{ width: 160 }}
                     value={field.value}
                     onChange={(date) => field.onChange(date)}
-                    format="DD-MM-YYYY"
+                    format="MM/DD/YYYY"
                     allowClear={false}
                   />
                 )}

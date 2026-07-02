@@ -276,7 +276,7 @@ const SupplierInvoiceFormInputA = ({
                   <DatePicker
                     value={field.value}
                     onChange={(date) => field.onChange(date)}
-                    format="DD-MM-YYYY"
+                    format="MM/DD/YYYY"
                     allowClear={false}
                     disabled={disableField}
                     style={{ width: "100%" }}

@@ -549,6 +549,8 @@ const PurchaseOrderForm = ({
                   Number(row.orderunitcost || 0),
                   row.orddiscount != null ? Number(row.orddiscount) : 0
                 ),
+          additionalcost: row.additionalcost != null ? Number(row.additionalcost) : 0,
+          finalunitcost: row.finalunitcost != null ? Number(row.finalunitcost) : 0,
         })
       ) || [];
 
@@ -633,6 +635,8 @@ const PurchaseOrderForm = ({
               row.ordextendedprice != null
                 ? Number(row.ordextendedprice)
                 : calculateOrdExtendedPrice(qty, unitCost, discount),
+            additionalcost: row.additionalcost != null ? Number(row.additionalcost) : 0,
+            finalunitcost: row.finalunitcost != null ? Number(row.finalunitcost) : 0,
           };
         }
       ) || [];
@@ -855,6 +859,8 @@ const PurchaseOrderForm = ({
           item.orderunitcost,
           item.orddiscount
         ),
+        additionalcost: item.additionalcost ?? undefined,
+        finalunitcost: item.finalunitcost ?? undefined,
       })) || [],
     };
 
@@ -1416,19 +1422,22 @@ const PurchaseOrderForm = ({
                       <th className="text-nowrap">#</th>
                       <th className="text-nowrap">Item Code</th>
                       <th>Description</th>
+                      <th className="text-nowrap">Unit</th>
                       <th className="text-end text-nowrap">{disableField ? "Order Qty" : "Qty"}</th>
                       {disableField && <th className="text-end text-nowrap">Recv Qty</th>}
                       {disableField && <th className="text-end text-nowrap">Backorder</th>}
                       <th className="text-end text-nowrap">Unit Price</th>
                       <th className="text-end text-nowrap">Disc %</th>
                       <th className="text-end text-nowrap">Ext. Price</th>
+                      <th className="text-end text-nowrap">Add. Cost</th>
+                      <th className="text-end text-nowrap">Final Cost</th>
                       {!disableField && <th className="text-center text-nowrap">Action</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {itemFields.length === 0 ? (
                       <tr>
-                        <td colSpan={disableField ? 9 : 8} className="text-center text-muted py-5 fst-italic">
+                        <td colSpan={disableField ? 12 : 11} className="text-center text-muted py-5 fst-italic">
                           No items yet — use the form above to add line items
                         </td>
                       </tr>
@@ -1448,6 +1457,8 @@ const PurchaseOrderForm = ({
                         const extPrice = Number.isFinite(savedExtPrice)
                           ? savedExtPrice
                           : calculateOrdExtendedPrice(qty, unitPrice, discountPct);
+                        const additionalcost = Number(getValues(`items.${index}.additionalcost`) || 0);
+                        const finalunitcost = Number(getValues(`items.${index}.finalunitcost`) || 0);
                         return (
                           <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                             <td>
@@ -1464,6 +1475,7 @@ const PurchaseOrderForm = ({
                             </td>
                             <td className="text-nowrap">{displayItemCode}</td>
                             <td>{description}</td>
+                            <td className="text-nowrap text-muted small">{getValues(`items.${index}.itemunit`)}</td>
                             <td className="text-end">{qty}</td>
                             {disableField && <td className="text-end">{recvQty}</td>}
                             {disableField && <td className="text-end">{backorder}</td>}
@@ -1471,6 +1483,14 @@ const PurchaseOrderForm = ({
                             <td className="text-end">{discountPct}</td>
                             <td className="text-end">
                               {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
+                            </td>
+                            <td className="text-end text-muted">
+                              <input type="hidden" {...register(`items.${index}.additionalcost` as const, { valueAsNumber: true })} />
+                              {additionalcost > 0 ? additionalcost.toFixed(3) : "—"}
+                            </td>
+                            <td className="text-end text-muted">
+                              <input type="hidden" {...register(`items.${index}.finalunitcost` as const, { valueAsNumber: true })} />
+                              {finalunitcost > 0 ? finalunitcost.toFixed(3) : "—"}
                             </td>
                             {!disableField && (
                               <td className="text-center">
@@ -1870,6 +1890,35 @@ const PurchaseOrderForm = ({
                           )}
                         </td>
                       </tr>
+                      {!disableField && (
+                        <tr>
+                          <td colSpan={2} className="pt-1 pb-2">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary w-100"
+                              onClick={() => {
+                                const freight = Number(watchedFreight || 0);
+                                const duty = Number(watchedDutyPaid || 0);
+                                const salesTax = Number(watch("posalestax") || 0);
+                                const totalCharges = freight + duty + salesTax;
+                                const currentItems = watchedItems || [];
+                                const totalQty = currentItems.reduce((s: number, r: any) => s + Number(r.qtyordered || 0), 0);
+                                const perPiece = totalQty > 0 ? Math.round((totalCharges / totalQty) * 1000) / 1000 : 0;
+                                currentItems.forEach((item: any, i: number) => {
+                                  const netCost = Number(item.orderunitcost || 0) * (1 - Number(item.orddiscount || 0) / 100);
+                                  update(i, {
+                                    ...item,
+                                    additionalcost: perPiece,
+                                    finalunitcost: Math.round((netCost + perPiece) * 1000) / 1000,
+                                  });
+                                });
+                              }}
+                            >
+                              ⟳ Distribute Charges to Items
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                       <tr className="border-top border-2">
                         <td className="ps-0 fw-bold" style={{ fontSize: "1rem" }}>PO Total</td>
                         <td className="pe-0 text-end fw-bold" style={{ fontSize: "1rem" }}>
