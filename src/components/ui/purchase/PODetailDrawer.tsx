@@ -61,7 +61,7 @@ const useWindowWidth = () => {
 };
 
 const PODetailDrawer = ({ po, storeid, onClose }: Props) => {
-  const [getPurchaseOrderItemsList] = useLazyQuery(GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY);
+  const [getPurchaseOrderItemsList] = useLazyQuery(GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY, { fetchPolicy: 'network-only' });
   const dispatch = useAppDispatch();
   const { basePath } = useDefaultRoute();
   const gridRef = useRef<AgGridReact>(null);
