@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AG Grid — Tailwind Style Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; background: #f3f4f6; display: flex; height: 100vh; overflow: hidden; color: #374151; }
+    svg { display: inline-block; vertical-align: middle; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 240px; background: #111827; color: #d1d5db; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
+    .sidebar-logo { height: 56px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #374151; font-size: 18px; font-weight: 700; color: white; letter-spacing:.03em; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 8px; }
+    .nav-section { padding: 10px 12px 4px; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.08em; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; color: #9ca3af; font-size: 13px; margin-bottom: 2px; }
+    .nav-item:hover { background: #1f2937; color: white; cursor: pointer; }
+    .nav-item.active { background: #1d4ed8; color: white; }
+    .sidebar-user { border-top: 1px solid #374151; padding: 12px; display: flex; align-items: center; gap: 10px; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+    .user-name { font-size: 12px; font-weight: 500; color: white; }
+    .user-sub { font-size: 11px; color: #6b7280; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .header { height: 56px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+    .header-info { flex: 1; }
+    .header-title { font-size: 15px; font-weight: 600; color: #1f2937; }
+    .header-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; transition: background .15s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .icon-btn { padding: 7px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; color: #6b7280; }
+    .icon-btn:hover { background: #f9fafb; }
+    .content { flex: 1; overflow: hidden; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── KPI cards ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; flex-shrink: 0; }
+    .kpi-card { background: white; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.07); border-top: 4px solid transparent; }
+    .kpi-card.blue { border-top-color: #3b82f6; }
+    .kpi-card.indigo { border-top-color: #6366f1; }
+    .kpi-card.purple { border-top-color: #a855f7; }
+    .kpi-card.amber { border-top-color: #f59e0b; }
+    .kpi-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
+    .kpi-value { font-size: 22px; font-weight: 700; color: #1f2937; margin-top: 3px; }
+    .kpi-trend { font-size: 11px; margin-top: 2px; }
+    .up { color: #16a34a; } .dn { color: #ef4444; } .neu { color: #9ca3af; }
+
+    /* ── Grid card ── */
+    .grid-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    /* ── Toolbar ── */
+    .toolbar { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .search-wrap { position: relative; }
+    .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+    .search-input { padding: 7px 10px 7px 30px; border: 1px solid #e5e7eb; border-radius: 7px; font-size: 12px; width: 200px; outline: none; }
+    .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.12); }
+    .toolbar-spacer { flex: 1; }
+    .pill-group { display: flex; gap: 5px; }
+    .pill { padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 500; border: none; background: #f3f4f6; color: #4b5563; transition: background .15s; }
+    .pill.on { background: #1e40af; color: white; }
+    .chip-row { padding: 7px 14px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 500; border: 1px solid #e5e7eb; background: white; color: #4b5563; }
+    .chip.on { background: #1e40af; color: white; border-color: #1e40af; }
+    .chip-badge { padding: 1px 5px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+    .chip.on .chip-badge { background: white; color: #1e40af; }
+    .cb-green { background: #dcfce7; color: #15803d; }
+    .cb-amber { background: #fef3c7; color: #b45309; }
+    .cb-red { background: #fee2e2; color: #b91c1c; }
+
+    /* ═══════════════════════════════════════════════════════════
+       AG GRID SIMULATION — custom Tailwind theme
+       Row height: 28px  Header: 32px  Font: 12px
+       ═══════════════════════════════════════════════════════════ */
+    .ag-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+    .ag-header { display: flex; align-items: stretch; background: #f8fafc; border-bottom: 2px solid #e2e8f0; flex-shrink: 0; height: 32px; user-select: none; }
+    .ag-col { display: flex; align-items: center; border-right: 1px solid #e2e8f0; position: relative; overflow: hidden; flex-shrink: 0; }
+    .ag-col:last-child { border-right: none; flex: 1; }
+    .ag-col-label { font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing:.04em; padding: 0 10px; display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; }
+    .ag-sort { display: flex; flex-direction: column; gap: 1px; opacity: .4; }
+    .ag-sort.asc .tri-up { opacity: 1; color: #2563eb; }
+    .ag-sort.desc .tri-desc { opacity: 1; color: #2563eb; }
+    .ag-filter-btn { margin-left: auto; padding: 0 6px 0 2px; color: #94a3b8; flex-shrink: 0; opacity: .6; }
+    .ag-filter-btn:hover { opacity: 1; color: #2563eb; }
+    .ag-col-resize { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; cursor: col-resize; background: transparent; }
+    .ag-col-resize:hover { background: #3b82f6; opacity: .4; }
+
+    /* Rows */
+    .ag-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
+    .ag-row { display: flex; align-items: center; height: 28px; border-bottom: 1px solid #f1f5f9; transition: background .1s; }
+    .ag-row:hover { background: #eff6ff; }
+    .ag-row.selected { background: #dbeafe; }
+    .ag-row:last-child { border-bottom: none; }
+    .ag-cell { font-size: 12px; padding: 0 10px; display: flex; align-items: center; height: 100%; border-right: 1px solid #f1f5f9; overflow: hidden; white-space: nowrap; flex-shrink: 0; }
+    .ag-cell:last-child { border-right: none; flex: 1; }
+    .ag-cell.right { justify-content: flex-end; }
+    .cell-link { color: #2563eb; font-weight: 500; cursor: pointer; }
+    .cell-link:hover { text-decoration: underline; }
+    .cell-muted { color: #94a3b8; }
+    .cell-strike { text-decoration: line-through; color: #94a3b8; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-amber { background: #fef3c7; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #b91c1c; }
+    .amber-val { color: #b45309; font-weight: 500; }
+
+    /* Action buttons in cell */
+    .cell-actions { display: flex; gap: 3px; align-items: center; }
+    .act { width: 22px; height: 22px; border: none; background: transparent; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; transition: background .12s, color .12s; }
+    .act.view:hover { background: #dbeafe; color: #2563eb; }
+    .act.print:hover { background: #f3f4f6; color: #374151; }
+    .act.pay:hover { background: #dcfce7; color: #16a34a; }
+    .act.edit:hover { background: #fef9c3; color: #ca8a04; }
+
+    /* Checkbox */
+    .ag-chk { width: 14px; height: 14px; accent-color: #2563eb; cursor: pointer; }
+
+    /* Column widths */
+    .w-chk  { width: 40px; }
+    .w-inv  { width: 105px; }
+    .w-cust { width: 180px; }
+    .w-date { width: 110px; }
+    .w-sts  { width: 90px; }
+    .w-qty  { width: 65px; }
+    .w-pcs  { width: 65px; }
+    .w-net  { width: 110px; }
+    .w-bal  { width: 110px; }
+    .w-act  { width: 100px; }
+
+    /* Footer bar */
+    .ag-footer { height: 36px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; }
+    .ag-footer-stat { font-size: 11px; color: #64748b; border-right: 1px solid #e2e8f0; padding-right: 10px; }
+    .ag-footer-stat:last-of-type { border-right: none; }
+    .ag-footer-stat span { font-weight: 600; color: #1f2937; }
+    .pag { margin-left: auto; display: flex; gap: 4px; }
+    .pag-btn { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 5px; font-size: 11px; background: white; color: #374151; }
+    .pag-btn.on { background: #2563eb; color: white; border-color: #2563eb; }
+    .pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Comparison note box */
+    .note-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 12px 16px; flex-shrink: 0; }
+    .note-title { font-size: 12px; font-weight: 600; color: #0369a1; margin-bottom: 8px; }
+    .note-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .note-col { font-size: 11px; color: #374151; }
+    .note-col strong { display: block; font-size: 11px; font-weight: 600; color: #0c4a6e; margin-bottom: 4px; }
+    .note-col li { list-style: none; padding: 2px 0; padding-left: 12px; position: relative; }
+    .note-col li::before { content: "•"; position: absolute; left: 2px; color: #0369a1; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">JewelPOS</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">Sales</div>
+      <a href="#" class="nav-item active">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Invoices
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+        Memos
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Sales Orders
+      </a>
+      <div class="nav-section">Inventory</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Products
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">JW</div>
+      <div>
+        <div class="user-name">JewelPOS Admin</div>
+        <div class="user-sub">Main Outlet</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="header">
+      <div class="header-info">
+        <div class="header-title">Invoices — AG Grid View</div>
+        <div class="header-sub">Same AG Grid component · Tailwind color theme</div>
+      </div>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+        New Invoice
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      </button>
+    </header>
+
+    <div class="content">
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Revenue — This Month</div>
+          <div class="kpi-value">$84,320</div>
+          <div class="kpi-trend up">↑ 12% vs last month</div>
+        </div>
+        <div class="kpi-card indigo">
+          <div class="kpi-label">Invoices — This Month</div>
+          <div class="kpi-value">246</div>
+          <div class="kpi-trend up">↑ 8% vs last month</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Avg Invoice</div>
+          <div class="kpi-value">$342.76</div>
+          <div class="kpi-trend dn">↓ 3% vs last month</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Open Balance</div>
+          <div class="kpi-value">$14,850</div>
+          <div class="kpi-trend neu">38 open invoices</div>
+        </div>
+      </div>
+
+      <!-- AG Grid Card -->
+      <div class="grid-card">
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></span>
+            <input type="text" class="search-input" placeholder="Quick filter…">
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="pill-group" id="datePills">
+            <button class="pill on" onclick="setPill(this)">All</button>
+            <button class="pill" onclick="setPill(this)">Today</button>
+            <button class="pill" onclick="setPill(this)">This Week</button>
+            <button class="pill" onclick="setPill(this)">This Month</button>
+            <button class="pill" onclick="setPill(this)">This Qtr</button>
+            <button class="pill" onclick="setPill(this)">This Year</button>
+          </div>
+        </div>
+
+        <!-- Status chips -->
+        <div class="chip-row">
+          <span style="font-size:11px;color:#9ca3af">Filter:</span>
+          <div style="display:flex;gap:7px" id="chips">
+            <button class="chip on" onclick="setChip(this)">All <span class="chip-badge">246</span></button>
+            <button class="chip" onclick="setChip(this)">Paid <span class="chip-badge cb-green">189</span></button>
+            <button class="chip" onclick="setChip(this)">Open <span class="chip-badge cb-amber">38</span></button>
+            <button class="chip" onclick="setChip(this)">Voided <span class="chip-badge cb-red">19</span></button>
+          </div>
+        </div>
+
+        <!-- ─── AG GRID ─── -->
+        <div class="ag-wrap">
+
+          <!-- Header row (32px) -->
+          <div class="ag-header">
+            <div class="ag-col w-chk" style="justify-content:center">
+              <input type="checkbox" class="ag-chk" onchange="selectAll(this)">
+            </div>
+            <div class="ag-col w-inv">
+              <div class="ag-col-label">
+                Invoice #
+                <div class="ag-sort asc">
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="currentColor"/></svg>
+                  <svg width="8" height="5" viewBox="0 0 8 5" style="opacity:.3"><path d="M4 5L0 0h8z" fill="currentColor"/></svg>
+                </div>
+              </div>
+              <button class="ag-filter-btn"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10m-7 4h4"/></svg></button>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-cust">
+              <div class="ag-col-label">Customer
+                <div class="ag-sort">
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="currentColor" opacity=".3"/></svg>
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 5L0 0h8z" fill="currentColor" opacity=".3"/></svg>
+                </div>
+              </div>
+              <button class="ag-filter-btn"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10m-7 4h4"/></svg></button>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-date">
+              <div class="ag-col-label">Date
+                <div class="ag-sort">
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="currentColor" opacity=".3"/></svg>
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 5L0 0h8z" fill="currentColor" opacity=".3"/></svg>
+                </div>
+              </div>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-sts">
+              <div class="ag-col-label">Status</div>
+              <button class="ag-filter-btn"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10m-7 4h4"/></svg></button>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-qty" style="justify-content:flex-end">
+              <div class="ag-col-label" style="justify-content:flex-end">Qty</div>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-pcs" style="justify-content:flex-end">
+              <div class="ag-col-label" style="justify-content:flex-end">Pcs</div>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-net" style="justify-content:flex-end">
+              <div class="ag-col-label" style="justify-content:flex-end">Net Amount
+                <div class="ag-sort">
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="currentColor" opacity=".3"/></svg>
+                  <svg width="8" height="5" viewBox="0 0 8 5"><path d="M4 5L0 0h8z" fill="currentColor" opacity=".3"/></svg>
+                </div>
+              </div>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col w-bal" style="justify-content:flex-end">
+              <div class="ag-col-label" style="justify-content:flex-end">Balance</div>
+              <div class="ag-col-resize"></div>
+            </div>
+            <div class="ag-col">
+              <div class="ag-col-label">Actions</div>
+            </div>
+          </div>
+
+          <!-- Body rows (28px each) -->
+          <div class="ag-body" id="agBody">
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10482</span></div>
+              <div class="ag-cell w-cust">Goldsmith &amp; Co.</div>
+              <div class="ag-cell w-date cell-muted">Jun 29, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-green">Paid</span></div>
+              <div class="ag-cell w-qty right">12</div>
+              <div class="ag-cell w-pcs right">12</div>
+              <div class="ag-cell w-net right">$4,250.00</div>
+              <div class="ag-cell w-bal right cell-muted">$0.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view" title="View"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit" title="Edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act print" title="Print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10481</span></div>
+              <div class="ag-cell w-cust">Diamond Palace LLC</div>
+              <div class="ag-cell w-date cell-muted">Jun 29, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-amber">Open</span></div>
+              <div class="ag-cell w-qty right">5</div>
+              <div class="ag-cell w-pcs right">5</div>
+              <div class="ag-cell w-net right">$12,750.00</div>
+              <div class="ag-cell w-bal right amber-val">$12,750.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act pay" title="Collect Payment"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>
+                <button class="act print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10480</span></div>
+              <div class="ag-cell w-cust">Silver Star Jewelry</div>
+              <div class="ag-cell w-date cell-muted">Jun 28, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-green">Paid</span></div>
+              <div class="ag-cell w-qty right">8</div>
+              <div class="ag-cell w-pcs right">8</div>
+              <div class="ag-cell w-net right">$6,100.00</div>
+              <div class="ag-cell w-bal right cell-muted">$0.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10479</span></div>
+              <div class="ag-cell w-cust">Royal Gems Inc.</div>
+              <div class="ag-cell w-date cell-muted">Jun 28, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-red">Voided</span></div>
+              <div class="ag-cell w-qty right cell-muted">3</div>
+              <div class="ag-cell w-pcs right cell-muted">3</div>
+              <div class="ag-cell w-net right cell-strike">$890.00</div>
+              <div class="ag-cell w-bal right cell-muted">—</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10478</span></div>
+              <div class="ag-cell w-cust">Luxe Bangles Co.</div>
+              <div class="ag-cell w-date cell-muted">Jun 27, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-amber">Open</span></div>
+              <div class="ag-cell w-qty right">4</div>
+              <div class="ag-cell w-pcs right">4</div>
+              <div class="ag-cell w-net right">$3,200.00</div>
+              <div class="ag-cell w-bal right amber-val">$1,600.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act pay"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>
+                <button class="act print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10477</span></div>
+              <div class="ag-cell w-cust">Prestige Ornaments</div>
+              <div class="ag-cell w-date cell-muted">Jun 27, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-green">Paid</span></div>
+              <div class="ag-cell w-qty right">6</div>
+              <div class="ag-cell w-pcs right">6</div>
+              <div class="ag-cell w-net right">$7,800.00</div>
+              <div class="ag-cell w-bal right cell-muted">$0.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+            <div class="ag-row" onclick="toggleRow(this)">
+              <div class="ag-cell w-chk" style="justify-content:center"><input type="checkbox" class="ag-chk"></div>
+              <div class="ag-cell w-inv"><span class="cell-link">INV-10476</span></div>
+              <div class="ag-cell w-cust">Modern Jewels Inc.</div>
+              <div class="ag-cell w-date cell-muted">Jun 26, 2026</div>
+              <div class="ag-cell w-sts"><span class="badge badge-amber">Open</span></div>
+              <div class="ag-cell w-qty right">2</div>
+              <div class="ag-cell w-pcs right">2</div>
+              <div class="ag-cell w-net right">$2,500.00</div>
+              <div class="ag-cell w-bal right amber-val">$2,500.00</div>
+              <div class="ag-cell"><div class="cell-actions">
+                <button class="act view"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                <button class="act edit"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                <button class="act pay"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>
+                <button class="act print"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+              </div></div>
+            </div>
+
+          </div><!-- /ag-body -->
+
+          <!-- Footer: row count + totals + pagination -->
+          <div class="ag-footer">
+            <span class="ag-footer-stat">Rows: <span>246</span></span>
+            <span class="ag-footer-stat">Showing: <span>1–7</span></span>
+            <span class="ag-footer-stat">Net Total: <span>$37,490.00</span></span>
+            <span class="ag-footer-stat">Balance: <span style="color:#b45309">$16,850.00</span></span>
+            <div class="pag">
+              <button class="pag-btn" disabled>‹</button>
+              <button class="pag-btn on">1</button>
+              <button class="pag-btn">2</button>
+              <button class="pag-btn">3</button>
+              <button class="pag-btn">›</button>
+            </div>
+          </div>
+        </div><!-- /ag-wrap -->
+      </div><!-- /grid-card -->
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <script>
+    function setPill(btn) {
+      document.querySelectorAll('#datePills .pill').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+    }
+    function setChip(btn) {
+      document.querySelectorAll('#chips .chip').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+    }
+    function toggleRow(row) {
+      row.classList.toggle('selected');
+      const chk = row.querySelector('.ag-chk');
+      if (chk) chk.checked = row.classList.contains('selected');
+    }
+    function selectAll(masterChk) {
+      document.querySelectorAll('#agBody .ag-chk').forEach(chk => {
+        chk.checked = masterChk.checked;
+        const row = chk.closest('.ag-row');
+        if (row) row.classList.toggle('selected', masterChk.checked);
+      });
+    }
+  </script>
+</body>
+</html>

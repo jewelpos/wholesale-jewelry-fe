@@ -8,7 +8,7 @@ import {
   CREATE_INVENTORY_TAG_LABEL_MUTATION,
   UPDATE_INVENTORY_TAG_LABEL_MUTATION,
 } from "@/lib/graphql/mutations/label";
-import LabelCanvas, { LabelTemplate, LabelData } from "./LabelCanvas";
+import LabelCanvas, { LabelTemplate, LabelData, FieldPrintConfig } from "./LabelCanvas";
 import api from "@/lib/axios";
 
 interface Props {
@@ -38,35 +38,42 @@ const DEFAULT_FORM = {
   middlemargin: "0.1",
   tagprefix: "",
   tagsuffix: "",
-  showbarcode: "1",
-  showitemcode: "1",
-  showdescription: "1",
-  showsellprice: "1",
-  showcodedprice: "0",
-  showcategory: "0",
-  barcodeside: "front",
-  itemcodeside: "front",
-  descriptionside: "back",
-  sellpriceside: "back",
-  codedpriceside: "front",
-  categoryside: "back",
   backgroundimage: "",
   isactive: "1",
 };
 
 type FormState = typeof DEFAULT_FORM;
 
-const CONTENT_FIELDS: { key: keyof FormState; showKey: keyof FormState; label: string; defaultSide: "front" | "back" }[] = [
-  { key: "barcodeside",     showKey: "showbarcode",    label: "Barcode",      defaultSide: "front" },
-  { key: "itemcodeside",    showKey: "showitemcode",   label: "Item Code",    defaultSide: "front" },
-  { key: "codedpriceside",  showKey: "showcodedprice", label: "Coded Price",  defaultSide: "front" },
-  { key: "descriptionside", showKey: "showdescription",label: "Description",  defaultSide: "back"  },
-  { key: "sellpriceside",   showKey: "showsellprice",  label: "Sell Price",   defaultSide: "back"  },
-  { key: "categoryside",    showKey: "showcategory",   label: "Category",     defaultSide: "back"  },
+const DEFAULT_FIELD_CONFIGS: FieldPrintConfig[] = [
+  { key: "itembarcodeid",   label: "Barcode",     side: "front", enabled: true,  order: 1, fontSize: 10, bold: false },
+  { key: "itemcode",        label: "Item Code",   side: "front", enabled: true,  order: 2, fontSize: 10, bold: true  },
+  { key: "codedprice",      label: "Coded Price", side: "front", enabled: false, order: 3, fontSize: 10, bold: true  },
+  { key: "itemdescription", label: "Description", side: "back",  enabled: true,  order: 4, fontSize: 10, bold: false },
+  { key: "itemsellprice",   label: "Sell Price",  side: "back",  enabled: true,  order: 5, fontSize: 11, bold: true  },
+  { key: "categoryname",    label: "Category",    side: "back",  enabled: false, order: 6, fontSize: 9,  bold: false },
 ];
+
+function initFieldConfigs(label: LabelTemplate): FieldPrintConfig[] {
+  if (label.fieldconfigs) {
+    try {
+      const parsed = JSON.parse(label.fieldconfigs);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as FieldPrintConfig[];
+    } catch {}
+  }
+  // Derive from legacy show/side fields for existing labels without fieldconfigs
+  return [
+    { key: "itembarcodeid",   label: "Barcode",     side: (label.barcodeside     as "front" | "back") ?? "front", enabled: label.showbarcode    === "1", order: 1, fontSize: 10, bold: false },
+    { key: "itemcode",        label: "Item Code",   side: (label.itemcodeside    as "front" | "back") ?? "front", enabled: label.showitemcode   === "1", order: 2, fontSize: 10, bold: true  },
+    { key: "codedprice",      label: "Coded Price", side: (label.codedpriceside  as "front" | "back") ?? "front", enabled: label.showcodedprice === "1", order: 3, fontSize: 10, bold: true  },
+    { key: "itemdescription", label: "Description", side: (label.descriptionside as "front" | "back") ?? "back",  enabled: label.showdescription === "1", order: 4, fontSize: 10, bold: false },
+    { key: "itemsellprice",   label: "Sell Price",  side: (label.sellpriceside   as "front" | "back") ?? "back",  enabled: label.showsellprice  === "1", order: 5, fontSize: 11, bold: true  },
+    { key: "categoryname",    label: "Category",    side: (label.categoryside    as "front" | "back") ?? "back",  enabled: label.showcategory   === "1", order: 6, fontSize: 9,  bold: false },
+  ];
+}
 
 const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, onSaved }) => {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [fieldConfigs, setFieldConfigs] = useState<FieldPrintConfig[]>(DEFAULT_FIELD_CONFIGS);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,31 +95,21 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
         middlemargin:    editLabel.middlemargin ?? "0.1",
         tagprefix:       editLabel.tagprefix ?? "",
         tagsuffix:       editLabel.tagsuffix ?? "",
-        showbarcode:     editLabel.showbarcode ?? "1",
-        showitemcode:    editLabel.showitemcode ?? "1",
-        showdescription: editLabel.showdescription ?? "1",
-        showsellprice:   editLabel.showsellprice ?? "1",
-        showcodedprice:  editLabel.showcodedprice ?? "0",
-        showcategory:    editLabel.showcategory ?? "0",
-        barcodeside:     editLabel.barcodeside ?? "front",
-        itemcodeside:    editLabel.itemcodeside ?? "front",
-        descriptionside: editLabel.descriptionside ?? "back",
-        sellpriceside:   editLabel.sellpriceside ?? "back",
-        codedpriceside:  editLabel.codedpriceside ?? "front",
-        categoryside:    editLabel.categoryside ?? "back",
         backgroundimage: editLabel.backgroundimage ?? "",
         isactive:        editLabel.isactive ?? "1",
       });
+      setFieldConfigs(initFieldConfigs(editLabel));
     } else {
       setForm(DEFAULT_FORM);
+      setFieldConfigs(DEFAULT_FIELD_CONFIGS);
     }
   }, [editLabel]);
 
   const set = (key: keyof FormState, value: string | number) =>
     setForm((p) => ({ ...p, [key]: value }));
 
-  const toggleBool = (key: keyof FormState) =>
-    setForm((p) => ({ ...p, [key]: p[key] === "1" ? "0" : "1" }));
+  const updateFieldConfig = (index: number, patch: Partial<FieldPrintConfig>) =>
+    setFieldConfigs((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)));
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -124,9 +121,10 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
       const res = await api.post("/store/label/upload-background-image", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      set("backgroundimage", res.data.url ?? "");
-    } catch {
-      setErrors((p) => ({ ...p, backgroundimage: "Image upload failed" }));
+      set("backgroundimage", res.data?.url ?? "");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? "Image upload failed";
+      setErrors((p) => ({ ...p, backgroundimage: msg }));
     } finally {
       setImageUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -144,10 +142,33 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
 
   const handleSave = async () => {
     if (!validate()) return;
+    const cfg = (key: keyof LabelData) => fieldConfigs.find((c) => c.key === key);
     const label = {
-      ...form,
-      labelwidth: Number(form.labelwidth),
-      labelheight: Number(form.labelheight),
+      labelname:       form.labelname,
+      tagmodel:        form.tagmodel || null,
+      labletype:       form.labletype,
+      labelwidth:      Number(form.labelwidth),
+      labelheight:     Number(form.labelheight),
+      leftmargin:      form.leftmargin,
+      topmargin:       form.topmargin,
+      middlemargin:    form.middlemargin,
+      tagprefix:       form.tagprefix,
+      tagsuffix:       form.tagsuffix,
+      backgroundimage: form.backgroundimage || null,
+      isactive:        form.isactive,
+      showbarcode:     cfg("itembarcodeid")?.enabled    ? "1" : "0",
+      showitemcode:    cfg("itemcode")?.enabled         ? "1" : "0",
+      showdescription: cfg("itemdescription")?.enabled  ? "1" : "0",
+      showsellprice:   cfg("itemsellprice")?.enabled    ? "1" : "0",
+      showcodedprice:  cfg("codedprice")?.enabled       ? "1" : "0",
+      showcategory:    cfg("categoryname")?.enabled     ? "1" : "0",
+      barcodeside:     cfg("itembarcodeid")?.side    ?? "front",
+      itemcodeside:    cfg("itemcode")?.side         ?? "front",
+      descriptionside: cfg("itemdescription")?.side  ?? "back",
+      sellpriceside:   cfg("itemsellprice")?.side    ?? "back",
+      codedpriceside:  cfg("codedprice")?.side       ?? "front",
+      categoryside:    cfg("categoryname")?.side     ?? "back",
+      fieldconfigs:    JSON.stringify(fieldConfigs),
     };
     try {
       if (editLabel) {
@@ -172,18 +193,18 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
     middlemargin: form.middlemargin,
     tagprefix: form.tagprefix,
     tagsuffix: form.tagsuffix,
-    showbarcode: form.showbarcode,
-    showitemcode: form.showitemcode,
-    showdescription: form.showdescription,
-    showsellprice: form.showsellprice,
-    showcodedprice: form.showcodedprice,
-    showcategory: form.showcategory,
-    barcodeside: form.barcodeside,
-    itemcodeside: form.itemcodeside,
-    descriptionside: form.descriptionside,
-    sellpriceside: form.sellpriceside,
-    codedpriceside: form.codedpriceside,
-    categoryside: form.categoryside,
+    showbarcode:     fieldConfigs.find((c) => c.key === "itembarcodeid")?.enabled   ? "1" : "0",
+    showitemcode:    fieldConfigs.find((c) => c.key === "itemcode")?.enabled        ? "1" : "0",
+    showdescription: fieldConfigs.find((c) => c.key === "itemdescription")?.enabled ? "1" : "0",
+    showsellprice:   fieldConfigs.find((c) => c.key === "itemsellprice")?.enabled   ? "1" : "0",
+    showcodedprice:  fieldConfigs.find((c) => c.key === "codedprice")?.enabled      ? "1" : "0",
+    showcategory:    fieldConfigs.find((c) => c.key === "categoryname")?.enabled    ? "1" : "0",
+    barcodeside:     fieldConfigs.find((c) => c.key === "itembarcodeid")?.side   ?? "front",
+    itemcodeside:    fieldConfigs.find((c) => c.key === "itemcode")?.side        ?? "front",
+    descriptionside: fieldConfigs.find((c) => c.key === "itemdescription")?.side ?? "back",
+    sellpriceside:   fieldConfigs.find((c) => c.key === "itemsellprice")?.side   ?? "back",
+    codedpriceside:  fieldConfigs.find((c) => c.key === "codedprice")?.side      ?? "front",
+    categoryside:    fieldConfigs.find((c) => c.key === "categoryname")?.side    ?? "back",
     backgroundimage: form.backgroundimage || undefined,
   };
 
@@ -256,7 +277,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   ), errors.labelname)}
                   {field("Type", (
                     <select className="form-select form-select-sm" value={form.labletype}
-                      onChange={(e) => { set("labletype", e.target.value); }}>
+                      onChange={(e) => set("labletype", e.target.value)}>
                       <option value="rattail">Rat-tail (Front + Back)</option>
                       <option value="rectangular">Rectangular (Single face)</option>
                     </select>
@@ -268,7 +289,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   {field("Active", (
                     <div className="form-check form-switch mb-0">
                       <input className="form-check-input" type="checkbox" checked={form.isactive === "1"}
-                        onChange={() => toggleBool("isactive")} />
+                        onChange={() => setForm((p) => ({ ...p, isactive: p.isactive === "1" ? "0" : "1" }))} />
                     </div>
                   ))}
                 </>)}
@@ -357,68 +378,87 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   {errors.backgroundimage && (
                     <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{errors.backgroundimage}</div>
                   )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handleImageUpload}
-                  />
+                  <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
                 </>)}
 
               </div>
 
-              {/* RIGHT — Content + Preview */}
+              {/* RIGHT — Content & Preview */}
               <div className="col-md-6">
 
                 {section("Content & Placement", (
                   <div>
-                    <div className="row g-0 mb-1" style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      <div className="col-5">Field</div>
-                      <div className="col-2 text-center">Show</div>
+                    {/* Column headers */}
+                    <div className="d-flex align-items-center mb-1" style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", gap: 4 }}>
+                      <div style={{ flex: "0 0 86px" }}>Field</div>
+                      <div style={{ flex: "0 0 38px", textAlign: "center" }}>Show</div>
                       {isRattail && <>
-                        <div className="col-2 text-center">Front</div>
-                        <div className="col-2 text-center">Back</div>
+                        <div style={{ flex: "0 0 36px", textAlign: "center" }}>Front</div>
+                        <div style={{ flex: "0 0 36px", textAlign: "center" }}>Back</div>
                       </>}
+                      <div style={{ flex: "0 0 48px", textAlign: "center" }}>Size</div>
+                      <div style={{ flex: "0 0 40px", textAlign: "center" }}>Order</div>
+                      <div style={{ flex: "0 0 32px", textAlign: "center" }}>Bold</div>
                     </div>
-                    {CONTENT_FIELDS.map(({ key, showKey, label, defaultSide }) => {
-                      const shown = form[showKey] === "1";
-                      const side = (form[key] as string) ?? defaultSide;
-                      return (
-                        <div key={key} className="row g-0 align-items-center mb-1 py-1"
-                          style={{ borderBottom: "1px solid #f8fafc", fontSize: 13 }}>
-                          <div className="col-5" style={{ color: shown ? "#1e293b" : "#94a3b8", fontWeight: shown ? 500 : 400 }}>
-                            {label}
-                          </div>
-                          <div className="col-2 text-center">
-                            <div className="form-check form-switch mb-0 d-flex justify-content-center">
-                              <input className="form-check-input" type="checkbox"
-                                checked={shown} onChange={() => toggleBool(showKey)} />
-                            </div>
-                          </div>
-                          {isRattail && <>
-                            <div className="col-2 text-center">
-                              <div className="form-check mb-0 d-flex justify-content-center">
-                                <input className="form-check-input" type="radio"
-                                  name={`side-${key}`} value="front"
-                                  checked={side === "front"}
-                                  disabled={!shown}
-                                  onChange={() => set(key, "front")} />
-                              </div>
-                            </div>
-                            <div className="col-2 text-center">
-                              <div className="form-check mb-0 d-flex justify-content-center">
-                                <input className="form-check-input" type="radio"
-                                  name={`side-${key}`} value="back"
-                                  checked={side === "back"}
-                                  disabled={!shown}
-                                  onChange={() => set(key, "back")} />
-                              </div>
-                            </div>
-                          </>}
+
+                    {fieldConfigs.map((cfg, i) => (
+                      <div key={cfg.key} className="d-flex align-items-center py-1"
+                        style={{ borderBottom: "1px solid #f8fafc", gap: 4 }}>
+                        {/* Field name */}
+                        <div style={{ flex: "0 0 86px", fontSize: 12, color: cfg.enabled ? "#1e293b" : "#94a3b8", fontWeight: cfg.enabled ? 500 : 400 }}>
+                          {cfg.label}
                         </div>
-                      );
-                    })}
+                        {/* Show toggle */}
+                        <div style={{ flex: "0 0 38px", display: "flex", justifyContent: "center" }}>
+                          <div className="form-check form-switch mb-0">
+                            <input className="form-check-input" type="checkbox"
+                              checked={cfg.enabled}
+                              onChange={() => updateFieldConfig(i, { enabled: !cfg.enabled })} />
+                          </div>
+                        </div>
+                        {/* Front/Back radio (rattail only) */}
+                        {isRattail && <>
+                          <div style={{ flex: "0 0 36px", display: "flex", justifyContent: "center" }}>
+                            <input type="radio" className="form-check-input"
+                              name={`side-${cfg.key}`} value="front"
+                              checked={cfg.side === "front"}
+                              disabled={!cfg.enabled}
+                              onChange={() => updateFieldConfig(i, { side: "front" })} />
+                          </div>
+                          <div style={{ flex: "0 0 36px", display: "flex", justifyContent: "center" }}>
+                            <input type="radio" className="form-check-input"
+                              name={`side-${cfg.key}`} value="back"
+                              checked={cfg.side === "back"}
+                              disabled={!cfg.enabled}
+                              onChange={() => updateFieldConfig(i, { side: "back" })} />
+                          </div>
+                        </>}
+                        {/* Font size */}
+                        <div style={{ flex: "0 0 48px" }}>
+                          <input type="number" min={7} max={20} step={1}
+                            className="form-control form-control-sm p-0 text-center"
+                            style={{ fontSize: 11, height: 24 }}
+                            value={cfg.fontSize}
+                            disabled={!cfg.enabled}
+                            onChange={(e) => updateFieldConfig(i, { fontSize: Number(e.target.value) || cfg.fontSize })} />
+                        </div>
+                        {/* Order */}
+                        <div style={{ flex: "0 0 40px" }}>
+                          <input type="number" min={1} max={10} step={1}
+                            className="form-control form-control-sm p-0 text-center"
+                            style={{ fontSize: 11, height: 24 }}
+                            value={cfg.order}
+                            onChange={(e) => updateFieldConfig(i, { order: Number(e.target.value) || cfg.order })} />
+                        </div>
+                        {/* Bold */}
+                        <div style={{ flex: "0 0 32px", display: "flex", justifyContent: "center" }}>
+                          <input type="checkbox" className="form-check-input"
+                            checked={cfg.bold}
+                            disabled={!cfg.enabled}
+                            onChange={() => updateFieldConfig(i, { bold: !cfg.bold })} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
 
@@ -431,7 +471,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   padding: 16, display: "flex", alignItems: "center", justifyContent: "center",
                   minHeight: 160, overflowX: "auto",
                 }}>
-                  <LabelCanvas template={previewTemplate} data={SAMPLE_DATA} scale={2} />
+                  <LabelCanvas template={previewTemplate} data={SAMPLE_DATA} scale={2} fieldConfigs={fieldConfigs} />
                 </div>
                 <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", marginTop: 6 }}>
                   Sample data · {form.labelwidth}" × {isRattail ? `${Number(form.labelheight) * 2 + Number(form.middlemargin || 0)}"` : `${form.labelheight}"`} total

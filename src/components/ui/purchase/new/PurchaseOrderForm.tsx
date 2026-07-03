@@ -74,6 +74,7 @@ const PurchaseOrderForm = ({
   const [showAPModal, setShowAPModal] = useState(false);
   const [apInitialData, setApInitialData] = useState<POSupplierInvoiceInitialData | null>(null);
   const [showImportWizard, setShowImportWizard] = useState(false);
+  const [pendingImportMeta, setPendingImportMeta] = useState<{ fileName: string; count: number } | null>(null);
 
   const currencyFormatter = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -899,6 +900,18 @@ const PurchaseOrderForm = ({
       const { data } = response;
       const successData = data?.createPurchaseOrder || data?.editPurchaseOrder || data?.returnPurchaseOrder;
       if (successData) {
+        // Log import history now that PO is actually saved
+        if (pendingImportMeta) {
+          const meta = pendingImportMeta;
+          setPendingImportMeta(null);
+          void fetch('/api/proxy/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `mutation { saveImportFileRecord(storeid: ${parsedStoreId}, filename: ${JSON.stringify(meta.fileName)}, importedby: 0, recordcount: ${meta.count}) }`,
+            }),
+          }).catch(() => {});
+        }
         dispatch(
           showNotification({
             message: successData.message,
@@ -1978,7 +1991,7 @@ const PurchaseOrderForm = ({
           userId={0}
           warehouseId={parsedWarehouseId}
           onClose={() => setShowImportWizard(false)}
-          onDone={(importedItems) => {
+          onDone={(importedItems, importedFileName) => {
             importedItems.forEach((item) =>
               append({
                 itemid: item.itemid,
@@ -1991,6 +2004,7 @@ const PurchaseOrderForm = ({
                 ordextendedprice: item.qtyordered * item.orderunitcost * (1 - (item.orddiscount ?? 0) / 100),
               })
             );
+            setPendingImportMeta({ fileName: importedFileName, count: importedItems.length });
             setShowImportWizard(false);
           }}
         />

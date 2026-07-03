@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Tailwind Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; background: #f3f4f6; display: flex; height: 100vh; overflow: hidden; color: #374151; }
+    svg { display: inline-block; vertical-align: middle; }
+    button { font-family: inherit; cursor: pointer; }
+    a { text-decoration: none; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 240px; background: #111827; color: #d1d5db; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
+    .sidebar-logo { height: 56px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #374151; font-size: 18px; font-weight: 700; color: white; letter-spacing:.03em; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 8px; }
+    .nav-section { padding: 10px 12px 4px; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.08em; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; color: #9ca3af; transition: background .15s; font-size: 13px; margin-bottom: 2px; }
+    .nav-item:hover { background: #1f2937; color: white; }
+    .nav-item.active { background: #1d4ed8; color: white; }
+    .sidebar-user { border-top: 1px solid #374151; padding: 12px; display: flex; align-items: center; gap: 10px; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+    .user-name { font-size: 12px; font-weight: 500; color: white; }
+    .user-sub { font-size: 11px; color: #6b7280; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .header { height: 56px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+    .header-info { flex: 1; }
+    .header-title { font-size: 15px; font-weight: 600; color: #1f2937; }
+    .header-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .gold-ticker { display: flex; align-items: center; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 5px 12px; }
+    .gold-label { font-size: 11px; font-weight: 600; color: #b45309; }
+    .gold-price { font-size: 12px; font-weight: 700; color: #78350f; }
+    .gold-change { font-size: 11px; color: #16a34a; }
+    .icon-btn { padding: 7px; border: none; background: transparent; border-radius: 8px; color: #6b7280; transition: background .15s; }
+    .icon-btn:hover { background: #f3f4f6; }
+    .content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Quick actions ── */
+    .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; transition: background .15s, box-shadow .15s; }
+    .btn-primary { background: #2563eb; color: white; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: white; color: #374151; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .btn-secondary:hover { background: #f9fafb; }
+
+    /* ── KPI cards ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .kpi-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.07); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .kpi-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .kpi-icon.blue { background: #dbeafe; color: #2563eb; }
+    .kpi-icon.indigo { background: #e0e7ff; color: #4f46e5; }
+    .kpi-icon.amber { background: #fef3c7; color: #d97706; }
+    .kpi-icon.purple { background: #f3e8ff; color: #9333ea; }
+    .kpi-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
+    .kpi-value { font-size: 24px; font-weight: 700; color: #1f2937; margin-top: 4px; }
+    .kpi-trend { font-size: 11px; margin-top: 4px; }
+    .up { color: #16a34a; }
+    .dn { color: #ef4444; }
+    .neutral { color: #9ca3af; }
+
+    /* ── Two-col layout ── */
+    .row-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .row-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* ── Card ── */
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f3f4f6; }
+    .card-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+    .card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .card-link { font-size: 12px; color: #2563eb; }
+    .card-link:hover { text-decoration: underline; }
+
+    /* ── Chart ── */
+    .chart-wrap { padding: 12px 20px 20px; }
+    .chart-pills { display: flex; gap: 6px; }
+    .cpill { padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 500; border: none; transition: background .15s; background: #f3f4f6; color: #4b5563; }
+    .cpill.on { background: #2563eb; color: white; }
+    .cpill:hover { background: #e5e7eb; }
+    .cpill.on:hover { background: #1d4ed8; }
+
+    /* ── Recent invoices list ── */
+    .inv-list { list-style: none; }
+    .inv-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 20px; border-bottom: 1px solid #f9fafb; transition: background .1s; }
+    .inv-item:last-child { border-bottom: none; }
+    .inv-item:hover { background: #f9fafb; }
+    .inv-num { font-size: 12px; font-weight: 600; color: #1f2937; }
+    .inv-cust { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .inv-amt { font-size: 12px; font-weight: 600; color: #1f2937; text-align: right; }
+    .badge { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 500; margin-top: 3px; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-amber { background: #fef3c7; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #b91c1c; }
+
+    /* ── Top customers ── */
+    .cust-list { list-style: none; }
+    .cust-item { display: flex; align-items: center; gap: 12px; padding: 11px 20px; border-bottom: 1px solid #f9fafb; }
+    .cust-item:last-child { border-bottom: none; }
+    .cust-rank { width: 16px; font-size: 11px; font-weight: 700; color: #9ca3af; flex-shrink: 0; }
+    .cust-avt { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .cust-avt.a { background: linear-gradient(135deg,#60a5fa,#4338ca); }
+    .cust-avt.b { background: linear-gradient(135deg,#c084fc,#db2777); }
+    .cust-avt.c { background: linear-gradient(135deg,#4ade80,#0d9488); }
+    .cust-name { font-size: 12px; font-weight: 600; color: #1f2937; }
+    .cust-inv { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .cust-amt { font-size: 12px; font-weight: 700; color: #1f2937; margin-left: auto; }
+
+    /* ── Inventory alerts ── */
+    .alert-list { list-style: none; }
+    .alert-item { display: flex; align-items: center; gap: 10px; padding: 11px 20px; border-bottom: 1px solid #f9fafb; }
+    .alert-item:last-child { border-bottom: none; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot.red { background: #ef4444; }
+    .dot.amber { background: #f59e0b; }
+    .alert-name { font-size: 12px; font-weight: 600; color: #1f2937; flex: 1; }
+    .alert-status { font-size: 11px; margin-top: 2px; }
+    .text-red { color: #dc2626; }
+    .text-amber { color: #d97706; }
+    .alert-badge { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+    .order-link { font-size: 12px; color: #2563eb; border: none; background: none; padding: 0; }
+    .order-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">JewelPOS</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">Sales</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Invoices
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+        Memos
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Sales Orders
+      </a>
+      <div class="nav-section">Inventory</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Products
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Purchase Orders
+      </a>
+      <div class="nav-section">Reports</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Sales Matrix
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">JW</div>
+      <div>
+        <div class="user-name">JewelPOS Admin</div>
+        <div class="user-sub">Main Outlet</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="header">
+      <div class="header-info">
+        <div class="header-title">Dashboard</div>
+        <div class="header-sub">Monday, June 30, 2026 · Main Outlet</div>
+      </div>
+      <div class="gold-ticker">
+        <span class="gold-label">GOLD</span>
+        <span class="gold-price">$3,284.50</span>
+        <span class="gold-change">+0.8%</span>
+      </div>
+      <button class="icon-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      </button>
+    </header>
+
+    <div class="content">
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="btn btn-primary">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          New Invoice
+        </button>
+        <button class="btn btn-secondary">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          New Customer
+        </button>
+        <button class="btn btn-secondary">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          Sales Order
+        </button>
+        <button class="btn btn-secondary">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          Receive PO
+        </button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Today's Revenue</div>
+            <div class="kpi-value">$6,420</div>
+            <div class="kpi-trend up">↑ +18% vs yesterday</div>
+          </div>
+          <div class="kpi-icon blue">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Invoices Today</div>
+            <div class="kpi-value">24</div>
+            <div class="kpi-trend up">↑ +3 vs yesterday</div>
+          </div>
+          <div class="kpi-icon indigo">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Outstanding</div>
+            <div class="kpi-value">$14,850</div>
+            <div class="kpi-trend neutral">38 open invoices</div>
+          </div>
+          <div class="kpi-icon amber">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Avg Invoice</div>
+            <div class="kpi-value">$267.50</div>
+            <div class="kpi-trend dn">↓ -5% vs yesterday</div>
+          </div>
+          <div class="kpi-icon purple">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart + Recent side-by-side -->
+      <div class="row-2">
+        <!-- Revenue Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Revenue Trend</div>
+              <div class="card-sub">Last 12 months</div>
+            </div>
+            <div class="chart-pills" id="chartRange">
+              <button class="cpill on" onclick="setChartPill(this)">Monthly</button>
+              <button class="cpill" onclick="setChartPill(this)">Weekly</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <svg viewBox="0 0 580 190" width="100%" height="190">
+              <!-- Grid -->
+              <line x1="38" y1="8" x2="38" y2="165" stroke="#e5e7eb" stroke-width="1"/>
+              <line x1="38" y1="8"  x2="575" y2="8"  stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="38" y1="48" x2="575" y2="48" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="38" y1="88" x2="575" y2="88" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="38" y1="128" x2="575" y2="128" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="38" y1="165" x2="575" y2="165" stroke="#e5e7eb" stroke-width="1"/>
+              <!-- Y labels -->
+              <text x="33" y="12"  fill="#9ca3af" font-size="9" text-anchor="end">$100k</text>
+              <text x="33" y="52"  fill="#9ca3af" font-size="9" text-anchor="end">$75k</text>
+              <text x="33" y="92"  fill="#9ca3af" font-size="9" text-anchor="end">$50k</text>
+              <text x="33" y="132" fill="#9ca3af" font-size="9" text-anchor="end">$25k</text>
+              <text x="33" y="169" fill="#9ca3af" font-size="9" text-anchor="end">$0</text>
+              <!-- Bars (12 months) -->
+              <rect x="46"  y="100" width="28" height="65" rx="3" fill="#bfdbfe"/>
+              <text x="60"  y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Jul</text>
+              <rect x="88"  y="85"  width="28" height="80" rx="3" fill="#bfdbfe"/>
+              <text x="102" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Aug</text>
+              <rect x="130" y="92"  width="28" height="73" rx="3" fill="#bfdbfe"/>
+              <text x="144" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Sep</text>
+              <rect x="172" y="70"  width="28" height="95" rx="3" fill="#93c5fd"/>
+              <text x="186" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Oct</text>
+              <rect x="214" y="55"  width="28" height="110" rx="3" fill="#93c5fd"/>
+              <text x="228" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Nov</text>
+              <rect x="256" y="32"  width="28" height="133" rx="3" fill="#60a5fa"/>
+              <text x="270" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Dec</text>
+              <rect x="298" y="115" width="28" height="50" rx="3" fill="#bfdbfe"/>
+              <text x="312" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Jan</text>
+              <rect x="340" y="105" width="28" height="60" rx="3" fill="#bfdbfe"/>
+              <text x="354" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Feb</text>
+              <rect x="382" y="80"  width="28" height="85" rx="3" fill="#93c5fd"/>
+              <text x="396" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Mar</text>
+              <rect x="424" y="73"  width="28" height="92" rx="3" fill="#93c5fd"/>
+              <text x="438" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">Apr</text>
+              <rect x="466" y="60"  width="28" height="105" rx="3" fill="#60a5fa"/>
+              <text x="480" y="182" fill="#9ca3af" font-size="8" text-anchor="middle">May</text>
+              <!-- Jun highlighted -->
+              <rect x="508" y="45"  width="28" height="120" rx="3" fill="#2563eb"/>
+              <text x="522" y="182" fill="#374151" font-size="8" font-weight="600" text-anchor="middle">Jun</text>
+              <!-- Tooltip -->
+              <rect x="492" y="23" width="60" height="19" rx="4" fill="#1e293b"/>
+              <text x="522" y="36" fill="white" font-size="9" font-weight="600" text-anchor="middle">$84,320</text>
+              <polygon points="522,42 517,42 522,48 527,42" fill="#1e293b"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Recent Invoices -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Invoices</div>
+            <a href="#" class="card-link">View all</a>
+          </div>
+          <ul class="inv-list">
+            <li class="inv-item">
+              <div style="flex:1">
+                <div class="inv-num">INV-10482</div>
+                <div class="inv-cust">Goldsmith &amp; Co.</div>
+              </div>
+              <div>
+                <div class="inv-amt">$4,250</div>
+                <span class="badge badge-green">Paid</span>
+              </div>
+            </li>
+            <li class="inv-item">
+              <div style="flex:1">
+                <div class="inv-num">INV-10481</div>
+                <div class="inv-cust">Diamond Palace</div>
+              </div>
+              <div>
+                <div class="inv-amt">$12,750</div>
+                <span class="badge badge-amber">Open</span>
+              </div>
+            </li>
+            <li class="inv-item">
+              <div style="flex:1">
+                <div class="inv-num">INV-10480</div>
+                <div class="inv-cust">Silver Star Jewelry</div>
+              </div>
+              <div>
+                <div class="inv-amt">$6,100</div>
+                <span class="badge badge-green">Paid</span>
+              </div>
+            </li>
+            <li class="inv-item">
+              <div style="flex:1">
+                <div class="inv-num">INV-10479</div>
+                <div class="inv-cust">Royal Gems Inc.</div>
+              </div>
+              <div>
+                <div class="inv-amt">$890</div>
+                <span class="badge badge-red">Voided</span>
+              </div>
+            </li>
+            <li class="inv-item">
+              <div style="flex:1">
+                <div class="inv-num">INV-10478</div>
+                <div class="inv-cust">Luxe Bangles Co.</div>
+              </div>
+              <div>
+                <div class="inv-amt">$3,200</div>
+                <span class="badge badge-amber">Open</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Bottom row: Top Customers + Alerts -->
+      <div class="row-2b">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Customers — This Month</div>
+          </div>
+          <ul class="cust-list">
+            <li class="cust-item">
+              <span class="cust-rank">1</span>
+              <div class="cust-avt a">GP</div>
+              <div>
+                <div class="cust-name">Goldsmith &amp; Partners</div>
+                <div class="cust-inv">12 invoices</div>
+              </div>
+              <span class="cust-amt">$42,180</span>
+            </li>
+            <li class="cust-item">
+              <span class="cust-rank">2</span>
+              <div class="cust-avt b">DP</div>
+              <div>
+                <div class="cust-name">Diamond Palace LLC</div>
+                <div class="cust-inv">8 invoices</div>
+              </div>
+              <span class="cust-amt">$28,400</span>
+            </li>
+            <li class="cust-item">
+              <span class="cust-rank">3</span>
+              <div class="cust-avt c">SS</div>
+              <div>
+                <div class="cust-name">Silver Star Jewelry</div>
+                <div class="cust-inv">6 invoices</div>
+              </div>
+              <span class="cust-amt">$19,600</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Inventory Alerts</div>
+            <span style="background:#fee2e2;color:#b91c1c;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700">5 items</span>
+          </div>
+          <ul class="alert-list">
+            <li class="alert-item">
+              <span class="dot red"></span>
+              <div style="flex:1">
+                <div class="alert-name">18K Gold Bangle Set</div>
+                <div class="alert-status text-red">Out of stock</div>
+              </div>
+              <button class="order-link">Order</button>
+            </li>
+            <li class="alert-item">
+              <span class="dot amber"></span>
+              <div style="flex:1">
+                <div class="alert-name">Diamond Solitaire Ring</div>
+                <div class="alert-status text-amber">2 pcs left</div>
+              </div>
+              <button class="order-link">Order</button>
+            </li>
+            <li class="alert-item">
+              <span class="dot amber"></span>
+              <div style="flex:1">
+                <div class="alert-name">Pearl Necklace 16"</div>
+                <div class="alert-status text-amber">3 pcs left</div>
+              </div>
+              <button class="order-link">Order</button>
+            </li>
+            <li class="alert-item">
+              <span class="dot red"></span>
+              <div style="flex:1">
+                <div class="alert-name">Silver Chain 20" (925)</div>
+                <div class="alert-status text-red">Out of stock</div>
+              </div>
+              <button class="order-link">Order</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function setChartPill(btn) {
+      document.querySelectorAll('#chartRange .cpill').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+    }
+  </script>
+</body>
+</html>

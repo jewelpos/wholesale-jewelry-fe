@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Monthly Sales Report — Tailwind Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; background: #f3f4f6; display: flex; height: 100vh; overflow: hidden; color: #374151; }
+    svg { display: inline-block; vertical-align: middle; }
+    button { font-family: inherit; cursor: pointer; }
+    select { font-family: inherit; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 240px; background: #111827; color: #d1d5db; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
+    .sidebar-logo { height: 56px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #374151; font-size: 18px; font-weight: 700; color: white; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 8px; }
+    .nav-section { padding: 10px 12px 4px; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.08em; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; color: #9ca3af; font-size: 13px; margin-bottom: 2px; }
+    .nav-item:hover { background: #1f2937; color: white; cursor: pointer; }
+    .nav-item.active { background: #4338ca; color: white; }
+    .sidebar-user { border-top: 1px solid #374151; padding: 12px; display: flex; align-items: center; gap: 10px; }
+    .u-av { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+    .u-name { font-size: 12px; font-weight: 500; color: white; }
+    .u-sub { font-size: 11px; color: #6b7280; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Page Header ── */
+    .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; flex-shrink: 0; gap: 16px; }
+    .page-header-info { flex: 1; }
+    .page-title { font-size: 16px; font-weight: 700; color: #111827; }
+    .breadcrumb { font-size: 11px; color: #9ca3af; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+    .breadcrumb span { color: #6b7280; }
+    .page-header-right { display: flex; align-items: flex-end; gap: 10px; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.05em; }
+    .filter-select { padding: 7px 28px 7px 10px; border: 1px solid #e5e7eb; border-radius: 7px; font-size: 12px; background: white; color: #374151; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b7280' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; width: 180px; }
+    .filter-select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.12); }
+    .btn-export { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; border: 1px solid #e5e7eb; background: white; color: #374151; transition: background .15s; }
+    .btn-export:hover { background: #f9fafb; }
+
+    /* ── Content area ── */
+    .content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── Summary panel ── */
+    .summary-panel { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.07); overflow: hidden; }
+    .summary-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; user-select: none; }
+    .summary-panel-title { font-size: 12px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; }
+    .summary-panel-toggle { font-size: 11px; color: #6b7280; display: flex; align-items: center; gap: 4px; }
+    .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+    .sum-card { padding: 16px 20px; border-right: 1px solid #f3f4f6; position: relative; overflow: hidden; }
+    .sum-card:last-child { border-right: none; }
+    .sum-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .sum-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
+    .sum-value { font-size: 22px; font-weight: 700; color: #111827; margin-top: 4px; }
+    .sum-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+    /* ── Mini Chart ── */
+    .chart-panel { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.07); overflow: hidden; }
+    .chart-panel-header { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f3f4f6; cursor: pointer; user-select: none; }
+    .chart-title { font-size: 12px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; }
+    .chart-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .chart-body { padding: 0 16px 12px; }
+
+    /* ── Year Slider ── */
+    .slider-panel { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.07); padding: 12px 20px; }
+    .slider-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .slider-label { font-size: 12px; font-weight: 600; color: #374151; }
+    .slider-range-display { font-size: 12px; font-weight: 600; color: #6366f1; background: #eef2ff; padding: 3px 12px; border-radius: 999px; }
+    .slider-track { position: relative; height: 6px; background: #e5e7eb; border-radius: 999px; margin: 6px 0; }
+    .slider-fill { position: absolute; left: 0%; right: 0%; top: 0; bottom: 0; background: #6366f1; border-radius: 999px; }
+    .slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: white; border: 2px solid #6366f1; box-shadow: 0 1px 3px rgba(0,0,0,.2); cursor: pointer; }
+    .slider-marks { display: flex; justify-content: space-between; margin-top: 6px; }
+    .slider-mark { font-size: 10px; color: #9ca3af; }
+    .slider-mark.active { color: #6366f1; font-weight: 600; }
+
+    /* ── Grid Card ── */
+    .grid-card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.07); overflow: hidden; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+    /* Search toolbar */
+    .grid-toolbar { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .search-wrap { position: relative; }
+    .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+    .search-input { padding: 6px 10px 6px 30px; border: 1px solid #e5e7eb; border-radius: 7px; font-size: 12px; width: 220px; outline: none; }
+    .search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.12); }
+    .toolbar-spacer { flex: 1; }
+    .col-toggle-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border: 1px solid #e5e7eb; border-radius: 7px; font-size: 11px; background: white; color: #374151; }
+    .col-toggle-btn:hover { background: #f9fafb; }
+
+    /* ═══════════════════════════════════════════════
+       AG GRID — Tailwind / Indigo theme
+       Header: 32px  Row: 28px  Font: 12px
+       ═══════════════════════════════════════════════ */
+    .ag-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+    .ag-scroll { overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .ag-head { display: flex; align-items: stretch; background: #f8fafc; border-bottom: 2px solid #e2e8f0; flex-shrink: 0; height: 32px; min-width: max-content; width: 100%; user-select: none; }
+    .ag-hcell { display: flex; align-items: center; border-right: 1px solid #e2e8f0; position: relative; flex-shrink: 0; }
+    .ag-hcell:last-child { border-right: none; }
+    .ag-hlabel { font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing:.03em; padding: 0 8px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 4px; }
+    .ag-sort-icon { display: flex; flex-direction: column; gap: 1px; }
+    .ag-filter-icon { margin-left: auto; padding-right: 5px; color: #94a3b8; opacity: .5; flex-shrink: 0; }
+    .ag-filter-icon:hover { opacity: 1; color: #6366f1; }
+    .ag-resize { position: absolute; right: 0; top: 0; bottom: 0; width: 3px; cursor: col-resize; }
+    .ag-resize:hover { background: #6366f1; opacity: .4; }
+
+    .ag-body { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+    .ag-row { display: flex; align-items: center; height: 28px; border-bottom: 1px solid #f1f5f9; min-width: max-content; width: 100%; transition: background .08s; }
+    .ag-row:hover { background: #f5f3ff; }
+    .ag-row.selected { background: #ede9fe; }
+    .ag-row.pinned { background: #f8fafc; border-top: 2px solid #e2e8f0; font-weight: 700; }
+    .ag-cell { font-size: 12px; padding: 0 8px; display: flex; align-items: center; height: 100%; border-right: 1px solid #f1f5f9; overflow: hidden; white-space: nowrap; flex-shrink: 0; }
+    .ag-cell:last-child { border-right: none; }
+    .ag-cell.right { justify-content: flex-end; }
+    .ag-cell.num { font-variant-numeric: tabular-nums; }
+    .ag-cell.muted { color: #94a3b8; }
+    .cell-link { color: #6366f1; font-weight: 500; cursor: pointer; }
+    .cell-link:hover { text-decoration: underline; }
+
+    /* Month cell coloring — heat map light */
+    .heat-0 { color: #94a3b8; }
+    .heat-1 { background: #f5f3ff; color: #4338ca; }
+    .heat-2 { background: #ede9fe; color: #4338ca; }
+    .heat-3 { background: #ddd6fe; color: #3730a3; }
+    .heat-4 { background: #c4b5fd; color: #3730a3; font-weight: 600; }
+
+    /* Column widths */
+    .w-chk  { width: 36px; justify-content: center; }
+    .w-id   { width: 90px; }
+    .w-co   { width: 180px; }
+    .w-yr   { width: 60px; }
+    .w-cnt  { width: 80px; }
+    .w-tot  { width: 110px; }
+    .w-mon  { width: 82px; }
+
+    /* Footer */
+    .ag-foot { height: 34px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; align-items: center; padding: 0 14px; gap: 12px; flex-shrink: 0; }
+    .ag-stat { font-size: 11px; color: #64748b; border-right: 1px solid #e2e8f0; padding-right: 12px; }
+    .ag-stat:last-of-type { border-right: none; }
+    .ag-stat b { color: #111827; }
+    .pag { margin-left: auto; display: flex; gap: 3px; }
+    .pag-btn { padding: 3px 9px; border: 1px solid #e2e8f0; border-radius: 5px; font-size: 11px; background: white; color: #374151; }
+    .pag-btn.on { background: #6366f1; color: white; border-color: #6366f1; }
+    .pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .ag-chk { width: 13px; height: 13px; accent-color: #6366f1; cursor: pointer; }
+
+    /* Hidden cols indicator */
+    .hidden-cols-note { font-size: 11px; color: #6b7280; padding: 0 14px; background: #fafafa; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 6px; height: 26px; flex-shrink: 0; }
+    .hidden-tag { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 7px; font-size: 10px; color: #6b7280; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">JewelPOS</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Invoices
+      </a>
+      <div class="nav-section">Reports</div>
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Sales Matrix
+      </a>
+      <a href="#" class="nav-item active">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Customer Monthly Sales
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Monthly Sales
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Invoice Profit
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Daily Payments
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="u-av">JW</div>
+      <div><div class="u-name">JewelPOS Admin</div><div class="u-sub">Main Outlet</div></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-info">
+        <div class="page-title">Customer Monthly Sales Report</div>
+        <div class="breadcrumb">
+          Reports
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span>Customer Monthly Sales</span>
+        </div>
+      </div>
+      <div class="page-header-right">
+        <div class="filter-group">
+          <div class="filter-label">Outlet</div>
+          <select class="filter-select">
+            <option>Select Outlet…</option>
+            <option selected>Main Outlet</option>
+            <option>Branch — Downtown</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Warehouse</div>
+          <select class="filter-select">
+            <option>All Warehouses</option>
+            <option selected>Main Warehouse</option>
+          </select>
+        </div>
+        <button class="btn-export">
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Summary Panel (collapsible) -->
+      <div class="summary-panel">
+        <div class="summary-panel-header" onclick="togglePanel()">
+          <div class="summary-panel-title">
+            <svg width="14" height="14" fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Report Summary
+          </div>
+          <div class="summary-panel-toggle" id="panelToggleBtn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            Collapse
+          </div>
+        </div>
+        <div id="summaryCards" class="summary-cards">
+          <div class="sum-card">
+            <div class="sum-accent" style="background:#6366f1"></div>
+            <div class="sum-label">Total Sales</div>
+            <div class="sum-value">$248,640</div>
+            <div class="sum-sub">All customers · 2026</div>
+          </div>
+          <div class="sum-card">
+            <div class="sum-accent" style="background:#10b981"></div>
+            <div class="sum-label">Gross Profit</div>
+            <div class="sum-value">$74,592</div>
+            <div class="sum-sub">30% margin</div>
+          </div>
+          <div class="sum-card">
+            <div class="sum-accent" style="background:#ef4444"></div>
+            <div class="sum-label">Balance Due</div>
+            <div class="sum-value">$31,200</div>
+            <div class="sum-sub">Outstanding receivables</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Area Chart (collapsible) -->
+      <div class="chart-panel">
+        <div class="chart-panel-header" onclick="toggleChart()">
+          <div class="chart-title">
+            <svg width="14" height="14" fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16"/></svg>
+            Customer Sales by Month
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:#6366f1;font-weight:600;background:#eef2ff;padding:3px 10px;border-radius:999px">2026</span>
+            <span id="chartToggleBtn" style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              Collapse
+            </span>
+          </div>
+        </div>
+        <div id="chartBody" class="chart-body">
+          <svg viewBox="0 0 700 100" width="100%" height="100" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="20" x2="700" y2="20" stroke="#f1f5f9" stroke-width="1"/>
+            <line x1="0" y1="50" x2="700" y2="50" stroke="#f1f5f9" stroke-width="1"/>
+            <line x1="0" y1="80" x2="700" y2="80" stroke="#f1f5f9" stroke-width="1"/>
+            <!-- Area fill -->
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#6366f1" stop-opacity=".25"/>
+                <stop offset="100%" stop-color="#6366f1" stop-opacity=".02"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,90 L58,78 L116,72 L175,65 L233,55 L291,48 L350,40 L408,35 L466,28 L525,22 L583,15 L641,10 L700,8 L700,100 L0,100 Z" fill="url(#areaGrad)"/>
+            <!-- Line -->
+            <path d="M0,90 L58,78 L116,72 L175,65 L233,55 L291,48 L350,40 L408,35 L466,28 L525,22 L583,15 L641,10 L700,8" fill="none" stroke="#6366f1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Dots -->
+            <circle cx="0"   cy="90" r="3" fill="#6366f1"/>
+            <circle cx="58"  cy="78" r="3" fill="#6366f1"/>
+            <circle cx="116" cy="72" r="3" fill="#6366f1"/>
+            <circle cx="175" cy="65" r="3" fill="#6366f1"/>
+            <circle cx="233" cy="55" r="3" fill="#6366f1"/>
+            <circle cx="291" cy="48" r="3" fill="#6366f1"/>
+            <circle cx="350" cy="40" r="3" fill="#6366f1"/>
+            <circle cx="408" cy="35" r="3" fill="#6366f1"/>
+            <circle cx="466" cy="28" r="3" fill="#6366f1"/>
+            <circle cx="525" cy="22" r="3" fill="#6366f1"/>
+            <circle cx="583" cy="15" r="3" fill="#6366f1"/>
+            <circle cx="641" cy="10" r="3" fill="#6366f1"/>
+            <!-- Month labels -->
+            <text x="0"   y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Jan</text>
+            <text x="58"  y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Feb</text>
+            <text x="116" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Mar</text>
+            <text x="175" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Apr</text>
+            <text x="233" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">May</text>
+            <text x="291" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Jun</text>
+            <text x="350" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Jul</text>
+            <text x="408" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Aug</text>
+            <text x="466" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Sep</text>
+            <text x="525" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Oct</text>
+            <text x="583" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Nov</text>
+            <text x="641" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">Dec</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Year Range Slider -->
+      <div class="slider-panel">
+        <div class="slider-header">
+          <div class="slider-label">
+            <svg width="13" height="13" fill="none" stroke="#6366f1" viewBox="0 0 24 24" style="margin-right:5px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Year Range
+          </div>
+          <span class="slider-range-display">2026 — 2026</span>
+        </div>
+        <div class="slider-track">
+          <div class="slider-fill" style="left:93%;right:0%"></div>
+          <div class="slider-thumb" style="left:93%"></div>
+          <div class="slider-thumb" style="left:100%"></div>
+        </div>
+        <div class="slider-marks">
+          <span class="slider-mark">2018</span>
+          <span class="slider-mark">2019</span>
+          <span class="slider-mark">2020</span>
+          <span class="slider-mark">2021</span>
+          <span class="slider-mark">2022</span>
+          <span class="slider-mark">2023</span>
+          <span class="slider-mark">2024</span>
+          <span class="slider-mark">2025</span>
+          <span class="slider-mark active">2026</span>
+        </div>
+      </div>
+
+      <!-- Grid Card -->
+      <div class="grid-card">
+
+        <!-- Search toolbar -->
+        <div class="grid-toolbar">
+          <div class="search-wrap">
+            <span class="search-icon"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></span>
+            <input type="text" class="search-input" placeholder="Quick filter (company, warehouse…)">
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="col-toggle-btn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+            Columns
+          </button>
+          <button class="col-toggle-btn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Export
+          </button>
+        </div>
+
+        <!-- Hidden cols note -->
+        <div class="hidden-cols-note">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+          Hidden columns:
+          <span class="hidden-tag">Total Balance Due</span>
+          <span class="hidden-tag">Total Profit</span>
+          <span style="font-size:10px;color:#6366f1;cursor:pointer;margin-left:4px">Show all →</span>
+        </div>
+
+        <!-- AG Grid -->
+        <div class="ag-wrap">
+          <div class="ag-scroll">
+
+            <!-- Header -->
+            <div class="ag-head">
+              <div class="ag-hcell w-chk"><input type="checkbox" class="ag-chk" onchange="selAll(this)"></div>
+              <div class="ag-hcell w-id">
+                <div class="ag-hlabel">Cust ID
+                  <div class="ag-sort-icon">
+                    <svg width="7" height="4" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="#94a3b8" opacity=".4"/></svg>
+                    <svg width="7" height="4" viewBox="0 0 8 5"><path d="M4 5L0 0h8z" fill="#94a3b8" opacity=".4"/></svg>
+                  </div>
+                </div>
+                <button class="ag-filter-icon"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10m-7 4h4"/></svg></button>
+                <div class="ag-resize"></div>
+              </div>
+              <div class="ag-hcell w-co">
+                <div class="ag-hlabel">Company Name
+                  <div class="ag-sort-icon">
+                    <svg width="7" height="4" viewBox="0 0 8 5"><path d="M4 0L8 5H0z" fill="#6366f1"/></svg>
+                    <svg width="7" height="4" viewBox="0 0 8 5"><path d="M4 5L0 0h8z" fill="#94a3b8" opacity=".4"/></svg>
+                  </div>
+                </div>
+                <button class="ag-filter-icon"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10m-7 4h4"/></svg></button>
+                <div class="ag-resize"></div>
+              </div>
+              <div class="ag-hcell w-yr">
+                <div class="ag-hlabel">Year</div>
+                <div class="ag-resize"></div>
+              </div>
+              <div class="ag-hcell w-cnt" style="justify-content:flex-end">
+                <div class="ag-hlabel" style="justify-content:flex-end">Inv Count</div>
+                <div class="ag-resize"></div>
+              </div>
+              <div class="ag-hcell w-tot" style="justify-content:flex-end">
+                <div class="ag-hlabel" style="justify-content:flex-end">Total Sales</div>
+                <div class="ag-resize"></div>
+              </div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Jan</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Feb</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Mar</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Apr</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">May</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Jun</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Jul</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Aug</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Sep</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Oct</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Nov</div><div class="ag-resize"></div></div>
+              <div class="ag-hcell w-mon" style="justify-content:flex-end"><div class="ag-hlabel" style="justify-content:flex-end">Dec</div></div>
+            </div>
+
+            <!-- Body -->
+            <div class="ag-body" id="agBody">
+
+              <!-- Row 1 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1001</div>
+                <div class="ag-cell w-co"><span class="cell-link">Goldsmith &amp; Partners</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">42</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$84,200</div>
+                <div class="ag-cell w-mon right num heat-1">$4,100</div>
+                <div class="ag-cell w-mon right num heat-2">$5,200</div>
+                <div class="ag-cell w-mon right num heat-2">$5,800</div>
+                <div class="ag-cell w-mon right num heat-3">$7,400</div>
+                <div class="ag-cell w-mon right num heat-3">$8,100</div>
+                <div class="ag-cell w-mon right num heat-4">$11,200</div>
+                <div class="ag-cell w-mon right num heat-4">$12,000</div>
+                <div class="ag-cell w-mon right num heat-3">$9,400</div>
+                <div class="ag-cell w-mon right num heat-2">$7,200</div>
+                <div class="ag-cell w-mon right num heat-2">$6,800</div>
+                <div class="ag-cell w-mon right num heat-1">$4,800</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Row 2 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1002</div>
+                <div class="ag-cell w-co"><span class="cell-link">Diamond Palace LLC</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">31</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$62,750</div>
+                <div class="ag-cell w-mon right num heat-2">$3,800</div>
+                <div class="ag-cell w-mon right num heat-2">$4,600</div>
+                <div class="ag-cell w-mon right num heat-3">$7,200</div>
+                <div class="ag-cell w-mon right num heat-3">$8,000</div>
+                <div class="ag-cell w-mon right num heat-3">$7,500</div>
+                <div class="ag-cell w-mon right num heat-4">$9,100</div>
+                <div class="ag-cell w-mon right num heat-2">$5,600</div>
+                <div class="ag-cell w-mon right num heat-2">$4,950</div>
+                <div class="ag-cell w-mon right num heat-1">$3,800</div>
+                <div class="ag-cell w-mon right num heat-2">$4,400</div>
+                <div class="ag-cell w-mon right num heat-2">$3,800</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Row 3 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1003</div>
+                <div class="ag-cell w-co"><span class="cell-link">Silver Star Jewelry</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">28</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$41,600</div>
+                <div class="ag-cell w-mon right num heat-1">$2,200</div>
+                <div class="ag-cell w-mon right num heat-2">$3,400</div>
+                <div class="ag-cell w-mon right num heat-2">$3,800</div>
+                <div class="ag-cell w-mon right num heat-3">$5,600</div>
+                <div class="ag-cell w-mon right num heat-2">$4,400</div>
+                <div class="ag-cell w-mon right num heat-3">$6,200</div>
+                <div class="ag-cell w-mon right num heat-2">$4,800</div>
+                <div class="ag-cell w-mon right num heat-2">$3,600</div>
+                <div class="ag-cell w-mon right num heat-1">$2,800</div>
+                <div class="ag-cell w-mon right num heat-2">$3,000</div>
+                <div class="ag-cell w-mon right num heat-1">$1,800</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Row 4 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1004</div>
+                <div class="ag-cell w-co"><span class="cell-link">Royal Gems Inc.</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">18</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$29,400</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-1">$1,800</div>
+                <div class="ag-cell w-mon right num heat-2">$3,200</div>
+                <div class="ag-cell w-mon right num heat-2">$4,400</div>
+                <div class="ag-cell w-mon right num heat-2">$3,800</div>
+                <div class="ag-cell w-mon right num heat-3">$5,400</div>
+                <div class="ag-cell w-mon right num heat-2">$4,200</div>
+                <div class="ag-cell w-mon right num heat-2">$3,600</div>
+                <div class="ag-cell w-mon right num heat-1">$2,000</div>
+                <div class="ag-cell w-mon right num heat-1">$1,800</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Row 5 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1005</div>
+                <div class="ag-cell w-co"><span class="cell-link">Luxe Bangles Co.</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">15</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$18,200</div>
+                <div class="ag-cell w-mon right num heat-1">$1,200</div>
+                <div class="ag-cell w-mon right num heat-1">$1,400</div>
+                <div class="ag-cell w-mon right num heat-2">$2,600</div>
+                <div class="ag-cell w-mon right num heat-2">$2,800</div>
+                <div class="ag-cell w-mon right num heat-2">$2,400</div>
+                <div class="ag-cell w-mon right num heat-2">$3,000</div>
+                <div class="ag-cell w-mon right num heat-1">$1,600</div>
+                <div class="ag-cell w-mon right num heat-1">$1,200</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Row 6 -->
+              <div class="ag-row" onclick="toggleRow(this)">
+                <div class="ag-cell w-chk"><input type="checkbox" class="ag-chk"></div>
+                <div class="ag-cell w-id muted">C-1006</div>
+                <div class="ag-cell w-co"><span class="cell-link">Prestige Ornaments</span></div>
+                <div class="ag-cell w-yr muted">2026</div>
+                <div class="ag-cell w-cnt right num">12</div>
+                <div class="ag-cell w-tot right num" style="font-weight:600;color:#111827">$12,490</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-1">$890</div>
+                <div class="ag-cell w-mon right num heat-1">$1,100</div>
+                <div class="ag-cell w-mon right num heat-2">$2,200</div>
+                <div class="ag-cell w-mon right num heat-2">$2,400</div>
+                <div class="ag-cell w-mon right num heat-2">$2,600</div>
+                <div class="ag-cell w-mon right num heat-1">$1,800</div>
+                <div class="ag-cell w-mon right num heat-1">$1,500</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+                <div class="ag-cell w-mon right num heat-0">—</div>
+              </div>
+
+              <!-- Pinned Bottom Row -->
+              <div class="ag-row pinned">
+                <div class="ag-cell w-chk"></div>
+                <div class="ag-cell w-id muted" style="font-size:10px">Total</div>
+                <div class="ag-cell w-co" style="color:#374151;font-size:11px">Page Total</div>
+                <div class="ag-cell w-yr"></div>
+                <div class="ag-cell w-cnt right num">146</div>
+                <div class="ag-cell w-tot right num" style="color:#6366f1">$248,640</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$11,300</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$16,290</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$23,700</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$30,400</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$28,600</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$37,500</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$30,000</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$24,250</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$15,800</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$16,000</div>
+                <div class="ag-cell w-mon right num" style="color:#4338ca">$10,400</div>
+                <div class="ag-cell w-mon right num" style="color:#94a3b8">—</div>
+              </div>
+
+            </div><!-- /ag-body -->
+
+            <!-- Footer -->
+            <div class="ag-foot">
+              <span class="ag-stat">Rows: <b>6</b></span>
+              <span class="ag-stat">Customers: <b>6</b></span>
+              <span class="ag-stat">Total Sales: <b style="color:#6366f1">$248,640</b></span>
+              <span class="ag-stat">Avg / Customer: <b>$41,440</b></span>
+              <div class="pag">
+                <button class="pag-btn" disabled>‹</button>
+                <button class="pag-btn on">1</button>
+                <button class="pag-btn">2</button>
+                <button class="pag-btn">›</button>
+              </div>
+            </div>
+
+          </div><!-- /ag-scroll -->
+        </div><!-- /ag-wrap -->
+      </div><!-- /grid-card -->
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <script>
+    function toggleChart() {
+      const body = document.getElementById('chartBody');
+      const btn = document.getElementById('chartToggleBtn');
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? 'block' : 'none';
+      btn.innerHTML = collapsed
+        ? '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Collapse'
+        : '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg> Expand';
+    }
+    function togglePanel() {
+      const cards = document.getElementById('summaryCards');
+      const btn = document.getElementById('panelToggleBtn');
+      const collapsed = cards.style.display === 'none';
+      cards.style.display = collapsed ? 'grid' : 'none';
+      btn.innerHTML = collapsed
+        ? '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Collapse'
+        : '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg> Expand';
+    }
+    function toggleRow(row) {
+      if (row.classList.contains('pinned')) return;
+      row.classList.toggle('selected');
+      const chk = row.querySelector('.ag-chk');
+      if (chk) chk.checked = row.classList.contains('selected');
+    }
+    function selAll(master) {
+      document.querySelectorAll('#agBody .ag-row:not(.pinned) .ag-chk').forEach(c => {
+        c.checked = master.checked;
+        c.closest('.ag-row').classList.toggle('selected', master.checked);
+      });
+    }
+  </script>
+</body>
+</html>

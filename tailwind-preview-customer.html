@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Form — Tailwind Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; background: #f3f4f6; display: flex; height: 100vh; overflow: hidden; color: #374151; }
+    svg { display: inline-block; vertical-align: middle; }
+    button, input, select, textarea { font-family: inherit; font-size: 13px; }
+    a { text-decoration: none; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 240px; background: #111827; color: #d1d5db; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
+    .sidebar-logo { height: 56px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #374151; font-size: 18px; font-weight: 700; color: white; letter-spacing: .03em; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 8px; }
+    .nav-section { padding: 10px 12px 4px; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .08em; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; color: #9ca3af; cursor: pointer; transition: background .15s; text-decoration: none; font-size: 13px; margin-bottom: 2px; }
+    .nav-item:hover { background: #1f2937; color: white; }
+    .nav-item.active { background: #1d4ed8; color: white; }
+    .sidebar-user { border-top: 1px solid #374151; padding: 12px; display: flex; align-items: center; gap: 10px; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+    .user-info { min-width: 0; }
+    .user-name { font-size: 12px; font-weight: 500; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-sub { font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Main layout ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Header ── */
+    .header { height: 56px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 20px; gap: 10px; flex-shrink: 0; }
+    .header-back { padding: 6px; border: none; background: none; cursor: pointer; border-radius: 8px; color: #6b7280; transition: background .15s; }
+    .header-back:hover { background: #f3f4f6; }
+    .header-info { flex: 1; }
+    .header-title { font-size: 15px; font-weight: 600; color: #1f2937; }
+    .header-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: background .15s, color .15s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-ghost { background: transparent; color: #6b7280; }
+    .btn-ghost:hover { background: #f3f4f6; color: #374151; }
+
+    /* ── Content ── */
+    .content { flex: 1; overflow-y: auto; padding: 20px; }
+    .content-inner { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Cards ── */
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05); }
+    .card-body { padding: 20px; }
+    .card-section-title { font-size: 13px; font-weight: 600; color: #374151; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6; margin-bottom: 16px; }
+
+    /* ── Grid helpers ── */
+    .grid-avatar-info { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-2-sm { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .span-2 { grid-column: span 2; }
+    .form-stack { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Avatar ── */
+    .avatar-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px 20px; }
+    .avatar-circle-wrap { position: relative; cursor: pointer; }
+    .avatar-circle { width: 112px; height: 112px; border-radius: 50%; background: linear-gradient(135deg, #60a5fa, #4338ca); display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 700; user-select: none; overflow: hidden; }
+    .avatar-overlay { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.35); opacity: 0; transition: opacity .2s; display: flex; align-items: center; justify-content: center; color: white; }
+    .avatar-circle-wrap:hover .avatar-overlay { opacity: 1; }
+    .avatar-hint p { font-size: 12px; font-weight: 500; color: #374151; text-align: center; }
+    .avatar-hint span { font-size: 11px; color: #9ca3af; display: block; margin-top: 2px; text-align: center; }
+    .avatar-toggles { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── Toggle pills ── */
+    .toggle-group { width: 100%; }
+    .toggle-label { font-size: 11px; font-weight: 500; color: #6b7280; text-align: center; margin-bottom: 6px; }
+    .toggle-row { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .toggle-btn { flex: 1; padding: 9px 0; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: white; color: #6b7280; transition: background .15s, color .15s; }
+    .toggle-btn.on-green  { background: #16a34a; color: white; }
+    .toggle-btn.on-gray   { background: #9ca3af; color: white; }
+    .toggle-btn.on-blue   { background: #2563eb; color: white; }
+    .toggle-btn.on-violet { background: #7c3aed; color: white; }
+    .toggle-btn.on-amber  { background: #d97706; color: white; }
+
+    /* ── Form controls ── */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 11px; font-weight: 500; color: #4b5563; }
+    .required { color: #ef4444; }
+    .input-wrap { position: relative; }
+    .input-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+    .input-suffix { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; outline: none; background: white; color: #1f2937; transition: border-color .15s, box-shadow .15s; }
+    .form-control:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .form-control.has-icon { padding-left: 36px; }
+    .form-control.has-prefix { padding-left: 26px; }
+    .form-control.has-suffix { padding-right: 30px; }
+    textarea.form-control { resize: none; }
+    select.form-control { cursor: pointer; }
+
+    /* ── Misc ── */
+    .success-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+    .success-banner-text { font-size: 13px; color: #166534; font-weight: 500; }
+    .hidden { display: none !important; }
+    .icon-green { color: #16a34a; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">JewelPOS</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-section">CRM</div>
+      <a href="#" class="nav-item active">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Customers
+      </a>
+      <div class="nav-section">Sales</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Invoices
+      </a>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Sales Orders
+      </a>
+      <div class="nav-section">Inventory</div>
+      <a href="#" class="nav-item">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Products
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">JW</div>
+      <div class="user-info">
+        <div class="user-name">JewelPOS Admin</div>
+        <div class="user-sub">Main Outlet</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Header -->
+    <header class="header">
+      <button class="header-back">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="header-info">
+        <div class="header-title">New Customer</div>
+        <div class="header-sub">Create a new customer account</div>
+      </div>
+      <button class="btn btn-ghost" style="margin-right:4px">Cancel</button>
+      <button class="btn btn-primary" onclick="handleSave()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        Save Customer
+      </button>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="content-inner">
+
+        <!-- Row 1: Avatar + Basic Info -->
+        <div class="grid-avatar-info">
+
+          <!-- Avatar Card -->
+          <div class="card">
+            <div class="avatar-card">
+              <div class="avatar-circle-wrap" onclick="document.getElementById('avatarInput').click()">
+                <div class="avatar-circle" id="avatarCircle">?</div>
+                <div class="avatar-overlay">
+                  <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+                </div>
+              </div>
+              <input id="avatarInput" type="file" accept="image/*" style="display:none" onchange="previewAvatar(event)">
+              <div class="avatar-hint">
+                <p>Profile Photo</p>
+                <span>Click to upload</span>
+              </div>
+
+              <div class="avatar-toggles">
+                <div class="toggle-group">
+                  <div class="toggle-label">Account Status</div>
+                  <div class="toggle-row" id="statusToggle">
+                    <button class="toggle-btn on-green" onclick="setToggle('statusToggle',this,'on-green')">Active</button>
+                    <button class="toggle-btn" onclick="setToggle('statusToggle',this,'on-gray')">Inactive</button>
+                  </div>
+                </div>
+                <div class="toggle-group">
+                  <div class="toggle-label">Account Type</div>
+                  <div class="toggle-row" id="typeToggle">
+                    <button class="toggle-btn on-blue" onclick="setToggle('typeToggle',this,'on-blue')">B2B</button>
+                    <button class="toggle-btn" onclick="setToggle('typeToggle',this,'on-violet')">Retail</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Basic Info Card -->
+          <div class="card">
+            <div class="card-body">
+              <div class="card-section-title">Basic Information</div>
+              <div class="form-stack">
+                <div class="form-group span-2">
+                  <label class="form-label">Full Name <span class="required">*</span></label>
+                  <input type="text" class="form-control" placeholder="e.g. Goldsmith & Partners" oninput="updateInitials(this)">
+                </div>
+                <div class="grid-2-sm">
+                  <div class="form-group">
+                    <label class="form-label">Business Name</label>
+                    <input type="text" class="form-control" placeholder="Optional">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tax ID / EIN</label>
+                    <input type="text" class="form-control" placeholder="Optional">
+                  </div>
+                </div>
+                <div class="grid-2-sm">
+                  <div class="form-group">
+                    <label class="form-label">Credit Limit</label>
+                    <div class="input-wrap">
+                      <span class="input-icon" style="font-size:13px;font-weight:500">$</span>
+                      <input type="number" class="form-control has-icon" placeholder="0.00">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Payment Terms</label>
+                    <select class="form-control">
+                      <option value="">Select terms</option>
+                      <option>Net 30</option>
+                      <option>Net 60</option>
+                      <option>Due on Receipt</option>
+                      <option>Net 90</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid-2-sm">
+                  <div class="form-group">
+                    <label class="form-label">Discount %</label>
+                    <div class="input-wrap">
+                      <input type="number" class="form-control has-suffix" placeholder="0" min="0" max="100">
+                      <span class="input-suffix" style="font-size:13px;font-weight:500">%</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tax Exempt</label>
+                    <div class="toggle-row" id="taxToggle" style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+                      <button class="toggle-btn on-gray" onclick="setToggle('taxToggle',this,'on-gray')">No</button>
+                      <button class="toggle-btn" onclick="setToggle('taxToggle',this,'on-amber')">Yes</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Internal Notes</label>
+                  <textarea rows="2" class="form-control" placeholder="Notes about this customer…"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Contact + Address -->
+        <div class="grid-2">
+
+          <!-- Contact Card -->
+          <div class="card">
+            <div class="card-body">
+              <div class="card-section-title">Contact Information</div>
+              <div class="form-stack">
+                <div class="form-group">
+                  <label class="form-label">Email Address</label>
+                  <div class="input-wrap">
+                    <span class="input-icon">
+                      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </span>
+                    <input type="email" class="form-control has-icon" placeholder="email@example.com">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Primary Phone</label>
+                  <div class="input-wrap">
+                    <span class="input-icon">
+                      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    </span>
+                    <input type="tel" class="form-control has-icon" placeholder="+1 (555) 000-0000">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Secondary Phone</label>
+                  <div class="input-wrap">
+                    <span class="input-icon">
+                      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    </span>
+                    <input type="tel" class="form-control has-icon" placeholder="Optional">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Website</label>
+                  <div class="input-wrap">
+                    <span class="input-icon">
+                      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+                    </span>
+                    <input type="url" class="form-control has-icon" placeholder="https://...">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Card -->
+          <div class="card">
+            <div class="card-body">
+              <div class="card-section-title">Billing Address</div>
+              <div class="form-stack">
+                <div class="form-group">
+                  <label class="form-label">Street Address</label>
+                  <input type="text" class="form-control" placeholder="123 Main Street">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Address Line 2</label>
+                  <input type="text" class="form-control" placeholder="Suite, Floor, etc.">
+                </div>
+                <div class="grid-2-sm">
+                  <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-control" placeholder="New York">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">State</label>
+                    <input type="text" class="form-control" placeholder="NY">
+                  </div>
+                </div>
+                <div class="grid-2-sm">
+                  <div class="form-group">
+                    <label class="form-label">ZIP / Postal</label>
+                    <input type="text" class="form-control" placeholder="10001">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Country</label>
+                    <select class="form-control">
+                      <option>United States</option>
+                      <option>Canada</option>
+                      <option>India</option>
+                      <option>United Kingdom</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Banner -->
+        <div id="saveBanner" class="success-banner hidden">
+          <svg class="icon-green" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="success-banner-text">Customer saved successfully! You will be redirected to the customer list.</span>
+        </div>
+
+        <div style="height:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setToggle(groupId, btn, activeClass) {
+      const allClasses = ['on-green','on-gray','on-blue','on-violet','on-amber'];
+      document.getElementById(groupId).querySelectorAll('.toggle-btn').forEach(b => {
+        allClasses.forEach(c => b.classList.remove(c));
+      });
+      btn.classList.add(activeClass);
+    }
+
+    function updateInitials(input) {
+      const words = input.value.trim().split(/\s+/).filter(Boolean);
+      const initials = words.slice(0,2).map(w => w[0].toUpperCase()).join('') || '?';
+      document.getElementById('avatarCircle').textContent = initials;
+    }
+
+    function previewAvatar(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const c = document.getElementById('avatarCircle');
+        c.style.backgroundImage = `url(${ev.target.result})`;
+        c.style.backgroundSize = 'cover';
+        c.style.backgroundPosition = 'center';
+        c.textContent = '';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleSave() {
+      const b = document.getElementById('saveBanner');
+      b.classList.remove('hidden');
+      b.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      setTimeout(() => b.classList.add('hidden'), 3000);
+    }
+  </script>
+</body>
+</html>

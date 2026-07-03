@@ -387,24 +387,6 @@ export default function Step4Preview({
       itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
     }));
 
-    void (async () => {
-      try {
-        const token = await getAccessToken();
-        await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            query: `mutation { saveImportFileRecord(storeid: ${storeId}, filename: ${JSON.stringify(fileName)}, importedby: ${userId}, recordcount: ${items.length}) }`,
-          }),
-        });
-      } catch {
-        // history logging is best-effort
-      }
-    })();
-
     setImporting(false);
     onDone(items);
   }

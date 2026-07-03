@@ -300,7 +300,7 @@ const LABEL_FIELDS = `
   tagprefix tagsuffix
   showbarcode showitemcode showdescription showsellprice showcodedprice showcategory
   barcodeside itemcodeside descriptionside sellpriceside codedpriceside categoryside
-  backgroundimage isactive
+  backgroundimage isactive fieldconfigs
 `;
 
 export const GET_INVENTORY_TAG_LABELS_QUERY = gql`

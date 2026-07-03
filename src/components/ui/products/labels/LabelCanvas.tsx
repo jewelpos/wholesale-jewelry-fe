@@ -37,6 +37,7 @@ export interface LabelTemplate {
   categoryside?: string;
   backgroundimage?: string;
   isactive?: string;
+  fieldconfigs?: string;
 }
 
 export interface FieldPrintConfig {

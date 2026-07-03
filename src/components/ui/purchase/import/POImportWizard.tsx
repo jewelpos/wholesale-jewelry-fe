@@ -14,7 +14,7 @@ interface Props {
   userId: number;
   warehouseId?: number;
   onClose: () => void;
-  onDone: (items: ImportedPOItem[]) => void;
+  onDone: (items: ImportedPOItem[], fileName: string) => void;
 }
 
 type Step = 1 | 2 | 3 | 4;
@@ -41,7 +41,7 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
     setProcessingPhase('adding');
     // Small timeout so the "Adding to PO" message paints before the heavy append loop
     setTimeout(() => {
-      onDone(items);
+      onDone(items, fileName);
     }, 80);
   };
 
