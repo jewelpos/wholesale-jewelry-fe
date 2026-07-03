@@ -1,0 +1,13 @@
+name: Deploy UAT
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel UAT Deploy
+        run: curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_IW75xOFixhvBkvCRh8IEzPXk7ZMl/kNqkZkQ6E6
