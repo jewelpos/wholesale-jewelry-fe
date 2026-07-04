@@ -18,12 +18,12 @@ export type SalesInvoiceListType = {
   warehousename: string;
   warehouseid: number;
   outletid: number;
-  createdbyid: string;
+  createdby: string;
   registerno: string;
   isweborder: boolean;
   invsalesorder: boolean;
   voiddate: string;
-  lastmodifiedbyid: string;
+  modifiedby: string;
   lastmodifieddate: string;
   statusname: string;
   custcrediapplied: number | null;

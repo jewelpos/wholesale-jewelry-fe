@@ -52,73 +52,58 @@ const SupplierInvoiceListComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
-  // Ref so datasource closure always reads the latest search without recreating
+  // Ref so getRows always reads the latest search without needing a new datasource
   const debouncedSearchRef = useRef(debouncedSearch);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
 
-  // Stable datasource — created once, reads search from ref
-  const datasource = useMemo(
-    () => ({
-      getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(
-          params,
-          debouncedSearchRef.current,
-          "veninvoiceno"
-        );
-        const result = await handleTryCatch(async () => {
-          const { data } = await getSupplierInvoiceList({
-            variables: {
-              storeid: parsedStoreId,
-              ...filters,
-            },
-          });
-          if (data.getSupplierInvoiceList) {
-            params.success({
-              rowData: data.getSupplierInvoiceList.data,
-              rowCount: data.getSupplierInvoiceList.total,
-            });
-            if (!data.getSupplierInvoiceList.data.length) {
-              gridRef.current?.api?.showNoRowsOverlay();
-            } else {
-              gridRef.current?.api?.hideOverlay();
-            }
-          }
-          return true;
+  // Stable getRows — useCallback with empty deps so datasource is never recreated
+  const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
+    const filters = filterVariables(params, debouncedSearchRef.current, "veninvoiceno");
+    const result = await handleTryCatch(async () => {
+      const { data } = await getSupplierInvoiceList({
+        variables: { storeid: parsedStoreId, ...filters },
+      });
+      if (data.getSupplierInvoiceList) {
+        params.success({
+          rowData: data.getSupplierInvoiceList.data,
+          rowCount: data.getSupplierInvoiceList.total,
         });
-        if (result.error) {
+        if (!data.getSupplierInvoiceList.data.length) {
           gridRef.current?.api?.showNoRowsOverlay();
-          dispatch(
-            showNotification({
-              message: result.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
-          params.fail();
+        } else {
+          gridRef.current?.api?.hideOverlay();
         }
-      },
-    }),
-    [parsedStoreId, dispatch, getSupplierInvoiceList]
-  );
+      }
+      return true;
+    });
+    if (result.error) {
+      gridRef.current?.api?.showNoRowsOverlay();
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      params.fail();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const datasource = useRef({ getRows }).current;
 
   const handleRefreshInvoice = useCallback(() => {
-    if (gridReady) {
-      gridRef.current?.api?.refreshServerSide({ purge: true });
-    }
-  }, [gridReady]);
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, []);
 
-  // Set datasource once when grid ready — stable datasource so this only fires once
+  // Set datasource once when grid is ready
   useEffect(() => {
     if (parsedStoreId && gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
   }, [gridReady, datasource, parsedStoreId]);
 
-  // Refresh data on search change — no setGridOption, preserves column state
+  // Refresh on search change only — gridReady not in deps so this never fires on initial load
   useEffect(() => {
     if (!gridReady) return;
-    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
-  }, [debouncedSearch, gridReady]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [

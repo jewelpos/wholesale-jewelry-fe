@@ -426,7 +426,7 @@ const InventoryTransferRequestForm = () => {
                     <div className="row g-3 align-items-end">
                       <div className="col-lg-5 col-md-6 col-sm-12">
                         <div className="input-blocks">
-                          <label>Search/Scan Item/Barcode *</label>
+                          <label>Search/Scan Item/Barcode <span className="text-danger">*</span></label>
                           <SelectProduct
                             storeId={parsedStoreId}
                             hasWarehouseId={true}
@@ -479,7 +479,7 @@ const InventoryTransferRequestForm = () => {
 
                       <div className="col-lg-2 col-md-6 col-sm-12">
                         <div className="input-blocks">
-                          <label>Quantity *</label>
+                          <label>Quantity <span className="text-danger">*</span></label>
                           <input
                             ref={qtyInputRef}
                             type="number"

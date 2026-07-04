@@ -1072,6 +1072,15 @@ const SalesInvoiceForm = ({
     const c = customerData?.getCustomer;
     if (!c) return;
 
+    if (Number(c.custalert) === 1 && c.custalertremarks?.trim()) {
+      MySwal.fire({
+        title: "Customer Alert",
+        text: c.custalertremarks,
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
+    }
+
     setValue("invbilltocompanyname", c.custcompanyname ?? "");
     setValue("invbilltoadd1", c.custadd1 ?? "");
     setValue("invbilltocity", c.custcity ?? "");
@@ -2478,6 +2487,14 @@ const SalesInvoiceForm = ({
                         _itemdiscount: toNum(selected.itemdiscount),
                         _itemcategoryid: selected.itemcategoryid ?? null,
                       }));
+                      if (Number(selected.itemalertwarning) === 1 && selected.itemwarningmessage?.trim()) {
+                        MySwal.fire({
+                          title: "Item Alert",
+                          html: `<strong>${selected.itemcode ?? ""}</strong><br/>${selected.itemwarningmessage}`,
+                          icon: "warning",
+                          confirmButtonText: "OK",
+                        });
+                      }
                     }}
                     onNotFound={() => dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))}
                   />
@@ -2536,7 +2553,7 @@ const SalesInvoiceForm = ({
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
-                  <label className="form-label small text-muted mb-1">Unit Price *</label>
+                  <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     step="0.001"

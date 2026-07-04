@@ -82,7 +82,7 @@ const POSupplierInvoiceModal = ({ storeId, initialData, onDone }: Props) => {
         supplierid: Number(formData.supplierid),
         warehouseid: Number(formData.warehouseid),
         veninvoiceno: formData.veninvoiceno,
-        refponumber: formData.refponumber ? Number(formData.refponumber) : undefined,
+        refponumber: parseInt(String(formData.refponumber), 10) || 0,
         veninvoicedate: (formData.veninvoicedate as Dayjs).format("YYYY-MM-DD"),
         termsid: Number(formData.termsid),
         veninvoicetotal: Number(formData.veninvoicetotal),
@@ -165,7 +165,7 @@ const POSupplierInvoiceModal = ({ storeId, initialData, onDone }: Props) => {
             <div className="row g-3">
               {/* Invoice # */}
               <div className="col-6">
-                <label style={LABEL}>Invoice # *</label>
+                <label style={LABEL}>Invoice # <span className="text-danger">*</span></label>
                 <input
                   {...register("veninvoiceno", { required: "Invoice # is required" })}
                   className={`form-control ${errors.veninvoiceno ? "is-invalid" : ""}`}
@@ -181,8 +181,11 @@ const POSupplierInvoiceModal = ({ storeId, initialData, onDone }: Props) => {
                 <label style={LABEL}>Ref PO #</label>
                 <input
                   {...register("refponumber")}
+                  type="number"
+                  min="0"
+                  step="1"
                   className="form-control"
-                  placeholder="PO reference"
+                  placeholder="e.g. 1234"
                 />
               </div>
             </div>
@@ -190,7 +193,7 @@ const POSupplierInvoiceModal = ({ storeId, initialData, onDone }: Props) => {
             <div className="row g-3">
               {/* Invoice Date */}
               <div className="col-6">
-                <label style={LABEL}>Invoice Date *</label>
+                <label style={LABEL}>Invoice Date <span className="text-danger">*</span></label>
                 <Controller
                   control={control}
                   name="veninvoicedate"
@@ -211,7 +214,7 @@ const POSupplierInvoiceModal = ({ storeId, initialData, onDone }: Props) => {
 
               {/* Amount */}
               <div className="col-6">
-                <label style={LABEL}>Amount *</label>
+                <label style={LABEL}>Amount <span className="text-danger">*</span></label>
                 <input
                   {...register("veninvoicetotal", {
                     required: "Amount is required",

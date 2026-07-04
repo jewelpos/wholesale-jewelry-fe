@@ -28,13 +28,13 @@ export const GET_EXPENSE_LIST_QUERY = gql`
         expensedetail
         expenseamount
         expensemode
-        expensepaidbyid
+        createdby
         expensenotes
         expensechknumber
         warehousename
         warehouseid
         outletid
-        lastmodifiedbyid
+        modifiedby
         lastmodifieddate
         approvalstatus
         approvedbyid

@@ -81,9 +81,9 @@ const SectionCard = ({
   );
 };
 
-const Label = ({ children }: { children: React.ReactNode }) => (
+const Label = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
   <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>
-    {children}
+    {children}{required && <span className="text-danger ms-1">*</span>}
   </label>
 );
 
@@ -220,7 +220,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
               <div className="col-lg-3 col-md-6">
                 <FieldWrap>
-                  <Label>Item Code *</Label>
+                  <Label required>Item Code</Label>
                   <input
                     type="text"
                     className={`form-control form-control-sm ${errors.itemcode ? "is-invalid" : ""}`}
@@ -232,7 +232,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
               <div className="col-lg-3 col-md-6">
                 <FieldWrap>
-                  <Label>Description *</Label>
+                  <Label required>Description</Label>
                   <input
                     type="text"
                     className={`form-control form-control-sm ${errors.itemdescription ? "is-invalid" : ""}`}
@@ -243,7 +243,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
               <div className="col-lg-3 col-md-6">
                 <FieldWrap>
-                  <Label>Status *</Label>
+                  <Label required>Status</Label>
                   {disableField ? (
                     <div>
                       <span
@@ -311,7 +311,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             <div className="row g-2">
               <div className="col-lg-6 col-md-6">
                 <FieldWrap>
-                  <Label>Department *</Label>
+                  <Label required>Department</Label>
                   <Controller
                     name="itemcategoryid"
                     control={control}
@@ -331,7 +331,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
               <div className="col-lg-6 col-md-6">
                 <FieldWrap>
-                  <Label>Product Line *</Label>
+                  <Label required>Product Line</Label>
                   <Controller
                     name="subcategoryid"
                     control={control}
@@ -355,7 +355,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             <div className="row g-2">
               <div className="col-lg-4 col-md-6">
                 <FieldWrap>
-                  <Label>Supplier *</Label>
+                  <Label required>Supplier</Label>
                   <Controller
                     name="supplierid"
                     control={control}
@@ -471,7 +471,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
 
           {/* Unit Cost */}
           <div style={{ flex: "1 1 140px", minWidth: 120 }}>
-            <Label>Unit Cost *</Label>
+            <Label required>Unit Cost</Label>
             <div className="input-group input-group-sm">
               <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
               <input
@@ -640,7 +640,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             />
           </div>
           <div className="col-lg-3 col-md-6">
-            <Label>Item Unit *</Label>
+            <Label required>Item Unit</Label>
             <Controller
               name="itemunit"
               control={control}

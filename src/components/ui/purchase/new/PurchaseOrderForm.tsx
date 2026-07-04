@@ -1097,7 +1097,7 @@ const PurchaseOrderForm = ({
                   <>
                     <div className="vr align-self-stretch" />
                     <div>
-                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Return for PO *</div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Return for PO <span className="text-danger">*</span></div>
                       <SelectPurchaseOrder
                         value={returnOrderPoNumber}
                         onChange={(v: number) => setReturnOrderPoNumber(Number(v || 0))}
@@ -1561,7 +1561,7 @@ const PurchaseOrderForm = ({
                   </div>
                   <div className="row g-2 align-items-end">
                     <div className="col-lg-4 col-md-6 col-sm-12">
-                      <label className="form-label small text-muted mb-1">Item *</label>
+                      <label className="form-label small text-muted mb-1">Item <span className="text-danger">*</span></label>
                       <SelectProduct
                         storeId={parsedStoreId}
                         hasWarehouseId={true}
@@ -1611,7 +1611,7 @@ const PurchaseOrderForm = ({
                     </div>
 
                     <div className="col-lg-1 col-md-3 col-sm-6">
-                      <label className="form-label small text-muted mb-1">Qty *</label>
+                      <label className="form-label small text-muted mb-1">Qty <span className="text-danger">*</span></label>
                       <input
                         type="number"
                         step="0.001"
@@ -1630,7 +1630,7 @@ const PurchaseOrderForm = ({
                     </div>
 
                     <div className="col-lg-1 col-md-3 col-sm-6">
-                      <label className="form-label small text-muted mb-1">Unit Price *</label>
+                      <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
                       <input
                         type="number"
                         step="0.001"

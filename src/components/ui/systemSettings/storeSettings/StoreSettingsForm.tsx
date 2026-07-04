@@ -7,9 +7,7 @@ import { useDispatch } from "react-redux";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_ALL_WAREHOUSE_SETTINGS_QUERY } from "@/lib/graphql/query/warehouse";
-import { GET_WAREHOUSES_BY_OUTLET_ID_QUERY } from "@/lib/graphql/query/warehouse";
 import { UPSERT_WAREHOUSE_SETTINGS_MUTATION } from "@/lib/graphql/mutations/warehouseSettings";
-import { useUserRole } from "@/hooks/useUserRole";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 
 interface WarehouseSettingsRow {
@@ -68,44 +66,29 @@ const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
 ];
 
 const StoreSettingsForm = () => {
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam } = useParams();
   const router = useRouter();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const dispatch = useDispatch();
-  const { isAdmin, isAtLeastManager } = useUserRole();
 
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
   const [form, setForm] = useState<SettingsFormValues>(emptySettings());
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Admin: fetch all warehouses with settings
   const { data: allData, loading: allLoading, refetch: refetchAll } = useQuery(GET_ALL_WAREHOUSE_SETTINGS_QUERY, {
     variables: { storeid: parsedStoreId },
-    skip: !parsedStoreId || !isAdmin,
-  });
-
-  // Non-admin: fetch warehouses for this outlet
-  const { data: outletData, loading: outletLoading } = useQuery(GET_WAREHOUSES_BY_OUTLET_ID_QUERY, {
-    variables: { outletid: parsedOutletId },
-    skip: !parsedOutletId || isAdmin,
+    skip: !parsedStoreId,
   });
 
   const [upsertSettings] = useMutation(UPSERT_WAREHOUSE_SETTINGS_MUTATION);
 
   const allRowsRaw = allData?.getAllWarehouseSettings;
-  const outletWarehousesRaw = outletData?.getWarehousesByOutletId;
-
   const allRows: WarehouseSettingsRow[] = useMemo(() => allRowsRaw ?? [], [allRowsRaw]);
-  const outletWarehouses: { warehouseid: number; warehousename: string }[] = useMemo(() => outletWarehousesRaw ?? [], [outletWarehousesRaw]);
 
-  // Warehouse list to display in selector — memoized so the useEffect dep is stable
   const warehouseOptions = useMemo(
-    () => isAdmin
-      ? allRows.map(r => ({ warehouseid: r.warehouseid, warehousename: r.warehousename }))
-      : outletWarehouses,
-    [isAdmin, allRows, outletWarehouses]
+    () => allRows.map(r => ({ warehouseid: r.warehouseid, warehousename: r.warehousename })),
+    [allRows]
   );
 
   // Auto-select first warehouse on load
@@ -117,35 +100,32 @@ const StoreSettingsForm = () => {
 
   // Populate form when warehouse selection changes
   useEffect(() => {
-    if (!selectedWarehouseId) return;
-    if (isAdmin && allRows.length > 0) {
-      const row = allRows.find(r => r.warehouseid === selectedWarehouseId);
-      if (row) {
-        setForm({
-          saletagkey: row.saletagkey,
-          tagpricekey: row.tagpricekey,
-          pricecodeone: row.pricecodeone ?? "",
-          pricecodetwo: row.pricecodetwo ?? "",
-          pricecodethree: row.pricecodethree ?? "",
-          pricecodefour: row.pricecodefour ?? "",
-          pricecodefive: row.pricecodefive ?? "",
-          pricecodesix: row.pricecodesix ?? "",
-          pricecodeseven: row.pricecodeseven ?? "",
-          pricecodeeight: row.pricecodeeight ?? "",
-          pricecodenine: row.pricecodenine ?? "",
-          pricecodezero: row.pricecodezero ?? "",
-          allowpcsentry: row.allowpcsentry,
-          allowcarriage: row.allowcarriage,
-          storepolicy: row.storepolicy ?? "",
-          defaultsalestaxrate: row.defaultsalestaxrate ?? null,
-        });
-        setDirty(false);
-      }
+    if (!selectedWarehouseId || allRows.length === 0) return;
+    const row = allRows.find(r => r.warehouseid === selectedWarehouseId);
+    if (row) {
+      setForm({
+        saletagkey: row.saletagkey,
+        tagpricekey: row.tagpricekey,
+        pricecodeone: row.pricecodeone ?? "",
+        pricecodetwo: row.pricecodetwo ?? "",
+        pricecodethree: row.pricecodethree ?? "",
+        pricecodefour: row.pricecodefour ?? "",
+        pricecodefive: row.pricecodefive ?? "",
+        pricecodesix: row.pricecodesix ?? "",
+        pricecodeseven: row.pricecodeseven ?? "",
+        pricecodeeight: row.pricecodeeight ?? "",
+        pricecodenine: row.pricecodenine ?? "",
+        pricecodezero: row.pricecodezero ?? "",
+        allowpcsentry: row.allowpcsentry,
+        allowcarriage: row.allowcarriage,
+        storepolicy: row.storepolicy ?? "",
+        defaultsalestaxrate: row.defaultsalestaxrate ?? null,
+      });
     } else {
       setForm(emptySettings());
-      setDirty(false);
     }
-  }, [selectedWarehouseId, allRows, isAdmin]);
+    setDirty(false);
+  }, [selectedWarehouseId, allRows]);
 
   const set = (key: keyof SettingsFormValues, value: any) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -180,7 +160,7 @@ const StoreSettingsForm = () => {
           },
         },
       });
-      if (isAdmin) await refetchAll();
+      await refetchAll();
       setDirty(false);
       return true;
     });
@@ -192,7 +172,7 @@ const StoreSettingsForm = () => {
     }
   };
 
-  const loading = allLoading || outletLoading;
+  const loading = allLoading;
   const selectedWarehouseName = warehouseOptions.find(w => w.warehouseid === selectedWarehouseId)?.warehousename ?? "";
 
   return (

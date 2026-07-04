@@ -1285,7 +1285,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">
-                  <label className="form-label small text-muted mb-1">Unit Price *</label>
+                  <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     className="form-control px-1 text-end"

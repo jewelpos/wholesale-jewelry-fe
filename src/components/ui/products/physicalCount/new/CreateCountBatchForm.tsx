@@ -105,7 +105,7 @@ const CreateCountBatchForm = () => {
             <div className="row g-3">
               {/* Warehouse */}
               <div className="col-md-4">
-                <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Warehouse *</label>
+                <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Warehouse <span className="text-danger">*</span></label>
                 <select
                   className="form-select form-select-sm"
                   value={warehouseid}
@@ -121,7 +121,7 @@ const CreateCountBatchForm = () => {
 
               {/* Count Date */}
               <div className="col-md-3">
-                <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Count Date *</label>
+                <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Count Date <span className="text-danger">*</span></label>
                 <input
                   type="date"
                   className="form-control form-control-sm"
@@ -179,7 +179,7 @@ const CreateCountBatchForm = () => {
             {(scope === "CATEGORY" || scope === "SUBCATEGORY") && (
               <div className="row g-3">
                 <div className="col-md-4">
-                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Category *</label>
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Category <span className="text-danger">*</span></label>
                   <select
                     className="form-select form-select-sm"
                     value={categoryid}
@@ -194,7 +194,7 @@ const CreateCountBatchForm = () => {
                 </div>
                 {scope === "SUBCATEGORY" && (
                   <div className="col-md-4">
-                    <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Subcategory *</label>
+                    <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Subcategory <span className="text-danger">*</span></label>
                     <select
                       className="form-select form-select-sm"
                       value={subcategoryid}
@@ -213,7 +213,7 @@ const CreateCountBatchForm = () => {
             {scope === "LOCATION" && (
               <div className="row g-3">
                 <div className="col-md-4">
-                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Showcase / Location Filter *</label>
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Showcase / Location Filter <span className="text-danger">*</span></label>
                   <input
                     className="form-control form-control-sm"
                     placeholder="e.g. Showcase A"

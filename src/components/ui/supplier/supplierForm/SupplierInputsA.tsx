@@ -70,7 +70,7 @@ const SupplierInputsA = ({
           </div>
         )}
         <div className="col-12 mb-3">
-          <label className="form-label">Company Name</label>
+          <label className="form-label">Company Name <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.companyname ? " is-invalid" : ""}`}
@@ -97,7 +97,7 @@ const SupplierInputsA = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">City</label>
+          <label className="form-label">City <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.city ? " is-invalid" : ""}`}
@@ -153,7 +153,7 @@ const SupplierInputsA = ({
       <SectionLabel label="Contact Person" icon={User} />
       <div className="row">
         <div className="col-12 mb-3">
-          <label className="form-label">Contact Name</label>
+          <label className="form-label">Contact Name <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.contactperson1 ? " is-invalid" : ""}`}
@@ -169,7 +169,7 @@ const SupplierInputsA = ({
       <SectionLabel label="Contact Info" icon={Phone} />
       <div className="row">
         <div className="col-6 mb-3">
-          <label className="form-label">Phone</label>
+          <label className="form-label">Phone <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.phone1 ? " is-invalid" : ""}`}
@@ -191,7 +191,7 @@ const SupplierInputsA = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Email</label>
+          <label className="form-label">Email <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.emailaddress ? " is-invalid" : ""}`}

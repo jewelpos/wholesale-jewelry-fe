@@ -40,12 +40,12 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         warehousename
         warehouseid
         outletid
-        createdbyid
+        createdby
         registerno
         isweborder
         invsalesorder
         voiddate
-        lastmodifiedbyid
+        modifiedby
         lastmodifieddate
         statusname
         custcrediapplied

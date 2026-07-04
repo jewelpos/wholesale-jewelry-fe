@@ -10,7 +10,7 @@ import { useDispatch } from "react-redux";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import api from "@/lib/axios";
+import { getAccessToken } from "@/lib/authStorage";
 import { CustomerFormType } from "@/types/customer";
 import CustomerInputsA from "./CustomerInputsA";
 import CustomerInputsB from "./CustomerInputsB";
@@ -138,21 +138,18 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
     Object.entries(payload).forEach(([key, value]: [string, any]) => {
       form.append(key, value);
     });
+    const token = await getAccessToken();
+    const authHeaders: Record<string, string> = {};
+    if (token) authHeaders["Authorization"] = `Bearer ${token}`;
+
     const result = await handleTryCatch(
       async () => {
-        let response;
-        if (customerId) {
-          response = await api.put(
-            `/store/customer/edit`,
-            form
-          );
-        } else {
-          response = await api.post(
-            `/store/customer/add`,
-            form
-          );
-        }
-        const { data } = response;
+        const url = customerId
+          ? "/api/proxy/store/customer/edit"
+          : "/api/proxy/store/customer/add";
+        const method = customerId ? "PUT" : "POST";
+        const res = await fetch(url, { method, body: form, headers: authHeaders });
+        const data = await res.json();
         if (data.success) {
           dispatch(
             showNotification({
@@ -161,6 +158,8 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
             })
           );
           router.back();
+        } else {
+          throw new Error(data.message || "Save failed");
         }
         return true;
       },
@@ -303,11 +302,11 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
           </div>
         )}
 
-        {/* Documents section — edit mode only (customerid exists) */}
-        {parsedCustomerId && !isNaN(parsedCustomerId) && !customerLoading && (
+        {/* Documents section */}
+        {!customerLoading && (
           <div className="container-fluid">
             <CustomerDocumentsSection
-              customerid={parsedCustomerId}
+              customerid={isNaN(parsedCustomerId) ? 0 : parsedCustomerId}
               storeid={parsedStoreId}
             />
           </div>

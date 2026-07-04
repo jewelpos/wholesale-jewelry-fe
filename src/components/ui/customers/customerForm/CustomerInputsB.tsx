@@ -65,7 +65,7 @@ const CustomerInputsB = ({
       <SectionLabel label="Warehouse" icon={Landmark} />
       <div className="row">
         <div className="col-6 mb-3">
-          <label className="form-label">Store</label>
+          <label className="form-label">Store <span className="text-danger">*</span></label>
           <Controller
             name="storeid"
             control={control}
@@ -86,7 +86,7 @@ const CustomerInputsB = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Warehouse</label>
+          <label className="form-label">Warehouse <span className="text-danger">*</span></label>
           <Controller
             name="warehouseid"
             control={control}
@@ -156,7 +156,7 @@ const CustomerInputsB = ({
           <input
             type="text"
             className={`form-control${errors.custcreditlimit ? " is-invalid" : ""}`}
-            {...register("custcreditlimit", { required: "Credit limit is required" })}
+            {...register("custcreditlimit")}
           />
           {errors.custcreditlimit && (
             <div className="invalid-feedback">{errors.custcreditlimit.message}</div>
@@ -167,19 +167,22 @@ const CustomerInputsB = ({
           <input
             type="text"
             className={`form-control${errors.custdiscount ? " is-invalid" : ""}`}
-            {...register("custdiscount", { required: "Discount is required" })}
+            {...register("custdiscount")}
           />
           {errors.custdiscount && (
             <div className="invalid-feedback">{errors.custdiscount.message}</div>
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Tax ID</label>
+          <label className="form-label">Tax ID <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custtaxid ? " is-invalid" : ""}`}
-            {...register("custtaxid")}
+            {...register("custtaxid", { required: "Tax ID is required" })}
           />
+          {errors.custtaxid && (
+            <div className="invalid-feedback">{errors.custtaxid.message}</div>
+          )}
         </div>
         <div className="col-6 mb-3">
           <label className="form-label">Sales Tax %</label>

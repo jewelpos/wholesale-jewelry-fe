@@ -2000,7 +2000,7 @@ const SalesInvoiceFormV2 = ({
                 )}
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
-                  <label className="form-label small text-muted mb-1">Qty *</label>
+                  <label className="form-label small text-muted mb-1">Qty <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     step="0.001"
@@ -2022,7 +2022,7 @@ const SalesInvoiceFormV2 = ({
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
-                  <label className="form-label small text-muted mb-1">Unit Price *</label>
+                  <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     step="0.001"

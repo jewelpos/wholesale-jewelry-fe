@@ -5,10 +5,9 @@ import { useQuery, useMutation } from "@apollo/client";
 import { createPortal } from "react-dom";
 import { Eye, Download, Trash2, Upload, FileText, X } from "lucide-react";
 import dayjs from "dayjs";
-import axios from "@/lib/axios";
+import { getAccessToken } from "@/lib/authStorage";
 import { GET_CUSTOMER_DOCUMENTS_QUERY } from "@/lib/graphql/query/customerDocuments";
 import { DELETE_CUSTOMER_DOCUMENT_MUTATION } from "@/lib/graphql/mutations/customerDocuments";
-import { useUserRole } from "@/hooks/useUserRole";
 
 interface CustomerDocument {
   documentid: number;
@@ -42,10 +41,12 @@ function canPreview(mimeType: string): "image" | "pdf" | null {
 }
 
 export default function CustomerDocumentsSection({ customerid, storeid }: Props) {
-  const { isAtLeastManager } = useUserRole();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadingRef = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<CustomerDocument | null>(null);
+
+  const isNewCustomer = !customerid;
 
   const { data, loading, refetch } = useQuery(GET_CUSTOMER_DOCUMENTS_QUERY, {
     variables: { storeid, customerid },
@@ -57,11 +58,14 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
     onCompleted: () => refetch(),
   });
 
-  const documents: CustomerDocument[] = data?.getCustomerDocuments ?? [];
+  const raw: CustomerDocument[] = data?.getCustomerDocuments ?? [];
+  const documents = [...new Map(raw.map(d => [d.documentid, d])).values()];
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
     e.target.value = "";
 
     setUploading(true);
@@ -71,13 +75,19 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
       formData.append("storeid", String(storeid));
       formData.append("customerid", String(customerid));
       formData.append("documentname", file.name);
-      await axios.post("/store/customer/document/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const token = await getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      await fetch("/api/proxy/store/customer/document/upload", {
+        method: "POST",
+        body: formData,
+        headers,
       });
       refetch();
     } catch (err: any) {
       console.error("Upload failed", err);
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
     }
   };
@@ -103,7 +113,7 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
           <FileText size={14} strokeWidth={2} color="#0d6efd" />
           Customer Documents
         </h6>
-        {isAtLeastManager && (
+        {!isNewCustomer && (
           <>
             <input
               ref={fileInputRef}
@@ -127,7 +137,11 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
       </div>
 
       <div className="card-body p-0">
-        {loading ? (
+        {isNewCustomer ? (
+          <div className="p-3 text-muted" style={{ fontSize: 13 }}>
+            Save the customer first to upload documents.
+          </div>
+        ) : loading ? (
           <div className="p-3 text-muted" style={{ fontSize: 13 }}>
             Loading documents...
           </div>
@@ -196,8 +210,8 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
                         >
                           <Download size={14} />
                         </a>
-                        {/* Delete — Admin/Manager only */}
-                        {isAtLeastManager && (
+                        {/* Delete */}
+                        {(
                           <button
                             type="button"
                             title="Delete"

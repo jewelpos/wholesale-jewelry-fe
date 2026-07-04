@@ -652,7 +652,7 @@ const InventoryTransferForm = () => {
           {transferType === "REQUEST" && (
             <div className="row g-3 align-items-start">
               <div className="col-lg-4 col-md-6 col-sm-12">
-                <div style={sectionLabel}>Transfer Request *</div>
+                <div style={sectionLabel}>Transfer Request <span className="text-danger">*</span></div>
                 <Controller
                   control={control}
                   name="transferRequestId"
@@ -705,7 +705,7 @@ const InventoryTransferForm = () => {
           {transferType === "INTERNAL" && (
             <div className="row g-3 align-items-end">
               <div className="col-lg-4 col-md-6 col-sm-12">
-                <div style={sectionLabel}>From Warehouse *</div>
+                <div style={sectionLabel}>From Warehouse <span className="text-danger">*</span></div>
                 <Controller
                   control={control}
                   name="fromWarehouseId"
@@ -738,7 +738,7 @@ const InventoryTransferForm = () => {
               </div>
 
               <div className="col-lg-4 col-md-6 col-sm-12">
-                <div style={sectionLabel}>To Warehouse *</div>
+                <div style={sectionLabel}>To Warehouse <span className="text-danger">*</span></div>
                 <Controller
                   control={control}
                   name="toWarehouseId"

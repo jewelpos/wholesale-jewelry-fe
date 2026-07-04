@@ -71,7 +71,7 @@ const SupplierInputsB = ({
       <SectionLabel label="Warehouse" icon={Landmark} />
       <div className="row">
         <div className="col-6 mb-3">
-          <label className="form-label">Store</label>
+          <label className="form-label">Store <span className="text-danger">*</span></label>
           <Controller
             name="storeid"
             control={control}
@@ -92,7 +92,7 @@ const SupplierInputsB = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Warehouse</label>
+          <label className="form-label">Warehouse <span className="text-danger">*</span></label>
           <Controller
             name="warehouseid"
             control={control}

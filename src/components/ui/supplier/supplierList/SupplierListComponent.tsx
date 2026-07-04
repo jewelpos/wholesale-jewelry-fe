@@ -111,12 +111,14 @@ const SupplierListComponent = () => {
     }
   }, [gridReady, datasource, selectedOutlet]);
 
-  // Refresh data when filters change — no setGridOption, preserves column state
+  // Refresh only when search text changes — initial load and outlet changes are handled by Effect 1
+  const isFirstSearch = useRef(true);
   useEffect(() => {
+    if (isFirstSearch.current) { isFirstSearch.current = false; return; }
     if (!gridReady) return;
-    if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
+    gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
-  }, [debouncedSearch, selectedOutlet, gridReady]);
+  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("supplier-list");
 

@@ -6,13 +6,13 @@ export type AccountsExpenseListType = {
   expensedetail: string;
   expenseamount: number;
   expensemode: string;
-  expensepaidbyid: number;
+  createdby: string;
   expensenotes: string;
   expensechknumber: string;
   warehousename: string;
   warehouseid: number;
   outletid: number;
-  lastmodifiedbyid: number;
+  modifiedby: string;
   lastmodifieddate: string;
   approvalstatus: string;
   approvedbyid: number;

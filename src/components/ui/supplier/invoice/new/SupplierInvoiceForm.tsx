@@ -117,7 +117,7 @@ const SupplierInvoiceForm = ({
     const payload = {
       ...formData,
       ...editPayload,
-      refponumber: Number(formData.refponumber),
+      refponumber: parseInt(String(formData.refponumber), 10) || 0,
       veninvoicedate: formData.veninvoicedate,
       veninvoicetotal: Number(formData.veninvoicetotal),
       warehouseid: Number(formData.warehouseid),
@@ -145,7 +145,7 @@ const SupplierInvoiceForm = ({
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        if (supplierinvoiceid && handleRefreshInvoice) {
+        if (handleRefreshInvoice) {
           handleRefreshInvoice();
         }
         setShowInvoiceFormModal(false);
@@ -172,7 +172,7 @@ const SupplierInvoiceForm = ({
         warehouseid: invoice.warehouseid,
         supplierid: invoice.supplierid,
         veninvoiceno: invoice.veninvoiceno,
-        refponumber: invoice.refponumber.toString(),
+        refponumber: invoice.refponumber != null ? String(invoice.refponumber) : "",
         veninvoicedate: dayjs(invoice.veninvoicedate),
         termsid: invoice.termsid,
         storeid: parsedStoreId,

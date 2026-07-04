@@ -130,7 +130,7 @@ const SupplierInvoiceFormInputA = ({
 
           {/* Supplier dropdown */}
           <div style={{ marginBottom: 12 }}>
-            <label style={LABEL}>Vendor / Supplier *</label>
+            <label style={LABEL}>Vendor / Supplier <span className="text-danger">*</span></label>
             <Controller
               name="supplierid"
               control={control}
@@ -254,7 +254,7 @@ const SupplierInvoiceFormInputA = ({
           {/* Row 1: Invoice #, Date, Ref PO */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0 20px", marginBottom: 18 }}>
             <div>
-              <label style={LABEL}>Vendor Invoice # *</label>
+              <label style={LABEL}>Vendor Invoice # <span className="text-danger">*</span></label>
               <input
                 type="text"
                 placeholder="e.g. INV-2024-001"
@@ -268,7 +268,7 @@ const SupplierInvoiceFormInputA = ({
             </div>
 
             <div>
-              <label style={LABEL}>Invoice Date *</label>
+              <label style={LABEL}>Invoice Date <span className="text-danger">*</span></label>
               <Controller
                 name="veninvoicedate"
                 control={control}
@@ -288,8 +288,10 @@ const SupplierInvoiceFormInputA = ({
             <div>
               <label style={LABEL}>Ref PO # <span style={{ color: "#94a3b8", fontWeight: 400 }}>(optional)</span></label>
               <input
-                type="text"
-                placeholder="e.g. PO-123"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="e.g. 1234"
                 className="form-control form-control-sm"
                 {...register("refponumber")}
               />
@@ -302,7 +304,7 @@ const SupplierInvoiceFormInputA = ({
           {/* Row 2: Amount, Terms, Warehouse */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0 20px" }}>
             <div>
-              <label style={LABEL}>Invoice Amount *</label>
+              <label style={LABEL}>Invoice Amount <span className="text-danger">*</span></label>
               <div style={{ position: "relative" }}>
                 <span style={{
                   position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
@@ -328,7 +330,7 @@ const SupplierInvoiceFormInputA = ({
             </div>
 
             <div>
-              <label style={LABEL}>Payment Terms *</label>
+              <label style={LABEL}>Payment Terms <span className="text-danger">*</span></label>
               <Controller
                 name="termsid"
                 control={control}

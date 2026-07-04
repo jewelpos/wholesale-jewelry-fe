@@ -89,7 +89,7 @@ const CustomerInputsA = ({
           </div>
         )}
         <div className="col-12 mb-3">
-          <label className="form-label">Company Name</label>
+          <label className="form-label">Company Name <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custcompanyname ? " is-invalid" : ""}`}
@@ -105,7 +105,7 @@ const CustomerInputsA = ({
       <SectionLabel label="Address" icon={MapPin} />
       <div className="row">
         <div className="col-12 mb-3">
-          <label className="form-label">Street Address</label>
+          <label className="form-label">Street Address <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custadd1 ? " is-invalid" : ""}`}
@@ -116,7 +116,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">City</label>
+          <label className="form-label">City <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custcity ? " is-invalid" : ""}`}
@@ -127,7 +127,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-3 mb-3">
-          <label className="form-label">State</label>
+          <label className="form-label">State <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custstate ? " is-invalid" : ""}`}
@@ -138,7 +138,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-3 mb-3">
-          <label className="form-label">Zip</label>
+          <label className="form-label">Zip <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custzip ? " is-invalid" : ""}`}
@@ -149,7 +149,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-12 mb-3">
-          <label className="form-label">Country</label>
+          <label className="form-label">Country <span className="text-danger">*</span></label>
           <Controller
             name="custcountry"
             control={control}
@@ -173,7 +173,7 @@ const CustomerInputsA = ({
       <SectionLabel label="Contact Person" icon={User} />
       <div className="row">
         <div className="col-6 mb-3">
-          <label className="form-label">First Name</label>
+          <label className="form-label">First Name <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custfname ? " is-invalid" : ""}`}
@@ -193,7 +193,7 @@ const CustomerInputsA = ({
       <SectionLabel label="Contact Info" icon={Phone} />
       <div className="row">
         <div className="col-6 mb-3">
-          <label className="form-label">Store Phone</label>
+          <label className="form-label">Store Phone <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custphone1 ? " is-invalid" : ""}`}
@@ -204,7 +204,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Cell Phone</label>
+          <label className="form-label">Cell Phone <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custcell ? " is-invalid" : ""}`}
@@ -226,7 +226,7 @@ const CustomerInputsA = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Email</label>
+          <label className="form-label">Email <span className="text-danger">*</span></label>
           <input
             type="text"
             className={`form-control${errors.custemailadd ? " is-invalid" : ""}`}
