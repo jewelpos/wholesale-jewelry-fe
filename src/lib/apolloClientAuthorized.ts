@@ -11,7 +11,7 @@ import { authLink } from "./graphql/authLinks";
 const config = getEnvironmentConfig();
 
 const httpLink = createHttpLink({
-  uri: config.graphqlUrl,
+  uri: typeof window !== "undefined" ? "/api/proxy/graphql" : config.graphqlUrl,
 });
 
 export const apolloClientAuthorized = new ApolloClient({

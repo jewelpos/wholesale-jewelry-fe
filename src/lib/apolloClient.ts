@@ -3,8 +3,10 @@ import { getEnvironmentConfig } from "./config/environment";
 
 const config = getEnvironmentConfig();
 
+const graphqlUri = typeof window !== "undefined" ? "/api/proxy/graphql" : config.graphqlUrl;
+
 export const apolloClient = new ApolloClient({
-  uri: config.graphqlUrl,
+  uri: graphqlUri,
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
