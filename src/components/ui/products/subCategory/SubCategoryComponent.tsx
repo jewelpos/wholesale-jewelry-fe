@@ -9,6 +9,7 @@ import {
   ColDef,
   ICellRendererParams,
 } from "ag-grid-community";
+import { useRouter } from "next/navigation";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -25,8 +26,10 @@ import POSGrid from "../../grid/POSGrid";
 import { subCategoryColumnDefs } from "./columnDef";
 import SubcategoryModal from "./SubcategoryModal";
 import SubcategoryActions from "./SubcategoryActions";
+import ActionFooter from "../../ActionFooter";
 
 const SubCategoryComponent = () => {
+  const router = useRouter();
   const [getItemSubCategoryList] = useLazyQuery(
     GET_ITEM_SUB_CATEGORY_LIST_QUERY
   );
@@ -192,11 +195,12 @@ const SubCategoryComponent = () => {
             />
           ) : null,
         width: 120,
+        minWidth: 120,
         sortable: false,
         filter: false,
-        maxWidth: 150,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,
@@ -234,6 +238,7 @@ const SubCategoryComponent = () => {
         onSuccess={handleModalSuccess}
         editData={editData}
       />
+      <ActionFooter handleCancel={() => router.back()} cancelLabel="Close" />
     </>
   );
 };

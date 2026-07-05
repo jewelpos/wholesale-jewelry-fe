@@ -115,9 +115,12 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
       return <MemoActions data={params.data} />;
     },
     pinned: "right",
-    maxWidth: 130,
+    width: 130,
+    minWidth: 130,
     sortable: false,
     filter: false,
+    suppressAutoSize: true,
+    suppressSizeToFit: true,
     suppressHeaderMenuButton: true,
   },
 ];

@@ -7,7 +7,9 @@ import {
   GridReadyEvent,
   IServerSideGetRowsParams,
   ColDef,
+  ICellRendererParams,
 } from "ag-grid-community";
+import { useRouter } from "next/navigation";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -23,9 +25,10 @@ import { categoryColumnDefs } from "./ColumnDefs";
 import CategoryHeader from "./CategoryHeader";
 import CategoryModal from "./CategoryModal";
 import CategoryActions from "./CategoryActions";
-import { ICellRendererParams } from "ag-grid-community";
+import ActionFooter from "../../ActionFooter";
 
 const CategoryComponent = () => {
+  const router = useRouter();
   const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
@@ -186,11 +189,12 @@ const CategoryComponent = () => {
             />
           ) : null,
         width: 120,
+        minWidth: 120,
         sortable: false,
         filter: false,
-        maxWidth: 150,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,
@@ -228,6 +232,7 @@ const CategoryComponent = () => {
         onSuccess={handleModalSuccess}
         editData={editData}
       />
+      <ActionFooter handleCancel={() => router.back()} cancelLabel="Close" />
     </>
   );
 };

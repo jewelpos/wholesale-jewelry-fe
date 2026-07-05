@@ -258,7 +258,8 @@ const SalesListComponent = () => {
       {
         headerName: "Actions",
         field: "actions",
-        width: 185,
+        width: 190,
+        minWidth: 190,
         cellRenderer: (params: ICellRendererParams<SalesInvoiceListType>) => {
           if (params.node.rowPinned) {
             return null;
@@ -275,9 +276,9 @@ const SalesListComponent = () => {
         },
         sortable: false,
         filter: false,
-        maxWidth: 190,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,

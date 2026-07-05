@@ -189,12 +189,13 @@ const CustomerListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 120,
+        width: 130,
+        minWidth: 130,
         sortable: false,
         filter: false,
-        maxWidth: 150,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,

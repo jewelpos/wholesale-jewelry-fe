@@ -143,10 +143,12 @@ const PurchaseOrderListComponent = () => {
             />
           ) : null,
         width: 200,
+        minWidth: 200,
         sortable: false,
         filter: false,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,
@@ -162,12 +164,13 @@ const PurchaseOrderListComponent = () => {
     }
   }, [gridReady, datasource, parsedStoreId]);
 
-  // Refresh data when filters change — no setGridOption, preserves column state
+  // Refresh data when filters change — initial load handled by Effect 1 (setGridOption triggers it)
   useEffect(() => {
     if (!gridReady) return;
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
-  }, [debouncedSearch, selectedSupplier, statusFilter, gridReady]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedSupplier, statusFilter]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 

@@ -156,12 +156,13 @@ const ProductsListComponent = () => {
     if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
   }, [gridReady, datasource]);
 
-  // Refresh data when any filter/search/outlet changes — never recreates datasource
+  // Refresh data when any filter/search/outlet changes — initial load handled by Effect 1 (setGridOption triggers it)
   useEffect(() => {
     if (!gridReady) return;
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
-  }, [debouncedSearch, activeFilters, selectedOutlet, selectedWarehouse, gridReady]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, activeFilters, selectedOutlet, selectedWarehouse]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
