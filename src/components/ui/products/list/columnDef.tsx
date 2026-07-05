@@ -1,5 +1,5 @@
 import React from "react";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 import { ProductListType } from "@/types/product";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { SetFilterValuesFuncParams } from "ag-grid-enterprise";
@@ -14,7 +14,7 @@ export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   if (params.value === null || params.value === undefined) return null;
   return (
     <span style={{ display: "block", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-      {detectUserCurrency().format(params.value)}
+      {formatCurrency(params.value)}
     </span>
   );
 };
@@ -99,8 +99,11 @@ export function makeProductColumnDefs(
     {
       headerName: "Actions",
       cellRenderer: ActionCellRenderer,
+      width: 185,
+      minWidth: 185,
       pinned: "right",
-      suppressSizeToFit: false,
+      suppressAutoSize: true,
+      suppressSizeToFit: true,
       sortable: false,
       filter: false,
       suppressHeaderMenuButton: true,

@@ -11,9 +11,11 @@ export const bankListColumnDefs: ColDef<AccountsBankListType>[] = [
   {
     headerName: "Actions",
     cellRenderer: ActionCellRenderer,
-    maxWidth: 150,
+    width: 100,
+    minWidth: 100,
     pinned: "right",
-    suppressSizeToFit: false,
+    suppressAutoSize: true,
+    suppressSizeToFit: true,
     sortable: false,
     filter: false,
     suppressHeaderMenuButton: true,

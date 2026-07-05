@@ -135,11 +135,13 @@ const SupplierListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 80,
+        width: 130,
+        minWidth: 130,
         sortable: false,
         filter: false,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,

@@ -120,11 +120,13 @@ const SupplierInvoiceListComponent = () => {
               setViewInvoiceId={setViewInvoiceId}
             />
           ) : null,
-        width: 80,
+        width: 100,
+        minWidth: 100,
         sortable: false,
         filter: false,
         pinned: "right",
-        suppressSizeToFit: false,
+        suppressAutoSize: true,
+        suppressSizeToFit: true,
         suppressMovable: true,
         suppressHeaderMenuButton: true,
         enableRowGroup: false,
