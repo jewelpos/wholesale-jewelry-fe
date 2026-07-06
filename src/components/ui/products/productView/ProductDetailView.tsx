@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@apollo/client";
+import { useQuery, useLazyQuery } from "@apollo/client";
 import { Package, Edit, Printer, ArrowLeft } from "react-feather";
 import {
   GET_PRODUCT_BY_ITEMCODE_QUERY,
   GET_ITEM_CATEGORIES_QUERY,
   GET_ITEM_SUBCATEGORIES_QUERY,
   GET_PRODUCT_LIST_QUERY,
+  GET_PRODUCT_ACTIVITY_CHART_QUERY,
 } from "@/lib/graphql/query/products";
 import { useUserRole } from "@/hooks/useUserRole";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import PrintLabelsModal from "../labels/PrintLabelsModal";
+import ActivityTimeline from "../activities/ActivityTimeline";
+import { ProductActivityChartPoint } from "@/types/product";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/utils/currencyFormat";
 
@@ -157,10 +160,18 @@ const ProductDetailView = () => {
   const { basePath } = useDefaultRoute();
   const { isAtLeastManager } = useUserRole();
   const [labelsOpen, setLabelsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
+  const [activityLoaded, setActivityLoaded] = useState(false);
 
   const storeId = parseInt(storeIdParam as string, 10);
   const outletId = parseInt(outletIdParam as string, 10);
   const itemcode = itemcodeParam as string;
+
+  const [fetchActivity, { data: activityData, loading: activityLoading }] = useLazyQuery(
+    GET_PRODUCT_ACTIVITY_CHART_QUERY,
+    { fetchPolicy: "cache-first" },
+  );
+  const chartData: ProductActivityChartPoint[] = activityData?.getProductActivityChart ?? [];
 
   const { data: productData, loading: productLoading } = useQuery(
     GET_PRODUCT_BY_ITEMCODE_QUERY,
@@ -177,6 +188,23 @@ const ProductDetailView = () => {
 
   const product = productData?.getProductByItemCode;
   const categoryId = product?.itemcategoryid;
+
+  useEffect(() => {
+    if (activeTab === "activity" && !activityLoaded && product?.itemid && storeId) {
+      setActivityLoaded(true);
+      fetchActivity({
+        variables: {
+          storeid: storeId,
+          itemid: Number(product.itemid),
+          outletid: outletId || null,
+          warehouseid: null,
+          dateFrom: null,
+          dateTo: null,
+        },
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activityLoaded, product?.itemid, storeId, outletId]);
 
   const { data: subcategoriesData } = useQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
     variables: { storeid: storeId, categoryid: categoryId },
@@ -366,7 +394,43 @@ const ProductDetailView = () => {
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "14px 12px 0" }}>
+      {/* ── Tab bar ── */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
+        {(["details", "activity"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: "10px 24px",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab ? "2px solid #0f172a" : "2px solid transparent",
+              fontSize: 13,
+              fontWeight: activeTab === tab ? 700 : 500,
+              color: activeTab === tab ? "#0f172a" : "#94a3b8",
+              cursor: "pointer",
+              textTransform: "capitalize",
+            }}
+          >
+            {tab === "details" ? "Details" : "Activity"}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "activity" ? (
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "14px 12px" }}>
+          {activityLoading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "24px 0" }}>
+              <div className="spinner-border spinner-border-sm text-secondary" />
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>Loading activity…</span>
+            </div>
+          ) : (
+            <ActivityTimeline data={chartData} />
+          )}
+        </div>
+      ) : null}
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "14px 12px 0", display: activeTab === "activity" ? "none" : undefined }}>
         {/* Alert Strip */}
         {product.itemalertwarning && product.itemwarningmessage && (
           <div
