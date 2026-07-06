@@ -14,6 +14,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import PrintLabelsModal from "../labels/PrintLabelsModal";
 import { createPortal } from "react-dom";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 function parseFirstImageUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -28,11 +29,7 @@ function formatPrice(val: number | string | null | undefined): string {
   if (val === null || val === undefined || val === "") return "—";
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return "—";
-  return num.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  });
+  return formatCurrency(num);
 }
 
 const StatChip = ({

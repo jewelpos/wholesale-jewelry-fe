@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 export interface SummaryCardDef {
   label: string;
@@ -18,13 +19,7 @@ interface Props {
 }
 
 const fmt = {
-  currency: (v: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(v),
+  currency: (v: number) => formatCurrency(v),
   number: (v: number) => new Intl.NumberFormat("en-US").format(Math.round(v)),
   percent: (v: number) => `${Number(v).toFixed(1)}%`,
   text: (v: string | number) => String(v),

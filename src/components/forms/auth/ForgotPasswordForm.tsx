@@ -4,9 +4,11 @@ import { emailValidation } from "@/lib/utils/validations/authValidations";
 import { ForgotPasswordFormInput } from "@/types/auth";
 import Image from "next/image";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 const ForgotPasswordForm = () => {
+  const { storePrefix } = useParams<{ storePrefix: string }>();
   const {
     register,
     handleSubmit,
@@ -69,7 +71,7 @@ const ForgotPasswordForm = () => {
         <div className="signinform text-center">
           <h4>
             Return to
-            <Link href="/jw/login" className="hover-a">
+            <Link href={`/${storePrefix}/login`} className="hover-a">
               {" "}
               login{" "}
             </Link>

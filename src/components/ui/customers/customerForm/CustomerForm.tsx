@@ -85,6 +85,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const photoPath = getValues("custphotopath");
   const customerid = getValues("customerid");
   const [loading, setLoading] = useState(false);
+  const [pendingDocFiles, setPendingDocFiles] = useState<File[]>([]);
 
   const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
 
@@ -151,6 +152,24 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
         const res = await fetch(url, { method, body: form, headers: authHeaders });
         const data = await res.json();
         if (data.success) {
+          if (!customerId && data.data?.customerid && pendingDocFiles.length > 0) {
+            const newId = data.data.customerid;
+            const uploadToken = await getAccessToken();
+            const uploadHeaders: Record<string, string> = {};
+            if (uploadToken) uploadHeaders["Authorization"] = `Bearer ${uploadToken}`;
+            for (const file of pendingDocFiles) {
+              const fd = new FormData();
+              fd.append("file", file);
+              fd.append("storeid", String(parsedStoreId));
+              fd.append("customerid", String(newId));
+              fd.append("documentname", file.name);
+              try {
+                await fetch("/api/proxy/store/customer/document/upload", { method: "POST", body: fd, headers: uploadHeaders });
+              } catch (err) {
+                console.error("Document upload failed", err);
+              }
+            }
+          }
           dispatch(
             showNotification({
               message: data.message,
@@ -308,6 +327,9 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
             <CustomerDocumentsSection
               customerid={isNaN(parsedCustomerId) ? 0 : parsedCustomerId}
               storeid={parsedStoreId}
+              pendingFiles={pendingDocFiles}
+              onAddPendingFile={(f) => setPendingDocFiles((prev) => [...prev, f])}
+              onRemovePendingFile={(i) => setPendingDocFiles((prev) => prev.filter((_, idx) => idx !== i))}
             />
           </div>
         )}

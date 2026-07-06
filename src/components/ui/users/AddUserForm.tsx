@@ -2,6 +2,7 @@
 
 import useStores from "@/hooks/useStores";
 import { MENU_STATUS_TYPES, NOTIFICATION_TYPES } from "@/lib/config/constants";
+import api from "@/lib/axios";
 
 import {
   CREATE_OUTLET_USER_MUTATION,
@@ -66,7 +67,8 @@ const AddUserForm = () => {
       defaultoutletid: 0,
     },
   });
-  const { fetchStoresData, loading: storesLoading } = useStores();
+  const { fetchStoresData, refetchCurrentStore, loading: storesLoading } = useStores();
+  const isNewUser = !userId;
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const password = getValues("password");
   const roleId = getValues("roleid");
@@ -99,6 +101,13 @@ const AddUserForm = () => {
       router.back();
     },
   });
+
+  useEffect(() => {
+    if (!isNewUser || !parsedStoreId) return;
+    api.post('/store/setup/mark-step', { storeid: parsedStoreId, step: 'users' })
+      .then(() => refetchCurrentStore())
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchStoresData();

@@ -18,9 +18,9 @@ import SelectSupplierInvoice from "@/components/forms/SelectSupplierInvoice";
 import ButtonLoader from "../../ButtonLoader";
 import { handleKeyDownAllowNumberOnly } from "@/lib/utils/utils";
 import dayjs from "dayjs";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+const fmt = (n: number) => formatCurrency(n);
 
 const NewPaymentForm = ({
   storeId,

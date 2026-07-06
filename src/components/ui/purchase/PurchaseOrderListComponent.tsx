@@ -33,6 +33,39 @@ import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../grid/SummaryPanelWrapper";
 
+type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
+
+const DATE_PRESET_LABELS: Record<DatePreset, string> = {
+  all: "All",
+  today: "Today",
+  week: "This Week",
+  month: "This Month",
+  quarter: "This Qtr",
+  year: "This Year",
+};
+
+function getDateRange(preset: DatePreset): { startdate: string; enddate: string } | null {
+  if (preset === "all") return null;
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = fmt(now);
+  if (preset === "today") return { startdate: today, enddate: today };
+  if (preset === "week") {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    return { startdate: fmt(start), enddate: today };
+  }
+  if (preset === "month") {
+    return { startdate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, enddate: today };
+  }
+  if (preset === "quarter") {
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    return { startdate: fmt(qStart), enddate: today };
+  }
+  return { startdate: `${now.getFullYear()}-01-01`, enddate: today };
+}
+
 const PurchaseOrderListComponent = () => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -53,6 +86,7 @@ const PurchaseOrderListComponent = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const knownStatusesRef = useRef(new Set<string>());
   const [knownStatuses, setKnownStatuses] = useState<string[]>([]);
 
@@ -65,9 +99,11 @@ const PurchaseOrderListComponent = () => {
   const debouncedSearchRef = useRef(debouncedSearch);
   const selectedSupplierRef = useRef(selectedSupplier);
   const statusFilterRef = useRef(statusFilter);
+  const datePresetRef = useRef(datePreset);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
   useEffect(() => { selectedSupplierRef.current = selectedSupplier; }, [selectedSupplier]);
   useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
+  useEffect(() => { datePresetRef.current = datePreset; }, [datePreset]);
 
   // Stable datasource — created once, reads filters from refs
   const datasource = useMemo(
@@ -82,6 +118,13 @@ const PurchaseOrderListComponent = () => {
           filters.filters = [
             ...filters.filters,
             { key: "status", value: { filterType: "text", type: "equals", filter: statusFilterRef.current } },
+          ];
+        }
+        const dateRange = getDateRange(datePresetRef.current);
+        if (dateRange) {
+          filters.filters = [
+            ...filters.filters,
+            { key: "podate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } },
           ];
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,7 +213,7 @@ const PurchaseOrderListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, selectedSupplier, statusFilter]);
+  }, [debouncedSearch, selectedSupplier, statusFilter, datePreset]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 
@@ -260,9 +303,10 @@ const PurchaseOrderListComponent = () => {
               selectedSupplier={selectedSupplier}
               setSelectedSupplier={setSelectedSupplier}
             />
-            {knownStatuses.length > 0 && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                {[null, ...knownStatuses].map((s) => {
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ marginBottom: 8 }}>
+              {/* Status pills — left */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {knownStatuses.length > 0 && [null, ...knownStatuses].map((s) => {
                   const isActive = statusFilter === s;
                   return (
                     <button
@@ -288,7 +332,21 @@ const PurchaseOrderListComponent = () => {
                   );
                 })}
               </div>
-            )}
+              {/* Date preset pills — right */}
+              <div className="btn-group btn-group-sm">
+                {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`btn ${datePreset === p ? "btn-secondary" : "btn-outline-secondary"}`}
+                    style={{ fontSize: 11, padding: "3px 10px" }}
+                    onClick={() => setDatePreset(p)}
+                  >
+                    {DATE_PRESET_LABELS[p]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div style={{ flex: 1, minHeight: 0 }}>
               <POSGrid
                 ref={gridRef}

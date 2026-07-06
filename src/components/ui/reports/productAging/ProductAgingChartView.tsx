@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 import { GET_PRODUCT_AGING_LIST_QUERY } from "@/lib/graphql/query/products";
 import { ItemAgingSummary } from "@/types/product";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
@@ -44,8 +45,6 @@ const bucketColors = (bucket: string) => {
   return { bg: "#f1f5f9", border: "#cbd5e1", text: "#475569", solid: "#94a3b8" };
 };
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
 interface Props {
   storeid: number;
@@ -143,7 +142,7 @@ const ProductAgingChartView = ({ storeid, outletid, warehouseid }: Props) => {
           label: (ctx) =>
             ctx.datasetIndex === 0
               ? ` ${ctx.parsed.y} items`
-              : ` ${fmt(ctx.parsed.y ?? 0)}`,
+              : ` ${formatCurrency(ctx.parsed.y ?? 0)}`,
         },
       },
     },
@@ -164,7 +163,7 @@ const ProductAgingChartView = ({ storeid, outletid, warehouseid }: Props) => {
         grid: { display: false },
         ticks: {
           font: { size: 11 },
-          callback: (v) => `$${(Number(v) / 1000).toFixed(0)}k`,
+          callback: (v) => formatCurrency(Number(v)),
         },
         title: { display: true, text: "Stock Cost", font: { size: 10 }, color: "#94a3b8" },
       },
@@ -208,7 +207,7 @@ const ProductAgingChartView = ({ storeid, outletid, warehouseid }: Props) => {
           <div>
             <div className="fw-semibold" style={{ fontSize: 14 }}>Aging Distribution</div>
             <div className="text-muted" style={{ fontSize: 12 }}>
-              {loading ? "Loading…" : `${totalItems} items · ${fmt(totalCost)} total cost`}
+              {loading ? "Loading…" : `${totalItems} items · ${formatCurrency(totalCost)} total cost`}
             </div>
           </div>
           <div className="d-flex align-items-center gap-2 flex-wrap">

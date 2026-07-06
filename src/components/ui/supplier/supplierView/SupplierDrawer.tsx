@@ -12,6 +12,7 @@ import {
 } from "@/lib/graphql/query/supplier";
 import { SupplierListType } from "@/types/supplier";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -19,11 +20,7 @@ function fmt(val: number | string | null | undefined): string {
   if (val === null || val === undefined || val === "") return "—";
   const n = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(n)) return "—";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  });
+  return formatCurrency(n);
 }
 
 function fmtDate(val: string | null | undefined): string | null {

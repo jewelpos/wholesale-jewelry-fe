@@ -3,9 +3,9 @@
 import React, { useEffect } from "react";
 import { useLazyQuery } from "@apollo/client";
 import { GET_PURCHASE_ORDER_STATS_QUERY } from "@/lib/graphql/query/purchase";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => formatCurrency(n);
 
 interface Props {
   storeid: number;

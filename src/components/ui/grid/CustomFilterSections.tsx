@@ -88,26 +88,23 @@ const CustomFilterSections = ({
             </span>
           </div>
           {gridRef && (
-            <div
-              className="form-check form-switch d-flex align-items-center gap-1 mb-0"
-              style={{ paddingLeft: 0 }}
+            <button
+              type="button"
+              onClick={() => handleFilterToggle(!showFilters)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                borderRadius: 6, border: showFilters ? "1px solid #6366f1" : "1px solid #dee2e6",
+                background: showFilters ? "#eef2ff" : "#fff",
+                color: showFilters ? "#6366f1" : "#64748b",
+                cursor: "pointer", whiteSpace: "nowrap", transition: "0.15s",
+              }}
             >
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="advancedFiltersToggle"
-                checked={showFilters}
-                onChange={(e) => handleFilterToggle(e.target.checked)}
-                style={{ cursor: "pointer", marginLeft: 0 }}
-              />
-              <label
-                className="form-check-label"
-                htmlFor="advancedFiltersToggle"
-                style={{ cursor: "pointer", fontSize: 12, color: "#64748b", userSelect: "none" }}
-              >
-                Filters
-              </label>
-            </div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+              </svg>
+              Filters
+            </button>
           )}
         </div>
         {setSelectedOutlet && (

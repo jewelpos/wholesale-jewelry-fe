@@ -112,7 +112,8 @@ api.interceptors.response.use(
 
         // If we're in the browser environment, redirect to login
         if (typeof window !== "undefined") {
-          window.location.href = "/jw/login";
+          const prefix = window.location.pathname.split("/")[1] || "jw";
+          window.location.href = `/${prefix}/login`;
         }
 
         return Promise.reject(refreshError);

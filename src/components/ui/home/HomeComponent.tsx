@@ -2,10 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store/hook";
 
 const HomeComponent = () => {
   const user = useAppSelector((state) => state.user.data);
+  const { storePrefix } = useParams<{ storePrefix: string }>();
 
   return (
     <div className="content d-flex align-items-center justify-content-center" style={{ minHeight: "60vh" }}>
@@ -31,7 +33,7 @@ const HomeComponent = () => {
         <p style={{ color: "var(--text-secondary, #64748b)", fontSize: 14, marginBottom: 24 }}>
           Set up your store to get started. Once your store is ready, you&apos;ll have access to your full dashboard.
         </p>
-        <Link href="/jw/store/create" className="btn btn-primary rounded-pill px-4">
+        <Link href={`/${storePrefix}/store/create`} className="btn btn-primary rounded-pill px-4">
           Create your store →
         </Link>
       </div>

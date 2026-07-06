@@ -2,6 +2,7 @@
 
 import React from "react";
 import { TrendingUp, DollarSign, AlertTriangle, Calendar, CreditCard, Percent, Clock, Activity } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 type Balance = {
   customerid: number;
@@ -22,9 +23,6 @@ type Props = {
   loading: boolean;
   paymentBehaviorBadge?: React.ReactNode;
 };
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
 const formatNumber = (n: number) =>
   new Intl.NumberFormat("en-US").format(Math.round(n));

@@ -14,6 +14,7 @@ import {
   ChartOptions,
 } from "chart.js";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 ChartJS.register(
   CategoryScale,
@@ -39,13 +40,7 @@ export interface ReportMiniChartProps {
 }
 
 const fmt = {
-  currency: (v: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(v),
+  currency: (v: number) => formatCurrency(v),
   number: (v: number) =>
     new Intl.NumberFormat("en-US", {
       notation: "compact",

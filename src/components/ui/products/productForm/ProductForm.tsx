@@ -11,6 +11,7 @@ import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import useStores from "@/hooks/useStores";
 import { ProductFormType } from "@/types/product";
 import { BulkDiscountTierRow } from "@/types/promotion";
 import api from "@/lib/axios";
@@ -29,9 +30,11 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const { itemcode } = useParams();
   const dispatch = useDispatch();
   const router = useRouter();
+  const { refetchCurrentStore } = useStores();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const isEdit = !!itemcode;
+  const isNewProduct = !itemcode;
 
   const [productImages, setProductImages] = useState<File[]>([]);
   const [loading] = useState(false);
@@ -117,6 +120,13 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       storeid: parsedStoreId,
     },
   });
+
+  useEffect(() => {
+    if (!isNewProduct || !parsedStoreId) return;
+    api.post('/store/setup/mark-step', { storeid: parsedStoreId, step: 'product' })
+      .then(() => refetchCurrentStore())
+      .catch(() => {});
+  }, []);
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,

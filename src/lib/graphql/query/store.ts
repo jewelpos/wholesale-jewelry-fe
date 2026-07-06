@@ -24,6 +24,7 @@ export const GET_STORES = gql`
       hassetupinventory
       hassetupproduct
       hassetupreceipt
+      routeprefix
       outlets {
         outletid
         outletname
@@ -49,6 +50,10 @@ export const GET_STORE = gql`
       hassetupinventory
       hassetupproduct
       hassetupreceipt
+      hassetuplayout
+      defaultprintlayout
+      currencycode
+      routeprefix
       outlets {
         outletid
         outletname

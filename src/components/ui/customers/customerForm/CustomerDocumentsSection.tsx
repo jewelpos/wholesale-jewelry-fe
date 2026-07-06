@@ -24,6 +24,9 @@ interface CustomerDocument {
 interface Props {
   customerid: number;
   storeid: number;
+  pendingFiles?: File[];
+  onAddPendingFile?: (file: File) => void;
+  onRemovePendingFile?: (index: number) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -40,8 +43,9 @@ function canPreview(mimeType: string): "image" | "pdf" | null {
   return null;
 }
 
-export default function CustomerDocumentsSection({ customerid, storeid }: Props) {
+export default function CustomerDocumentsSection({ customerid, storeid, pendingFiles = [], onAddPendingFile, onRemovePendingFile }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingInputRef = useRef<HTMLInputElement>(null);
   const uploadingRef = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<CustomerDocument | null>(null);
@@ -113,7 +117,30 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
           <FileText size={14} strokeWidth={2} color="#0d6efd" />
           Customer Documents
         </h6>
-        {!isNewCustomer && (
+        {isNewCustomer ? (
+          <>
+            <input
+              ref={pendingInputRef}
+              type="file"
+              accept="*/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onAddPendingFile?.(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+              style={{ fontSize: 12 }}
+              onClick={() => pendingInputRef.current?.click()}
+            >
+              <Upload size={12} />
+              Attach File
+            </button>
+          </>
+        ) : (
           <>
             <input
               ref={fileInputRef}
@@ -138,9 +165,44 @@ export default function CustomerDocumentsSection({ customerid, storeid }: Props)
 
       <div className="card-body p-0">
         {isNewCustomer ? (
-          <div className="p-3 text-muted" style={{ fontSize: 13 }}>
-            Save the customer first to upload documents.
-          </div>
+          pendingFiles.length === 0 ? (
+            <div className="p-3 text-muted" style={{ fontSize: 13 }}>
+              No files attached. Files will be uploaded when you save.
+            </div>
+          ) : (
+            <table className="table table-sm mb-0" style={{ fontSize: 12 }}>
+              <thead style={{ background: "#f8f9fa" }}>
+                <tr>
+                  <th style={{ padding: "8px 12px", fontWeight: 600 }}>Name</th>
+                  <th style={{ padding: "8px 12px", fontWeight: 600 }}>Size</th>
+                  <th style={{ padding: "8px 12px", fontWeight: 600 }}>Status</th>
+                  <th style={{ padding: "8px 12px", fontWeight: 600, textAlign: "right" }}>Remove</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingFiles.map((f, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    <td style={{ padding: "7px 12px" }}>{f.name}</td>
+                    <td style={{ padding: "7px 12px", color: "#6c757d" }}>{formatBytes(f.size)}</td>
+                    <td style={{ padding: "7px 12px" }}>
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "#fff3cd", color: "#856404", border: "1px solid #ffc107" }}>
+                        Pending
+                      </span>
+                    </td>
+                    <td style={{ padding: "7px 12px", textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => onRemovePendingFile?.(i)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#dc3545" }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
         ) : loading ? (
           <div className="p-3 text-muted" style={{ fontSize: 13 }}>
             Loading documents...

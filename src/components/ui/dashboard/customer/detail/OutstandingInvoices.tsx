@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 type Invoice = {
   invoicenumber: number;
@@ -16,9 +17,6 @@ type Props = {
   invoices: Invoice[];
   loading: boolean;
 };
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
 const num = (v: number | null | undefined) => Number(v ?? 0);
 

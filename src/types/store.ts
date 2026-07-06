@@ -33,6 +33,10 @@ export type Store = {
   hassetupinventory: boolean;
   hassetupproduct: boolean;
   hassetupreceipt: boolean;
+  hassetuplayout: boolean;
+  defaultprintlayout?: string;
+  currencycode?: string;
+  routeprefix?: string;
   outlets?: {
     outletid: number;
     outletname: string;

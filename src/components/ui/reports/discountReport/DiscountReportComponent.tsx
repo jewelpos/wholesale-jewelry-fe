@@ -13,7 +13,7 @@ import { GET_DISCOUNT_REPORT_QUERY } from "@/lib/graphql/query/discountReport";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 const { RangePicker } = DatePicker;
 
@@ -49,8 +49,8 @@ const columnDefs: ColDef[] = [
   },
   { field: 'promotionname', headerName: 'Promo Name', width: 140 },
   { field: 'discountpercent', headerName: 'Disc %', width: 90, valueFormatter: ({ value }) => value != null ? `${Number(value).toFixed(2)}%` : '' },
-  { field: 'discountamount', headerName: 'Disc Amt', width: 110, valueFormatter: ({ value }) => detectUserCurrency().format(Number(value || 0)), type: 'numericColumn' },
-  { field: 'netamount', headerName: 'Net Amt', width: 110, valueFormatter: ({ value }) => detectUserCurrency().format(Number(value || 0)), type: 'numericColumn' },
+  { field: 'discountamount', headerName: 'Disc Amt', width: 110, valueFormatter: ({ value }) => formatCurrency(Number(value || 0)), type: 'numericColumn' },
+  { field: 'netamount', headerName: 'Net Amt', width: 110, valueFormatter: ({ value }) => formatCurrency(Number(value || 0)), type: 'numericColumn' },
   { field: 'warehousename', headerName: 'Warehouse', width: 120 },
 ];
 
@@ -90,7 +90,6 @@ const DiscountReportComponent = () => {
   };
 
   const totalDiscount = summary.reduce((acc, s) => acc + Number(s.totaldiscountamount ?? 0), 0);
-  const fmt = detectUserCurrency().format;
 
   return (
     <div className="content">
@@ -135,7 +134,7 @@ const DiscountReportComponent = () => {
             <div className="card h-100" style={{ minWidth: 160 }}>
               <div className="card-body py-2 px-3">
                 <div className="text-muted" style={{ fontSize: 11 }}>Total Discount</div>
-                <div className="fw-bold" style={{ fontSize: 18 }}>{fmt(totalDiscount)}</div>
+                <div className="fw-bold" style={{ fontSize: 18 }}>{formatCurrency(totalDiscount)}</div>
                 <div className="text-muted" style={{ fontSize: 11 }}>{rows.length} lines</div>
               </div>
             </div>
@@ -147,7 +146,7 @@ const DiscountReportComponent = () => {
                 <div className="card h-100" style={{ minWidth: 140, borderTop: `3px solid ${c.color}` }}>
                   <div className="card-body py-2 px-3">
                     <div style={{ fontSize: 11, color: c.color, fontWeight: 600 }}>{SOURCE_LABELS[s.discountsource] ?? s.discountsource}</div>
-                    <div className="fw-bold" style={{ fontSize: 16 }}>{fmt(Number(s.totaldiscountamount))}</div>
+                    <div className="fw-bold" style={{ fontSize: 16 }}>{formatCurrency(Number(s.totaldiscountamount))}</div>
                     <div className="text-muted" style={{ fontSize: 11 }}>{s.totallines} lines</div>
                   </div>
                 </div>

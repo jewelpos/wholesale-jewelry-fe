@@ -82,8 +82,7 @@ const WarehouseBreakdown = ({ rows, loading }: Props) => {
           font: { size: 11 },
           callback: (v: number | string) => {
             const n = typeof v === "number" ? v : parseFloat(v as string);
-            if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
-            return `$${n}`;
+            return formatCurrency(n);
           },
         },
       },

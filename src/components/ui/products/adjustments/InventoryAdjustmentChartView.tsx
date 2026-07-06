@@ -12,7 +12,7 @@ import {
   ChartOptions,
 } from "chart.js";
 import { InventoryAdjustmentChartResponse } from "@/types/product";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -21,7 +21,6 @@ interface Props {
   loading: boolean;
 }
 
-const fmt = detectUserCurrency().format;
 
 const InventoryAdjustmentChartView = ({ data, loading }: Props) => {
   if (loading) {
@@ -90,7 +89,7 @@ const InventoryAdjustmentChartView = ({ data, loading }: Props) => {
             const item = data.items[ctx.dataIndex];
             return ctx.datasetIndex === 0
               ? `  Qty Adjusted: ${item.total_qty_adjusted}  (${item.adjustment_count} records)`
-              : `  Cost Adjusted: ${fmt(item.total_cost_adjusted)}`;
+              : `  Cost Adjusted: ${formatCurrency(item.total_cost_adjusted)}`;
           },
         },
       },
@@ -106,7 +105,7 @@ const InventoryAdjustmentChartView = ({ data, loading }: Props) => {
       yCost: {
         type: "linear", position: "right", beginAtZero: true,
         grid: { display: false },
-        ticks: { font: { size: 10 }, callback: (v) => `$${Number(v) / 1000}k` },
+        ticks: { font: { size: 10 }, callback: (v) => formatCurrency(Number(v)) },
         title: { display: true, text: "Cost", font: { size: 10 }, color: "#94a3b8" },
       },
     },
@@ -116,7 +115,7 @@ const InventoryAdjustmentChartView = ({ data, loading }: Props) => {
     { label: "TOTAL RECORDS",    value: data.total_adjustments,             bg: "#dbeafe", border: "#93c5fd", text: "#1e40af", format: (v: number) => String(v) },
     { label: "ITEMS AFFECTED",   value: data.items_affected,                bg: "#dcfce7", border: "#86efac", text: "#166534", format: (v: number) => String(v) },
     { label: "TOTAL QTY MOVED",  value: data.total_qty,                     bg: "#ffedd5", border: "#fdba74", text: "#9a3412", format: (v: number) => String(v) },
-    { label: "TOTAL COST ADJ.",  value: data.total_cost,                    bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", format: (v: number) => fmt(v) },
+    { label: "TOTAL COST ADJ.",  value: data.total_cost,                    bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", format: (v: number) => formatCurrency(v) },
   ];
 
   return (

@@ -38,6 +38,7 @@ import {
   getSalesColumnStateForMode,
 } from "./salesMatrixColumnDef";
 import MultiOutletSelect from "@/components/ui/products/inventoryPivot/MultiOutletSelect";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "@/components/ui/grid/SummaryPanelWrapper";
 
@@ -381,12 +382,7 @@ const SalesMatrixComponent = () => {
           cornerRadius: 6,
           callbacks: {
             label: (ctx: any) =>
-              `${ctx.dataset.label}: ${new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                notation: "compact",
-                maximumFractionDigits: 1,
-              }).format(ctx.parsed.y)}`,
+              `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`,
           },
         },
       },

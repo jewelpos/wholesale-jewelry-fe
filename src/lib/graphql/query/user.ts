@@ -58,6 +58,10 @@ export const GET_USERS_LIST_QUERY = gql`
       rolename
       outletid
       outletname
+      creationdatetime
+      otpverified
+      emailverified
+      deletedat
     }
   }
 `;

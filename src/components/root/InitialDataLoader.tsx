@@ -9,6 +9,7 @@ import FullPageLoader from "../ui/FullPageLoader";
 import useAuth from "@/hooks/useAuth";
 import useStores from "@/hooks/useStores";
 import useUserData from "@/hooks/useUserData";
+import { setCurrencyCode } from "@/lib/utils/currencyFormat";
 import "ag-grid-enterprise";
 import { LicenseManager } from "ag-grid-enterprise";
 
@@ -30,6 +31,11 @@ const InitialDataLoader = ({
   const { loading: storeLoading, fetchStoresData } = useStores();
   const { fetchUserData, loading: userDataLoading } = useUserData();
   const stores = useAppSelector((state) => state.stores.data);
+  const storeCurrencyCode = useAppSelector((state) => state.store.data?.currencycode);
+
+  useEffect(() => {
+    setCurrencyCode(storeCurrencyCode);
+  }, [storeCurrencyCode]);
 
   useEffect(() => {
     if (stores?.length && (!storeId || !outletId)) {
@@ -45,14 +51,16 @@ const InitialDataLoader = ({
         return "home";
       };
       if (defaultStore) {
+        const prefix = defaultStore.routeprefix ?? "jw";
         router.push(
-          `/jw/${defaultStore?.storeid}/${
+          `/${prefix}/${defaultStore?.storeid}/${
             defaultStore?.outlets?.find((o) => o.isdefaultoutlet)?.outletid
           }/${getLandingPage(storeIsSetup)}`
         );
       } else {
+        const prefix = stores[0].routeprefix ?? "jw";
         router.push(
-          `/jw/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/${getLandingPage(
+          `/${prefix}/${stores[0].storeid}/${stores[0]?.outlets?.[0]?.outletid}/${getLandingPage(
             stores[0]?.hassetupoutlet || stores[0]?.hassetupproduct
           )}`
         );

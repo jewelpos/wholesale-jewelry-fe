@@ -16,9 +16,9 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { CREATE_SUPPLIER_VOIDED_PAYMENT_MUTATION } from "@/lib/graphql/mutations/supplier";
 import { useMutation } from "@apollo/client";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+const fmt = (n: number) => formatCurrency(n);
 
 const VoidPaymentForm = ({
   storeId,

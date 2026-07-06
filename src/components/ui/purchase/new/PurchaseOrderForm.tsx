@@ -12,7 +12,7 @@ import SelectPurchaseOrder from "@/components/forms/SelectPurchaseOrder";
 import SelectProduct from "@/components/forms/SelectProduct";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 import { Controller, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -76,32 +76,9 @@ const PurchaseOrderForm = ({
   const [showImportWizard, setShowImportWizard] = useState(false);
   const [pendingImportMeta, setPendingImportMeta] = useState<{ fileName: string; count: number } | null>(null);
 
-  const currencyFormatter = useMemo(() => {
-    if (typeof navigator === "undefined") {
-      return {
-        formatFixed: (amount: number) => amount.toFixed(2),
-      };
-    }
-
-    const detected = detectUserCurrency();
-    const userLocale = navigator.language || "en-US";
-    const formatter = new Intl.NumberFormat(userLocale, {
-      style: "currency",
-      currency: detected.code,
-      currencyDisplay: "symbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-    return {
-      formatFixed: (amount: number) => formatter.format(amount),
-    };
-  }, []);
-
   const formatMoney = (raw: unknown) => {
     const n = typeof raw === "number" ? raw : Number(raw || 0);
-    const safe = Number.isFinite(n) ? n : 0;
-    return currencyFormatter.formatFixed(safe);
+    return formatCurrency(Number.isFinite(n) ? n : 0);
   };
 
   const [createPurchaseOrder, { loading: creating }] = useMutation(

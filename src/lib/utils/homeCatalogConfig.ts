@@ -10,6 +10,14 @@ const sharedTiles: CatalogTile[] = [
     setupFlag: "hassetupusers",
   },
   {
+    icon: "/assets/img/gif/receipt.gif",
+    title: "Choose your invoice layout",
+    para: "Pick how your invoices and documents look when printed or emailed to customers.",
+    btnText: "Choose layout",
+    btnUrl: "/invoice-layout",
+    setupFlag: "hassetuplayout",
+  },
+  {
     icon: "/assets/img/gif/tax.gif",
     title: "Organize your sales taxes",
     para: "Set up tax rates so your invoices and reports stay accurate.",

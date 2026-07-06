@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useMutation } from "@apollo/client";
 import { CANCEL_INVOICE_MUTATION } from "@/lib/graphql/mutations/sales";
-import { useAppDispatch } from "@/lib/store/hook";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesInvoiceListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, MessageCircle, Printer, Mail, Trash2 } from "react-feather";
+import { Edit, Eye, MessageCircle, Printer, Mail, Trash2, ChevronDown } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
@@ -18,6 +18,15 @@ import api from "@/lib/axios";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
+type PrintTemplate = 'compact' | 'thumbnail' | 'barcode' | 'packing_slip';
+
+const TEMPLATE_LABELS: Record<PrintTemplate, string> = {
+  compact:      'Standard',
+  thumbnail:    'With Photos',
+  barcode:      'With Barcodes',
+  packing_slip: 'Packing Slip',
+};
+
 interface SalesActionsProps {
   data: SalesInvoiceListType;
   node: IRowNode<SalesInvoiceListType>;
@@ -25,6 +34,7 @@ interface SalesActionsProps {
 
 const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const dispatch = useAppDispatch();
+  const storeData = useAppSelector((state) => state.store.data);
   const [cancelInvoice] = useMutation(CANCEL_INVOICE_MUTATION);
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam } = useParams();
@@ -33,6 +43,10 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showEmail, setShowEmail] = useState(false);
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const defaultTemplate = (storeData?.defaultprintlayout || 'compact') as PrintTemplate;
 
   const handleSendSMS = async () => {
     setSmsSending(true);
@@ -49,12 +63,13 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     }
   };
 
-  const handlePrint = async () => {
+  const handlePrint = async (template: PrintTemplate = defaultTemplate) => {
+    setShowTemplateMenu(false);
     setPrinting(true);
     try {
       const response = await api.post(
         `/store/invoice/print`,
-        { storeid: parsedStoreId, invoicenumbers: [data.invoicenumber] },
+        { storeid: parsedStoreId, invoicenumbers: [data.invoicenumber], template },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );
       if (response.data) {
@@ -147,11 +162,36 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
             </span>
           )}
 
-          {/* Print */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
-            onClick={handlePrint} disabled={printing} title="Print Invoice">
-            <Printer size={14} />
-          </button>
+          {/* Print split-button */}
+          <div ref={menuRef} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+              onClick={() => handlePrint(defaultTemplate)} disabled={printing}
+              title={`Print Invoice (${TEMPLATE_LABELS[defaultTemplate]})`}>
+              <Printer size={14} />
+            </button>
+            <button type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, lineHeight: 1, paddingLeft: 1 }}
+              onClick={() => setShowTemplateMenu(v => !v)} disabled={printing} title="Choose print layout">
+              <ChevronDown size={10} />
+            </button>
+            {showTemplateMenu && (
+              <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 148, padding: "4px 0" }}
+                onMouseLeave={() => setShowTemplateMenu(false)}>
+                {(Object.keys(TEMPLATE_LABELS) as PrintTemplate[]).map(t => (
+                  <button key={t} type="button" className="dropdown-item"
+                    style={{ fontSize: 12, padding: "4px 12px", background: t === defaultTemplate ? "#f0f4ff" : undefined, fontWeight: t === defaultTemplate ? 600 : undefined }}
+                    onClick={() => handlePrint(t)}>
+                    {TEMPLATE_LABELS[t]}{t === defaultTemplate ? " ★" : ""}
+                  </button>
+                ))}
+                <div style={{ borderTop: "1px solid #dee2e6", margin: "4px 0" }} />
+                <Link href={`${basePath}/invoice-layout`} className="dropdown-item" scroll={false}
+                  style={{ fontSize: 12, padding: "4px 12px", color: "#0d6efd" }}
+                  onClick={() => setShowTemplateMenu(false)}>
+                  Change default…
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Email */}
           <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}

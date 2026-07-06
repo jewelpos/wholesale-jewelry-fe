@@ -44,7 +44,7 @@ import type { ProductSettingsInfo } from "@/types/product";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { useCurrency } from "@/hooks/useCurrency";
 import api from "@/lib/axios";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
@@ -343,27 +343,7 @@ const SalesInvoiceFormV2 = ({
     setEmailModalDocNumber(docNumber);
   };
 
-  const currencyFormatter = useMemo(() => {
-    if (typeof navigator === "undefined") {
-      return {
-        formatFixed: (amount: number) => amount.toFixed(2),
-      };
-    }
-
-    const detected = detectUserCurrency();
-    const userLocale = navigator.language || "en-US";
-    const formatter = new Intl.NumberFormat(userLocale, {
-      style: "currency",
-      currency: detected.code,
-      currencyDisplay: "symbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-    return {
-      formatFixed: (amount: number) => formatter.format(amount),
-    };
-  }, []);
+  const currencyFormatter = useCurrency();
 
   const formatMoney = (raw: unknown) => {
     const n = typeof raw === "number" ? raw : Number(raw || 0);

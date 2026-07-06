@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 type Payment = {
   paymentdate: string | null;
@@ -18,13 +19,6 @@ type Props = {
   storeId: number;
   outletId: number;
 };
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 
 const num = (v: number | null | undefined) => Number(v ?? 0);
 

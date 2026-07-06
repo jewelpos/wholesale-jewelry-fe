@@ -11,10 +11,14 @@ import {
   GET_ITEM_SUBCATEGORIES_QUERY,
   GET_PRODUCT_LIST_QUERY,
   GET_PRODUCT_STATS_QUERY,
+  GET_PRODUCT_ACTIVITY_CHART_QUERY,
 } from "@/lib/graphql/query/products";
+import ActivityTimeline from "../activities/ActivityTimeline";
+import { ProductActivityChartPoint } from "@/types/product";
 import { useUserRole } from "@/hooks/useUserRole";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import PrintLabelsModal from "../labels/PrintLabelsModal";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 function parseFirstImageUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -29,11 +33,7 @@ function fmt(val: number | string | null | undefined): string {
   if (val === null || val === undefined || val === "") return "—";
   const n = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(n)) return "—";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  });
+  return formatCurrency(n);
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -149,10 +149,18 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
   const [visible, setVisible] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [statsLoaded, setStatsLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
+  const [activityLoaded, setActivityLoaded] = useState(false);
 
   const [fetchStats, { data: statsData, loading: statsLoading }] = useLazyQuery(GET_PRODUCT_STATS_QUERY, {
     fetchPolicy: "cache-first",
   });
+
+  const [fetchActivity, { data: activityData, loading: activityLoading }] = useLazyQuery(
+    GET_PRODUCT_ACTIVITY_CHART_QUERY,
+    { fetchPolicy: "cache-first" },
+  );
+  const chartData: ProductActivityChartPoint[] = activityData?.getProductActivityChart ?? [];
 
   const stats = statsData?.getProductStats;
   const { basePath } = useDefaultRoute();
@@ -193,6 +201,23 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
   });
 
   const product = productData?.getProductByItemCode;
+
+  useEffect(() => {
+    if (activeTab === "activity" && !activityLoaded && product?.itemid && storeId) {
+      setActivityLoaded(true);
+      fetchActivity({
+        variables: {
+          storeid: storeId,
+          itemid: Number(product.itemid),
+          outletid: outletId || null,
+          warehouseid: null,
+          dateFrom: null,
+          dateTo: null,
+        },
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activityLoaded, product?.itemid, storeId, outletId]);
 
   const { data: subcatData } = useQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
     variables: { storeid: storeId, categoryid: product?.itemcategoryid },
@@ -421,9 +446,45 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
         </div>
       </div>
 
+      {/* ── Tab bar ───────────────────────────────────────── */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", flexShrink: 0 }}>
+        {(["details", "activity"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab ? "2px solid #0f172a" : "2px solid transparent",
+              fontSize: 12,
+              fontWeight: activeTab === tab ? 700 : 500,
+              color: activeTab === tab ? "#0f172a" : "#94a3b8",
+              cursor: "pointer",
+              textTransform: "capitalize",
+              letterSpacing: "0.3px",
+            }}
+          >
+            {tab === "details" ? "Details" : "Activity"}
+          </button>
+        ))}
+      </div>
+
       {/* ── Scrollable body ────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {loading ? (
+        {activeTab === "activity" ? (
+          <div style={{ padding: "14px 14px 28px" }}>
+            {activityLoading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "24px 0" }}>
+                <div className="spinner-border spinner-border-sm text-secondary" />
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>Loading activity…</span>
+              </div>
+            ) : (
+              <ActivityTimeline data={chartData} />
+            )}
+          </div>
+        ) : loading ? (
           <div
             style={{
               display: "flex",

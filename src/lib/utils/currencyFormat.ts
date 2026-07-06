@@ -1,116 +1,52 @@
-/**
- * Utility function to automatically detect a user's currency using browser APIs
- * @returns {Object} Object containing currency code, symbol, and formatting functions
- */
-export function detectUserCurrency() {
-    try {
-        // Get user's locale from browser
-        const userLocale = navigator.language || 'en-US';
+// Module-level active currency — set once when store data loads, used everywhere.
+let _code = 'USD';
+let _formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
-        // Get currency information based on the locale
-        const formatter = new Intl.NumberFormat(userLocale, {
-            style: 'currency',
-            currency: getCurrencyFromLocale(userLocale),
-            currencyDisplay: 'symbol'
-        });
+export function setCurrencyCode(code: string | null | undefined) {
+  const c = (code || 'USD').toUpperCase();
+  if (c === _code) return;
+  _code = c;
+  try {
+    _formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: c });
+  } catch {
+    _formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  }
+}
 
-        // Extract currency code from the formatter
-        const parts = formatter.formatToParts(123);
-        const currencyPart = parts.find(part => part.type === 'currency');
-        const currencyCode = getCurrencyFromLocale(userLocale);
-        const currencySymbol = currencyPart ? currencyPart.value : '$';
+export function getCurrencyCode() {
+  return _code;
+}
 
-        return {
-            code: currencyCode,
-            symbol: currencySymbol,
-            format: (amount: string | number | bigint) => formatter.format(typeof amount === 'string' ? parseFloat(amount) : amount),
-            formatWithoutSymbol: (amount: string | number | bigint) => {
-                return formatter.formatToParts(typeof amount === 'string' ? parseFloat(amount) : amount)
-                    .filter(part => part.type !== 'currency' && part.type !== 'literal')
-                    .map(part => part.value)
-                    .join('');
-            }
-        };
-    } catch (error) {
-        console.error('Error detecting currency:', error);
-        // Default to USD on error
-        return {
-            code: 'USD',
-            symbol: '$',
-            format: (amount: number) => `$${amount.toFixed(2)}`,
-            formatWithoutSymbol: (amount: number) => amount.toFixed(2)
-        };
-    }
+/** Format a number using the active store currency. Safe to call outside React. */
+export function formatCurrency(amount: number | string | null | undefined): string {
+  const n = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
+  return _formatter.format(Number.isFinite(n) ? n : 0);
 }
 
 /**
- * Maps common locales to their default currency codes
- * @param {string} locale - Browser locale string (e.g., 'en-US', 'ja-JP')
- * @returns {string} ISO currency code
+ * Build a formatter object for use inside React components (via useCurrency hook).
+ * Falls back to USD on invalid code.
  */
-function getCurrencyFromLocale(locale: string) {
-    const localeCurrencyMap: { [key: string]: string } = {
-        'en-US': 'USD',
-        'en-GB': 'GBP',
-        'en-CA': 'CAD',
-        'en-AU': 'AUD',
-        'en-NZ': 'NZD',
-        'ja-JP': 'JPY',
-        'zh-CN': 'CNY',
-        'zh-HK': 'HKD',
-        'zh-TW': 'TWD',
-        'ko-KR': 'KRW',
-        'de-DE': 'EUR',
-        'fr-FR': 'EUR',
-        'it-IT': 'EUR',
-        'es-ES': 'EUR',
-        'ru-RU': 'RUB',
-        'pt-BR': 'BRL',
-        'hi-IN': 'INR',
-        'tr-TR': 'TRY'
+export function makeCurrencyFormatter(currencyCode?: string | null) {
+  const code = (currencyCode || 'USD').toUpperCase();
+  try {
+    const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
+    return {
+      code,
+      format: (amount: number | string) => fmt.format(typeof amount === 'string' ? parseFloat(amount) || 0 : amount),
+      formatFixed: (amount: number | string) => fmt.format(typeof amount === 'string' ? parseFloat(amount) || 0 : amount),
     };
-
-    // Check if we have a direct mapping
-    if (localeCurrencyMap[locale as keyof typeof localeCurrencyMap]) {
-        return localeCurrencyMap[locale];
-    }
-
-    // Extract country code and check if it matches a currency
-    const countryCode = locale.split('-')[1];
-    if (countryCode) {
-        switch (countryCode) {
-            case 'US': return 'USD';
-            case 'GB': return 'GBP';
-            case 'CA': return 'CAD';
-            case 'AU': return 'AUD';
-            case 'JP': return 'JPY';
-            case 'CN': return 'CNY';
-            case 'HK': return 'HKD';
-            case 'KR': return 'KRW';
-            case 'IN': return 'INR';
-            // Euro countries
-            case 'DE':
-            case 'FR':
-            case 'IT':
-            case 'ES':
-            case 'PT':
-            case 'NL':
-            case 'BE':
-            case 'AT':
-            case 'FI':
-            case 'IE':
-                return 'EUR';
-            default:
-                return 'USD'; // Default to USD if unknown
-        }
-    }
-
-    return 'USD'; // Default fallback
+  } catch {
+    const fallback = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    return {
+      code: 'USD',
+      format: (amount: number | string) => fallback.format(typeof amount === 'string' ? parseFloat(amount) || 0 : amount),
+      formatFixed: (amount: number | string) => fallback.format(typeof amount === 'string' ? parseFloat(amount) || 0 : amount),
+    };
+  }
 }
 
-// Example usage:
-// const currency = detectUserCurrency();
-// console.log(currency.code);        // "USD"
-// console.log(currency.symbol);      // "$"
-// console.log(currency.format(1999.99));  // "$1,999.99"
-// console.log(currency.formatWithoutSymbol(1999.99));  // "1,999.99"
+/** @deprecated Use formatCurrency() or useCurrency() hook instead */
+export function detectUserCurrency() {
+  return makeCurrencyFormatter(_code);
+}

@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Matches /{prefix}, /{prefix}/login, /{prefix}/register, /{prefix}/forgot_password
+const PUBLIC_ROUTE_RE = /^\/[^/]+(\/login|\/register|\/forgot_password)?$/;
+
+function isPublicRoute(pathname: string): boolean {
+  return pathname === "/" || PUBLIC_ROUTE_RE.test(pathname);
+}
+
+function getPrefix(pathname: string): string {
+  const seg = pathname.split("/")[1];
+  return seg || "jw";
+}
+
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't need authentication
-  const publicRoutes = [
-    "/",
-    "/jw",
-    "/jw/login",
-    "/jw/register",
-    "/jw/forgot_password",
-  ];
-
-  // Skip middleware for static files and images
+  // Skip middleware for static files and Next.js internals
   if (
-    pathname.startsWith("/_next") || // Next.js internal routes
-    pathname.startsWith("/api") || // API routes
-    pathname.includes(".") || // Files with extensions (images, etc)
-    pathname.startsWith("/public") || // Public directory
-    pathname.startsWith("/images") || // Image directory if you have one
-    pathname.startsWith("/assets") // Assets directory if you have one
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".") ||
+    pathname.startsWith("/public") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/assets")
   ) {
     return NextResponse.next();
   }
@@ -31,15 +34,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If accessing a public route while authenticated, redirect to dashboard
-  if (token && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/jw/home", request.url));
+  const prefix = getPrefix(pathname);
+
+  // Authenticated user on a public route → redirect to home
+  if (token && isPublicRoute(pathname)) {
+    return NextResponse.redirect(new URL(`/${prefix}/home`, request.url));
   }
 
-  // If accessing a protected route without authentication, redirect to login
-  if (!token && (!publicRoutes.includes(pathname) || pathname === "/")) {
-    return NextResponse.redirect(new URL("/jw/login", request.url));
+  // Unauthenticated user on a protected route → redirect to login
+  if (!token && !isPublicRoute(pathname)) {
+    return NextResponse.redirect(new URL(`/${prefix}/login`, request.url));
   }
+
   return NextResponse.next();
 }
 

@@ -63,4 +63,8 @@ export type UsersListType = {
   outletname: string;
   storename: string;
   isdefaultoutlet: boolean;
+  creationdatetime: string | null;
+  otpverified: number;
+  emailverified: number;
+  deletedat: string | null;
 };

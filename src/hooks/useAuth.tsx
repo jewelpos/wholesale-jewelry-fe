@@ -1,12 +1,14 @@
 import { useAppDispatch } from "@/lib/store/hook";
 import { clearUser } from "@/lib/store/slice/userDataSlice";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const params = useParams<{ storePrefix?: string }>();
+  const storePrefix = params?.storePrefix ?? "jw";
 
   const onLogout = async () => {
     setLoading(true);
@@ -20,7 +22,7 @@ const useAuth = () => {
         throw new Error("Logout failed");
       }
       dispatch(clearUser());
-      router.push("/jw/login");
+      router.push(`/${storePrefix}/login`);
       return true;
     } catch (error) {
       console.error("Logout error:", error);

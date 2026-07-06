@@ -18,9 +18,9 @@ import dayjs from "dayjs";
 import Link from "next/link";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { ExternalLink } from "react-feather";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+const fmt = (n: number) => formatCurrency(n);
 
 const fmtDate = (v?: string) => {
   if (!v) return "—";

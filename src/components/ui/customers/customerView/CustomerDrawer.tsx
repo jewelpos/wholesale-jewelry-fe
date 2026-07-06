@@ -14,6 +14,7 @@ import { GET_PAYMENT_TERMS_QUERY } from "@/lib/graphql/query/payment";
 import { CustomerType, CustomersListType } from "@/types/customer";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import CustomerStatementModal from "@/components/ui/customers/statement/CustomerStatementModal";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -21,11 +22,7 @@ function fmt(val: number | string | null | undefined): string {
   if (val === null || val === undefined || val === "") return "—";
   const n = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(n)) return "—";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  });
+  return formatCurrency(n);
 }
 
 function fmtDate(val: string | null | undefined): string | null {

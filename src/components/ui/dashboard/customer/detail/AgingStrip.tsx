@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 type Aging = {
   due_0_30: number | null;
@@ -15,13 +16,6 @@ type Props = {
   aging: Aging | undefined | null;
   loading: boolean;
 };
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 
 const num = (v: number | null | undefined) => Number(v ?? 0);
 

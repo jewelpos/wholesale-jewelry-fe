@@ -15,6 +15,7 @@ const useStores = () => {
   const parsedStoreId = parseInt(storeId as string, 10);
   const [loading, setLoading] = useState<boolean>(false);
   const [getStores] = useLazyQuery(GET_STORES);
+  const [getStoreLazy] = useLazyQuery(GET_STORE);
   const { loading: stroreLoading } = useQuery(GET_STORE, {
     variables: { storeid: parsedStoreId },
     skip: !storeId,
@@ -52,8 +53,17 @@ const useStores = () => {
     }
   }, []);
 
+  const refetchCurrentStore = useCallback(async () => {
+    if (!parsedStoreId) return;
+    const { data } = await getStoreLazy({ variables: { storeid: parsedStoreId } });
+    if (data?.getStore) {
+      dispatch(addStore(data.getStore));
+    }
+  }, [getStoreLazy, parsedStoreId, dispatch]);
+
   return {
     fetchStoresData,
+    refetchCurrentStore,
     loading: loading || stroreLoading,
   };
 };

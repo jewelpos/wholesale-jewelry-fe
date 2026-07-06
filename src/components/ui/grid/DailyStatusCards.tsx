@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 export interface DailySummaryData {
   total_today?: number | null;
@@ -20,15 +21,6 @@ interface Props {
     avg?: string;
     open?: string;
   };
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 const Skeleton = () => (

@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ShieldOff } from "react-feather";
 
 const UnauthorizedPage = () => {
+  const searchParams = useSearchParams();
+  const prefix = searchParams.get("prefix") || "jw";
   return (
     <div
       style={{
@@ -37,7 +40,7 @@ const UnauthorizedPage = () => {
         You don&apos;t have permission to perform that action. If you believe this is a mistake, contact your system administrator.
       </p>
       <Link
-        href="/jw/login"
+        href={`/${prefix}/login`}
         style={{
           padding: "10px 24px",
           background: "#376fd0",

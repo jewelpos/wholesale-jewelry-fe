@@ -16,9 +16,9 @@ import { NOTIFICATION_TYPES, TIME_FORMAT } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { CREATE_SUPPLIER_CREDIT_APPLY_MUTATION } from "@/lib/graphql/mutations/supplier";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+const fmt = (n: number) => formatCurrency(n);
 
 const CreditAdjustmentForm = ({
   storeId,

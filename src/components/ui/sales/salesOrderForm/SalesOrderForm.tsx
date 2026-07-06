@@ -35,7 +35,7 @@ import { GET_PRODUCT_BULK_DISCOUNTS_QUERY } from "@/lib/graphql/query/bulkDiscou
 import { resolveDiscount, type BulkDiscountTier, type ActivePromotion } from "@/lib/utils/discountResolver";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
-import { detectUserCurrency } from "@/lib/utils/currencyFormat";
+import { useCurrency } from "@/hooks/useCurrency";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
@@ -201,18 +201,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     return tiers;
   }, [fetchBulkDiscounts, parsedStoreId]);
 
-  const currencyFormatter = useMemo(() => {
-    if (typeof navigator === "undefined") return { formatFixed: (n: number) => n.toFixed(2) };
-    const detected = detectUserCurrency();
-    const formatter = new Intl.NumberFormat(navigator.language || "en-US", {
-      style: "currency",
-      currency: detected.code,
-      currencyDisplay: "symbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return { formatFixed: (n: number) => formatter.format(n) };
-  }, []);
+  const currencyFormatter = useCurrency();
 
   const formatMoney = (raw: unknown) => {
     const n = typeof raw === "number" ? raw : Number(raw || 0);

@@ -13,7 +13,6 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import CustomerStatementModal from "@/components/ui/customers/statement/CustomerStatementModal";
-import { useUserRole } from "@/hooks/useUserRole";
 
 interface CustomerActionsProps {
   data: CustomersListType;
@@ -32,7 +31,6 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [statementOpen, setStatementOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { isAtLeastManager } = useUserRole();
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -92,17 +90,15 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
         >
           <Eye size={14} />
         </a>
-        {isAtLeastManager && (
-          <button
-            type="button"
-            className="p-1 btn btn-link"
-            style={{ lineHeight: 1 }}
-            onClick={() => setStatementOpen(true)}
-            title="Print Statement"
-          >
-            <FileText size={14} />
-          </button>
-        )}
+        <button
+          type="button"
+          className="p-1 btn btn-link"
+          style={{ lineHeight: 1 }}
+          onClick={() => setStatementOpen(true)}
+          title="Print Statement"
+        >
+          <FileText size={14} />
+        </button>
         <Link
           className="p-1"
           href={`${basePath}/customers/${data.customerid}/edit`}

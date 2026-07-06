@@ -29,7 +29,8 @@ async function onLogout(): Promise<boolean> {
     }
     const store = makeStore();
     store.dispatch(clearUser());
-    window.location.href = "/jw/login";
+    const prefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
+    window.location.href = `/${prefix}/login`;
     return true;
   } catch {
     throw new Error("");
@@ -70,9 +71,11 @@ export const errorLink = onError(
             });
           }
 
-          case "FORBIDDEN":
-            window.location.href = "/unauthorized";
+          case "FORBIDDEN": {
+            const forbiddenPrefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
+            window.location.href = `/unauthorized?prefix=${forbiddenPrefix}`;
             break;
+          }
 
           default:
             console.error(

@@ -16,7 +16,7 @@ import {
   ICellRendererParams,
 } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import { useAppDispatch } from "@/lib/store/hook";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
@@ -78,6 +78,7 @@ function getDateRange(preset: DatePreset): { startdate: string; enddate: string 
 const SalesListComponent = () => {
   const [getInvoiceList] = useLazyQuery(GET_SALES_INVOICE_LIST_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
+  const defaultPrintLayout = useAppSelector((state) => state.store.data?.defaultprintlayout || 'compact');
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
@@ -206,6 +207,7 @@ const SalesListComponent = () => {
     const payload = {
       storeid: parsedStoreId,
       invoicenumbers: selectedInvoiceNumbers,
+      template: defaultPrintLayout,
     };
 
     const result = await handleTryCatch(
@@ -248,7 +250,7 @@ const SalesListComponent = () => {
         })
       );
     }
-  }, [dispatch, parsedStoreId, selectedInvoiceNumbers]);
+  }, [dispatch, parsedStoreId, selectedInvoiceNumbers, defaultPrintLayout]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [

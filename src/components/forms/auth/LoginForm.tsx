@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { LoginFormInputs } from "@/types/auth";
 import { emailOrUsernameValidation } from "@/lib/utils/validations/authValidations";
@@ -13,6 +13,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from "react-feather";
 
 export const LoginForm = () => {
   const router = useRouter();
+  const { storePrefix } = useParams<{ storePrefix: string }>();
   const dispatch = useAppDispatch();
   const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -37,10 +38,10 @@ export const LoginForm = () => {
     const data = await response.json();
     if (data.data) {
       if (data.success) {
-        router.push("/jw/home");
+        router.push(`/${storePrefix}/home`);
       } else {
         const queryString = new URLSearchParams({ email: formData.username }).toString();
-        router.push(`/jw/verify?${queryString}`);
+        router.push(`/${storePrefix}/verify?${queryString}`);
       }
       setLoginLoading(false);
     } else {
@@ -92,7 +93,7 @@ export const LoginForm = () => {
         <div className="jp-field">
           <div className="jp-label-row">
             <label htmlFor="jp-pass">Password</label>
-            <Link href="/jw/forgot_password" className="jp-forgot">Forgot password?</Link>
+            <Link href={`/${storePrefix}/forgot_password`} className="jp-forgot">Forgot password?</Link>
           </div>
           <div className="jp-input-wrap has-eye">
             <Lock size={16} className="jp-input-icon" />

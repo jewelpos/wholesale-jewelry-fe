@@ -1,7 +1,8 @@
+import { formatCurrency as _formatCurrency } from "@/lib/utils/currencyFormat";
+
 export const num = (v: number | null | undefined) => Number(v ?? 0);
 
-export const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+export const formatCurrency = (n: number) => _formatCurrency(n);
 
 export const formatNum = (n: number) => new Intl.NumberFormat("en-US").format(Math.round(n));
 

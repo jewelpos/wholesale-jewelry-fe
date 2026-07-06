@@ -4,10 +4,12 @@ const ActionFooter = ({
   children,
   handleCancel,
   leftContent,
+  cancelLabel = "Cancel",
 }: Readonly<{
-  children: React.ReactNode;
+  children?: React.ReactNode;
   handleCancel: () => void;
   leftContent?: React.ReactNode;
+  cancelLabel?: string;
 }>) => {
   return (
     <div className="card sticky-footer">
@@ -20,7 +22,7 @@ const ActionFooter = ({
               onClick={handleCancel}
               className="btn btn-cancel me-3"
             >
-              Cancel
+              {cancelLabel}
             </button>
             {children}
           </div>

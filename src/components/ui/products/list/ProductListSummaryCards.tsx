@@ -3,10 +3,10 @@
 import React from "react";
 import { useQuery } from "@apollo/client";
 import { GET_PRODUCT_LIST_SUMMARY_QUERY } from "@/lib/graphql/query/products";
+import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 const fmtNum = (n: number) => new Intl.NumberFormat("en-US").format(Math.round(n));
-const fmtCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+const fmtCurrency = (n: number) => formatCurrency(n);
 
 const CARDS = [
   { key: "total_products"       as const, label: "Total Products",    format: fmtNum },
