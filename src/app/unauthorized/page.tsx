@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ShieldOff } from "react-feather";
+import { Suspense } from "react";
 
-const UnauthorizedPage = () => {
+const UnauthorizedContent = () => {
   const searchParams = useSearchParams();
   const prefix = searchParams.get("prefix") || "jw";
   return (
@@ -56,5 +57,11 @@ const UnauthorizedPage = () => {
     </div>
   );
 };
+
+const UnauthorizedPage = () => (
+  <Suspense>
+    <UnauthorizedContent />
+  </Suspense>
+);
 
 export default UnauthorizedPage;
