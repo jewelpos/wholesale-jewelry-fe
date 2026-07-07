@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client";
 
 export const GET_EMPLOYEE_COMMISSION_RATES_QUERY = gql`
-  query GetEmployeeCommissionRates($storeid: Int!, $outletid: Int!) {
-    getEmployeeCommissionRates(storeid: $storeid, outletid: $outletid) {
+  query GetEmployeeCommissionRates($storeid: Int!) {
+    getEmployeeCommissionRates(storeid: $storeid) {
       id
       userid
       username

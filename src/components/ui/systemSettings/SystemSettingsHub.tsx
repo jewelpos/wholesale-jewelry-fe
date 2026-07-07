@@ -154,8 +154,8 @@ const SystemSettingsHub = () => {
   });
   const outletIdInt = parseInt(outletIdParam as string, 10);
   const { data: commissionRatesData } = useQuery(GET_EMPLOYEE_COMMISSION_RATES_QUERY, {
-    variables: { storeid: storeIdInt, outletid: outletIdInt },
-    skip: !storeIdParam || !outletIdParam,
+    variables: { storeid: storeIdInt },
+    skip: !storeIdParam,
   });
 
   const metalTypeCount = metalTypeData?.getMetalTypeList?.length ?? null;
