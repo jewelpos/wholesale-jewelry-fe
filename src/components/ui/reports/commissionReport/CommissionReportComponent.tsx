@@ -421,7 +421,7 @@ const CommissionReportComponent = () => {
           );
         },
       },
-    ],
+    ] as ColDef[],
     []
   );
 
@@ -441,7 +441,7 @@ const CommissionReportComponent = () => {
       { headerName: "Paid By", field: "paid_by_username", width: 130 },
       { headerName: "Paid At", field: "paid_at", flex: 1, minWidth: 160, valueFormatter: ({ value }) => value ? dayjs(value).format("MMM D, YYYY h:mm A") : "" },
       { headerName: "Notes", field: "notes", flex: 2, minWidth: 160 },
-    ],
+    ] as ColDef[],
     []
   );
 
