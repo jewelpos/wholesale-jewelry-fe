@@ -220,6 +220,11 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
         discountsource
         discountpromotionid
       }
+      salesreps {
+        userid
+        username
+        split_percent
+      }
     }
   }
 `;

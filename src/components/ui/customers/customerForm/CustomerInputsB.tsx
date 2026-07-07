@@ -14,6 +14,7 @@ import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
 import SelectStore from "@/components/forms/SelectStore";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
+import SelectEmployee from "@/components/forms/SelectEmployee";
 import {
   Landmark,
   FileText,
@@ -21,6 +22,7 @@ import {
   Activity,
   Bell,
   StickyNote,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -145,6 +147,29 @@ const CustomerInputsB = ({
               />
             )}
           />
+        </div>
+      </div>
+
+      {/* Sales Rep */}
+      <SectionLabel label="Sales Representative" icon={UserCheck} />
+      <div className="row">
+        <div className="col-12 mb-3">
+          <label className="form-label">Default Sales Rep</label>
+          <Controller
+            name="default_salesrep_userid"
+            control={control}
+            render={({ field }) => (
+              <SelectEmployee
+                storeId={storeId}
+                isDisabled={disableField}
+                trigger={trigger}
+                {...field}
+              />
+            )}
+          />
+          <div style={{ fontSize: 11, color: "#6c757d", marginTop: 4 }}>
+            Auto-fills on new invoices for this customer
+          </div>
         </div>
       </div>
 

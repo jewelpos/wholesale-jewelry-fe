@@ -350,6 +350,7 @@ export const GET_CUSTOMER_QUERY = gql`
       custalertremarks
       custphotopath
       custalert
+      default_salesrep_userid
     }
   }
 `;

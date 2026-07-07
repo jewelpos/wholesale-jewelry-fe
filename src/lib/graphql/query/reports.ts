@@ -1,5 +1,75 @@
 import { gql } from "@apollo/client";
 
+export const GET_EMPLOYEE_COMMISSION_RATES_QUERY = gql`
+  query GetEmployeeCommissionRates($storeid: Int!, $outletid: Int!) {
+    getEmployeeCommissionRates(storeid: $storeid, outletid: $outletid) {
+      id
+      userid
+      username
+      commission_basis
+      is_active
+      tiers {
+        id
+        threshold_from
+        threshold_to
+        commission_rate
+      }
+    }
+  }
+`;
+
+export const GET_EMPLOYEE_COMMISSION_REPORT_QUERY = gql`
+  query GetEmployeeCommissionReport(
+    $storeid: Int!
+    $fromdate: String!
+    $todate: String!
+    $userid: Int
+  ) {
+    getEmployeeCommissionReport(
+      storeid: $storeid
+      fromdate: $fromdate
+      todate: $todate
+      userid: $userid
+    ) {
+      lines {
+        userid
+        username
+        commission_basis
+        applied_rate
+        invoice_count
+        total_net_sales
+        total_cost
+        gross_profit
+        commission_amount
+        true_profit_after_commission
+        already_paid
+        balance_due
+      }
+      summary_net_sales
+      summary_gross_profit
+      summary_commission
+      summary_true_profit
+      summary_paid
+    }
+  }
+`;
+
+export const GET_COMMISSION_PAYOUT_HISTORY_QUERY = gql`
+  query GetCommissionPayoutHistory($storeid: Int!, $userid: Int) {
+    getCommissionPayoutHistory(storeid: $storeid, userid: $userid) {
+      id
+      userid
+      username
+      period_start
+      period_end
+      commission_amount
+      notes
+      paid_at
+      paid_by_username
+    }
+  }
+`;
+
 export const GET_CUSTOMER_MONTHLY_SALES_PIVOT_QUERY = gql`
   query GetMonthlyCustomerSalesPivot(
     $storeid: Int!

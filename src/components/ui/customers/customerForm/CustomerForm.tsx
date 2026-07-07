@@ -76,6 +76,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
       file: null,
       customerid: "",
       custalert: 0,
+      default_salesrep_userid: null,
     },
   });
   const storeId = getValues("storeid");

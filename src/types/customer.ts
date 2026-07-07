@@ -212,6 +212,7 @@ export type CustomerFormType = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   file: any;
   custalert: number;
+  default_salesrep_userid?: number | null;
 };
 
 export type CustomerType = {

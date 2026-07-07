@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client";
-import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, LucideIcon } from "lucide-react";
+import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, BadgeDollarSign, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
@@ -12,6 +12,7 @@ import { GET_ALL_INVENTORY_TAG_LABELS_QUERY } from "@/lib/graphql/query/products
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { GET_EXPENSE_CODE_QUERY } from "@/lib/graphql/query/accounts";
 import { GET_WAREHOUSES_FOR_CRUD_QUERY } from "@/lib/graphql/query/warehouse";
+import { GET_EMPLOYEE_COMMISSION_RATES_QUERY } from "@/lib/graphql/query/reports";
 
 interface SettingTile {
   title: string;
@@ -151,6 +152,11 @@ const SystemSettingsHub = () => {
     variables: { storeid: storeIdInt },
     skip: !storeIdParam,
   });
+  const outletIdInt = parseInt(outletIdParam as string, 10);
+  const { data: commissionRatesData } = useQuery(GET_EMPLOYEE_COMMISSION_RATES_QUERY, {
+    variables: { storeid: storeIdInt, outletid: outletIdInt },
+    skip: !storeIdParam || !outletIdParam,
+  });
 
   const metalTypeCount = metalTypeData?.getMetalTypeList?.length ?? null;
   const shippingCount = shippingData?.getShippingModes?.length ?? null;
@@ -158,6 +164,7 @@ const SystemSettingsHub = () => {
   const labelCount = labelData?.getAllInventoryTagLabels?.length ?? null;
   const expenseCodeCount = expenseCodeData?.getExpenseCode?.length ?? null;
   const warehouseCount = warehouseData?.getWarehousesForCRUD?.filter((w: any) => !w.isdeletedat).length ?? null;
+  const commissionConfiguredCount = commissionRatesData?.getEmployeeCommissionRates?.filter((r: any) => r.is_active).length ?? null;
   const todayStr = new Date().toISOString().slice(0, 10);
   const ratesData = metalRatesData?.getCurrentMetalRates;
   const metalRatesLabel = ratesData
@@ -278,6 +285,22 @@ const SystemSettingsHub = () => {
             accent: "#ef4444",
             count: expenseCodeCount,
             countLabel: "codes",
+          }} />
+        </div>
+      </div>
+
+      {/* HR / Payroll section */}
+      <SectionHeader title="HR / Payroll" />
+      <div className="row g-3">
+        <div className="col-xl-3 col-lg-4 col-md-6">
+          <TileCard tile={{
+            title: "Commission Rates",
+            description: "Manage sales rep commission rates and tiers. Set earn trigger and per-employee basis (net sales or gross profit).",
+            href: `${base}/commission_rates`,
+            icon: BadgeDollarSign,
+            accent: "#8b5cf6",
+            count: commissionConfiguredCount,
+            countLabel: "configured",
           }} />
         </div>
       </div>

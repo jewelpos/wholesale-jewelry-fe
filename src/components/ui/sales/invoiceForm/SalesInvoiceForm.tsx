@@ -12,6 +12,7 @@ import { isApolloError, useLazyQuery, useMutation, useQuery } from "@apollo/clie
 import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
+import SelectEmployee from "@/components/forms/SelectEmployee";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectProduct from "@/components/forms/SelectProduct";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
@@ -194,6 +195,8 @@ type SalesInvoiceFormType = {
   amountreceived?: number;
 
   items: SalesInvoiceItemForm[];
+
+  salesreps?: { userid: number; split_percent: number }[];
 };
 
 type ToolItem = {
@@ -687,6 +690,7 @@ const SalesInvoiceForm = ({
       remarks: "",
       amountreceived: 0.0,
       items: [],
+      salesreps: [],
     },
     mode: "all",
   });
@@ -930,6 +934,7 @@ const SalesInvoiceForm = ({
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
       })),
+      salesreps: (doc.salesreps ?? []).map((r: any) => ({ userid: Number(r.userid), split_percent: Number(r.split_percent) })),
     });
   }, [viewInvoiceQueryData, parsedStoreId, reset]);
 
@@ -1019,6 +1024,7 @@ const SalesInvoiceForm = ({
 
   const watchedTrackingNo = watch("shippingtrackingno");
   const watchedShippingMethod = watch("invshippingmethod");
+  const watchedSalesReps = watch("salesreps") ?? [];
   useEffect(() => {
     if (readOnly || documentType !== "INVOICE") return;
     if (viewInvoicenumber && !isDirty) return;
@@ -1072,6 +1078,9 @@ const SalesInvoiceForm = ({
     if (typeof c.custshippingmethod !== "undefined") {
       const parsed = Number(c.custshippingmethod);
       if (Number.isFinite(parsed)) setValue("invshippingmethod", parsed);
+    }
+    if (c.default_salesrep_userid && !invoiceId) {
+      setValue("salesreps", [{ userid: c.default_salesrep_userid, split_percent: 100 }]);
     }
 
     // Auto-populate tax rate on new docs only: customer rate takes priority over warehouse default
@@ -1445,6 +1454,15 @@ const SalesInvoiceForm = ({
     const warehouseId = Number(formData.warehouseid);
     if (!parsedStoreId || !warehouseId) return;
 
+    const reps = (formData.salesreps ?? []).filter(r => r.userid);
+    if (reps.length > 0) {
+      const total = reps.reduce((s, r) => s + (r.split_percent ?? 0), 0);
+      if (Math.abs(total - 100) > 0.01) {
+        dispatch(showNotification({ message: `Sales rep split must total 100% (currently ${total.toFixed(1)}%)`, type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+    }
+
     const items = (formData.items || []).map((it) => {
       const { qty, unit, disc, gross, net } = computeLine(it, mode);
       const taxable = toNum(it.itemtaxable);
@@ -1542,6 +1560,7 @@ const SalesInvoiceForm = ({
       nontaxablesale: totals.nonTaxableSale,
 
       items,
+      salesreps: (formData.salesreps ?? []).filter(r => r.userid),
     };
 
     const resolvedInvoiceId = fetchedInvoiceId ?? invoiceId;
@@ -2267,6 +2286,78 @@ const SalesInvoiceForm = ({
                 </div>
               </div>
             </div>
+
+            {/* Sales Rep group */}
+            {!readOnly && (
+              <div className="col-lg-4 col-md-12">
+                <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Sales Rep</div>
+                    {watchedSalesReps.length < 2 && (
+                      <button type="button" className="btn btn-link p-0" style={{ fontSize: "0.7rem" }}
+                        onClick={() => {
+                          const current = getValues("salesreps") ?? [];
+                          if (current.length === 0) {
+                            setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
+                          } else if (current.length === 1) {
+                            setValue("salesreps", [
+                              { ...current[0], split_percent: 50 },
+                              { userid: 0, split_percent: 50 },
+                            ]);
+                          }
+                        }}>
+                        + Add Rep
+                      </button>
+                    )}
+                  </div>
+                  {watchedSalesReps.length === 0 && (
+                    <div className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>No sales rep assigned</div>
+                  )}
+                  {watchedSalesReps.map((rep, idx) => (
+                    <div key={idx} className="d-flex align-items-center gap-2 mb-2">
+                      <div style={{ flex: 1 }}>
+                        <SelectEmployee
+                          storeId={parsedStoreId}
+                          value={rep.userid || null}
+                          trigger={trigger}
+                          name={`salesreps.${idx}.userid`}
+                          onChange={(val: number) => {
+                            const next = [...(getValues("salesreps") ?? [])];
+                            next[idx] = { ...next[idx], userid: val };
+                            setValue("salesreps", next);
+                          }}
+                        />
+                      </div>
+                      <input
+                        type="number" min={0} max={100} step={0.1}
+                        style={{ width: 60 }}
+                        className="form-control form-control-sm"
+                        value={rep.split_percent ?? 100}
+                        onChange={(e) => {
+                          const next = [...(getValues("salesreps") ?? [])];
+                          next[idx] = { ...next[idx], split_percent: Number(e.target.value) };
+                          setValue("salesreps", next);
+                        }}
+                      />
+                      <span style={{ fontSize: "0.75rem" }}>%</span>
+                      <button type="button" className="btn btn-link p-0 text-danger" style={{ fontSize: "0.75rem" }}
+                        onClick={() => {
+                          const next = (getValues("salesreps") ?? []).filter((_, i) => i !== idx);
+                          if (next.length === 1) next[0].split_percent = 100;
+                          setValue("salesreps", next);
+                        }}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {watchedSalesReps.length > 0 && Math.abs(watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0) - 100) > 0.01 && (
+                    <div className="text-danger" style={{ fontSize: "0.7rem" }}>
+                      Split must total 100% (currently {watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0).toFixed(1)}%)
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Pricing group */}
             <div className="col-lg-4 col-md-12">
