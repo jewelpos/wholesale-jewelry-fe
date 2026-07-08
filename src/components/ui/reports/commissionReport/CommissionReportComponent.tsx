@@ -256,9 +256,16 @@ const CommissionReportComponent = () => {
 
   const userOptions = useMemo(() => {
     if (!usersData?.getUserListUnderStore) return [];
+    const seen = new Set<number>();
     return usersData.getUserListUnderStore
       .filter((u: any) => u.isenabled)
-      .map((u: any) => ({ value: u.userid, label: u.userfullname || u.login }));
+      .reduce((acc: { value: number; label: string }[], u: any) => {
+        if (!seen.has(u.userid)) {
+          seen.add(u.userid);
+          acc.push({ value: u.userid, label: u.userfullname || u.login });
+        }
+        return acc;
+      }, []);
   }, [usersData]);
 
   const handleSearch = async () => {
