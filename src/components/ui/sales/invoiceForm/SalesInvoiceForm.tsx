@@ -2287,35 +2287,28 @@ const SalesInvoiceForm = ({
               </div>
             </div>
 
-            {/* Sales Rep group */}
+            {/* Sales Rep — compact full-width strip */}
             {!readOnly && (
-              <div className="col-lg-4 col-md-12">
-                <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Sales Rep</div>
-                    {watchedSalesReps.length < 2 && (
-                      <button type="button" className="btn btn-link p-0" style={{ fontSize: "0.7rem" }}
-                        onClick={() => {
-                          const current = getValues("salesreps") ?? [];
-                          if (current.length === 0) {
-                            setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
-                          } else if (current.length === 1) {
-                            setValue("salesreps", [
-                              { ...current[0], split_percent: 50 },
-                              { userid: 0, split_percent: 50 },
-                            ]);
-                          }
-                        }}>
-                        + Add Rep
-                      </button>
-                    )}
-                  </div>
+              <div className="col-12">
+                <div
+                  style={{
+                    borderTop: "1px solid #e9ecef",
+                    paddingTop: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  <span className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.65rem", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                    Sales Rep
+                  </span>
                   {watchedSalesReps.length === 0 && (
-                    <div className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>No sales rep assigned</div>
+                    <span className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>None</span>
                   )}
                   {watchedSalesReps.map((rep, idx) => (
-                    <div key={idx} className="d-flex align-items-center gap-2 mb-2">
-                      <div style={{ flex: 1 }}>
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 180 }}>
                         <SelectEmployee
                           storeId={parsedStoreId}
                           value={rep.userid || null}
@@ -2330,7 +2323,7 @@ const SalesInvoiceForm = ({
                       </div>
                       <input
                         type="number" min={0} max={100} step={0.1}
-                        style={{ width: 60 }}
+                        style={{ width: 52 }}
                         className="form-control form-control-sm"
                         value={rep.split_percent ?? 100}
                         onChange={(e) => {
@@ -2339,8 +2332,8 @@ const SalesInvoiceForm = ({
                           setValue("salesreps", next);
                         }}
                       />
-                      <span style={{ fontSize: "0.75rem" }}>%</span>
-                      <button type="button" className="btn btn-link p-0 text-danger" style={{ fontSize: "0.75rem" }}
+                      <span style={{ fontSize: "0.75rem", color: "#6c757d" }}>%</span>
+                      <button type="button" className="btn btn-link p-0 text-danger" style={{ fontSize: "0.85rem", lineHeight: 1 }}
                         onClick={() => {
                           const next = (getValues("salesreps") ?? []).filter((_, i) => i !== idx);
                           if (next.length === 1) next[0].split_percent = 100;
@@ -2351,9 +2344,25 @@ const SalesInvoiceForm = ({
                     </div>
                   ))}
                   {watchedSalesReps.length > 0 && Math.abs(watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0) - 100) > 0.01 && (
-                    <div className="text-danger" style={{ fontSize: "0.7rem" }}>
-                      Split must total 100% (currently {watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0).toFixed(1)}%)
-                    </div>
+                    <span className="text-danger" style={{ fontSize: "0.7rem" }}>
+                      Split must = 100% (now {watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0).toFixed(1)}%)
+                    </span>
+                  )}
+                  {watchedSalesReps.length < 2 && (
+                    <button type="button" className="btn btn-link p-0" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
+                      onClick={() => {
+                        const current = getValues("salesreps") ?? [];
+                        if (current.length === 0) {
+                          setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
+                        } else {
+                          setValue("salesreps", [
+                            { ...current[0], split_percent: 50 },
+                            { userid: 0, split_percent: 50 },
+                          ]);
+                        }
+                      }}>
+                      + Add Rep
+                    </button>
                   )}
                 </div>
               </div>
