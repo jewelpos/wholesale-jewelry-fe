@@ -1,8 +1,32 @@
 import { deleteCookieResponse } from "@/lib/authStorage";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+const LOGOUT_MUTATION = `mutation { logout { success } }`;
+
+function parseCookie(cookieHeader: string, name: string): string | null {
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export async function POST(request: Request) {
   try {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const accessToken = parseCookie(cookieHeader, "accessToken");
+
+    if (accessToken) {
+      const backendUrl = process.env.BACKEND_ORIGIN || process.env.NEXT_PUBLIC_API_URL;
+      if (backendUrl) {
+        await fetch(`${backendUrl}/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ query: LOGOUT_MUTATION }),
+        }).catch(() => {});
+      }
+    }
+
     const response = NextResponse.json(
       { message: "Logged out successfully", ok: true },
       { status: 200 }

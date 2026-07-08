@@ -518,6 +518,7 @@ const SalesInvoiceForm = ({
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
+  const pdfCloseNavigateBack = useRef(false);
 
   // ─── Discount resolution ────────────────────────────────────────────────
   const { data: promotionsData } = useQuery(GET_PROMOTION_LIST_QUERY, {
@@ -1074,13 +1075,13 @@ const SalesInvoiceForm = ({
     setValue("invbilltozip", c.custzip ?? "");
     setValue("invbilltophone", c.custphone1 ?? c.custphone2 ?? "");
 
-    if (typeof c.termsid === "number") setValue("termsid", c.termsid);
+    if (typeof c.termsid === "number" && c.termsid > 0) setValue("termsid", c.termsid);
     if (typeof c.custshippingmethod !== "undefined") {
       const parsed = Number(c.custshippingmethod);
-      if (Number.isFinite(parsed)) setValue("invshippingmethod", parsed);
+      if (Number.isFinite(parsed) && parsed > 0) setValue("invshippingmethod", parsed);
     }
-    if (c.default_salesrep_userid && !invoiceId) {
-      setValue("salesreps", [{ userid: c.default_salesrep_userid, split_percent: 100 }]);
+    if (c.default_salesrep_userid && isNewDoc) {
+      setValue("salesreps", [{ userid: c.default_salesrep_userid, split_percent: 0 }]);
     }
 
     // Auto-populate tax rate on new docs only: customer rate takes priority over warehouse default
@@ -1108,7 +1109,7 @@ const SalesInvoiceForm = ({
       setValue("invshiptozip", c.custzip ?? "");
       setValue("invshiptophone", c.custphone1 ?? c.custphone2 ?? "");
     }
-  }, [customerData, customerId, setValue, shipSameAsBill, invoiceId, warehouseSettingsData, parsedWarehouseId]);
+  }, [customerData, customerId, setValue, shipSameAsBill, invoiceId, isNewDoc, warehouseSettingsData, parsedWarehouseId]);
   useEffect(() => {
     if (!shipSameAsBill) return;
 
@@ -1454,10 +1455,20 @@ const SalesInvoiceForm = ({
     const warehouseId = Number(formData.warehouseid);
     if (!parsedStoreId || !warehouseId) return;
 
+    if (!formData.termsid || Number(formData.termsid) <= 0) {
+      dispatch(showNotification({ message: "Terms is required", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+    if (!formData.invshippingmethod || Number(formData.invshippingmethod) <= 0) {
+      dispatch(showNotification({ message: "Shipping method is required", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+
     const reps = (formData.salesreps ?? []).filter(r => r.userid);
     if (reps.length > 0) {
       const total = reps.reduce((s, r) => s + (r.split_percent ?? 0), 0);
-      if (Math.abs(total - 100) > 0.01) {
+      // Only enforce 100% when splits are non-zero (i.e. commission is being configured, not just tracking)
+      if (total > 0 && Math.abs(total - 100) > 0.01) {
         dispatch(showNotification({ message: `Sales rep split must total 100% (currently ${total.toFixed(1)}%)`, type: NOTIFICATION_TYPES.ERROR }));
         return;
       }
@@ -1726,20 +1737,16 @@ const SalesInvoiceForm = ({
             const popupResult = await MySwal.fire({
               icon: "success",
               title: "Invoice Saved",
-              html: `
-                <div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">Invoice ${num ? `#${num}` : ""} saved successfully.</div>
-                ${showSmsButton ? `<div style="margin-top:14px; padding-top:12px; border-top:1px solid #eee;">
-                  <button id="swal-sms-btn" style="background:none; border:1px solid #198754; color:#198754; border-radius:6px; padding:6px 16px; cursor:pointer; font-size:0.875rem;">
-                    📱 Share Invoice Link
-                  </button>
-                </div>` : ""}
-              `,
+              html: `<div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">Invoice ${num ? `#${num}` : ""} saved successfully.</div>`,
               showCancelButton: true,
               showDenyButton: true,
-              confirmButtonText: "Print",
-              denyButtonText: "Email",
+              confirmButtonText: "🖨️ Print",
+              denyButtonText: "✉️ Email",
               cancelButtonText: "Close",
               showCloseButton: true,
+              footer: showSmsButton
+                ? `<button id="swal-sms-btn" style="background:none;border:none;color:#198754;cursor:pointer;font-size:0.85rem;padding:0;">📱 Send SMS</button>`
+                : undefined,
               didOpen: () => {
                 if (!showSmsButton) return;
                 document.getElementById("swal-sms-btn")?.addEventListener("click", () => {
@@ -1748,8 +1755,13 @@ const SalesInvoiceForm = ({
                 });
               },
             });
-            if (popupResult.isConfirmed && num) await handlePrintDocumentNumber(num);
             dispatch(showNotification({ message: response?.message || "Invoice saved successfully", type: NOTIFICATION_TYPES.SUCCESS }));
+            if (popupResult.isConfirmed && num) {
+              reset();
+              pdfCloseNavigateBack.current = true;
+              await handlePrintDocumentNumber(num);
+              return;
+            }
             if (smsSendClicked && num) {
               try {
                 await api.post(`/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: num });
@@ -1779,20 +1791,16 @@ const SalesInvoiceForm = ({
       const popupResult = await MySwal.fire({
         icon: "success",
         title: `${docLabel} Saved`,
-        html: `
-          <div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">${docLabel} ${label} saved successfully.</div>
-          ${showSmsButton ? `<div style="margin-top:14px; padding-top:12px; border-top:1px solid #eee;">
-            <button id="swal-sms-btn" style="background:none; border:1px solid #198754; color:#198754; border-radius:6px; padding:6px 16px; cursor:pointer; font-size:0.875rem;">
-              📱 Share Invoice Link
-            </button>
-          </div>` : ""}
-        `,
+        html: `<div class="text-muted" style="font-size: 0.95rem; line-height: 1.35;">${docLabel} ${label} saved successfully.</div>`,
         showCancelButton: true,
         showDenyButton: true,
-        confirmButtonText: "Print",
-        denyButtonText: "Email",
+        confirmButtonText: "🖨️ Print",
+        denyButtonText: "✉️ Email",
         cancelButtonText: "Close",
         showCloseButton: true,
+        footer: showSmsButton
+          ? `<button id="swal-sms-btn" style="background:none;border:none;color:#198754;cursor:pointer;font-size:0.85rem;padding:0;">📱 Send SMS</button>`
+          : undefined,
         didOpen: () => {
           if (!showSmsButton) return;
           document.getElementById("swal-sms-btn")?.addEventListener("click", () => {
@@ -1802,16 +1810,19 @@ const SalesInvoiceForm = ({
         },
       });
 
-      if (popupResult.isConfirmed && documentNumber) {
-        await handlePrintDocumentNumber(documentNumber);
-      }
-
       dispatch(
         showNotification({
           message: response?.message || `${docLabel} saved successfully`,
           type: NOTIFICATION_TYPES.SUCCESS,
         })
       );
+
+      if (popupResult.isConfirmed && documentNumber) {
+        reset();
+        pdfCloseNavigateBack.current = true;
+        await handlePrintDocumentNumber(documentNumber);
+        return;
+      }
 
       if (smsSendClicked && documentNumber) {
         try {
@@ -2319,72 +2330,95 @@ const SalesInvoiceForm = ({
               </div>
             </div>
 
-            {/* Sales Rep — compact full-width strip */}
-            {!readOnly && (
-              <div className="col-12">
-                <div style={{ borderTop: "1px solid #e9ecef", paddingTop: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                  <span className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.65rem", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                    Sales Rep
-                  </span>
-                  {watchedSalesReps.length === 0 && (
-                    <span className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>None</span>
-                  )}
-                  {watchedSalesReps.map((rep, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 180 }}>
-                        <SelectEmployee
-                          storeId={parsedStoreId}
-                          value={rep.userid || null}
-                          trigger={trigger}
-                          name={`salesreps.${idx}.userid`}
-                          onChange={(val: number) => {
+            {/* Sales Rep — always visible; read-only in view mode, editable otherwise */}
+            <div className="col-12">
+              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Sales Rep</div>
+                {readOnly ? (
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    {watchedSalesReps.length === 0 ? (
+                      <span className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>No sales rep selected</span>
+                    ) : (
+                      watchedSalesReps.map((rep, idx) => (
+                        <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 200 }}>
+                            <SelectEmployee
+                              storeId={parsedStoreId}
+                              value={rep.userid || null}
+                              isDisabled
+                              onChange={() => {}}
+                            />
+                          </div>
+                          <span className="text-muted" style={{ fontSize: "0.8rem" }}>{rep.split_percent}%</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    {watchedSalesReps.length === 0 && (
+                      <span className="text-muted" style={{ fontSize: "0.75rem", fontStyle: "italic" }}>None</span>
+                    )}
+                    {watchedSalesReps.map((rep, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ width: 200 }}>
+                          <SelectEmployee
+                            storeId={parsedStoreId}
+                            value={rep.userid || null}
+                            trigger={trigger}
+                            name={`salesreps.${idx}.userid`}
+                            onChange={(val: number) => {
+                              const next = [...(getValues("salesreps") ?? [])];
+                              next[idx] = { ...next[idx], userid: val };
+                              setValue("salesreps", next);
+                            }}
+                          />
+                        </div>
+                        <input
+                          type="number" min={0} max={100} step={0.1}
+                          style={{ width: 52 }}
+                          className="form-control form-control-sm"
+                          value={rep.split_percent ?? 0}
+                          onChange={(e) => {
                             const next = [...(getValues("salesreps") ?? [])];
-                            next[idx] = { ...next[idx], userid: val };
+                            next[idx] = { ...next[idx], split_percent: Number(e.target.value) };
                             setValue("salesreps", next);
                           }}
                         />
+                        <span style={{ fontSize: "0.75rem", color: "#6c757d" }}>%</span>
+                        <button type="button" className="btn btn-link p-0 text-danger" style={{ fontSize: "0.85rem", lineHeight: 1 }}
+                          onClick={() => {
+                            const next = (getValues("salesreps") ?? []).filter((_, i) => i !== idx);
+                            if (next.length === 1) next[0].split_percent = 0;
+                            setValue("salesreps", next);
+                          }}>×</button>
                       </div>
-                      <input
-                        type="number" min={0} max={100} step={0.1}
-                        style={{ width: 52 }}
-                        className="form-control form-control-sm"
-                        value={rep.split_percent ?? 100}
-                        onChange={(e) => {
-                          const next = [...(getValues("salesreps") ?? [])];
-                          next[idx] = { ...next[idx], split_percent: Number(e.target.value) };
-                          setValue("salesreps", next);
-                        }}
-                      />
-                      <span style={{ fontSize: "0.75rem", color: "#6c757d" }}>%</span>
-                      <button type="button" className="btn btn-link p-0 text-danger" style={{ fontSize: "0.85rem", lineHeight: 1 }}
+                    ))}
+                    {watchedSalesReps.length > 0 && (() => {
+                      const total = watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0);
+                      return total > 0 && Math.abs(total - 100) > 0.01;
+                    })() && (
+                      <span className="text-danger" style={{ fontSize: "0.7rem" }}>
+                        Split must = 100% (now {watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0).toFixed(1)}%)
+                      </span>
+                    )}
+                    {watchedSalesReps.length < 2 && (
+                      <button type="button" className="btn btn-link p-0" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
                         onClick={() => {
-                          const next = (getValues("salesreps") ?? []).filter((_, i) => i !== idx);
-                          if (next.length === 1) next[0].split_percent = 100;
-                          setValue("salesreps", next);
-                        }}>×</button>
-                    </div>
-                  ))}
-                  {watchedSalesReps.length > 0 && Math.abs(watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0) - 100) > 0.01 && (
-                    <span className="text-danger" style={{ fontSize: "0.7rem" }}>
-                      Split must = 100% (now {watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0).toFixed(1)}%)
-                    </span>
-                  )}
-                  {watchedSalesReps.length < 2 && (
-                    <button type="button" className="btn btn-link p-0" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      onClick={() => {
-                        const current = getValues("salesreps") ?? [];
-                        if (current.length === 0) {
-                          setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
-                        } else {
-                          setValue("salesreps", [{ ...current[0], split_percent: 50 }, { userid: 0, split_percent: 50 }]);
-                        }
-                      }}>
-                      + Add Rep
-                    </button>
-                  )}
-                </div>
+                          const current = getValues("salesreps") ?? [];
+                          if (current.length === 0) {
+                            setValue("salesreps", [{ userid: 0, split_percent: 0 }]);
+                          } else {
+                            setValue("salesreps", [{ ...current[0], split_percent: 50 }, { userid: 0, split_percent: 50 }]);
+                          }
+                        }}>
+                        + Add Rep
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
           </div>
         </div>
@@ -2885,7 +2919,13 @@ const SalesInvoiceForm = ({
       <PdfPreviewModal
         pdfUrl={pdfPreview.url}
         filename={pdfPreview.filename}
-        onClose={() => setPdfPreview(null)}
+        onClose={() => {
+          setPdfPreview(null);
+          if (pdfCloseNavigateBack.current) {
+            pdfCloseNavigateBack.current = false;
+            router.back();
+          }
+        }}
       />
     )}
     </>

@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@apollo/client";
+import ActionFooter from "@/components/ui/ActionFooter";
 import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, BadgeDollarSign, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
@@ -119,6 +120,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 // ─── Hub ────────────────────────────────────────────────────
 const SystemSettingsHub = () => {
+  const router = useRouter();
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const base = `/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`;
 
@@ -304,6 +306,8 @@ const SystemSettingsHub = () => {
           }} />
         </div>
       </div>
+
+      <ActionFooter handleCancel={() => router.back()} cancelLabel="Close" />
     </div>
   );
 };

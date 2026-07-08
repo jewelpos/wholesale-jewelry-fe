@@ -76,8 +76,16 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
         const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
         setPdfUrl(url);
       }
-    } catch {
-      dispatch(showNotification({ message: "Failed to generate PDF", type: NOTIFICATION_TYPES.ERROR }));
+    } catch (err: any) {
+      let msg = "Failed to generate PDF";
+      try {
+        if (err?.response?.data instanceof Blob) {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          msg = parsed?.message || msg;
+        }
+      } catch { /* ignore parse error */ }
+      dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
     } finally {
       setPrinting(false);
     }
