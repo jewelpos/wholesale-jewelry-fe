@@ -2287,19 +2287,42 @@ const SalesInvoiceForm = ({
               </div>
             </div>
 
+            {/* Pricing group */}
+            <div className="col-lg-4 col-md-12">
+              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
+                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Pricing</div>
+                <div className="row g-2">
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Discount %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="form-control form-control-sm"
+                      {...register("discountpercent")}
+                      onChange={(e) => {
+                        const n = Number(e.target.value || 0);
+                        const clamped = Math.min(100, Math.max(0, n));
+                        setValue("discountpercent", clamped, { shouldDirty: true });
+                        const currentItems = getValues("items");
+                        if (currentItems?.length) {
+                          replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label small text-muted mb-1">Sales Tax %</label>
+                    <input type="number" step="0.001" min={0} max={100} className="form-control form-control-sm"
+                      {...register("salestaxrate", { valueAsNumber: true })} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Sales Rep — compact full-width strip */}
             {!readOnly && (
               <div className="col-12">
-                <div
-                  style={{
-                    borderTop: "1px solid #e9ecef",
-                    paddingTop: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 8,
-                  }}
-                >
+                <div style={{ borderTop: "1px solid #e9ecef", paddingTop: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <span className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.65rem", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
                     Sales Rep
                   </span>
@@ -2338,9 +2361,7 @@ const SalesInvoiceForm = ({
                           const next = (getValues("salesreps") ?? []).filter((_, i) => i !== idx);
                           if (next.length === 1) next[0].split_percent = 100;
                           setValue("salesreps", next);
-                        }}>
-                        ×
-                      </button>
+                        }}>×</button>
                     </div>
                   ))}
                   {watchedSalesReps.length > 0 && Math.abs(watchedSalesReps.reduce((s, r) => s + (r.split_percent ?? 0), 0) - 100) > 0.01 && (
@@ -2355,10 +2376,7 @@ const SalesInvoiceForm = ({
                         if (current.length === 0) {
                           setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
                         } else {
-                          setValue("salesreps", [
-                            { ...current[0], split_percent: 50 },
-                            { userid: 0, split_percent: 50 },
-                          ]);
+                          setValue("salesreps", [{ ...current[0], split_percent: 50 }, { userid: 0, split_percent: 50 }]);
                         }
                       }}>
                       + Add Rep
@@ -2367,38 +2385,6 @@ const SalesInvoiceForm = ({
                 </div>
               </div>
             )}
-
-            {/* Pricing group */}
-            <div className="col-lg-4 col-md-12">
-              <div className="rounded px-3 py-2" style={{ background: "var(--bs-gray-100, #f8f9fa)" }}>
-                <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Pricing</div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <label className="form-label small text-muted mb-1">Discount %</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control form-control-sm"
-                      {...register("discountpercent")}
-                      onChange={(e) => {
-                        const n = Number(e.target.value || 0);
-                        const clamped = Math.min(100, Math.max(0, n));
-                        setValue("discountpercent", clamped, { shouldDirty: true });
-                        const currentItems = getValues("items");
-                        if (currentItems?.length) {
-                          replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label small text-muted mb-1">Sales Tax %</label>
-                    <input type="number" step="0.001" min={0} max={100} className="form-control form-control-sm"
-                      {...register("salestaxrate", { valueAsNumber: true })} />
-                  </div>
-                </div>
-              </div>
-            </div>
 
           </div>
         </div>
