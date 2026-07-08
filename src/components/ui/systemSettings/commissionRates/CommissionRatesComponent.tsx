@@ -513,17 +513,21 @@ const CommissionRatesComponent = () => {
                               <button
                                 type="button"
                                 onClick={() => handleAddTier(emp.userid)}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#8b5cf618"; e.currentTarget.style.borderColor = "#8b5cf6"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#8b5cf6"; }}
                                 style={{
-                                  background: "none",
-                                  border: "1px dashed #cbd5e1",
+                                  background: "#fff",
+                                  border: "1px solid #8b5cf6",
                                   borderRadius: 6,
                                   padding: "3px 10px",
                                   fontSize: 11,
-                                  color: "#64748b",
+                                  color: "#8b5cf6",
+                                  fontWeight: 600,
                                   cursor: "pointer",
                                   display: "flex",
                                   alignItems: "center",
                                   gap: 4,
+                                  transition: "background 0.15s",
                                 }}
                               >
                                 <Plus size={10} /> Add Tier
@@ -531,15 +535,20 @@ const CommissionRatesComponent = () => {
                               <button
                                 type="button"
                                 onClick={() => updateRow(emp.userid, { showTiers: false })}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#64748b"; }}
                                 style={{
-                                  background: "none",
-                                  border: "none",
+                                  background: "#fff",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: 6,
+                                  padding: "3px 10px",
                                   fontSize: 11,
-                                  color: "#94a3b8",
+                                  color: "#64748b",
                                   cursor: "pointer",
                                   display: "flex",
                                   alignItems: "center",
                                   gap: 3,
+                                  transition: "background 0.15s",
                                 }}
                               >
                                 <ChevronUp size={11} /> Collapse
@@ -570,9 +579,11 @@ const CommissionRatesComponent = () => {
                                 updateRow(emp.userid, { showTiers: true });
                                 if (row.tiers.length < 2) handleAddTier(emp.userid);
                               }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = "#8b5cf618"; e.currentTarget.style.borderColor = "#8b5cf6"; e.currentTarget.style.color = "#8b5cf6"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#64748b"; }}
                               style={{
-                                background: "none",
-                                border: "1px dashed #cbd5e1",
+                                background: "#fff",
+                                border: "1px solid #cbd5e1",
                                 borderRadius: 6,
                                 padding: "3px 10px",
                                 fontSize: 11,
@@ -581,6 +592,7 @@ const CommissionRatesComponent = () => {
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 3,
+                                transition: "all 0.15s",
                               }}
                             >
                               <ChevronDown size={10} /> Use Tiers
