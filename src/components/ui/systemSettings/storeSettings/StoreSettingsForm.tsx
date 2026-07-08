@@ -284,43 +284,34 @@ const StoreSettingsForm = () => {
                       />
                       <div className="form-text" style={{ fontSize: 11 }}>Auto-filled on new invoices when no customer rate is set</div>
                     </div>
-                    <div className="col-12 d-flex gap-4 align-items-end pb-1 flex-wrap">
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          id="allowpcsentry"
-                          checked={!!form.allowpcsentry}
-                          onChange={e => set("allowpcsentry", e.target.checked ? 1 : 0)}
-                        />
-                        <label className="form-check-label" htmlFor="allowpcsentry" style={{ fontSize: 12, color: "#475569" }}>
-                          Allow Pcs Entry
-                        </label>
-                      </div>
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          id="allowcarriage"
-                          checked={!!form.allowcarriage}
-                          onChange={e => set("allowcarriage", e.target.checked ? 1 : 0)}
-                        />
-                        <label className="form-check-label" htmlFor="allowcarriage" style={{ fontSize: 12, color: "#475569" }}>
-                          Allow Carriage
-                        </label>
-                      </div>
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          id="enforce_stock_check"
-                          checked={!!form.enforce_stock_check}
-                          onChange={e => set("enforce_stock_check", e.target.checked)}
-                        />
-                        <label className="form-check-label" htmlFor="enforce_stock_check" style={{ fontSize: 12, color: "#475569" }}>
-                          Enforce Stock Check on Invoice
-                        </label>
-                      </div>
+                    <div className="col-12 d-flex gap-4 align-items-center pb-1 flex-wrap" style={{ marginTop: 4 }}>
+                      {[
+                        { id: "allowpcsentry", label: "Allow Pcs Entry", value: !!form.allowpcsentry, onChange: (v: boolean) => set("allowpcsentry", v ? 1 : 0) },
+                        { id: "allowcarriage", label: "Allow Carriage", value: !!form.allowcarriage, onChange: (v: boolean) => set("allowcarriage", v ? 1 : 0) },
+                        { id: "enforce_stock_check", label: "Enforce Stock Check on Invoice", value: !!form.enforce_stock_check, onChange: (v: boolean) => set("enforce_stock_check", v) },
+                      ].map(({ id, label, value, onChange }) => (
+                        <div key={id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div
+                            onClick={() => onChange(!value)}
+                            style={{
+                              width: 36, height: 20, borderRadius: 10, cursor: "pointer",
+                              background: value ? "#376fd0" : "#cbd5e1",
+                              position: "relative", transition: "background 0.2s", flexShrink: 0,
+                            }}
+                          >
+                            <div style={{
+                              width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                              position: "absolute", top: 3,
+                              left: value ? 19 : 3,
+                              transition: "left 0.2s",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, color: "#475569", userSelect: "none", cursor: "pointer" }} onClick={() => onChange(!value)}>
+                            {label}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
