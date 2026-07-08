@@ -29,6 +29,7 @@ interface WarehouseSettingsRow {
   allowcarriage: number | null;
   storepolicy: string | null;
   defaultsalestaxrate: number | null;
+  enforce_stock_check: boolean;
 }
 
 type SettingsFormValues = Omit<WarehouseSettingsRow, "warehouseid" | "warehousename">;
@@ -50,6 +51,7 @@ const emptySettings = (): SettingsFormValues => ({
   allowcarriage: null,
   storepolicy: "",
   defaultsalestaxrate: null,
+  enforce_stock_check: false,
 });
 
 const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
@@ -120,6 +122,7 @@ const StoreSettingsForm = () => {
         allowcarriage: row.allowcarriage,
         storepolicy: row.storepolicy ?? "",
         defaultsalestaxrate: row.defaultsalestaxrate ?? null,
+        enforce_stock_check: row.enforce_stock_check ?? false,
       });
     } else {
       setForm(emptySettings());
@@ -157,6 +160,7 @@ const StoreSettingsForm = () => {
             allowcarriage: form.allowcarriage,
             storepolicy: form.storepolicy || null,
             defaultsalestaxrate: form.defaultsalestaxrate != null ? Number(form.defaultsalestaxrate) : null,
+            enforce_stock_check: form.enforce_stock_check,
           },
         },
       });
@@ -280,7 +284,7 @@ const StoreSettingsForm = () => {
                       />
                       <div className="form-text" style={{ fontSize: 11 }}>Auto-filled on new invoices when no customer rate is set</div>
                     </div>
-                    <div className="col-md-4 d-flex gap-4 align-items-end pb-1">
+                    <div className="col-12 d-flex gap-4 align-items-end pb-1 flex-wrap">
                       <div className="form-check">
                         <input
                           type="checkbox"
@@ -303,6 +307,18 @@ const StoreSettingsForm = () => {
                         />
                         <label className="form-check-label" htmlFor="allowcarriage" style={{ fontSize: 12, color: "#475569" }}>
                           Allow Carriage
+                        </label>
+                      </div>
+                      <div className="form-check">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          id="enforce_stock_check"
+                          checked={!!form.enforce_stock_check}
+                          onChange={e => set("enforce_stock_check", e.target.checked)}
+                        />
+                        <label className="form-check-label" htmlFor="enforce_stock_check" style={{ fontSize: 12, color: "#475569" }}>
+                          Enforce Stock Check on Invoice
                         </label>
                       </div>
                     </div>

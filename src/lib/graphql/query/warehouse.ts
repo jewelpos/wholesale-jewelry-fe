@@ -45,6 +45,7 @@ const WAREHOUSE_SETTINGS_FIELDS = `
   allowcarriage
   storepolicy
   defaultsalestaxrate
+  enforce_stock_check
 `;
 
 export const GET_ALL_WAREHOUSE_SETTINGS_QUERY = gql`
