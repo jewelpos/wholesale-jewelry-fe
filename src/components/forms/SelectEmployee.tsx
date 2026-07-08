@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Select from "react-select/base";
 import { SelectOption } from "@/types/form";
 import { selectStyles } from "@/lib/styles/selectStyles";
-import { useLazyQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { GET_USERS_LIST_QUERY } from "@/lib/graphql/query/user";
 
 const SelectEmployee = ({
@@ -21,15 +21,10 @@ any) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const [input, setInput] = useState("");
 
-  const [fetchUsers, { data, loading }] = useLazyQuery(GET_USERS_LIST_QUERY);
-
-  // Eagerly fetch when a value is pre-populated so the label resolves immediately
-  useEffect(() => {
-    if (value != null && value !== "" && value !== 0 && !data && storeId) {
-      fetchUsers({ variables: { storeid: storeId } });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeId]);
+  const { data, loading } = useQuery(GET_USERS_LIST_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
 
   const options: SelectOption[] = useMemo(() => {
     if (!data?.getUserListUnderStore) return [];
@@ -44,11 +39,6 @@ any) => {
         return acc;
       }, []);
   }, [data]);
-
-  const handleMenuOpen = () => {
-    if (!data && storeId) fetchUsers({ variables: { storeid: storeId } });
-    setMenuIsOpen(true);
-  };
 
   return (
     <Select<SelectOption>
@@ -68,7 +58,7 @@ any) => {
         trigger?.(field.name);
       }}
       menuIsOpen={menuIsOpen}
-      onMenuOpen={handleMenuOpen}
+      onMenuOpen={() => setMenuIsOpen(true)}
       onMenuClose={() => setMenuIsOpen(false)}
       inputValue={input}
       onInputChange={setInput}
