@@ -23,6 +23,14 @@ any) => {
 
   const [fetchUsers, { data, loading }] = useLazyQuery(GET_USERS_LIST_QUERY);
 
+  // Eagerly fetch when a value is pre-populated so the label resolves immediately
+  useEffect(() => {
+    if (value != null && value !== "" && value !== 0 && !data && storeId) {
+      fetchUsers({ variables: { storeid: storeId } });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
+
   const options: SelectOption[] = useMemo(() => {
     if (!data?.getUserListUnderStore) return [];
     const seen = new Set<number>();
