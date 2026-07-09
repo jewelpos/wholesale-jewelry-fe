@@ -84,7 +84,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       manufacturer: "",
       itemlocation: "",
       itemtaxable: 0,
-      trackinventory: 0,
+      trackinventory: 1,
       itemmetal: "",
       itemmetalpercent: "",
       itempremium: "",
