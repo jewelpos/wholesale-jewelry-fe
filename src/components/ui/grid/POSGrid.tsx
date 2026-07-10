@@ -116,6 +116,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           headerHeight={32}
           gridOptions={{
             suppressServerSideFullWidthLoadingRow: true,
+            filterDebounceMs: 300,
             ...gridOptions,
           }}
           rowSelection={rowSelection}

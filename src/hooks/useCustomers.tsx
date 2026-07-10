@@ -10,7 +10,7 @@ const useCustomers = () => {
   const dispatch = useAppDispatch();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [getCustomers] = useLazyQuery(GET_CUSTOMERS_QUERY);
+  const [getCustomers] = useLazyQuery(GET_CUSTOMERS_QUERY, { fetchPolicy: 'cache-and-network' });
 
   const fetchCustomersByStoreId = useCallback(async (storeId: number) => {
     const result = await handleTryCatch(

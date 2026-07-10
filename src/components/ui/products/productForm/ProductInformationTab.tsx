@@ -331,14 +331,12 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               </div>
               <div className="col-lg-6 col-md-6">
                 <FieldWrap>
-                  <Label required>Product Line</Label>
+                  <Label>Product Line</Label>
                   <Controller
                     name="subcategoryid"
                     control={control}
-                    rules={{ required: "Product line is required", validate: v => v === 0 ? "Product line is required" : true }}
                     render={({ field }) => (
                       <SelectSubCategory
-                        className={errors.subcategoryid ? "is-invalid" : ""}
                         trigger={trigger}
                         storeId={storeId}
                         disableField={disableField}
@@ -346,7 +344,6 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                       />
                     )}
                   />
-                  {errors.subcategoryid && <div className="invalid-feedback d-block">{errors.subcategoryid.message}</div>}
                 </FieldWrap>
               </div>
             </div>

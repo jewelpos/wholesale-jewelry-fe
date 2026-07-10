@@ -15,10 +15,10 @@ const useWarehouse = () => {
   const [warehouses, setWarehouses] = useState<WarehouseType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [getWarehousesByStoreId] = useLazyQuery(
-    GET_WAREHOUSES_BY_STORE_ID_QUERY
+    GET_WAREHOUSES_BY_STORE_ID_QUERY, { fetchPolicy: 'cache-and-network' }
   );
   const [getWarehousesByOutletId] = useLazyQuery(
-    GET_WAREHOUSES_BY_OUTLET_ID_QUERY
+    GET_WAREHOUSES_BY_OUTLET_ID_QUERY, { fetchPolicy: 'cache-and-network' }
   );
 
   const fetchWarehouseByStoreId = useCallback(async (storeId: number) => {

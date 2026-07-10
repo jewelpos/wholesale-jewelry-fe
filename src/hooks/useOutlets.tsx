@@ -10,7 +10,7 @@ const useOutlets = () => {
   const dispatch = useAppDispatch();
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [getOutlets] = useLazyQuery(GET_OUTLETS_QUERY);
+  const [getOutlets] = useLazyQuery(GET_OUTLETS_QUERY, { fetchPolicy: 'cache-and-network' });
 
   const fetchOutletsList = useCallback(async (storeIds: number[]) => {
     const result = await handleTryCatch(

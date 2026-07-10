@@ -108,8 +108,14 @@ const UserComponent = () => {
       field: "creationdatetime",
       filter: "agDateColumnFilter",
       minWidth: 150,
-      valueFormatter: (params) =>
-        params.value ? new Date(params.value).toLocaleDateString() : "—",
+      valueFormatter: (params) => {
+        if (!params.value) return "—";
+        const d = new Date(Number(params.value));
+        if (isNaN(d.getTime())) return "—";
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${m}/${day}/${d.getFullYear()}`;
+      },
     },
     {
       headerName: "OTP Verified",
@@ -143,8 +149,14 @@ const UserComponent = () => {
       field: "deletedat",
       filter: true,
       minWidth: 130,
-      valueFormatter: (params) =>
-        params.value ? new Date(params.value).toLocaleDateString() : "—",
+      valueFormatter: (params) => {
+        if (!params.value) return "—";
+        const d = new Date(Number(params.value));
+        if (isNaN(d.getTime())) return "—";
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${m}/${day}/${d.getFullYear()}`;
+      },
     },
     {
       headerName: "Actions",

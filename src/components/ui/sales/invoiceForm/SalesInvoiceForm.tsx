@@ -1765,6 +1765,7 @@ const SalesInvoiceForm = ({
             if (smsSendClicked && num) {
               try {
                 await api.post(`/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: num });
+                api.post('/store/comm-count/increment', { storeid: parsedStoreId, outletid: parsedOutletId, type: 'sms' }).catch(() => {});
                 dispatch(showNotification({ message: `SMS sent for Invoice #${num}`, type: NOTIFICATION_TYPES.SUCCESS }));
               } catch {
                 dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
@@ -1830,6 +1831,7 @@ const SalesInvoiceForm = ({
             storeid: parsedStoreId,
             invoicenumber: documentNumber,
           });
+          api.post('/store/comm-count/increment', { storeid: parsedStoreId, outletid: parsedOutletId, type: 'sms' }).catch(() => {});
           dispatch(showNotification({ message: `SMS sent for Invoice #${documentNumber}`, type: NOTIFICATION_TYPES.SUCCESS }));
         } catch {
           dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
@@ -2876,6 +2878,7 @@ const SalesInvoiceForm = ({
     {emailModalDocNumber && (
       <DocumentEmailModal
         storeId={parsedStoreId}
+        outletId={parsedOutletId}
         documentType={documentType}
         documentNumbers={[emailModalDocNumber]}
         onClose={() => {

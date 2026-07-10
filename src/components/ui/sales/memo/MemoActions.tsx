@@ -20,8 +20,9 @@ interface MemoActionsProps {
 const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
   const { basePath } = useDefaultRoute();
   const dispatch = useAppDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showEmail, setShowEmail] = useState(false);
@@ -111,6 +112,7 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
       {showEmail && (
         <DocumentEmailModal
           storeId={parsedStoreId}
+          outletId={parsedOutletId}
           documentType="MEMO"
           documentNumbers={[Number(data.memonumber)]}
           onClose={() => setShowEmail(false)}

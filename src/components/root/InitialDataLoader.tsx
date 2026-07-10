@@ -45,10 +45,14 @@ const InitialDataLoader = ({
       const storeIsSetup =
         defaultStore?.hassetupoutlet || defaultStore?.hassetupproduct;
       const roleid = user?.roleid;
+      const dashboardByRole: Record<number, string> = {
+        1: "dashboard/admin",
+        2: "dashboard/manager",
+        3: "dashboard/cashier",
+      };
       const getLandingPage = (setup: boolean | undefined) => {
-        if (setup && roleid === 2) return "dashboard/manager";
-        if (setup && roleid === 3) return "sales/new_invoice";
-        return "home";
+        if (!setup) return "home";
+        return dashboardByRole[roleid] ?? "dashboard/admin";
       };
       if (defaultStore) {
         const prefix = defaultStore.routeprefix ?? "jw";
@@ -73,7 +77,7 @@ const InitialDataLoader = ({
   }, [fetchUserData]);
 
   useEffect(() => {
-    if (user && user.permissions) {
+    if (user && !user.shouldcreatestore) {
       fetchStoresData();
     }
   }, [user, fetchStoresData]);

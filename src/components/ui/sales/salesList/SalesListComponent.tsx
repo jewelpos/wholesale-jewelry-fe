@@ -331,6 +331,7 @@ const SalesListComponent = () => {
       {emailModalOpen && (
         <DocumentEmailModal
           storeId={parsedStoreId}
+          outletId={parsedOutletId}
           documentType="INVOICE"
           documentNumbers={selectedInvoiceNumbers}
           onClose={() => setEmailModalOpen(false)}

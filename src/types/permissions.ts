@@ -86,7 +86,7 @@ export type AddUserPermissionType = {
   menus: AddUserMenusType;
 };
 
-type UsersListChildMenuType = {
+export type UsersListChildMenuType = {
   name: string;
   action: MenuAction[];
   menuid: number;
@@ -107,7 +107,7 @@ type UsersListChildMenuType = {
   permissiondisplayname: string;
 };
 
-type UsersListMenuType = {
+export type UsersListMenuType = {
   menuid: number;
   iconurl: string;
   menuurl: string;

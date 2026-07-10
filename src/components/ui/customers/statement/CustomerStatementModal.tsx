@@ -413,6 +413,7 @@ ${previewRef.current.innerHTML}
           customerName={customerName}
           defaultPhone={customer.phone || customer.mobile || ""}
           storeName={storeName}
+          storeid={parsedStoreId}
           customerid={customerIdNum}
           outletid={parsedOutletId}
           previewHtml={previewRef.current?.innerHTML ?? ""}

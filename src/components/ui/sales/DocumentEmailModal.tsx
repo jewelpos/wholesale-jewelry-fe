@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { X, Send } from "react-feather";
+import { useParams } from "next/navigation";
 import api from "@/lib/axios";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 
@@ -10,6 +11,7 @@ type DocumentType = "INVOICE" | "MEMO" | "SALES_ORDER" | "PURCHASE_ORDER";
 
 interface DocumentEmailModalProps {
   storeId: number;
+  outletId?: number;
   documentType: DocumentType;
   documentNumbers: number[];
   onClose: () => void;
@@ -36,6 +38,7 @@ const labelMap: Record<DocumentType, string> = {
 
 const DocumentEmailModal = ({
   storeId,
+  outletId: outletIdProp,
   documentType,
   documentNumbers,
   onClose,
@@ -43,6 +46,8 @@ const DocumentEmailModal = ({
   onError,
 }: DocumentEmailModalProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const params = useParams();
+  const outletId = outletIdProp ?? parseInt(params?.outletId as string, 10);
   const ep = endpointMap[documentType];
   const label = labelMap[documentType];
 
@@ -111,6 +116,9 @@ const DocumentEmailModal = ({
     if (result.error) {
       onError(result.error);
     } else {
+      if (outletId && Number.isFinite(outletId)) {
+        api.post('/store/comm-count/increment', { storeid: storeId, outletid: outletId, type: 'email' }).catch(() => {});
+      }
       onSent(result.data?.message ?? `Email sent to ${finalEmails.join(", ")}`);
       onClose();
     }

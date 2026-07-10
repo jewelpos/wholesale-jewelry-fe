@@ -20,7 +20,7 @@ const usePaymentMode = () => {
   const dispatch = useAppDispatch();
   const [paymentModes, setPaymentModes] = useState<PaymentModeType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [getPaymentExpenseModes] = useLazyQuery(GET_PAYMENT_MODE_LIST_QUERY);
+  const [getPaymentExpenseModes] = useLazyQuery(GET_PAYMENT_MODE_LIST_QUERY, { fetchPolicy: 'cache-and-network' });
 
   const fetchPaymentModes = useCallback(async (storeId: number) => {
     const result = await handleTryCatch(

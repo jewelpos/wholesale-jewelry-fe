@@ -1,4 +1,5 @@
 import { ApolloError } from "@apollo/client";
+import axios from "axios";
 
 export async function handleTryCatch<T>(
   fn: () => Promise<T>,
@@ -13,6 +14,12 @@ export async function handleTryCatch<T>(
       errorMessage =
         error?.graphQLErrors?.[0]?.message ||
         error?.networkError?.message ||
+        "An unexpected error occurred. Please try again.";
+    } else if (axios.isAxiosError(error)) {
+      errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
         "An unexpected error occurred. Please try again.";
     } else if (error instanceof Error) {
       errorMessage = error?.message;

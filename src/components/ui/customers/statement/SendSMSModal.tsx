@@ -8,11 +8,13 @@ import { SEND_STATEMENT_SMS_MUTATION } from "@/lib/graphql/mutations/customer";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import api from "@/lib/axios";
 
 interface SendSMSModalProps {
   customerName: string;
   defaultPhone: string;
   storeName: string;
+  storeid: number;
   customerid: number;
   outletid: number;
   previewHtml: string;
@@ -21,7 +23,7 @@ interface SendSMSModalProps {
 }
 
 const SendSMSModal: React.FC<SendSMSModalProps> = ({
-  customerName, defaultPhone, storeName, customerid, outletid, previewHtml, onClose, onSent,
+  customerName, defaultPhone, storeName, storeid, customerid, outletid, previewHtml, onClose, onSent,
 }) => {
   const dispatch = useAppDispatch();
   const [phone, setPhone] = useState(defaultPhone);
@@ -41,6 +43,7 @@ const SendSMSModal: React.FC<SendSMSModalProps> = ({
       });
       if (result?.sendCustomerStatementSMS?.success) {
         dispatch(showNotification({ message: "Statement sent via SMS successfully", type: NOTIFICATION_TYPES.SUCCESS }));
+        api.post('/store/comm-count/increment', { storeid, outletid, type: 'sms' }).catch(() => {});
         onSent();
       } else {
         dispatch(showNotification({ message: result?.sendCustomerStatementSMS?.error ?? "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));

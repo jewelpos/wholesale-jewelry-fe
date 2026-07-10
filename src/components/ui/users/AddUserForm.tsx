@@ -26,7 +26,7 @@ import UserRolesAndPermissionsInputs from "./UserRolesAndPermissionsInputs";
 import { RolesType } from "@/types/role";
 import { GET_ROLES_QUERY } from "@/lib/graphql/query/role";
 import { GET_PERMISSION_QUERY } from "@/lib/graphql/query/permission";
-import { AddUserMenusType, AddUserPermissionType } from "@/types/permissions";
+import { AddUserMenusType, AddUserPermissionType, UsersListChildMenuType, UsersListMenuType } from "@/types/permissions";
 import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
@@ -70,7 +70,7 @@ const AddUserForm = () => {
   const { fetchStoresData, refetchCurrentStore, loading: storesLoading } = useStores();
   const isNewUser = !userId;
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
-  const password = getValues("password");
+  const password = watch("password");
   const roleId = getValues("roleid");
   const storeId = getValues("storeid");
   const selectedOutlets = getValues("outlets");
@@ -153,7 +153,7 @@ const AddUserForm = () => {
       ...otherPayloads,
       permissions: {
         menus: permittedMenus,
-        roleid: permissions?.roleid,
+        roleid: formData.roleid,
       },
       storetooutlet: storeOutlet,
     };
@@ -162,7 +162,7 @@ const AddUserForm = () => {
       let response;
       if (userId) {
         response = await editOutletUser({
-          variables: { input: { ...payloads, userid: parsedUserId } },
+          variables: { input: { ...payloads, userid: userData?.getUserByIdUnderStore?.userid } },
         });
       } else {
         response = await createOutletUser({
@@ -211,7 +211,24 @@ const AddUserForm = () => {
         roleid: user.roleid,
         storeid: parsedStoreId,
       });
-      setPermittedMenus(user.userpermissions[0].menus);
+      const rawMenus: UsersListMenuType[] = user.userpermissions?.[0]?.menus ?? [];
+      const childrenByParent = new Map<number, UsersListChildMenuType[]>();
+      rawMenus.forEach((menu: UsersListMenuType) => {
+        (menu.children ?? []).forEach((child: UsersListChildMenuType) => {
+          const ppid = child.permissionparentid;
+          if (ppid != null) {
+            if (!childrenByParent.has(ppid)) childrenByParent.set(ppid, []);
+            childrenByParent.get(ppid)!.push(child);
+          }
+        });
+      });
+      const normalizedMenus = Array.from(childrenByParent.entries()).map(([ppid, children]) => ({
+        permissionid: ppid,
+        permissiondisplayname: '',
+        storetypeid: children[0]?.storetypeid ?? 1,
+        children,
+      }));
+      setPermittedMenus(normalizedMenus);
     }
   }, [reset, userData, parsedStoreId]);
 

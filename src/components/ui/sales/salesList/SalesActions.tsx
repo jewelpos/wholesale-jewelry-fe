@@ -37,8 +37,9 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const storeData = useAppSelector((state) => state.store.data);
   const [cancelInvoice] = useMutation(CANCEL_INVOICE_MUTATION);
   const { basePath } = useDefaultRoute();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [smsSending, setSmsSending] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
         storeid: parsedStoreId,
         invoicenumber: data.invoicenumber,
       });
+      api.post('/store/comm-count/increment', { storeid: parsedStoreId, outletid: parsedOutletId, type: 'sms' }).catch(() => {});
       dispatch(showNotification({ message: `SMS sent for Invoice #${data.invoicenumber}`, type: NOTIFICATION_TYPES.SUCCESS }));
     } catch {
       dispatch(showNotification({ message: "Failed to send SMS", type: NOTIFICATION_TYPES.ERROR }));
@@ -248,6 +250,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
       {showEmail && (
         <DocumentEmailModal
           storeId={parsedStoreId}
+          outletId={parsedOutletId}
           documentType="INVOICE"
           documentNumbers={[Number(data.invoicenumber)]}
           onClose={() => setShowEmail(false)}

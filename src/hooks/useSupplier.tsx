@@ -27,9 +27,9 @@ const useSupplier = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [supplier, setSupplier] = useState<SupplierType | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [getSuppliersByStoreId] = useLazyQuery(GET_SUPPLIERS_BY_STORE_ID_QUERY);
-  const [getSupplierByOutletId] = useLazyQuery(GET_SUPPLIER_BY_OUTLET_ID_QUERY);
-  const [getSupplierBySupplierId] = useLazyQuery(GET_SUPPLIER_QUERY);
+  const [getSuppliersByStoreId] = useLazyQuery(GET_SUPPLIERS_BY_STORE_ID_QUERY, { fetchPolicy: 'cache-and-network' });
+  const [getSupplierByOutletId] = useLazyQuery(GET_SUPPLIER_BY_OUTLET_ID_QUERY, { fetchPolicy: 'cache-and-network' });
+  const [getSupplierBySupplierId] = useLazyQuery(GET_SUPPLIER_QUERY, { fetchPolicy: 'cache-and-network' });
   const [getSupplierBalanceDue] = useLazyQuery(GET_SUPPLIER_BALANCE_DUE_QUERY);
   const [getFullSupplierInvoiceList] = useLazyQuery(
     GET_FULL_SUPPLIER_INVOICE_LIST_QUERY
