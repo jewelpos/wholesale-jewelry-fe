@@ -98,3 +98,13 @@ export const CREATE_SUPPLIER_CREDIT_APPLY_MUTATION = gql`
     }
   }
 `;
+
+export const REFRESH_SUPPLIER_LIST_MUTATION = gql`
+  mutation RefreshSupplierList($storeid: Int!) {
+    refreshSupplierList(storeid: $storeid) {
+      success
+      message
+      error
+    }
+  }
+`;

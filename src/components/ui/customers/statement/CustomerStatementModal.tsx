@@ -196,7 +196,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Statement — ${customer.custcompanyname || customer.fullname}</title>
+  <title>Statement — ${(customer.custcompanyname || customer.fullname || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 24px 32px; }

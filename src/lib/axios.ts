@@ -1,12 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { getAccessToken, getRefreshToken } from "./authStorage";
 
 // Create axios instance
 const api = axios.create({
   baseURL: typeof window !== "undefined" ? "/api/proxy" : process.env.NEXT_PUBLIC_API_URL,
-  // headers: {
-  //   "Content-Type": "application/json",
-  // },
 });
 
 // Store for ongoing refresh token requests
@@ -16,25 +12,24 @@ let failedQueue: {
   reject: (reason?: any) => void;
 }[] = [];
 
-const processQueue = (error: Error | null, token: string | null = null) => {
+const processQueue = (error: Error | null) => {
   failedQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);
     } else {
-      promise.resolve(token);
+      promise.resolve();
     }
   });
-
   failedQueue = [];
 };
 
 async function refreshTokenCall(): Promise<boolean> {
   try {
-    const response = await fetch("/api/auth/refresh-token", {
+    const response = await fetch("/api/auth/refresh", {
       method: "POST",
     });
     if (response.ok) {
-      return response.ok;
+      return true;
     }
     throw new Error("");
   } catch {
@@ -56,35 +51,18 @@ async function logout(): Promise<boolean> {
   }
 }
 
-// Request interceptor
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor
+// Response interceptor — handles 401 by attempting a silent token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
 
-    // If error is 401 and we haven't tried to refresh token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If we're already refreshing, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
+          .then(() => api(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
@@ -92,30 +70,16 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Get refresh token from storage
-        const refreshToken = await getRefreshToken();
-
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
-        }
-        await refreshTokenCall(); // Process queued requests
-        processQueue(null, "");
-
-        // Return original request with new token
+        await refreshTokenCall();
+        processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
-        // Handle refresh token failure
         processQueue(refreshError as Error);
-
-        // Clear tokens and redirect to login
         await logout();
-
-        // If we're in the browser environment, redirect to login
         if (typeof window !== "undefined") {
           const prefix = window.location.pathname.split("/")[1] || "jw";
           window.location.href = `/${prefix}/login`;
         }
-
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

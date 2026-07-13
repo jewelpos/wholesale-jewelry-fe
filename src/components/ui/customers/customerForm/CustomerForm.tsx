@@ -10,7 +10,6 @@ import { useDispatch } from "react-redux";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
-import { getAccessToken } from "@/lib/authStorage";
 import { CustomerFormType } from "@/types/customer";
 import CustomerInputsA from "./CustomerInputsA";
 import CustomerInputsB from "./CustomerInputsB";
@@ -140,24 +139,17 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
     Object.entries(payload).forEach(([key, value]: [string, any]) => {
       form.append(key, value);
     });
-    const token = await getAccessToken();
-    const authHeaders: Record<string, string> = {};
-    if (token) authHeaders["Authorization"] = `Bearer ${token}`;
-
     const result = await handleTryCatch(
       async () => {
         const url = customerId
           ? "/api/proxy/store/customer/edit"
           : "/api/proxy/store/customer/add";
         const method = customerId ? "PUT" : "POST";
-        const res = await fetch(url, { method, body: form, headers: authHeaders });
+        const res = await fetch(url, { method, body: form });
         const data = await res.json();
         if (data.success) {
           if (!customerId && data.data?.customerid && pendingDocFiles.length > 0) {
             const newId = data.data.customerid;
-            const uploadToken = await getAccessToken();
-            const uploadHeaders: Record<string, string> = {};
-            if (uploadToken) uploadHeaders["Authorization"] = `Bearer ${uploadToken}`;
             for (const file of pendingDocFiles) {
               const fd = new FormData();
               fd.append("file", file);
@@ -165,7 +157,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
               fd.append("customerid", String(newId));
               fd.append("documentname", file.name);
               try {
-                await fetch("/api/proxy/store/customer/document/upload", { method: "POST", body: fd, headers: uploadHeaders });
+                await fetch("/api/proxy/store/customer/document/upload", { method: "POST", body: fd });
               } catch (err) {
                 console.error("Document upload failed", err);
               }

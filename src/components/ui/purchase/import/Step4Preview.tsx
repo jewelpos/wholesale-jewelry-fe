@@ -6,7 +6,6 @@ import { cleanCell, cleanNumeric, DEFAULT_UNITS, RawSheet } from '@/lib/utils/po
 import { ColumnMapping } from './Step3ColumnMap';
 import { GET_INVENTORY_ITEMS_BY_ITEMCODES } from '@/lib/graphql/query/poImport';
 import { GET_ITEM_CATEGORIES_QUERY, GET_ITEM_SUBCATEGORIES_QUERY } from '@/lib/graphql/query/products';
-import { getAccessToken } from '@/lib/authStorage';
 
 export interface ImportedPOItem {
   itemid?: number;
@@ -334,15 +333,11 @@ export default function Step4Preview({
           })),
         };
 
-        const token = await getAccessToken();
         const res = await fetch(
           `/api/proxy/batch-add`,
           {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           },
         );

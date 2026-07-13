@@ -23,6 +23,7 @@ interface Props {
     React.SetStateAction<number | undefined>
   >;
   gridRef?: React.RefObject<AgGridReact | null>;
+  extraActions?: React.ReactNode;
 }
 
 const CustomFilterSections = ({
@@ -35,6 +36,7 @@ const CustomFilterSections = ({
   selectedSupplier,
   setSelectedSupplier,
   gridRef,
+  extraActions,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -106,6 +108,7 @@ const CustomFilterSections = ({
               Filters
             </button>
           )}
+          {extraActions}
         </div>
         {setSelectedOutlet && (
           <div className="col-12 col-md-5 col-lg-3 ms-md-auto">

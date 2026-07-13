@@ -6,7 +6,6 @@ import {
 } from "@apollo/client";
 import { getEnvironmentConfig } from "./config/environment";
 import { errorLink } from "./graphql/errorLinks";
-import { authLink } from "./graphql/authLinks";
 
 const config = getEnvironmentConfig();
 
@@ -14,8 +13,9 @@ const httpLink = createHttpLink({
   uri: typeof window !== "undefined" ? "/api/proxy/graphql" : config.graphqlUrl,
 });
 
+// authLink removed: /api/proxy/graphql reads the accessToken cookie server-side (M2 fix)
 export const apolloClientAuthorized = new ApolloClient({
-  link: from([errorLink, authLink, httpLink]),
+  link: from([errorLink, httpLink]),
   cache: new InMemoryCache({
     addTypename: false
   }),

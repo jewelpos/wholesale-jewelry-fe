@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -23,6 +23,7 @@ import {
   GET_CUSTOMER_LIST_QUERY,
   GET_CUSTOMER_QUERY,
 } from "@/lib/graphql/query/customer";
+import { REFRESH_CUSTOMER_LIST_MUTATION } from "@/lib/graphql/mutations/customer";
 import { CustomersListType, CustomerType } from "@/types/customer";
 import "ag-grid-enterprise";
 import { customersListColumnDefs } from "./ColumnDef";
@@ -56,6 +57,7 @@ const CustomerListComponent = () => {
     number | undefined
   >(undefined);
   const [getCustomerList] = useLazyQuery(GET_CUSTOMER_LIST_QUERY, { fetchPolicy: "network-only" });
+  const [refreshCustomerListMutation, { loading: refreshing }] = useMutation(REFRESH_CUSTOMER_LIST_MUTATION);
   const dispatch = useAppDispatch();
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -162,6 +164,18 @@ const CustomerListComponent = () => {
   const handleDeleteSuccess = useCallback(() => {
     if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
   }, [gridReady]);
+
+  const handleRefresh = useCallback(async () => {
+    const result = await handleTryCatch(async () => {
+      await refreshCustomerListMutation({ variables: { storeid: parsedStoreId } });
+      return true;
+    });
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    } else {
+      gridRef.current?.api?.refreshServerSide({ purge: true });
+    }
+  }, [parsedStoreId, refreshCustomerListMutation, dispatch]);
 
   useEffect(() => {
     if (parsedStoreId && gridReady) {
@@ -291,6 +305,25 @@ const CustomerListComponent = () => {
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
+            extraActions={
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                title="Refresh balances from latest invoices & payments"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                  borderRadius: 6, border: "1px solid #dee2e6",
+                  background: "#fff", color: "#64748b",
+                  cursor: refreshing ? "not-allowed" : "pointer",
+                  whiteSpace: "nowrap", transition: "0.15s",
+                }}
+              >
+                <i className={`fas fa-sync-alt${refreshing ? " fa-spin" : ""}`} style={{ fontSize: 11 }} />
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            }
           />
           <div className="d-flex gap-1 flex-wrap mb-2">
             {SEGMENT_PILLS.map((p) => (

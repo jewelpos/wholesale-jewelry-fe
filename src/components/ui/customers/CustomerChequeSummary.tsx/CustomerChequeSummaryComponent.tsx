@@ -19,6 +19,7 @@ import OnHandChecksComponent from "../onHandChecks/OnHandChecksComponent";
 import CustomerChequeSummaryHeader from "./CustomerChequeSummaryHeader";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
 import AddOnHandChequeModal from "./AddOnHandChequeModal";
+import OnHandChecksPrintModal from "./OnHandChecksPrintModal";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ReportSummaryCards, { SummaryCardDef } from "../../reports/shared/ReportSummaryCards";
@@ -47,6 +48,7 @@ const CustomerChequeSummaryComponent = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [openAddChequeModal, setOpenAddChequeModal] = useState<boolean>(false);
+  const [openPrintModal, setOpenPrintModal] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
@@ -191,6 +193,7 @@ const CustomerChequeSummaryComponent = () => {
       <CustomerChequeSummaryHeader
         setOpenAddChequeModal={setOpenAddChequeModal}
         onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "customer-checks", sheetName: "Checks" })}
+        onPrint={() => setOpenPrintModal(true)}
       />
 
       {isAdmin && (
@@ -316,6 +319,9 @@ const CustomerChequeSummaryComponent = () => {
           </div>
         </div>
       </div>
+      {openPrintModal && (
+        <OnHandChecksPrintModal onClose={() => setOpenPrintModal(false)} />
+      )}
       {openAddChequeModal && (
         <AddOnHandChequeModal
           setShowPrintModal={setOpenAddChequeModal}

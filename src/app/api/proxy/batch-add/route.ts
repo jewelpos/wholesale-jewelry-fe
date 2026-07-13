@@ -3,14 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 const BACKEND_BASE = process.env.BACKEND_PUBLIC_URL ?? process.env.BACKEND_ORIGIN ?? "https://api.jewelpos.com";
 
 export async function POST(request: NextRequest) {
+  const token = request.cookies.get("accessToken")?.value;
+  if (!token) {
+    return NextResponse.json({ created: [], failed: [{ itemcode: "auth", reason: "Unauthorized" }] }, { status: 401 });
+  }
+
   const body = await request.text();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "authorization": `Bearer ${token}`,
   };
-
-  const auth = request.headers.get("authorization");
-  if (auth) headers["authorization"] = auth;
 
   try {
     const response = await fetch(`${BACKEND_BASE}/store/product/batch-add`, {

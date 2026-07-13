@@ -470,6 +470,34 @@ export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
   }
 }`;
 
+export const GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY = gql`
+  query GetCustomerChecksForPrint(
+    $storeid: Int!
+    $customerid: Int
+    $fromdate: String
+    $todate: String
+    $checkstatus: String
+  ) {
+    getCustomerChecksForPrint(
+      storeid: $storeid
+      customerid: $customerid
+      fromdate: $fromdate
+      todate: $todate
+      checkstatus: $checkstatus
+    ) {
+      customerid
+      custcompanyname
+      checkpostingdate
+      checkno
+      checkamount
+      checkstatus
+      checkentrydate
+      enteredby
+      customercheckdetailid
+    }
+  }
+`;
+
 export const GET_CUSTOMER_MONTHLY_SALES_PIVOT_QUERY = gql`
   query GetMonthlyCustomerSalesPivot(
     $storeid: Int!

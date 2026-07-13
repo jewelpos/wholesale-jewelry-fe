@@ -1,7 +1,6 @@
 import { apolloClientServer } from "@/lib/apolloClientServer";
 import { setCookieResponse } from "@/lib/authStorage";
 import { REFRESH_TOKEN_MUTATION } from "@/lib/graphql/mutations/auth";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -22,11 +21,13 @@ export async function POST(request: NextRequest) {
     });
     if (data.refreshToken.success) {
       setCookieResponse(response, "accessToken", accessToken, {
+        maxAge: 15 * 60,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       });
       setCookieResponse(response, "refreshToken", refreshToken, {
+        maxAge: 7 * 24 * 60 * 60,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
@@ -41,7 +42,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  const token = (await cookies()).get("refreshToken")?.value;
-  return Response.json({ token });
-}

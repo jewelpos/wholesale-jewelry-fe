@@ -21,3 +21,23 @@ export const EDIT_OUTLET_USER_MUTATION = gql`
     }
   }
 `;
+
+export const RESEND_USER_VERIFICATION_OTP_MUTATION = gql`
+  mutation ResendUserVerificationOTP($userid: Int!) {
+    resendUserVerificationOTP(userid: $userid) {
+      success
+      message
+      error
+    }
+  }
+`;
+
+export const RESEND_USER_VERIFICATION_EMAIL_MUTATION = gql`
+  mutation ResendUserVerificationEmail($userid: Int!) {
+    resendUserVerificationEmail(userid: $userid) {
+      success
+      message
+      error
+    }
+  }
+`;

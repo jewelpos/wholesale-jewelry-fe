@@ -20,15 +20,9 @@ export const bankListColumnDefs: ColDef<AccountsBankListType>[] = [
     filter: false,
     suppressHeaderMenuButton: true,
     cellRendererParams: {
-      onEdit: (data: AccountsBankListType) => {
-        console.log("Edit clicked", data);
-      },
-      onDelete: (data: AccountsBankListType) => {
-        console.log("Delete clicked", data);
-      },
-      onView: (data: AccountsBankListType) => {
-        console.log("View clicked", data);
-      },
+      onEdit: (_data: AccountsBankListType) => {},
+      onDelete: (_data: AccountsBankListType) => {},
+      onView: (_data: AccountsBankListType) => {},
     },
   },
 ];

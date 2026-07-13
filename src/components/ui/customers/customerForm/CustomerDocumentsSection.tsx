@@ -5,7 +5,6 @@ import { useQuery, useMutation } from "@apollo/client";
 import { createPortal } from "react-dom";
 import { Eye, Download, Trash2, Upload, FileText, X } from "lucide-react";
 import dayjs from "dayjs";
-import { getAccessToken } from "@/lib/authStorage";
 import { GET_CUSTOMER_DOCUMENTS_QUERY } from "@/lib/graphql/query/customerDocuments";
 import { DELETE_CUSTOMER_DOCUMENT_MUTATION } from "@/lib/graphql/mutations/customerDocuments";
 
@@ -79,13 +78,9 @@ export default function CustomerDocumentsSection({ customerid, storeid, pendingF
       formData.append("storeid", String(storeid));
       formData.append("customerid", String(customerid));
       formData.append("documentname", file.name);
-      const token = await getAccessToken();
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
       await fetch("/api/proxy/store/customer/document/upload", {
         method: "POST",
         body: formData,
-        headers,
       });
       refetch();
     } catch (err: any) {

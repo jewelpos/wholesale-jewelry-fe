@@ -158,13 +158,8 @@ const Footer: React.FC = () => {
       {storeId && <GoldRateTicker storeid={storeId} />}
       <div className="container-fluid">
         <div className="d-flex justify-content-between align-items-center py-2 border-top text-muted small">
-          <div>&copy; {new Date().getFullYear()} Jewel Wholesale</div>
-          <div>
-            Designed by{" "}
-            <a href="https://yourdesignerurl.com" target="_blank" rel="noopener noreferrer">
-              Your Designer
-            </a>
-          </div>
+          <div>&copy; {new Date().getFullYear()} JewelPOS - Wholesale <span className="text-muted ms-1" style={{ fontSize: 11 }}>v0.1.0</span></div>
+          <div>Powered by POSitive Business Solution</div>
         </div>
       </div>
     </footer>

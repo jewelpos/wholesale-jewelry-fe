@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -10,6 +10,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from "react-feather";
+import { Turnstile, TurnstileInstance } from "@marsidev/react-turnstile";
 
 export const LoginForm = () => {
   const router = useRouter();
@@ -18,6 +19,8 @@ export const LoginForm = () => {
   const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const {
     register,
@@ -29,18 +32,28 @@ export const LoginForm = () => {
   });
 
   const onSubmit = async (formData: LoginFormInputs) => {
+    if (!turnstileToken) {
+      dispatch(showNotification({ message: "Security check not completed. Please wait a moment and try again.", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
     setLoginLoading(true);
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: formData.username, password: formData.password }),
+      body: JSON.stringify({ username: formData.username, password: formData.password, turnstileToken, keepSignedIn }),
     });
     const data = await response.json();
     if (data.data) {
       if (data.success) {
-        router.push(`/${storePrefix}/home`);
+        const { storeid, outletid, routeprefix } = data.data;
+        if (storeid && outletid && routeprefix) {
+          router.push(`/${routeprefix}/${storeid}/${outletid}/home`);
+        } else {
+          router.push(`/${storePrefix}/home`);
+        }
       } else {
-        const queryString = new URLSearchParams({ email: formData.username }).toString();
+        const codes: string[] = data?.data?.code || [];
+        const queryString = new URLSearchParams({ email: formData.username, codes: codes.join(",") }).toString();
         router.push(`/${storePrefix}/verify?${queryString}`);
       }
       setLoginLoading(false);
@@ -50,6 +63,8 @@ export const LoginForm = () => {
         data?.graphQLErrors?.[0]?.message ||
         data?.networkError?.message ||
         "An unexpected error occurred. Please try again.";
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
       dispatch(showNotification({ message: errorMessage, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
@@ -128,8 +143,33 @@ export const LoginForm = () => {
           Keep me signed in
         </label>
 
+        {/* Cloudflare Turnstile — auto-verifies silently, resets on failed login */}
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onSuccess={(token) => setTurnstileToken(token)}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => setTurnstileToken(null)}
+          options={{ size: "invisible" }}
+        />
+
+        {/* Security check status */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 4 }}>
+          {turnstileToken ? (
+            <>
+              <Shield size={12} color="#16a34a" />
+              <span style={{ color: "#16a34a", fontWeight: 500 }}>Security check passed</span>
+            </>
+          ) : (
+            <>
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: 11, color: "#64748b" }} />
+              <span style={{ color: "#64748b" }}>Running security check…</span>
+            </>
+          )}
+        </div>
+
         {/* Submit */}
-        <button type="submit" className="jp-submit-btn" disabled={loginLoading}>
+        <button type="submit" className="jp-submit-btn" disabled={loginLoading || !turnstileToken}>
           {loginLoading ? (
             <><i className="fas fa-spinner fa-spin" /> Signing in…</>
           ) : (
@@ -145,7 +185,7 @@ export const LoginForm = () => {
           <Shield size={12} />
           256-bit SSL encrypted
         </span>
-        <span>© 2025 JewelPOS</span>
+        <span>© {new Date().getFullYear()} JewelPOS</span>
       </div>
 
     </div>

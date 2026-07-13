@@ -8,28 +8,6 @@ export const COOKIE_OPTIONS: CookieOptions = {
   sameSite: "strict",
 };
 
-export async function getAccessToken(): Promise<string | null> {
-  try {
-    const response = await fetch("/api/auth/getToken");
-    const { token } = await response.json();
-    return token;
-  } catch (error) {
-    console.error("Error fetching token:", error);
-    return null;
-  }
-}
-
-export async function getRefreshToken(): Promise<string | null> {
-  try {
-    const response = await fetch("/api/auth/refresh");
-    const { token } = await response.json();
-    return token;
-  } catch (error) {
-    console.error("Error fetching token:", error);
-    return null;
-  }
-}
-
 // For setting cookies in API routes or Server Actions
 export const setCookieResponse = (
   response: NextResponse,

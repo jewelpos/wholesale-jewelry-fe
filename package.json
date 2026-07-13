@@ -18,7 +18,9 @@
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@hookform/resolvers": "^3.10.0",
+    "@marsidev/react-turnstile": "^1.5.3",
     "@reduxjs/toolkit": "^2.5.0",
+    "@types/dompurify": "^3.0.5",
     "@zxing/browser": "^0.2.0",
     "@zxing/library": "^0.22.0",
     "ag-grid-enterprise": "32.3.6",
@@ -32,6 +34,7 @@
     "cookies-next": "^5.0.2",
     "country-state-city": "^3.2.1",
     "dayjs": "^1.11.13",
+    "dompurify": "^3.4.12",
     "exceljs": "^4.4.0",
     "graphql": "^16.10.0",
     "lucide-react": "^1.17.0",
@@ -47,8 +50,7 @@
     "react-scrollbars-custom": "^4.1.1",
     "react-select": "^5.10.0",
     "sweetalert2": "^11.17.2",
-    "sweetalert2-react-content": "^5.1.0",
-    "xlsx": "^0.18.5"
+    "sweetalert2-react-content": "^5.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

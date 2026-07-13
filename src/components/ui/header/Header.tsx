@@ -16,7 +16,7 @@ type Props = {
 };
 
 const Header = ({ onLogout, storeLoading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storeId, outletId, storePrefix } = useParams<{ storeId: string; outletId: string; storePrefix: string }>();
   const [toggle, SetToggle] = useState(false);
   const user = useAppSelector((state) => state.user.data);
   const stores = useAppSelector((state) => state.stores.data);
@@ -619,7 +619,7 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                   </div>
                 </div>
                 <hr className="m-0" />
-                <Link className="dropdown-item" href="">
+                <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
                   <User className="me-2" /> My Profile
                 </Link>
                 <Link className="dropdown-item" href="">
@@ -651,7 +651,7 @@ const Header = ({ onLogout, storeLoading }: Props) => {
             <i className="fa fa-ellipsis-v" />
           </Link>
           <div className="dropdown-menu dropdown-menu-right">
-            <Link className="dropdown-item" href="profile">
+            <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
               My Profile
             </Link>
             <Link className="dropdown-item" href="generalsettings">

@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 
 export interface RawSheet {
@@ -51,46 +51,40 @@ export function cleanNumeric(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Read workbook from file using SheetJS (reliable browser support)
-// NOTE: SheetJS type:'array' requires Uint8Array, NOT ArrayBuffer — must convert first
-async function readWorkbook(file: File): Promise<XLSX.WorkBook> {
+async function readWorkbook(file: File): Promise<ExcelJS.Workbook> {
   const buffer = await file.arrayBuffer();
-  const data = new Uint8Array(buffer);
-  return XLSX.read(data, { type: 'array' });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer);
+  return wb;
 }
 
 export async function loadExcelSheets(file: File): Promise<string[]> {
   const wb = await readWorkbook(file);
-  console.log('[POImport] SheetNames from SheetJS:', wb.SheetNames);
-  return wb.SheetNames;
+  return wb.worksheets.map((ws) => ws.name);
 }
 
 export async function loadSheetData(file: File, sheetName: string): Promise<RawSheet> {
   const wb = await readWorkbook(file);
-  const ws = wb.Sheets[sheetName];
+  const ws = wb.getWorksheet(sheetName);
   if (!ws) throw new Error(`Worksheet "${sheetName}" not found`);
 
-  // Convert to array of arrays (all values as strings, include blank cells)
-  const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, {
-    header: 1,
-    defval: '',
-    blankrows: true,
-    raw: false, // format dates/numbers as strings
-  });
+  const colCount = ws.columnCount || 1;
+  const rows: string[][] = [];
 
-  let maxCols = 0;
-  const rows: string[][] = raw.map((row) => {
-    const cells = (row as unknown[]).map((cell) => cleanCell(cell));
-    if (cells.length > maxCols) maxCols = cells.length;
-    return cells;
+  ws.eachRow({ includeEmpty: true }, (row) => {
+    const cells: string[] = [];
+    for (let c = 1; c <= colCount; c++) {
+      cells.push(cleanCell(row.getCell(c).text));
+    }
+    rows.push(cells);
   });
 
   // Pad short rows to uniform width
   for (const r of rows) {
-    while (r.length < maxCols) r.push('');
+    while (r.length < colCount) r.push('');
   }
 
-  return { name: sheetName, rows, colCount: maxCols };
+  return { name: sheetName, rows, colCount };
 }
 
 export async function parseCsvFile(file: File): Promise<RawSheet> {

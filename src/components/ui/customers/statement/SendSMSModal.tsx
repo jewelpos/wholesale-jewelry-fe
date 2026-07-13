@@ -9,6 +9,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import api from "@/lib/axios";
+import DOMPurify from "dompurify";
 
 interface SendSMSModalProps {
   customerName: string;
@@ -37,7 +38,8 @@ const SendSMSModal: React.FC<SendSMSModalProps> = ({
     }
     setSending(true);
     try {
-      const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Statement</title></head><body style="margin:0;padding:16px;font-family:Arial,sans-serif;">${previewHtml}</body></html>`;
+      const safeHtml = DOMPurify.sanitize(previewHtml, { USE_PROFILES: { html: true } });
+      const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Statement</title></head><body style="margin:0;padding:16px;font-family:Arial,sans-serif;">${safeHtml}</body></html>`;
       const { data: result } = await sendSMS({
         variables: { input: { customerid, outletid, phoneNumber: phone.trim(), htmlContent: fullHtml } },
       });

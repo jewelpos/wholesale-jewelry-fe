@@ -32,7 +32,6 @@ const SupplierListHeader = ({
       setPaymentModal(actionName);
     }
   };
-  console.log(currentMenu);
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}

@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useMutation } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -21,6 +21,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
 import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
+import { REFRESH_SUPPLIER_LIST_MUTATION } from "@/lib/graphql/mutations/supplier";
 import { SupplierListType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import { supplierListcolumnDefs } from "./ColumnDef";
@@ -34,10 +35,14 @@ import SupplierInvoiceFormModal from "../invoice/new/SupplierInvoiceFormModal";
 import PaymentModal from "../appliedPayments/PaymentModal";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
+import { useParams } from "next/navigation";
 
 const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
+  const [refreshSupplierListMutation, { loading: refreshing }] = useMutation(REFRESH_SUPPLIER_LIST_MUTATION);
   const dispatch = useAppDispatch();
+  const { storeId: storeIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
@@ -104,10 +109,22 @@ const SupplierListComponent = () => {
     }
   }, [gridReady]);
 
+  const handleRefresh = useCallback(async () => {
+    const result = await handleTryCatch(async () => {
+      await refreshSupplierListMutation({ variables: { storeid: parsedStoreId } });
+      return true;
+    });
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    } else {
+      gridRef.current?.api?.refreshServerSide({ purge: true });
+    }
+  }, [parsedStoreId, refreshSupplierListMutation, dispatch]);
+
   // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
-    if (selectedOutlet && gridReady) {
-      gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
+    if (selectedOutlet && gridReady && gridRef.current?.api) {
+      gridRef.current.api.setGridOption("serverSideDatasource", datasource);
     }
   }, [gridReady, datasource, selectedOutlet]);
 
@@ -170,6 +187,25 @@ const SupplierListComponent = () => {
               setSearch={setSearch}
               selectedOutlet={selectedOutlet}
               setSelectedOutlet={setSelectedOutlet}
+              extraActions={
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  title="Refresh balances from latest invoices & payments"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                    borderRadius: 6, border: "1px solid #dee2e6",
+                    background: "#fff", color: "#64748b",
+                    cursor: refreshing ? "not-allowed" : "pointer",
+                    whiteSpace: "nowrap", transition: "0.15s",
+                  }}
+                >
+                  <i className={`fas fa-sync-alt${refreshing ? " fa-spin" : ""}`} style={{ fontSize: 11 }} />
+                  {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
+              }
             />
             <div style={{ flex: 1, minHeight: 0 }}>
               <POSGrid

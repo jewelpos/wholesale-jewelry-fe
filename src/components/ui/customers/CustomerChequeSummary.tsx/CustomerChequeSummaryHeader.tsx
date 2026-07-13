@@ -14,9 +14,11 @@ import Link from "next/link";
 const CustomerChequeSummaryHeader = ({
   setOpenAddChequeModal,
   onExport,
+  onPrint,
 }: {
   setOpenAddChequeModal: (value: boolean) => void;
   onExport: () => void;
+  onPrint: () => void;
 }) => {
   const { currentMenu } = useMenu();
 
@@ -27,6 +29,9 @@ const CustomerChequeSummaryHeader = ({
         break;
       case "export_customer_onhand_check":
         onExport();
+        break;
+      case "print_check_list":
+        onPrint();
         break;
       default:
         break;

@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const BACKEND_URL = process.env.BACKEND_PUBLIC_URL ?? process.env.BACKEND_ORIGIN ?? "https://api.jewelpos.com";
-
 const nextConfig: NextConfig = {
   // AG Grid 32 ColGroupDef has a known bug with React 18 Strict Mode: during the fake
   // unmount/remount, ColumnGroup.providedColumnGroup is nulled and the fake remount
@@ -21,14 +19,6 @@ const nextConfig: NextConfig = {
         hostname: "jewelposbucket.s3.amazonaws.com",
       },
     ],
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/api/proxy/:path*",
-        destination: `${BACKEND_URL}/:path*`,
-      },
-    ];
   },
 };
 

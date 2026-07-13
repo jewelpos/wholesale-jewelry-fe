@@ -109,3 +109,13 @@ export const SEND_STATEMENT_SMS_MUTATION = gql`
     }
   }
 `;
+
+export const REFRESH_CUSTOMER_LIST_MUTATION = gql`
+  mutation RefreshCustomerList($storeid: Int!) {
+    refreshCustomerList(storeid: $storeid) {
+      success
+      message
+      error
+    }
+  }
+`;

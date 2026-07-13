@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Matches /{prefix}, /{prefix}/login, /{prefix}/register, /{prefix}/forgot_password
-const PUBLIC_ROUTE_RE = /^\/[^/]+(\/login|\/register|\/forgot_password)?$/;
+// Matches /{prefix}, /{prefix}/login, /{prefix}/register, /{prefix}/forgot_password, /{prefix}/verify-email, /{prefix}/verify
+const PUBLIC_ROUTE_RE = /^\/[^/]+(\/login|\/register|\/forgot_password|\/verify-email|\/verify)?$/;
 
 function isPublicRoute(pathname: string): boolean {
   return pathname === "/" || PUBLIC_ROUTE_RE.test(pathname);

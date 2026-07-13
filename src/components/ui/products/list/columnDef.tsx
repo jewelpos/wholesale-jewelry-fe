@@ -110,7 +110,6 @@ export function makeProductColumnDefs(
       cellRendererParams: {
         editPath: "/products/edit",
         onDelete: (data: ProductListType) => {
-          console.log("Delete clicked", data);
         },
       },
     },

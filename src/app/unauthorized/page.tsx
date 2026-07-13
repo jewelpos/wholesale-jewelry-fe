@@ -7,7 +7,9 @@ import { Suspense } from "react";
 
 const UnauthorizedContent = () => {
   const searchParams = useSearchParams();
-  const prefix = searchParams.get("prefix") || "jw";
+  const rawPrefix = searchParams.get("prefix") || "jw";
+  // Allow only alphanumeric + hyphens to prevent open redirect
+  const prefix = /^[a-zA-Z0-9-]+$/.test(rawPrefix) ? rawPrefix : "jw";
   return (
     <div
       style={{
