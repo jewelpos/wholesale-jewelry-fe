@@ -13,6 +13,7 @@ export interface activeUser {
   username: string;
   role: string;
   roleid: number;
+  issysgenmasteraccount?: number;
   otpverified: boolean;
   emailverified: boolean;
   isenabled: boolean;

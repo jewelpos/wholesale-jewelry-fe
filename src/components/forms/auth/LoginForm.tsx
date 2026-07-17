@@ -53,7 +53,9 @@ export const LoginForm = () => {
         }
       } else {
         const codes: string[] = data?.data?.code || [];
-        const queryString = new URLSearchParams({ email: formData.username, codes: codes.join(",") }).toString();
+        // Store email in sessionStorage instead of URL to avoid PII in browser history/logs
+        sessionStorage.setItem("otp_email", formData.username);
+        const queryString = new URLSearchParams({ codes: codes.join(",") }).toString();
         router.push(`/${storePrefix}/verify?${queryString}`);
       }
       setLoginLoading(false);

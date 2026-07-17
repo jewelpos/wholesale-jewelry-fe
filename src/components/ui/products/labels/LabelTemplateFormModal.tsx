@@ -11,6 +11,8 @@ import {
 import LabelCanvas, { LabelTemplate, LabelData, FieldPrintConfig } from "./LabelCanvas";
 import api from "@/lib/axios";
 
+const isOn = (v: unknown): boolean => v === "1" || v === "\x01" || v === 1 || v === true;
+
 interface Props {
   storeid: number;
   editLabel: LabelTemplate | null;
@@ -35,11 +37,12 @@ const DEFAULT_FORM = {
   labelheight: 1,
   leftmargin: "0.05",
   topmargin: "0.05",
-  middlemargin: "0.1",
+  middlemargin: "0.05",
   tagprefix: "",
   tagsuffix: "",
   backgroundimage: "",
   isactive: "1",
+  contentAlign: "left" as "left" | "center",
 };
 
 type FormState = typeof DEFAULT_FORM;
@@ -49,26 +52,47 @@ const DEFAULT_FIELD_CONFIGS: FieldPrintConfig[] = [
   { key: "itemcode",        label: "Item Code",   side: "front", enabled: true,  order: 2, fontSize: 10, bold: true  },
   { key: "codedprice",      label: "Coded Price", side: "front", enabled: false, order: 3, fontSize: 10, bold: true  },
   { key: "itemdescription", label: "Description", side: "back",  enabled: true,  order: 4, fontSize: 10, bold: false },
-  { key: "itemsellprice",   label: "Sell Price",  side: "back",  enabled: true,  order: 5, fontSize: 11, bold: true  },
+  { key: "itemsellprice",   label: "Tag Price",   side: "back",  enabled: true,  order: 5, fontSize: 11, bold: true  },
   { key: "categoryname",    label: "Category",    side: "back",  enabled: false, order: 6, fontSize: 9,  bold: false },
 ];
+
+function normSide(v: unknown, def: "front" | "back"): "front" | "back" {
+  return v === "front" || v === "back" ? v : def;
+}
+
+function extractContentAlign(label: LabelTemplate): "left" | "center" {
+  if (!label.fieldconfigs) return "left";
+  try {
+    const raw = JSON.parse(label.fieldconfigs);
+    if (raw && !Array.isArray(raw) && raw.align === "center") return "center";
+  } catch { /* fall through */ }
+  return "left";
+}
 
 function initFieldConfigs(label: LabelTemplate): FieldPrintConfig[] {
   if (label.fieldconfigs) {
     try {
-      const parsed = JSON.parse(label.fieldconfigs);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed as FieldPrintConfig[];
+      const raw = JSON.parse(label.fieldconfigs);
+      // Support both old format (array) and new format ({ align, fields })
+      const parsed: FieldPrintConfig[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.fields) ? raw.fields : raw);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.some(c => c.enabled)) {
+        // Normalize sides: empty string from old DB saves becomes proper default
+        return parsed.map(c => ({ ...c, side: normSide(c.side, c.key === "itemdescription" || c.key === "itemsellprice" || c.key === "categoryname" ? "back" : "front") }));
+      }
     } catch {}
   }
   // Derive from legacy show/side fields for existing labels without fieldconfigs
-  return [
-    { key: "itembarcodeid",   label: "Barcode",     side: (label.barcodeside     as "front" | "back") ?? "front", enabled: label.showbarcode    === "1", order: 1, fontSize: 10, bold: false },
-    { key: "itemcode",        label: "Item Code",   side: (label.itemcodeside    as "front" | "back") ?? "front", enabled: label.showitemcode   === "1", order: 2, fontSize: 10, bold: true  },
-    { key: "codedprice",      label: "Coded Price", side: (label.codedpriceside  as "front" | "back") ?? "front", enabled: label.showcodedprice === "1", order: 3, fontSize: 10, bold: true  },
-    { key: "itemdescription", label: "Description", side: (label.descriptionside as "front" | "back") ?? "back",  enabled: label.showdescription === "1", order: 4, fontSize: 10, bold: false },
-    { key: "itemsellprice",   label: "Sell Price",  side: (label.sellpriceside   as "front" | "back") ?? "back",  enabled: label.showsellprice  === "1", order: 5, fontSize: 11, bold: true  },
-    { key: "categoryname",    label: "Category",    side: (label.categoryside    as "front" | "back") ?? "back",  enabled: label.showcategory   === "1", order: 6, fontSize: 9,  bold: false },
+  const result: FieldPrintConfig[] = [
+    { key: "itembarcodeid",   label: "Barcode",     side: normSide(label.barcodeside,     "front"), enabled: isOn(label.showbarcode),     order: 1, fontSize: 10, bold: false },
+    { key: "itemcode",        label: "Item Code",   side: normSide(label.itemcodeside,    "front"), enabled: isOn(label.showitemcode),    order: 2, fontSize: 10, bold: true  },
+    { key: "codedprice",      label: "Coded Price", side: normSide(label.codedpriceside,  "front"), enabled: isOn(label.showcodedprice),  order: 3, fontSize: 10, bold: true  },
+    { key: "itemdescription", label: "Description", side: normSide(label.descriptionside, "back"),  enabled: isOn(label.showdescription), order: 4, fontSize: 10, bold: false },
+    { key: "itemsellprice",   label: "Tag Price",   side: normSide(label.sellpriceside,   "back"),  enabled: isOn(label.showsellprice),   order: 5, fontSize: 11, bold: true  },
+    { key: "categoryname",    label: "Category",    side: normSide(label.categoryside,    "back"),  enabled: isOn(label.showcategory),    order: 6, fontSize: 9,  bold: false },
   ];
+  // All-disabled means the DB is in a corrupt state from a previous bug — recover with standard defaults
+  if (!result.some(c => c.enabled)) return DEFAULT_FIELD_CONFIGS;
+  return result;
 }
 
 const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, onSaved }) => {
@@ -97,6 +121,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
         tagsuffix:       editLabel.tagsuffix ?? "",
         backgroundimage: editLabel.backgroundimage ?? "",
         isactive:        editLabel.isactive ?? "1",
+        contentAlign:    extractContentAlign(editLabel),
       });
       setFieldConfigs(initFieldConfigs(editLabel));
     } else {
@@ -168,7 +193,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
       sellpriceside:   cfg("itemsellprice")?.side    ?? "back",
       codedpriceside:  cfg("codedprice")?.side       ?? "front",
       categoryside:    cfg("categoryname")?.side     ?? "back",
-      fieldconfigs:    JSON.stringify(fieldConfigs),
+      fieldconfigs:    JSON.stringify({ align: form.contentAlign, fields: fieldConfigs }),
     };
     try {
       if (editLabel) {
@@ -206,6 +231,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
     codedpriceside:  fieldConfigs.find((c) => c.key === "codedprice")?.side      ?? "front",
     categoryside:    fieldConfigs.find((c) => c.key === "categoryname")?.side    ?? "back",
     backgroundimage: form.backgroundimage || undefined,
+    contentAlign: form.contentAlign as "left" | "center",
   };
 
   const isRattail = form.labletype === "rattail";
@@ -311,9 +337,29 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                     <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"
                       value={form.topmargin} onChange={(e) => set("topmargin", e.target.value)} />
                   ))}
-                  {isRattail && field("Fold Gap", (
-                    <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"
-                      value={form.middlemargin} onChange={(e) => set("middlemargin", e.target.value)} />
+                  {isRattail && field("Back Top Margin", (
+                    <>
+                      <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"
+                        value={form.middlemargin} onChange={(e) => set("middlemargin", e.target.value)} />
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Pushes back-face content down from the fold line</div>
+                    </>
+                  ))}
+                  {field("Content Align", (
+                    <div className="d-flex gap-2">
+                      {(["left", "center"] as const).map(a => (
+                        <button key={a} type="button"
+                          onClick={() => set("contentAlign", a)}
+                          style={{
+                            padding: "3px 14px", fontSize: 12, borderRadius: 5, cursor: "pointer",
+                            border: `1px solid ${form.contentAlign === a ? "#6366f1" : "#e2e8f0"}`,
+                            background: form.contentAlign === a ? "#6366f1" : "#fff",
+                            color: form.contentAlign === a ? "#fff" : "#475569",
+                            fontWeight: form.contentAlign === a ? 600 : 400,
+                          }}>
+                          {a === "left" ? "Left" : "Center"}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </>)}
 
@@ -328,7 +374,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   ))}
                 </>)}
 
-                {section("Label Background Image", <>
+                {section("Label Background Image (Optional)", <>
                   <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
                     Upload a scan or photo of your blank label stock. The preview will overlay content on top of it so you can see exactly how it will print.
                   </div>

@@ -13,6 +13,7 @@ import {
 import { useAppSelector } from "@/lib/store/hook";
 import { useParams } from "next/navigation";
 import { SupplierListType } from "@/types/supplier";
+import DOMPurify from "dompurify";
 import SupplierStatementPrintContent, {
   SupplierStatementType,
   SupplierBalanceDueInvoice,
@@ -194,6 +195,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
     if (!previewRef.current) return;
     const win = window.open("", "_blank");
     if (!win) return;
+    const safeBody = DOMPurify.sanitize(previewRef.current.innerHTML);
     win.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -210,7 +212,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
   </style>
 </head>
 <body>
-${previewRef.current.innerHTML}
+${safeBody}
 </body>
 </html>`);
     win.document.close();

@@ -389,6 +389,9 @@ export default function Step4Preview({
   const totalImport = eligibleRows.length;
   const newCount = validRows.filter((r) => r.isNew).length + noDescRows.filter((r) => includedNoDesc.has(r.rowNum) && r.isNew).length;
   const existCount = validRows.filter((r) => !r.isNew).length + noDescRows.filter((r) => includedNoDesc.has(r.rowNum) && !r.isNew).length;
+  const totalRows = rawRows.length;
+  const uniqueCodeCount = new Set(eligibleRows.filter((r) => r.itemcode).map((r) => r.itemcode)).size;
+  const dupRowCount = Object.values(dupGroups).reduce((s, rows) => s + rows.length, 0);
 
   // Helper: category name lookup
   const catName = (id: number | null) => categories.find((c) => c.categoryid === id)?.categoryname ?? '—';
@@ -408,19 +411,23 @@ export default function Step4Preview({
       )}
 
       {/* Summary stats */}
-      <div className="d-flex gap-2 mb-3 flex-wrap">
-        <span className="badge bg-success">{existCount} existing ✅</span>
-        <span className="badge bg-primary">{newCount} new 🆕</span>
+      <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
+        <span className="badge bg-secondary">Total: {totalRows}</span>
+        <span className="badge bg-info text-dark">Unique: {uniqueCodeCount}</span>
+        <span className="badge bg-primary">New: {newCount} 🆕</span>
+        <span className="badge bg-success">Existing: {existCount} ✅</span>
+        {dupRowCount > 0 && (
+          <span className="badge bg-warning text-dark">
+            Duplicates: {dupRowCount} row{dupRowCount > 1 ? 's' : ''} ({Object.keys(dupGroups).length} SKU{Object.keys(dupGroups).length > 1 ? 's' : ''}) ⚠
+          </span>
+        )}
         {noDescRows.length > 0 && (
           <span className="badge bg-warning text-dark">
-            {noDescRows.length - includedNoDesc.size} no-description (check to include) ⚠
+            {noDescRows.length - includedNoDesc.size} no-description ⚠
           </span>
         )}
         {hardErrorRows.length > 0 && (
-          <span className="badge bg-warning text-dark">{hardErrorRows.length} skipped (missing qty/cost) ⚠</span>
-        )}
-        {Object.keys(dupGroups).length > 0 && (
-          <span className="badge bg-warning text-dark">{Object.keys(dupGroups).length} duplicate SKU group(s)</span>
+          <span className="badge bg-danger">Skipped: {hardErrorRows.length} ⚠</span>
         )}
       </div>
 

@@ -629,7 +629,7 @@ const CommissionReportComponent = () => {
                   Select a date range and click Run Report.
                 </div>
               ) : (
-                <div className="ag-theme-alpine" style={{ height: 400 }}>
+                <div className="ag-theme-quartz" style={{ height: 400 }}>
                   <AgGridReact
                     ref={gridRef}
                     columnDefs={columnDefs}
@@ -677,7 +677,7 @@ const CommissionReportComponent = () => {
             </div>
           </div>
           <div className="card-body p-2">
-            <div className="ag-theme-alpine" style={{ height: 400 }}>
+            <div className="ag-theme-quartz" style={{ height: 400 }}>
               <AgGridReact
                 ref={historyGridRef}
                 columnDefs={historyColumnDefs}

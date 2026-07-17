@@ -14,6 +14,7 @@ import {
 import { useAppSelector } from "@/lib/store/hook";
 import { useParams } from "next/navigation";
 import { CustomersListType, CustomerBalanceAgingType, CustomerLedgerReportType, CustomerPaymentListType } from "@/types/customer";
+import DOMPurify from "dompurify";
 import StatementPrintContent, { StatementType, InvoiceBalanceDue, StatementCustomer } from "./StatementPrintContent";
 import SendSMSModal from "./SendSMSModal";
 
@@ -192,6 +193,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
     if (!previewRef.current) return;
     const win = window.open("", "_blank");
     if (!win) return;
+    const safeBody = DOMPurify.sanitize(previewRef.current.innerHTML);
     win.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -208,7 +210,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   </style>
 </head>
 <body>
-${previewRef.current.innerHTML}
+${safeBody}
 </body>
 </html>`);
     win.document.close();

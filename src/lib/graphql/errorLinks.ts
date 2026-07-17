@@ -1,92 +1,98 @@
 import { onError } from "@apollo/client/link/error";
 import { Observable } from "@apollo/client";
-import { makeStore } from "../store/store";
-import { clearUser } from "../store/slice/userDataSlice";
+
+// Once session is fully dead, swallow every subsequent Apollo error silently.
+// Resets on page reload (which the Resume button triggers).
+let sessionExpiredFlag = false;
 
 async function refreshToken(): Promise<boolean> {
   try {
-    const response = await fetch("/api/auth/refresh", {
-      method: "POST",
-    });
-    if (response.ok) {
-      return response.ok;
-    }
+    const response = await fetch("/api/auth/refresh", { method: "POST" });
+    if (response.ok) return true;
     throw new Error("");
   } catch {
     throw new Error("");
   }
 }
 
-async function onLogout(): Promise<boolean> {
+// Called when the refresh token is itself expired — can't silently recover.
+// Fires a DOM event so SessionExpiredModal can show a friendly dialog.
+function notifySessionExpired() {
+  sessionExpiredFlag = true;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("session-expired"));
+  }
+}
+
+// Used by SessionExpiredModal's "Log In Again" button.
+export async function logoutAndRedirect(): Promise<void> {
   try {
-    const response = await fetch("/api/auth/logout", {
+    await fetch("/api/auth/logout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
-    const data = await response.json();
-    if (!data.ok) {
-      throw new Error("Logout failed");
-    }
-    const store = makeStore();
-    store.dispatch(clearUser());
-    const prefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
-    window.location.href = `/${prefix}/login`;
-    return true;
-  } catch {
-    throw new Error("");
-  }
+  } catch { /* best effort */ }
+  const prefix = window.location.pathname.split("/")[1] || "jw";
+  window.location.href = `/${prefix}/login`;
 }
 
+const handleUnauth = (operation: Parameters<Parameters<typeof onError>[0]>[0]["operation"], forward: Parameters<Parameters<typeof onError>[0]>[0]["forward"]) =>
+  new Observable((observer) => {
+    if (sessionExpiredFlag) { observer.complete(); return; }
+    refreshToken()
+      .then((success) => {
+        if (success) {
+          forward(operation).subscribe({
+            next: observer.next.bind(observer),
+            error: observer.error.bind(observer),
+            complete: observer.complete.bind(observer),
+          });
+        } else {
+          notifySessionExpired();
+          observer.complete();
+        }
+      })
+      .catch(() => { notifySessionExpired(); observer.complete(); });
+  });
+
 export const errorLink = onError(
-  ({
-    graphQLErrors,
-    networkError,
-    operation,
-    forward,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }): Observable<any> | void => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ({ graphQLErrors, networkError, operation, forward }): Observable<any> | void => {
+    // Session is dead — swallow everything silently to stop console spam
+    if (sessionExpiredFlag) return;
+
     if (graphQLErrors) {
       for (const err of graphQLErrors) {
         switch (err.extensions?.code) {
-          case "UNAUTHENTICATED": {
-            return new Observable((observer) => {
-              // Attempt token refresh
-              refreshToken()
-                .then((success) => {
-                  if (success) {
-                    // Retry the failed request
-                    const subscriber = {
-                      next: observer.next.bind(observer),
-                      error: observer.error.bind(observer),
-                      complete: observer.complete.bind(observer),
-                    };
-                    forward(operation).subscribe(subscriber);
-                  } else {
-                    onLogout();
-                  }
-                })
-                .catch(() => {
-                  onLogout();
-                });
-            });
-          }
+          case "UNAUTHENTICATED":
+            return handleUnauth(operation, forward);
 
           case "FORBIDDEN": {
-            const forbiddenPrefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
-            window.location.href = `/unauthorized?prefix=${forbiddenPrefix}`;
+            const prefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
+            window.location.href = `/unauthorized?prefix=${prefix}`;
             break;
           }
 
           default:
-            console.error(
-              `[GraphQL error]: Message: ${err.message}, Location: ${err.locations}, Path: ${err.path}`
-            );
+            // NestJS guards throw Unauthorized without setting extensions.code
+            if (err.message === "Unauthorized") {
+              return handleUnauth(operation, forward);
+            }
+            if (process.env.NODE_ENV !== "production") {
+              console.error(
+                `[GraphQL error]: Message: ${err.message}, Location: ${err.locations}, Path: ${err.path}`
+              );
+            }
         }
       }
     }
-
     if (networkError) {
-      console.error(`[Network error]: ${networkError}`);
+      if ("statusCode" in networkError && networkError.statusCode === 401) {
+        return handleUnauth(operation, forward);
+      }
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[Network error]: ${networkError}`);
+      }
     }
   }
 );

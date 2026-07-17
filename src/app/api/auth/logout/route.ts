@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const accessToken = parseCookie(cookieHeader, "accessToken");
 
     if (accessToken) {
-      const backendUrl = process.env.BACKEND_ORIGIN || process.env.NEXT_PUBLIC_API_URL;
+      const backendUrl = process.env.BACKEND_ORIGIN;
       if (backendUrl) {
         await fetch(`${backendUrl}/graphql`, {
           method: "POST",
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     );
     deleteCookieResponse(response, "accessToken");
     deleteCookieResponse(response, "refreshToken");
+    deleteCookieResponse(response, "ksi");
     return response;
   } catch {
     return NextResponse.json(

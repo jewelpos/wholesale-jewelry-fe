@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 
 export interface LabelData {
   itemcode: string;
@@ -38,6 +38,7 @@ export interface LabelTemplate {
   backgroundimage?: string;
   isactive?: string;
   fieldconfigs?: string;
+  contentAlign?: "center" | "left";
 }
 
 export interface FieldPrintConfig {
@@ -51,7 +52,8 @@ export interface FieldPrintConfig {
 }
 
 const DPI = 96;
-const isOn = (v: string | null | undefined) => v === "1" || v === "\x01";
+// Handle all truthy forms MySQL/GraphQL can return for TINYINT: string "1", binary \x01, number 1, boolean true
+const isOn = (v: unknown): boolean => v === "1" || v === "\x01" || v === 1 || v === true;
 
 function formatCurrency(v: string): string {
   const n = parseFloat(v);
@@ -60,23 +62,40 @@ function formatCurrency(v: string): string {
   return "$" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
 }
 
-function drawBarcode(canvas: HTMLCanvasElement, text: string) {
-  if (!text) return;
-  try {
-    const bwipjs = require("bwip-js");
-    bwipjs.toCanvas(canvas, {
-      bcid: "code128",
-      text,
-      scale: 2,
-      height: 8,
-      includetext: false,
-      paddingwidth: 0,
-      paddingheight: 0,
-    });
-  } catch {
-    // invalid barcode — leave canvas blank
-  }
-}
+// Renders barcode as <img> (via off-screen canvas → dataURL) so it prints reliably
+const BarcodeImage: React.FC<{ text: string; maxHeight: number; fontSize?: number; maxWidthPx?: number; center?: boolean; rattail?: boolean }> = ({ text, maxHeight, fontSize = 8, maxWidthPx, center, rattail }) => {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    if (!text) { setSrc(""); return; }
+    try {
+      const offscreen = document.createElement("canvas");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("bwip-js").toCanvas(offscreen, {
+        bcid: "code128",
+        text,
+        scale: 2,
+        height: rattail ? 4.6 : 4,
+        includetext: false,
+        paddingwidth: 0,
+        paddingheight: 0,
+      });
+      setSrc(offscreen.toDataURL("image/png"));
+    } catch { setSrc(""); }
+  }, [text]);
+  if (!src) return null;
+  const imgStyle: React.CSSProperties = {
+    maxWidth: maxWidthPx ? `${maxWidthPx}px` : "75%",
+    maxHeight,
+    display: "block",
+    ...(center ? { margin: "0 auto" } : {}),
+  };
+  return (
+    <div style={{ marginLeft: center ? 0 : -3, textAlign: center ? "center" : "left" }}>
+      <img src={src} alt="" style={imgStyle} />
+      <div style={{ fontSize, color: "#111", lineHeight: 1, letterSpacing: "0.5px" }}>{text}</div>
+    </div>
+  );
+};
 
 interface ActiveField {
   key: keyof LabelData;
@@ -94,14 +113,17 @@ interface FaceProps {
   mt: number;
   faceLabel?: string;
   fieldConfigs?: FieldPrintConfig[];
+  printMode?: boolean;
+  /** Explicit CSS height value to use in print mode (e.g. "1in") — overrides heightPx */
+  cssHeight?: string | number;
 }
 
 const LabelFace: React.FC<FaceProps> = ({
-  template, data, face, widthPx, heightPx, ml, mt, faceLabel, fieldConfigs,
+  template, data, face, widthPx, heightPx, ml, mt, faceLabel, fieldConfigs, printMode = false, cssHeight,
 }) => {
-  const barcodeRef = useRef<HTMLCanvasElement>(null);
   const isRattail = template.labletype === "rattail";
-  const hasImage = !!template.backgroundimage;
+  const isCenter = template.contentAlign === "center";
+  const hasImage = !!template.backgroundimage && !printMode;
 
   const onSide = (side: string | undefined, def: "front" | "back") =>
     isRattail ? (side || def) === face : true;
@@ -112,16 +134,16 @@ const LabelFace: React.FC<FaceProps> = ({
       // Config-driven: scale fontSize to the rendered label height
       const scale = heightPx / ((template.labelheight || 1) * DPI);
       return fieldConfigs
-        .filter(c => c.enabled && c.side === face)
+        .filter(c => c.enabled && (!isRattail || c.side === face || (face === "front" && c.side !== "back")))
         .sort((a, b) => a.order - b.order)
         .map(c => ({
           key: c.key,
-          fontSize: Math.max(7, Math.round(c.fontSize * scale)),
+          fontSize: Math.max(6, Math.round(c.fontSize * scale)),
           bold: c.bold,
         }));
     }
     // Template-flag fallback
-    const bfs = Math.max(7, Math.round(heightPx * 0.09));
+    const bfs = Math.max(9, Math.round(heightPx * 0.12));
     const fields: ActiveField[] = [];
     if (isOn(template.showbarcode)     && onSide(template.barcodeside,     "front")) fields.push({ key: "itembarcodeid",   fontSize: bfs,     bold: false });
     if (isOn(template.showitemcode)    && onSide(template.itemcodeside,    "front")) fields.push({ key: "itemcode",         fontSize: bfs,     bold: true  });
@@ -129,16 +151,18 @@ const LabelFace: React.FC<FaceProps> = ({
     if (isOn(template.showdescription) && onSide(template.descriptionside, "back"))  fields.push({ key: "itemdescription",  fontSize: bfs,     bold: false });
     if (isOn(template.showsellprice)   && onSide(template.sellpriceside,   "back"))  fields.push({ key: "itemsellprice",    fontSize: bfs + 1, bold: true  });
     if (isOn(template.showcategory)    && onSide(template.categoryside,    "back"))  fields.push({ key: "categoryname",     fontSize: bfs - 1, bold: false });
+    // All show* flags are "0" (corrupted DB state from old bug) — fall back to per-face defaults
+    if (fields.length === 0) {
+      if (face === "front") {
+        fields.push({ key: "itembarcodeid", fontSize: bfs,     bold: false });
+        fields.push({ key: "itemcode",      fontSize: bfs,     bold: true  });
+      } else {
+        fields.push({ key: "itemdescription", fontSize: bfs,     bold: false });
+        fields.push({ key: "itemsellprice",   fontSize: bfs + 1, bold: true  });
+      }
+    }
     return fields;
   })();
-
-  const showBarcode = activeFields.some(f => f.key === "itembarcodeid") && !!data.itembarcodeid;
-
-  useEffect(() => {
-    if (barcodeRef.current && showBarcode) {
-      drawBarcode(barcodeRef.current, data.itembarcodeid);
-    }
-  }, [showBarcode, data.itembarcodeid]);
 
   const renderField = (f: ActiveField) => {
     const fs = f.fontSize;
@@ -149,13 +173,12 @@ const LabelFace: React.FC<FaceProps> = ({
 
     switch (f.key) {
       case "itembarcodeid":
-        // Skip when data is empty — avoids blank canvas occupying space
         if (!data.itembarcodeid) return null;
-        return <canvas key="barcode" ref={barcodeRef} style={{ maxWidth: "100%", maxHeight: heightPx * 0.4 }} />;
+        return <BarcodeImage key="barcode" text={data.itembarcodeid} maxHeight={isRattail ? Math.round(Math.min(heightPx * 0.3, 28) * 1.15) : Math.min(heightPx * 0.3, 28)} fontSize={fs} maxWidthPx={Math.round(widthPx * (isRattail ? 0.80 : 0.75))} center={isCenter} rattail={isRattail} />;
 
       case "itemcode":
         return (
-          <div key="code" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "0.5px", textAlign: "center", color: "#111", ...pill }}>
+          <div key="code" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "0.5px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
             {data.itemcode}
           </div>
         );
@@ -163,33 +186,39 @@ const LabelFace: React.FC<FaceProps> = ({
       case "codedprice":
         if (!data.codedprice) return null;
         return (
-          <div key="coded" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "1px", textAlign: "center", color: "#111", ...pill }}>
+          <div key="coded" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "1px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
             {data.codedprice}
           </div>
         );
 
-      case "itemdescription":
+      case "itemdescription": {
+        // Chrome's print renderer ignores display:-webkit-box, causing 0-height and invisible text.
+        // In print mode use plain block + maxHeight; keep webkit clamp for the on-screen thumbnail.
+        const clampStyle: React.CSSProperties = printMode
+          ? { display: "block", maxHeight: `${Math.round(fs * 1.3 * 2)}px` }
+          : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" };
         return (
           <div key="desc" style={{
-            fontSize: fs, fontWeight: fw, textAlign: "center", lineHeight: 1.3,
-            overflow: "hidden", display: "-webkit-box",
-            WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-            maxWidth: "90%", color: "#111", ...pill,
+            fontSize: fs, fontWeight: fw, textAlign: isCenter ? "center" : "left", lineHeight: 1.3,
+            overflow: "hidden", width: "100%", color: "#111",
+            wordBreak: "break-word",
+            ...clampStyle, ...pill,
           }}>
             {data.itemdescription}
           </div>
         );
+      }
 
       case "itemsellprice":
         return (
-          <div key="sell" style={{ fontSize: fs, fontWeight: fw, textAlign: "center", color: "#111", ...pill }}>
+          <div key="sell" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
             {data.itemsellprice ? formatCurrency(data.itemsellprice) : ""}
           </div>
         );
 
       case "categoryname":
         return (
-          <div key="cat" style={{ fontSize: fs, fontWeight: fw, textAlign: "center", color: "#444", ...pill }}>
+          <div key="cat" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...pill }}>
             {data.categoryname}
           </div>
         );
@@ -206,22 +235,31 @@ const LabelFace: React.FC<FaceProps> = ({
   });
 
   const sharedContentStyle: React.CSSProperties = {
-    paddingLeft: ml,
+    paddingLeft: isCenter ? 4 : ml,
     paddingTop: mt,
     paddingRight: 4,
     paddingBottom: 4,
     display: "flex",
     flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 3,
+    justifyContent: "flex-start",
+    alignItems: isCenter ? "center" : "flex-start",
+    gap: 2,
     overflow: "hidden",
     boxSizing: "border-box",
   };
 
+  // In printMode, use cssHeight (e.g. "1in") for hard physical sizing; otherwise use heightPx.
+  // clip-path:inset(0) is a compositor-level paint boundary — prevents the background image's
+  // bottom edge from bleeding past the face into the next face or page.
+  const faceStyle: React.CSSProperties = {
+    width: printMode ? "100%" : widthPx,
+    height: cssHeight !== undefined ? cssHeight : heightPx,
+    overflow: "hidden",
+  };
+
   if (hasImage) {
     return (
-      <div style={{ width: widthPx, height: heightPx, position: "relative", overflow: "hidden", background: "#fff" }}>
+      <div style={{ ...faceStyle, position: "relative", background: "#fff" }}>
         <img
           src={template.backgroundimage}
           alt=""
@@ -246,7 +284,7 @@ const LabelFace: React.FC<FaceProps> = ({
   }
 
   return (
-    <div style={{ width: widthPx, height: heightPx, background: "#fff", position: "relative", ...sharedContentStyle }}>
+    <div style={{ ...faceStyle, background: "#fff", position: "relative", ...sharedContentStyle }}>
       {faceLabel && (
         <div style={{
           position: "absolute", top: 2, left: 4,
@@ -279,9 +317,9 @@ const FoldGap: React.FC<{ gapPx: number }> = ({ gapPx }) => (
 
 const RattailPreviewShell: React.FC<{
   widthPx: number; facePx: number; gapPx: number;
-  template: LabelTemplate; data: LabelData; ml: number; mt: number;
+  template: LabelTemplate; data: LabelData; ml: number; mt: number; backMt: number;
   fieldConfigs?: FieldPrintConfig[];
-}> = ({ widthPx, facePx, gapPx, template, data, ml, mt, fieldConfigs }) => {
+}> = ({ widthPx, facePx, gapPx, template, data, ml, mt, backMt, fieldConfigs }) => {
   const loopH = Math.round(facePx * 0.22);
   const loopW = Math.round(widthPx * 0.6);
 
@@ -304,7 +342,7 @@ const RattailPreviewShell: React.FC<{
       }}>
         <LabelFace template={template} data={data} face="front" widthPx={widthPx} heightPx={facePx} ml={ml} mt={mt} faceLabel="Front" fieldConfigs={fieldConfigs} />
         <FoldGap gapPx={gapPx} />
-        <LabelFace template={template} data={data} face="back"  widthPx={widthPx} heightPx={facePx} ml={ml} mt={0}  faceLabel="Back"  fieldConfigs={fieldConfigs} />
+        <LabelFace template={template} data={data} face="back"  widthPx={widthPx} heightPx={facePx} ml={ml} mt={backMt}  faceLabel="Back"  fieldConfigs={fieldConfigs} />
       </div>
     </div>
   );
@@ -316,32 +354,58 @@ interface Props {
   scale?: number;
   showFaceLabels?: boolean;
   fieldConfigs?: FieldPrintConfig[];
+  /** When true: use CSS `in` units for physical print accuracy and suppress the dashed border */
+  printMode?: boolean;
 }
 
-const LabelCanvas: React.FC<Props> = ({ template, data, scale = 1, showFaceLabels = false, fieldConfigs }) => {
+const LabelCanvas: React.FC<Props> = ({ template, data, scale = 1, showFaceLabels = false, fieldConfigs, printMode = false }) => {
   const isRattail = template.labletype === "rattail";
   const widthPx  = Math.round((template.labelwidth  || 2) * DPI * scale);
   const facePx   = Math.round((template.labelheight || 1) * DPI * scale);
-  const gapPx    = isRattail ? Math.round(parseFloat(template.middlemargin || "0") * DPI * scale) : 0;
-  const totalH   = isRattail ? facePx * 2 + gapPx : facePx;
-  const ml = Math.round(parseFloat(template.leftmargin || "0") * DPI * scale);
-  const mt = Math.round(parseFloat(template.topmargin  || "0") * DPI * scale);
+  // middlemargin is now the back-face top margin (how far content is pushed down from the fold).
+  // The fold itself has no physical gap — it's a crease, not a printed gap.
+  const backMtRaw = isRattail ? Math.round(parseFloat(template.middlemargin || "0") * DPI * scale) : 0;
+  const backMt    = printMode ? backMtRaw : Math.min(backMtRaw, Math.floor(facePx * 0.15));
+  const gapPx     = 0; // no physical fold gap; FoldGap component uses its own min-height for the preview line
+  const totalH    = isRattail ? facePx * 2 : facePx;
+  const mlRaw = Math.round(parseFloat(template.leftmargin || "0") * DPI * scale);
+  const mtRaw = Math.round(parseFloat(template.topmargin  || "0") * DPI * scale);
+
+  const isTailLabel = mlRaw >= widthPx;
+  // Print + tail: a wrapper div supplies marginLeft so content lands in the printable area.
+  // The wrapper is outside .label-item, so it is NOT zeroed by `margin:0 !important` in print CSS.
+  // Print + non-tail: small leftmargin is a valid inset within the printable area.
+  // Preview: cap at 8% so oversized values don't push content off the visible canvas.
+  const ml = printMode
+    ? (isTailLabel ? 0 : mlRaw)
+    : Math.min(mlRaw, Math.floor(widthPx * 0.08));
+  const mt = printMode ? mtRaw : Math.min(mtRaw, Math.floor(facePx * 0.08));
+
+  const wIn    = template.labelwidth  || 2;
+  const leftIn = parseFloat(template.leftmargin || "0");
+  const hIn    = template.labelheight || 1;
+  const midIn  = parseFloat(template.middlemargin || "0");
+  const totalHin = isRattail ? hIn * 2 : hIn; // fold is a crease, no extra height
 
   if (isRattail && scale > 1) {
     return (
       <RattailPreviewShell
         widthPx={widthPx} facePx={facePx} gapPx={gapPx}
-        template={template} data={data} ml={ml} mt={mt}
+        template={template} data={data} ml={ml} mt={mt} backMt={backMt}
         fieldConfigs={fieldConfigs}
       />
     );
   }
 
-  return (
+  const labelItem = (
     <div className="label-item" style={{
-      width: widthPx, height: totalH,
-      border: "1px dashed #ccc", background: "#fff",
-      overflow: "hidden", display: "flex", flexDirection: "column",
+      width:      printMode ? `${wIn}in` : widthPx,
+      height:     printMode ? `${totalHin}in` : totalH,
+      border:     printMode ? "none" : "1px dashed #ccc",
+      background: "#fff",
+      overflow:   "hidden",
+      display:    "flex",
+      flexDirection: "column",
     }}>
       <LabelFace
         template={template} data={data} face="front"
@@ -349,27 +413,41 @@ const LabelCanvas: React.FC<Props> = ({ template, data, scale = 1, showFaceLabel
         ml={ml} mt={mt}
         faceLabel={isRattail && showFaceLabels ? "Front" : undefined}
         fieldConfigs={fieldConfigs}
+        printMode={printMode}
+        cssHeight={printMode ? `${hIn}in` : undefined}
       />
       {isRattail && (
         <>
           <div style={{
-            height: gapPx, background: "#f0f0f0",
-            borderTop: "1px dashed #aaa", borderBottom: "1px dashed #aaa",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            height: 8,
+            background: "#f0f0f0",
+            borderTop: "1px dashed #aaa",
+            borderBottom: "1px dashed #aaa",
+            display: printMode ? "none" : "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>
-            {gapPx > 8 && <span style={{ fontSize: 8, color: "#999", letterSpacing: "2px" }}>— FOLD —</span>}
+            <span style={{ fontSize: 8, color: "#999", letterSpacing: "2px" }}>— FOLD —</span>
           </div>
           <LabelFace
             template={template} data={data} face="back"
             widthPx={widthPx} heightPx={facePx}
-            ml={ml} mt={0}
+            ml={ml} mt={backMt}
             faceLabel={showFaceLabels ? "Back" : undefined}
             fieldConfigs={fieldConfigs}
+            printMode={printMode}
+            cssHeight={printMode ? `${hIn}in` : undefined}
           />
         </>
       )}
     </div>
   );
+
+  // Tail label in print: wrapper div provides marginLeft to shift content into the printable area.
+  // This wrapper is outside .label-item so it is NOT zeroed by `margin:0 !important` in print CSS.
+  if (printMode && isTailLabel) {
+    return <div style={{ marginLeft: `${leftIn}in` }}>{labelItem}</div>;
+  }
+  return labelItem;
 };
 
 export default LabelCanvas;

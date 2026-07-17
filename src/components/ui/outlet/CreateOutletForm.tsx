@@ -56,6 +56,7 @@ const CreateOutletForm = () => {
   const { fetchStoresData, loading: storesLoading } = useStores();
   const existingOutlets = useAppSelector((state) => state.store.data?.outlets ?? []);
   const storeName = useAppSelector((state) => state.store.data?.storename ?? "");
+  const copyFromOutletId = watch("copyFromOutletId");
 
   const onSubmit: SubmitHandler<CreateOutlet> = async (formData) => {
     const result = await handleTryCatch(async () => {
@@ -142,6 +143,42 @@ const CreateOutletForm = () => {
         selectedCountry={getValues("country")}
         trigger={trigger}
       />
+
+      {existingOutlets.length > 0 && (
+        <div className="card table-list-card">
+          <div className="card-body">
+            <div className="row align-items-start">
+              <div className="col-md-5 mb-3">
+                <h4 className="mb-1">Copy inventory from existing branch</h4>
+                <p className="text-muted" style={{ fontSize: 13 }}>
+                  Copies the full product catalog from the selected branch into this new branch.
+                  Stock on hand will start at 0 for all items.
+                </p>
+              </div>
+              <div className="col-md-7">
+                <label className="form-label">Copy from branch</label>
+                <select
+                  className="form-select"
+                  {...register("copyFromOutletId", { setValueAs: (v) => (v ? Number(v) : null) })}
+                >
+                  <option value="">— Don&apos;t copy (start empty) —</option>
+                  {existingOutlets.map((o) => (
+                    <option key={o.outletid} value={o.outletid}>
+                      {o.outletname}
+                    </option>
+                  ))}
+                </select>
+                {copyFromOutletId && (
+                  <p className="mt-2 mb-0" style={{ fontSize: 12, color: "#059669" }}>
+                    Product list from <strong>{existingOutlets.find(o => o.outletid === Number(copyFromOutletId))?.outletname}</strong> will be copied to this branch with 0 stock on hand.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ActionFooter handleCancel={() => router.back()}>
         <ButtonLoader
           loading={loading}

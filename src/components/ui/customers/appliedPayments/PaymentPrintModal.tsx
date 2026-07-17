@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { CustomerPaymentListType } from "@/types/customer";
 import { useAppSelector } from "@/lib/store/hook";
+import DOMPurify from "dompurify";
 import dayjs from "dayjs";
 import { useParams } from "next/navigation";
 
@@ -34,7 +35,7 @@ const PaymentPrintModal = ({ customerid, payments, onClose }: PaymentPrintModalP
   const totalPaid = payments.reduce((s, p) => s + (p.amountpaid || 0), 0);
 
   const handlePrint = () => {
-    const content = document.getElementById("payment-print-content")?.innerHTML ?? "";
+    const content = DOMPurify.sanitize(document.getElementById("payment-print-content")?.innerHTML ?? "");
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) return;
     win.document.write(`<!DOCTYPE html>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+if (!process.env.BACKEND_ORIGIN) console.warn("[SECURITY] BACKEND_ORIGIN not set — falling back to hardcoded production URL.");
 const BACKEND_BASE = process.env.BACKEND_PUBLIC_URL ?? process.env.BACKEND_ORIGIN ?? "https://api.jewelpos.com";
 
 export async function POST(request: NextRequest) {
@@ -30,8 +31,7 @@ export async function POST(request: NextRequest) {
       data = { error: text };
     }
     return NextResponse.json(data, { status: response.status });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ created: [], failed: [{ itemcode: "batch", reason: `Proxy error: ${msg}` }] }, { status: 502 });
+  } catch {
+    return NextResponse.json({ created: [], failed: [{ itemcode: "batch", reason: "Service temporarily unavailable" }] }, { status: 502 });
   }
 }

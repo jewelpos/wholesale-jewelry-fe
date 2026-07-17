@@ -2,19 +2,20 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, Tag } from "react-feather";
 import { GET_ALL_INVENTORY_TAG_LABELS_QUERY } from "@/lib/graphql/query/products";
 import { DELETE_INVENTORY_TAG_LABEL_MUTATION } from "@/lib/graphql/mutations/label";
 import { LabelTemplate } from "./LabelCanvas";
 import LabelTemplateFormModal from "./LabelTemplateFormModal";
 import Swal from "sweetalert2";
+import useMenu from "@/hooks/useMenu";
 
 const LabelTemplatesComponent = () => {
   const router = useRouter();
-  const pathname = usePathname();
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
-  const fromSystemSettings = pathname?.includes("/system_settings");
+  const { storeId: storeIdParam } = useParams();
+  const { currentMenu } = useMenu();
+  const canAdd = currentMenu?.action?.some((a: { actionname: string }) => a.actionname.includes("add"));
   const storeid = parseInt(storeIdParam as string, 10);
 
   const { data, loading, refetch } = useQuery(GET_ALL_INVENTORY_TAG_LABELS_QUERY, {
@@ -81,26 +82,26 @@ const LabelTemplatesComponent = () => {
     <>
       <div className="page-header">
         <div className="add-item d-flex flex-column">
-          {fromSystemSettings && (
-            <button
-              type="button"
-              onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`)}
-              style={{ background: "none", border: "none", padding: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b", cursor: "pointer" }}
-            >
-              ← System Settings
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{ background: "none", border: "none", padding: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b", cursor: "pointer" }}
+          >
+            ← Back
+          </button>
           <div className="page-title">
             <h4>Label Templates</h4>
             <h6>Configure rat-tail and rectangular price tag templates</h6>
           </div>
         </div>
-        <div className="page-btn">
-          <button className="btn btn-added d-flex align-items-center gap-2" onClick={handleNew}>
-            <Plus size={14} />
-            New Template
-          </button>
-        </div>
+        {canAdd && (
+          <div className="page-btn">
+            <button className="btn btn-added d-flex align-items-center gap-2" onClick={handleNew}>
+              <Plus size={14} />
+              New Template
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", overflow: "hidden" }}>
@@ -141,7 +142,7 @@ const LabelTemplatesComponent = () => {
                     </td>
                     <td style={{ color: "#64748b" }}>
                       L:{t.leftmargin || 0}" T:{t.topmargin || 0}"
-                      {t.labletype === "rattail" && <span> Gap:{t.middlemargin || 0}"</span>}
+                      {t.labletype === "rattail" && <span> BkT:{t.middlemargin || 0}"</span>}
                     </td>
                     <td style={{ color: "#475569", maxWidth: 160 }}>
                       <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

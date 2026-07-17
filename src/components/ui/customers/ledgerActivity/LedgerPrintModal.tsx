@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import { CustomerLedgerReportType } from "@/types/customer";
 import { useAppSelector } from "@/lib/store/hook";
+import DOMPurify from "dompurify";
 import dayjs, { Dayjs } from "dayjs";
 import { useParams } from "next/navigation";
 
@@ -50,7 +51,7 @@ const LedgerPrintModal = ({
     : "All Transactions";
 
   const handlePrint = () => {
-    const content = document.getElementById("ledger-print-content")?.innerHTML ?? "";
+    const content = DOMPurify.sanitize(document.getElementById("ledger-print-content")?.innerHTML ?? "");
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) return;
     win.document.write(`<!DOCTYPE html>

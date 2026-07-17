@@ -159,7 +159,7 @@ const DiscountReportComponent = () => {
       {/* Grid */}
       <div className="card">
         <div className="card-body p-0">
-          <div style={{ height: 500 }}>
+          <div className="ag-theme-quartz" style={{ height: 500 }}>
             <AgGridReact
               ref={gridRef}
               rowData={rows}

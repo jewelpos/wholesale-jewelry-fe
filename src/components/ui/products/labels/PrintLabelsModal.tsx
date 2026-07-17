@@ -11,6 +11,7 @@ import {
 } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
 import LabelCanvas, { LabelData, LabelTemplate, FieldPrintConfig } from "./LabelCanvas";
+import { buildZpl } from "./zplGenerator";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 interface Props {
@@ -32,15 +33,69 @@ function formatCurrency(v: string): string {
   return "$" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
 }
 
-const isOn = (v: string | null | undefined) => v === "1" || v === "\x01";
+const isOn = (v: unknown): boolean => v === "1" || v === "\x01" || v === 1 || v === true;
+
+// barcodeside / itemcodeside etc. may be stored as "" in the DB — normalize to a valid face
+const DEFAULT_SIDES: Record<string, "front" | "back"> = {
+  itembarcodeid: "front", itemcode: "front", codedprice: "front",
+  itemdescription: "back", itemsellprice: "back", categoryname: "back",
+};
+function normalizeSide(key: string, side: unknown): "front" | "back" {
+  if (side === "front" || side === "back") return side;
+  return DEFAULT_SIDES[key] ?? "front";
+}
+function normalizeConfigs(configs: FieldPrintConfig[]): FieldPrintConfig[] {
+  return configs.map(c => ({ ...c, side: normalizeSide(c.key, c.side), fontSize: Math.max(6, c.fontSize) }));
+}
+
+// Compute display fieldConfigs for any template — used for thumbnails and the init useEffect.
+// Does NOT read localStorage; caller handles that separately for the selected template.
+function buildFieldConfigs(template: LabelTemplate): FieldPrintConfig[] {
+  const isRattailTemplate = template.labletype === "rattail";
+  if (template.fieldconfigs) {
+    try {
+      const raw = JSON.parse(template.fieldconfigs);
+      // Support both old format (array) and new format ({ align, fields })
+      const parsed: FieldPrintConfig[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.fields) ? raw.fields : raw);
+      if (Array.isArray(parsed) && parsed.some(c => c.enabled)) {
+        const normalized = normalizeConfigs(parsed);
+        // For rectangular templates all fields render on the single front face
+        return isRattailTemplate ? normalized : normalized.map(c => ({ ...c, side: "front" as const }));
+      }
+    } catch { /* fall through */ }
+  }
+  const tpl = template as unknown as Record<string, unknown>;
+  const built = FIELD_DEFAULTS.map((d, i) => ({
+    key: d.key as keyof LabelData,
+    label: d.label,
+    side: isRattailTemplate
+      ? (((tpl[d.sideKey] as string) || d.defaultSide) as "front" | "back")
+      : ("front" as const),
+    enabled: isOn(tpl[d.showKey]),
+    order: isRattailTemplate ? d.order : i + 1,
+    fontSize: d.fontSize,
+    bold: d.bold,
+  }));
+  if (built.some(c => c.enabled)) return built;
+  const STANDARD: (keyof LabelData)[] = ["itembarcodeid", "itemcode", "codedprice", "itemdescription", "itemsellprice"];
+  return FIELD_DEFAULTS.map((d, i) => ({
+    key: d.key as keyof LabelData,
+    label: d.label,
+    side: isRattailTemplate ? d.defaultSide : ("front" as const),
+    enabled: STANDARD.includes(d.key as keyof LabelData),
+    order: isRattailTemplate ? d.order : i + 1,
+    fontSize: d.fontSize,
+    bold: d.bold,
+  }));
+}
 
 const FIELD_DEFAULTS = [
-  { key: "itembarcodeid",   label: "Barcode",      defaultSide: "front" as const, order: 1, fontSize: 7, bold: false, showKey: "showbarcode",     sideKey: "barcodeside"     },
-  { key: "itemcode",        label: "Item Code",    defaultSide: "front" as const, order: 2, fontSize: 7, bold: true,  showKey: "showitemcode",    sideKey: "itemcodeside"    },
-  { key: "codedprice",      label: "Coded Price",  defaultSide: "front" as const, order: 3, fontSize: 7, bold: true,  showKey: "showcodedprice",  sideKey: "codedpriceside"  },
-  { key: "itemdescription", label: "Description",  defaultSide: "back"  as const, order: 1, fontSize: 7, bold: false, showKey: "showdescription", sideKey: "descriptionside" },
-  { key: "itemsellprice",   label: "Sell Price",   defaultSide: "back"  as const, order: 2, fontSize: 7, bold: true,  showKey: "showsellprice",   sideKey: "sellpriceside"   },
-  { key: "categoryname",    label: "Category",     defaultSide: "back"  as const, order: 3, fontSize: 7, bold: false, showKey: "showcategory",    sideKey: "categoryside"    },
+  { key: "itembarcodeid",   label: "Barcode",      defaultSide: "front" as const, order: 1, fontSize: 8,  bold: false, showKey: "showbarcode",     sideKey: "barcodeside"     },
+  { key: "itemcode",        label: "Item Code",    defaultSide: "front" as const, order: 2, fontSize: 9,  bold: true,  showKey: "showitemcode",    sideKey: "itemcodeside"    },
+  { key: "codedprice",      label: "Coded Price",  defaultSide: "front" as const, order: 3, fontSize: 9,  bold: true,  showKey: "showcodedprice",  sideKey: "codedpriceside"  },
+  { key: "itemdescription", label: "Description",  defaultSide: "back"  as const, order: 1, fontSize: 9,  bold: false, showKey: "showdescription", sideKey: "descriptionside" },
+  { key: "itemsellprice",   label: "Tag Price",    defaultSide: "back"  as const, order: 2, fontSize: 11, bold: true,  showKey: "showsellprice",   sideKey: "sellpriceside"   },
+  { key: "categoryname",    label: "Category",     defaultSide: "back"  as const, order: 3, fontSize: 8,  bold: false, showKey: "showcategory",    sideKey: "categoryside"    },
 ] as const;
 
 const PREVIEW_BLOCK_A: (keyof LabelData)[] = ["itembarcodeid", "codedprice"];
@@ -53,7 +108,7 @@ interface InlinePreviewProps {
   isRattail: boolean;
 }
 
-const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number }> = ({ text, maxW, numFontSize }) => {
+const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number; center?: boolean; rattail?: boolean }> = ({ text, maxW, numFontSize, center, rattail }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!ref.current || !text) return;
@@ -63,7 +118,7 @@ const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number
         bcid: "code128",
         text,
         scale: 2,
-        height: 6,
+        height: rattail ? 6.9 : 6,
         includetext: false,
         paddingwidth: 0,
         paddingheight: 0,
@@ -72,8 +127,8 @@ const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number
   }, [text]);
 
   return (
-    <div>
-      <canvas ref={ref} style={{ maxWidth: maxW * 0.8, width: "80%", display: "block" }} />
+    <div style={{ marginLeft: center ? 0 : -5, textAlign: center ? "center" : "left" }}>
+      <canvas ref={ref} style={{ maxWidth: maxW * (rattail ? 0.80 : 0.75), width: rattail ? "80%" : "75%", display: "block", margin: center ? "0 auto" : undefined }} />
       <div style={{ fontSize: numFontSize, color: "#111", marginTop: 0, lineHeight: 1, letterSpacing: "0.5px" }}>{text}</div>
     </div>
   );
@@ -84,28 +139,37 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
   const SCALE = 2;
   const w  = Math.round((template.labelwidth    || 2) * DPI * SCALE);
   const h  = Math.round((template.labelheight   || 1) * DPI * SCALE);
-  const ml = Math.round(parseFloat(template.leftmargin   || "0") * DPI * SCALE);
-  const mt = Math.round(parseFloat(template.topmargin    || "0") * DPI * SCALE);
-  const mg = Math.round(parseFloat(template.middlemargin || "0") * DPI * SCALE);
+  const mlRaw = Math.round(parseFloat(template.leftmargin   || "0") * DPI * SCALE);
+  const mtRaw = Math.round(parseFloat(template.topmargin    || "0") * DPI * SCALE);
+  // When leftmargin >= labelwidth the template models [tail area | printable area].
+  // Expand the canvas so the preview also shows the tail gap on the left and content on the right.
+  const isTailLabel = mlRaw >= w;
+  const totalW = isTailLabel ? w + mlRaw : w;
+  const ml = isTailLabel ? mlRaw : Math.min(mlRaw, Math.floor(w * 0.08));
+  const mt = Math.min(mtRaw, Math.floor(h * 0.08));
+  const mgRaw = Math.round(parseFloat(template.middlemargin || "0") * DPI * SCALE);
+  const mg = Math.min(mgRaw, h);
   const fontScale = h / ((template.labelheight || 1) * DPI);
   const hasImage = !!template.backgroundimage;
-  const contentW = w - ml - 4;
+  const contentW = Math.max(20, totalW - ml - 4);
 
-  const renderFace = (face: "front" | "back", faceLabel?: string) => {
+  const isCenter = template.contentAlign === "center";
+
+  const renderFace = (face: "front" | "back", faceLabel?: string, faceMt?: number) => {
+    const topPad = faceMt !== undefined ? faceMt : mt;
     const sorted = fieldConfigs
-      .filter(c => c.enabled && c.side === face)
+      .filter(c => c.enabled && (!isRattail || c.side === face || (face === "front" && c.side !== "back")))
       .sort((a, b) => a.order - b.order);
-
     const renderItem = (cfg: FieldPrintConfig) => {
       const value = fields[cfg.key];
       if (!value && (cfg.key === "itembarcodeid" || cfg.key === "codedprice" || cfg.key === "categoryname")) return null;
-      const fs = Math.max(7, Math.round(cfg.fontSize * fontScale));
+      const fs = Math.max(6, Math.round(cfg.fontSize * fontScale));
       const bg: React.CSSProperties = hasImage ? { background: "rgba(255,255,255,0.85)", padding: "1px 4px", borderRadius: 2 } : {};
 
       if (cfg.key === "itembarcodeid" && value) {
         return (
-          <div key={cfg.key} style={{ position: "relative", maxWidth: contentW, ...bg }}>
-            <BarcodePreview text={value} maxW={contentW} numFontSize={fs} />
+          <div key={cfg.key} style={{ position: "relative", width: "100%", textAlign: isCenter ? "center" : "left", ...bg }}>
+            <BarcodePreview text={value} maxW={contentW} numFontSize={fs} center={isCenter} rattail={isRattail} />
           </div>
         );
       }
@@ -117,8 +181,8 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
       return (
         <div key={cfg.key} style={{
           fontSize: fs, fontWeight: cfg.bold ? 700 : 400,
-          textAlign: "left", color: "#111",
-          maxWidth: contentW, overflow: "hidden",
+          textAlign: isCenter ? "center" : "left", color: "#111",
+          width: "100%", overflow: "hidden",
           whiteSpace: "nowrap", textOverflow: "ellipsis",
           lineHeight: 1.2, position: "relative", ...bg,
         }}>
@@ -134,7 +198,7 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
       const items = block.map(cfg => renderItem(cfg));
       if (!items.some(Boolean)) return null;
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0, zIndex: 2, position: "relative" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, zIndex: 2, position: "relative", width: "100%" }}>
           {items}
         </div>
       );
@@ -142,13 +206,13 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
 
     return (
       <div style={{
-        width: w, minHeight: h,
+        width: totalW, height: h,
         background: "#fff",
         position: "relative",
         display: "flex", flexDirection: "column",
-        justifyContent: "flex-start", alignItems: "flex-start",
+        justifyContent: "flex-start", alignItems: isCenter ? "center" : "flex-start",
         gap: 2,
-        paddingLeft: ml, paddingTop: face === "back" ? mg : mt,
+        paddingLeft: isCenter ? 4 : ml, paddingTop: topPad,
         paddingRight: 4, paddingBottom: 4,
         boxSizing: "border-box",
         overflow: "hidden",
@@ -178,22 +242,22 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
 
   if (isRattail) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, border: "1px dashed #ccc", width: w, margin: "0 auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, border: "1px dashed #ccc", width: totalW, margin: "0 auto" }}>
         {renderFace("front", "Front")}
         <div style={{
-          width: "100%", height: mg > 0 ? mg : 8, background: "#f0f4f8",
+          width: "100%", height: 8, background: "#f0f4f8",
           borderTop: "1px dashed #94a3b8", borderBottom: "1px dashed #94a3b8",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <span style={{ fontSize: 8, color: "#94a3b8", letterSpacing: 2 }}>— fold —</span>
         </div>
-        {renderFace("back", "Back")}
+        {renderFace("back", "Back", mg)}
       </div>
     );
   }
 
   return (
-    <div style={{ border: "1px dashed #ccc", width: w, margin: "0 auto" }}>
+    <div style={{ border: "1px dashed #ccc", width: totalW, margin: "0 auto" }}>
       {renderFace("front")}
     </div>
   );
@@ -213,7 +277,16 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   const [fetchSettings] = useLazyQuery(GET_PRODUCT_SETTINGS_INFO_QUERY);
 
   const templates: LabelTemplate[] = useMemo(
-    () => labelsData?.getInventoryTagLabels ?? [],
+    () => (labelsData?.getInventoryTagLabels ?? []).map((t: LabelTemplate) => {
+      if (!t.fieldconfigs) return t;
+      try {
+        const raw = JSON.parse(t.fieldconfigs);
+        if (raw && !Array.isArray(raw) && (raw.align === "center" || raw.align === "left")) {
+          return { ...t, contentAlign: raw.align as "center" | "left" };
+        }
+      } catch { /* fall through */ }
+      return t;
+    }),
     [labelsData]
   );
 
@@ -232,8 +305,30 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   const [fieldConfigs, setFieldConfigs] = useState<FieldPrintConfig[]>([]);
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [codechars, setCodechars] = useState("");
+  const [zplConnection, setZplConnection] = useState<"usb" | "tcp" | "bluetooth" | "serial">("usb");
+  const [printerIp, setPrinterIp] = useState("");
+  const [zplPort, setZplPort] = useState("9100");
+  const [zplBaud, setZplBaud] = useState("9600");
+  const [zplStatus, setZplStatus] = useState<"idle" | "printing" | "ok" | "error">("idle");
+  const [zplError, setZplError] = useState("");
   const pageStyleRef = useRef<HTMLStyleElement | null>(null);
   const settingsFetchedRef = useRef(false);
+
+  // Persist ZPL connection settings across sessions
+  useEffect(() => {
+    const conn = localStorage.getItem("zpl_connection");
+    const ip   = localStorage.getItem("zpl_ip");
+    const port = localStorage.getItem("zpl_port");
+    const baud = localStorage.getItem("zpl_baud");
+    if (conn && ["usb","tcp","bluetooth","serial"].includes(conn)) setZplConnection(conn as typeof zplConnection);
+    if (ip)   setPrinterIp(ip);
+    if (port) setZplPort(port);
+    if (baud) setZplBaud(baud);
+  }, []);
+  useEffect(() => { localStorage.setItem("zpl_connection", zplConnection); }, [zplConnection]);
+  useEffect(() => { if (printerIp) localStorage.setItem("zpl_ip",   printerIp); }, [printerIp]);
+  useEffect(() => { localStorage.setItem("zpl_port", zplPort); }, [zplPort]);
+  useEffect(() => { localStorage.setItem("zpl_baud", zplBaud); }, [zplBaud]);
 
   // Auto-select first template
   useEffect(() => {
@@ -247,33 +342,33 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     [templates, selectedLabelId]
   );
 
-  // Initialize fieldConfigs: load saved settings from localStorage, fall back to template defaults
+  // Initialize fieldConfigs: localStorage (for order/size) merged with template (for enabled state).
+  // Template's enabled state always wins so that enabling a field in the template form
+  // immediately takes effect here without requiring a manual "Reset".
   useEffect(() => {
     if (!selectedTemplate) return;
     const storageKey = `label_cfg_${parsedStoreId}_${selectedTemplate.labelid}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
+    const templateConfigs = buildFieldConfigs(selectedTemplate);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
         const parsed = JSON.parse(saved) as FieldPrintConfig[];
-        if (parsed.length > 0) {
-          setFieldConfigs(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          let merged = normalizeConfigs(parsed);
+          if (selectedTemplate.labletype !== "rattail") {
+            merged = merged.map(c => ({ ...c, side: "front" as const }));
+          }
+          // Template's enabled state is the source of truth; localStorage supplies order/fontSize/bold
+          merged = merged.map(c => {
+            const tplCfg = templateConfigs.find(t => t.key === c.key);
+            return tplCfg ? { ...c, enabled: tplCfg.enabled } : c;
+          });
+          setFieldConfigs(merged);
           return;
         }
-      } catch { /* fall through to defaults */ }
-    }
-    const isRattailTemplate = selectedTemplate.labletype === "rattail" ||
-      parseFloat(selectedTemplate.middlemargin || "0") > 0;
-    const tpl = selectedTemplate as unknown as Record<string, string>;
-    const configs = FIELD_DEFAULTS.map((d, i) => ({
-      key: d.key as keyof LabelData,
-      label: d.label,
-      side: isRattailTemplate ? ((tpl[d.sideKey] || d.defaultSide) as "front" | "back") : "front",
-      enabled: isOn(tpl[d.showKey]),
-      order: isRattailTemplate ? d.order : i + 1,
-      fontSize: d.fontSize,
-      bold: d.bold,
-    }));
-    setFieldConfigs(configs);
+      }
+    } catch { /* fall through */ }
+    setFieldConfigs(templateConfigs);
   }, [selectedTemplate, parsedStoreId]);
 
   // Auto-save fieldConfigs to localStorage whenever they change
@@ -282,6 +377,26 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     const storageKey = `label_cfg_${parsedStoreId}_${selectedLabelId}`;
     localStorage.setItem(storageKey, JSON.stringify(fieldConfigs));
   }, [fieldConfigs, selectedLabelId, parsedStoreId]);
+
+  // Auto-calculate coded price from tag price using template prefix as cipher key (10 chars) or literal wrap
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    const price = fields.itemsellprice;
+    const prefix = selectedTemplate.tagprefix || "";
+    const suffix = selectedTemplate.tagsuffix || "";
+    if (!price && !prefix) return;
+    let coded = "";
+    if (prefix.length === 10) {
+      const digits = price.replace(/[^0-9]/g, "");
+      coded = digits.split("").map(d => prefix[parseInt(d, 10)] ?? d).join("") + suffix;
+    } else {
+      const n = parseFloat(price.replace(/[^0-9.]/g, ""));
+      const formatted = isNaN(n) ? price : n.toFixed(2);
+      coded = prefix + formatted + suffix;
+    }
+    setFields(f => ({ ...f, codedprice: coded }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fields.itemsellprice, selectedTemplate?.tagprefix, selectedTemplate?.tagsuffix, selectedTemplate?.labelid]);
 
   // Fetch codechars once on mount
   useEffect(() => {
@@ -294,7 +409,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     });
   }, [parsedStoreId, product.itemwarehouseid, fetchSettings]);
 
-  // Auto-calculate coded price when sell price, template, or codechars changes
+  // Auto-calculate coded price when tag price, template, or codechars changes
   useEffect(() => {
     if (!codechars || !selectedTemplate) return;
     const price = parseFloat(fields.itemsellprice);
@@ -312,18 +427,20 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
       pageStyleRef.current.id = "label-page-style";
       document.head.appendChild(pageStyleRef.current);
     }
-    const isRattail = selectedTemplate.labletype === "rattail" ||
-      parseFloat(selectedTemplate.middlemargin || "0") > 0;
-    const wIn = selectedTemplate.labelwidth ?? 2;
-    const hIn = selectedTemplate.labelheight ?? 1;
-    const midIn = isRattail ? parseFloat(selectedTemplate.middlemargin || "0") : 0;
-    const pageH = isRattail ? hIn * 2 + midIn : hIn;
-    pageStyleRef.current.textContent = `@page { size: ${wIn}in ${pageH}in; margin: 0; }`;
+    const isRattailPrint = selectedTemplate.labletype === "rattail";
+    const wIn    = selectedTemplate.labelwidth  ?? 2;
+    const hIn    = selectedTemplate.labelheight ?? 1;
+    const leftIn = parseFloat(selectedTemplate.leftmargin || "0");
+    // Tail label: leftmargin ≥ labelwidth means [tail area | printable area].
+    // Expand page width to cover both so the printer sees the full 2" roll width.
+    const pageW  = leftIn >= wIn ? wIn + leftIn : wIn;
+    const pageH  = isRattailPrint ? hIn * 2 : hIn;
+    pageStyleRef.current.textContent = `@page { size: ${pageW}in ${pageH}in; margin: 0; }`;
     const timer = setTimeout(() => {
       window.print();
       setPrintQueued(false);
       if (pageStyleRef.current) pageStyleRef.current.textContent = "";
-    }, 100);
+    }, 300);
     return () => clearTimeout(timer);
   }, [printQueued, selectedTemplate]);
 
@@ -390,6 +507,102 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     [printQueued, copies]
   );
 
+  const handleZplPrint = async () => {
+    if (!selectedTemplate) return;
+    setZplStatus("printing");
+    setZplError("");
+    try {
+      const zpl = buildZpl(selectedTemplate, fields, fieldConfigs);
+
+      if (zplConnection === "usb") {
+        // Zebra Browser Print (supports USB, and also BT/Serial if configured there)
+        const deviceRes = await fetch("http://localhost:9101/default");
+        if (!deviceRes.ok) throw new Error("Zebra Browser Print not running — install from zebra.com");
+        const device = await deviceRes.json();
+        if (!device?.uid) throw new Error("No printer found. Check Zebra Browser Print is running and a printer is connected.");
+        const form = new URLSearchParams();
+        form.set("device", JSON.stringify(device));
+        form.set("data", zpl);
+        const wr = await fetch("http://localhost:9101/write", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form.toString(),
+        });
+        if (!wr.ok) throw new Error("Browser Print write failed");
+
+      } else if (zplConnection === "tcp") {
+        if (!printerIp.trim()) throw new Error("Enter the printer IP address");
+        const res = await fetch("/api/print-zpl", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            printerIp: printerIp.trim(),
+            printerPort: parseInt(zplPort) || 9100,
+            template: selectedTemplate,
+            data: fields,
+            fieldConfigs,
+          }),
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error ?? "TCP print failed");
+
+      } else if (zplConnection === "bluetooth") {
+        if (!("bluetooth" in navigator)) throw new Error("Web Bluetooth not supported — use Chrome or Edge");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const btNav = (navigator as any).bluetooth;
+        const btDevice = await btNav.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [
+            "000018f0-0000-1000-8000-00805f9b34fb", // Zebra BLE
+            "49535343-fe7d-4ae5-8fa9-9fafd205e455", // TSC / Citizen BLE
+            "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // common thermal BLE
+          ],
+        });
+        const server = await btDevice.gatt.connect();
+        // Try known service/characteristic UUIDs in order
+        const serviceUuids = [
+          ["000018f0-0000-1000-8000-00805f9b34fb", "00002af1-0000-1000-8000-00805f9b34fb"],
+          ["49535343-fe7d-4ae5-8fa9-9fafd205e455", "49535343-8841-43f4-a8d4-ecbe34729bb3"],
+          ["e7810a71-73ae-499d-8c15-faa9aef0c3f2", "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f"],
+        ];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let characteristic: any = null;
+        for (const [svcUuid, charUuid] of serviceUuids) {
+          try {
+            const svc  = await server.getPrimaryService(svcUuid);
+            characteristic = await svc.getCharacteristic(charUuid);
+            break;
+          } catch { /* try next */ }
+        }
+        if (!characteristic) throw new Error("Printer Bluetooth service not found — ensure printer is on and in range");
+        const bytes = new TextEncoder().encode(zpl);
+        const CHUNK = 512;
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+          await characteristic.writeValue(bytes.slice(i, i + CHUNK));
+        }
+
+      } else if (zplConnection === "serial") {
+        if (!("serial" in navigator)) throw new Error("Web Serial not supported — use Chrome or Edge");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const port = await (navigator as any).serial.requestPort();
+        await port.open({ baudRate: parseInt(zplBaud) || 9600 });
+        const writer = port.writable.getWriter();
+        try {
+          await writer.write(new TextEncoder().encode(zpl));
+        } finally {
+          writer.releaseLock();
+          await port.close();
+        }
+      }
+
+      setZplStatus("ok");
+      setTimeout(() => setZplStatus("idle"), 3000);
+    } catch (err) {
+      setZplError(err instanceof Error ? err.message : "Print failed");
+      setZplStatus("error");
+    }
+  };
+
   const goToSettings = () => {
     onClose();
     router.push(`${basePath}/products/labels`);
@@ -397,15 +610,14 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
 
   const EDITABLE_FIELDS: { key: keyof LabelData; label: string }[] = [
     { key: "itemdescription", label: "Description" },
-    { key: "itemsellprice",   label: "Sell Price"  },
+    { key: "itemsellprice",   label: "Tag Price"   },
     { key: "codedprice",      label: "Coded Price" },
     { key: "itemcode",        label: "Item Code"   },
     { key: "itembarcodeid",   label: "Barcode ID"  },
     { key: "categoryname",    label: "Category"    },
   ];
 
-  const isRattail = selectedTemplate?.labletype === "rattail" ||
-    parseFloat(selectedTemplate?.middlemargin || "0") > 0;
+  const isRattail = selectedTemplate?.labletype === "rattail";
 
   const frontFields = fieldConfigs
     .filter(c => c.side === "front")
@@ -461,10 +673,10 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
           <td style={{ padding: "2px 4px" }}>
             <input
               type="number"
-              min={7} max={18}
+              min={6} max={24}
               value={cfg.fontSize}
               disabled={!cfg.enabled}
-              onChange={e => updateField(cfg.key, { fontSize: Math.max(7, Math.min(18, Number(e.target.value))) })}
+              onChange={e => updateField(cfg.key, { fontSize: Math.max(6, Math.min(24, Number(e.target.value))) })}
               style={{ width: 44, fontSize: 11, textAlign: "center", padding: "1px 2px", border: "1px solid #e2e8f0", borderRadius: 4 }}
             />
           </td>
@@ -600,7 +812,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                         >
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, minHeight: 60, overflow: "hidden" }}>
                             <div style={{ transform: "scale(0.55)", transformOrigin: "center center" }}>
-                              <LabelCanvas template={t} data={fields} scale={1} showFaceLabels />
+                              <LabelCanvas template={t} data={fields} scale={1} showFaceLabels fieldConfigs={t.labelid === selectedLabelId ? fieldConfigs : buildFieldConfigs(t)} />
                             </div>
                           </div>
                           <div style={{ fontSize: 11, fontWeight: 600, color: selected ? "#4338ca" : "#334155", lineHeight: 1.3 }}>
@@ -673,21 +885,8 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!selectedTemplate) return;
-                              const storageKey = `label_cfg_${parsedStoreId}_${selectedTemplate.labelid}`;
-                              localStorage.removeItem(storageKey);
-                              const isRattailTemplate = selectedTemplate.labletype === "rattail" ||
-                                parseFloat(selectedTemplate.middlemargin || "0") > 0;
-                              const tpl = selectedTemplate as unknown as Record<string, string>;
-                              const configs = FIELD_DEFAULTS.map((d, i) => ({
-                                key: d.key as keyof LabelData,
-                                label: d.label,
-                                side: isRattailTemplate ? ((tpl[d.sideKey] || d.defaultSide) as "front" | "back") : "front",
-                                enabled: isOn(tpl[d.showKey]),
-                                order: isRattailTemplate ? d.order : i + 1,
-                                fontSize: d.fontSize,
-                                bold: d.bold,
-                              }));
-                              setFieldConfigs(configs);
+                              localStorage.removeItem(`label_cfg_${parsedStoreId}_${selectedTemplate.labelid}`);
+                              setFieldConfigs(buildFieldConfigs(selectedTemplate));
                             }}
                             style={{ fontSize: 10, color: "#94a3b8", textDecoration: "underline", cursor: "pointer" }}
                           >Reset</span>
@@ -743,6 +942,38 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                       Live Preview
                     </div>
 
+                    {(() => {
+                      const lw = selectedTemplate.labelwidth || 2;
+                      const lh = selectedTemplate.labelheight || 1;
+                      const leftIn = parseFloat(selectedTemplate.leftmargin || "0");
+                      const topIn  = parseFloat(selectedTemplate.topmargin  || "0");
+                      const isTail = leftIn >= lw;
+                      if (isTail) {
+                        return (
+                          <div style={{
+                            width: "100%", marginBottom: 10, padding: "8px 12px",
+                            background: "#eff6ff", border: "1px solid #93c5fd",
+                            borderRadius: 8, fontSize: 12, color: "#1e40af", lineHeight: 1.5,
+                          }}>
+                            Tail label: left {leftIn}" is the loop/tail area, right {lw}" is the printable area.
+                            The print canvas will be {leftIn + lw}" wide with content on the right.
+                          </div>
+                        );
+                      }
+                      const badTop = topIn >= lh * 0.9;
+                      if (!badTop) return null;
+                      return (
+                        <div style={{
+                          width: "100%", marginBottom: 10, padding: "8px 12px",
+                          background: "#fef3c7", border: "1px solid #f59e0b",
+                          borderRadius: 8, fontSize: 12, color: "#92400e", lineHeight: 1.5,
+                        }}>
+                          ⚠️ <strong>Top Margin = {selectedTemplate.topmargin}"</strong> is almost as tall as the {lh}" label face — content may be clipped.
+                          Edit the template to reduce the top margin.
+                        </div>
+                      );
+                    })()}
+
                     <div style={{
                       background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10,
                       padding: 16, width: "100%", marginBottom: 16,
@@ -784,6 +1015,109 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                       <Printer size={14} className="me-2" />
                       {printQueued ? "Preparing…" : `Print ${copies} Label${copies > 1 ? "s" : ""}`}
                     </button>
+
+                    {/* Direct ZPL print — connection type selector */}
+                    <div style={{ marginTop: 12, borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.6px", textTransform: "uppercase", marginBottom: 8 }}>
+                        Direct ZPL Print
+                      </div>
+
+                      {/* Connection type tabs */}
+                      <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                        {(["usb","tcp","bluetooth","serial"] as const).map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => { setZplConnection(t); setZplStatus("idle"); }}
+                            style={{
+                              flex: 1, padding: "4px 0", fontSize: 11, fontWeight: 600,
+                              border: "1px solid",
+                              borderColor: zplConnection === t ? "#6366f1" : "#e2e8f0",
+                              borderRadius: 5,
+                              background: zplConnection === t ? "#eef2ff" : "#fff",
+                              color: zplConnection === t ? "#4338ca" : "#64748b",
+                              cursor: "pointer",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {t === "tcp" ? "TCP/IP" : t}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Per-connection config */}
+                      {zplConnection === "usb" && (
+                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
+                          Uses <strong>Zebra Browser Print</strong> (install free from zebra.com).
+                          Supports USB, and any printer configured in Browser Print.
+                        </div>
+                      )}
+                      {zplConnection === "tcp" && (
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <input
+                            type="text"
+                            placeholder="Printer IP  e.g. 192.168.1.100"
+                            value={printerIp}
+                            onChange={e => { setPrinterIp(e.target.value); setZplStatus("idle"); }}
+                            className="form-control form-control-sm"
+                            style={{ fontSize: 12, flex: 3 }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Port"
+                            value={zplPort}
+                            onChange={e => { setZplPort(e.target.value); setZplStatus("idle"); }}
+                            className="form-control form-control-sm"
+                            style={{ fontSize: 12, flex: 1, maxWidth: 70 }}
+                          />
+                        </div>
+                      )}
+                      {zplConnection === "bluetooth" && (
+                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
+                          BLE printers only (Chrome/Edge). A device picker will open when you click Send.
+                          <br/>Note: Older Bluetooth Classic printers require Zebra Browser Print — use USB tab instead.
+                        </div>
+                      )}
+                      {zplConnection === "serial" && (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Baud rate:</span>
+                          <select
+                            value={zplBaud}
+                            onChange={e => setZplBaud(e.target.value)}
+                            className="form-select form-select-sm"
+                            style={{ fontSize: 12, maxWidth: 120 }}
+                          >
+                            {["9600","19200","38400","57600","115200"].map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                          <span style={{ fontSize: 11, color: "#94a3b8" }}>(Chrome/Edge only — a port picker opens on Send)</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn w-100"
+                        style={{
+                          background: zplStatus === "ok" ? "#16a34a" : "#0f172a",
+                          color: "#fff", fontWeight: 600, fontSize: 13,
+                          border: "none", padding: "8px 0",
+                        }}
+                        onClick={handleZplPrint}
+                        disabled={!selectedTemplate || zplStatus === "printing"}
+                      >
+                        {zplStatus === "printing" ? "Sending…"
+                         : zplStatus === "ok"      ? "✓ Sent"
+                         : `Send ZPL via ${zplConnection === "tcp" ? "TCP/IP" : zplConnection.toUpperCase()}`}
+                      </button>
+
+                      {zplStatus === "error" && (
+                        <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626", background: "#fef2f2", padding: "6px 10px", borderRadius: 6, border: "1px solid #fecaca" }}>
+                          {zplError}
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -796,7 +1130,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
       <div id="label-print-area">
         {selectedTemplate &&
           printCopies.map((_, i) => (
-            <LabelCanvas key={i} template={selectedTemplate} data={fields} scale={1} fieldConfigs={fieldConfigs} />
+            <LabelCanvas key={i} template={selectedTemplate} data={fields} scale={1} fieldConfigs={fieldConfigs} printMode />
           ))}
       </div>
     </>

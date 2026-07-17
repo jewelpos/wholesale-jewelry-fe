@@ -12,7 +12,7 @@ const OTPFormContainer = () => {
   const { storePrefix } = useParams<{ storePrefix: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const email = searchParams.get("email") || "";
+  const email = (typeof window !== "undefined" ? sessionStorage.getItem("otp_email") : null) || searchParams.get("email") || "";
   const codesParam = searchParams.get("codes") || "";
   const pendingCodes = codesParam ? codesParam.split(",") : [];
   const emailOnlyPending = pendingCodes.length > 0 && !pendingCodes.includes("MOBILE_OTP_VERIFICATION_PENDING");

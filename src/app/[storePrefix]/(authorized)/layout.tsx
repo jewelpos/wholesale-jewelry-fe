@@ -2,6 +2,8 @@ import { ErrorBoundary } from "@/components/root/ErrorBoundary";
 import ApolloClientProviderAuthorized from "./ApolloClientProviderAuthorized";
 import InitialDataLoader from "@/components/root/InitialDataLoader";
 import { PermissionGuard } from "@/components/root/PermissionGuard";
+import SessionExpiredModal from "@/components/root/SessionExpiredModal";
+
 export default function AuthorizedLayout({
   children,
 }: Readonly<{
@@ -21,6 +23,7 @@ export default function AuthorizedLayout({
             <PermissionGuard>{children}</PermissionGuard>
           </InitialDataLoader>
         </ErrorBoundary>
+        <SessionExpiredModal />
       </ApolloClientProviderAuthorized>
     </div>
   );

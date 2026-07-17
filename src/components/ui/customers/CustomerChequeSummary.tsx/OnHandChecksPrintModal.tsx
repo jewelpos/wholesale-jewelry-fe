@@ -6,6 +6,7 @@ import { GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY } from "@/lib/graphql/query/custome
 import { useParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store/hook";
 import SelectCustomer from "@/components/forms/SelectCustomer";
+import DOMPurify from "dompurify";
 import dayjs from "dayjs";
 
 interface CheckPrintItem {
@@ -77,8 +78,9 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label ?? statusFilter;
 
   const handlePrint = () => {
-    const content = document.getElementById("onhand-print-content")?.innerHTML ?? "";
-    if (!content) return;
+    const rawContent = document.getElementById("onhand-print-content")?.innerHTML ?? "";
+    if (!rawContent) return;
+    const content = DOMPurify.sanitize(rawContent);
 
     const win = window.open("", "_blank", "width=960,height=720");
     if (!win) return;

@@ -15,25 +15,35 @@ export async function POST(request: NextRequest) {
         refreshToken: token,
       },
     });
-    const { accessToken, refreshToken } = data.refreshToken.data;
-    const response = NextResponse.json(data.refreshToken, {
-      status: 201,
-    });
     if (data.refreshToken.success) {
+      const { accessToken, refreshToken } = data.refreshToken.data;
+      // Preserve keepSignedIn selection: ksi cookie is set at login and re-stamped here
+      const keepSignedIn = request.cookies.get("ksi")?.value === "1";
+      const refreshMaxAge = keepSignedIn ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+      const response = NextResponse.json({ success: true }, { status: 200 });
       setCookieResponse(response, "accessToken", accessToken, {
-        maxAge: 15 * 60,
+        maxAge: 30 * 60,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       });
       setCookieResponse(response, "refreshToken", refreshToken, {
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: refreshMaxAge,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       });
+      if (keepSignedIn) {
+        setCookieResponse(response, "ksi", "1", {
+          maxAge: 30 * 24 * 60 * 60,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+        });
+      }
+      return response;
     }
-    return response;
+    return NextResponse.json({ error: "Token refresh failed" }, { status: 401 });
   } catch {
     return NextResponse.json(
       { error: "Token refresh failed" },
@@ -41,4 +51,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

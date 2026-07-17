@@ -26,10 +26,6 @@ function isNewItem(createddate: string | number | null | undefined): boolean {
 
 const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
   const data = params.data;
-  if (!data) return null;
-
-  const imageUrl = parseFirstImageUrl(data.itemimagepath);
-  const isNew = isNewItem(data.createddate);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [scale, setScale] = useState(1);
@@ -82,6 +78,11 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
     setTranslate({ x: dragStart.current.tx + (e.clientX - dragStart.current.x), y: dragStart.current.ty + (e.clientY - dragStart.current.y) });
   };
   const handleMouseUp = () => setDragging(false);
+
+  if (!data) return null;
+
+  const imageUrl = parseFirstImageUrl(data.itemimagepath);
+  const isNew = isNewItem(data.createddate);
 
   return (
     <div style={{ display: "flex", alignItems: "center", width: "100%", height: "100%", gap: 4 }}>

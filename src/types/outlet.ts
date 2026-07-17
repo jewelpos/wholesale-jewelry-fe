@@ -10,6 +10,7 @@ export type CreateOutlet = {
   storeemail: string;
   contactperson: string;
   storelogo?: string;
+  copyFromOutletId?: number | null;
 };
 
 export type UpdateOutlet = {

@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    pathname.includes(".") ||
+    /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|map|json)$/.test(pathname) ||
     pathname.startsWith("/public") ||
     pathname.startsWith("/images") ||
     pathname.startsWith("/assets")
@@ -41,9 +41,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${prefix}/home`, request.url));
   }
 
-  // Unauthenticated user on a protected route → redirect to login
+  // Unauthenticated user on a protected route.
+  // If the refresh token is still present, the access token just expired — let the
+  // request through. Apollo's error link will silently refresh on the first GraphQL
+  // call and retry, so the user never sees the login page mid-session.
+  // Only hard-redirect to login when BOTH tokens are absent (true session end).
   if (!token && !isPublicRoute(pathname)) {
+    const refreshToken = request.cookies.get("refreshToken")?.value;
+    if (refreshToken) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL(`/${prefix}/login`, request.url));
+  }
+
+  // Unauthenticated user at root → redirect to default store login
+  if (!token && pathname === "/") {
+    return NextResponse.redirect(new URL("/jw/login", request.url));
   }
 
   return NextResponse.next();

@@ -15,7 +15,7 @@ const useMenu = () => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const currentMenu: any = useMemo(() => {
-    let selectedMenu;
+    let selectedMenu: any;
     menus?.forEach((menu) => {
       if (menu.menuurl === parentPath) {
         selectedMenu = menu.children?.find(
@@ -23,6 +23,19 @@ const useMenu = () => {
         );
       }
     });
+    // Deduplicate actions by actionname — duplicate storemenuactions rows in the DB
+    // would otherwise cause React "two children with the same key" warnings.
+    if (selectedMenu?.action?.length) {
+      const seen = new Set<string>();
+      selectedMenu = {
+        ...selectedMenu,
+        action: selectedMenu.action.filter((a: any) => {
+          if (seen.has(a.actionname)) return false;
+          seen.add(a.actionname);
+          return true;
+        }),
+      };
+    }
     return selectedMenu;
   }, [menus, parentPath, childPath]);
 

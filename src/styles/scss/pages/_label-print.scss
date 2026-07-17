@@ -4,14 +4,33 @@
   }
 
   #label-print-area {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 0;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  .label-item {
-    break-inside: avoid;
+  // Wipe every border/outline/shadow from anything inside the print area.
+  #label-print-area,
+  #label-print-area * {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  // overflow:hidden on label-item is the content boundary — no clip-path needed
+  // (clip-path:inset(0) can produce a 1-px anti-alias artifact on thermal prints).
+  #label-print-area .label-item {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  // Zero out any browser/Bootstrap default margins on divs inside a label.
+  // line-height is controlled per-element via inline styles in LabelFace.
+  #label-print-area .label-item div {
+    margin: 0 !important;
   }
 }
 
