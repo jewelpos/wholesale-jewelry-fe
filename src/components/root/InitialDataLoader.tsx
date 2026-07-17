@@ -44,7 +44,7 @@ const InitialDataLoader = ({
       );
       const storeIsSetup =
         defaultStore?.hassetupoutlet || defaultStore?.hassetupproduct;
-      const roleid = user?.roleid;
+      const roleid: number = user?.roleid ?? 0;
       const dashboardByRole: Record<number, string> = {
         1: "dashboard/admin",
         2: "dashboard/manager",
