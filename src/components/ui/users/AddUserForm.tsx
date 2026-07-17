@@ -222,11 +222,25 @@ const AddUserForm = () => {
           }
         });
       });
-      const normalizedMenus = Array.from(childrenByParent.entries()).map(([ppid, children]) => ({
+      const normalizedMenus: AddUserMenusType = Array.from(childrenByParent.entries()).map(([ppid, children]) => ({
         permissionid: ppid,
         permissiondisplayname: '',
         storetypeid: children[0]?.storetypeid ?? 1,
-        children,
+        children: children.map(c => ({
+          permissionid: c.permissionid,
+          permissionname: 0,
+          permissiondisplayname: c.permissiondisplayname,
+          permissiondescription: c.permissiondescription ?? '',
+          parentid: c.parentid ?? 0,
+          storemenuid: c.menuid,
+          permissionorder: c.permissionorder ?? 0,
+          storetypeid: c.storetypeid,
+          packageid: 0,
+          permissionparentid: c.permissionparentid,
+          rolesnotallowed: 0,
+          action: [],
+          status: 'SELECTED' as const,
+        })),
       }));
       setPermittedMenus(normalizedMenus);
     }
