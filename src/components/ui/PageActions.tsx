@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
@@ -51,7 +51,7 @@ const PageActions = ({
           const iconName = renderIconName(btn.actionname);
           const isModalButton = modalButtons?.includes(btn.actionname);
           return (
-            <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+            <div className="page-btn" key={btn.actionname}>
               <Link
                 href={isModalButton ? "#" : `${currentPath}/new`}
                 onClick={() =>

@@ -24,8 +24,8 @@ const PageHeader = ({ title, subtitle, children, showBreadcrumb, rightSection }:
             {rightSection}
           </div>
         )}
+        {children}
       </div>
-      {children}
     </div>
   );
 };

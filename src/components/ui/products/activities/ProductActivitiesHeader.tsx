@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import {
@@ -41,7 +41,7 @@ export default function ProductActivitiesHeader({ onExport }: { onExport: () => 
 
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

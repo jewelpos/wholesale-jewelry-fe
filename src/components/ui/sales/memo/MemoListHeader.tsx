@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -60,7 +60,7 @@ const MemoListHeader = ({
               const isAddNewMemoInvoiceAction = btn.actionname === "add_new_memo_invoice";
               const isAddCreditInvoiceAction = btn.actionname === "add_new_credit_memo_invoice";
 
-              // Any unrecognised create button requires ≥1 selection
+              // Any unrecognised create button requires â‰¥1 selection
               const isKnownButton =
                 isAddNewMemoAction || isAddNewMemoInvoiceAction || isAddCreditInvoiceAction || isActionButton;
               const unknownCreateDisabled = !isKnownButton && selectedMemoNumbers.length === 0;
@@ -101,7 +101,7 @@ const MemoListHeader = ({
 
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

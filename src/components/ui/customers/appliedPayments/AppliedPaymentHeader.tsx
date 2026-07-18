@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -66,7 +66,7 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
                 const btnColor = renderActionButtonColor(btn.actionname);
                 const iconName = renderActionButtonIconName(btn.actionname);
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <Link
                       href={`${basePath}/accounts/payment_matrix`}
                       className={`btn btn-added ${btnColor}`}
@@ -94,7 +94,7 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
 
               if (isReceivePayment) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <button
                       type="button"
                       className="btn btn-added"
@@ -112,7 +112,7 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
               const iconName = renderActionButtonIconName(btn.actionname);
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <button type="button" className={`btn btn-added ${btnColor}`} onClick={handleClick}>
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}

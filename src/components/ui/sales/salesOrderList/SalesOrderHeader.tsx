@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -81,7 +81,7 @@ const SalesOrderHeader = ({
               };
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <Link
                     href={href}
                     onClick={handleClick}

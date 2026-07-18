@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -82,7 +82,7 @@ const CustomerListHeader = ({
 
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

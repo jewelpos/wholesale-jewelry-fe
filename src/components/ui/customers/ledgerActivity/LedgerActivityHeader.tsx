@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -32,7 +32,7 @@ const LedgerActivityHeader = ({ onPrint, onExport }: LedgerActivityHeaderProps) 
 
               if (btn.actionname.includes("print")) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <button
                       type="button"
                       className={`btn btn-added ${btnColor}`}
@@ -47,7 +47,7 @@ const LedgerActivityHeader = ({ onPrint, onExport }: LedgerActivityHeaderProps) 
 
               if (btn.actionname.includes("export")) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <button
                       type="button"
                       className={`btn btn-added ${btnColor}`}
@@ -61,7 +61,7 @@ const LedgerActivityHeader = ({ onPrint, onExport }: LedgerActivityHeaderProps) 
               }
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <Link href={`${currentPath}/new`} className={`btn btn-added ${btnColor}`}>
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}

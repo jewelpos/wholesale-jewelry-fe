@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import useMenu from "@/hooks/useMenu";
@@ -51,7 +51,7 @@ const InventoryTransferListHeader = () => {
               const iconName = renderActionButtonIconName(btn.actionname);
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

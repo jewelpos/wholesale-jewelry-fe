@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
@@ -85,7 +85,7 @@ export default function PurchaseOrderListHeader({
                 (btn.actionname.includes("print") || btn.actionname.includes("email"));
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

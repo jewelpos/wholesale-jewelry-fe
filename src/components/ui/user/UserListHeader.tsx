@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../PageHeader";
@@ -28,7 +28,7 @@ const UserListHeader = () => {
               const btnColor = renderActionButtonColor(btn.actionname);
               const iconName = renderActionButtonIconName(btn.actionname);
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <Link
                     href={`${currentPath}/new`}
                     className={`btn btn-added ${btnColor}`}

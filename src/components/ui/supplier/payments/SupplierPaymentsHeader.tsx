@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import useMenu from "@/hooks/useMenu";
@@ -47,7 +47,7 @@ export default function SupplierPaymentsHeader({ setPaymentModal, onExport }: Su
 
               if (isPaySupplier) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <button
                       type="button"
                       className="btn btn-added"
@@ -65,7 +65,7 @@ export default function SupplierPaymentsHeader({ setPaymentModal, onExport }: Su
               const iconName = renderActionButtonIconName(btn.actionname);
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <button
                     type="button"
                     className={`btn btn-added ${btnColor}`}

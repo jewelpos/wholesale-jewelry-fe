@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -31,7 +31,7 @@ const SupplierLedgerActivityHeader = ({ onExport }: SupplierLedgerActivityHeader
 
               if (btn.actionname.includes("export")) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <button
                       type="button"
                       className={`btn btn-added ${btnColor}`}
@@ -45,7 +45,7 @@ const SupplierLedgerActivityHeader = ({ onExport }: SupplierLedgerActivityHeader
               }
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <Link href={`${currentPath}/new`} className={`btn btn-added ${btnColor}`}>
                     {iconName && <FeatherIcon icon={iconName} />}
                     {btn.actiondisplayname}

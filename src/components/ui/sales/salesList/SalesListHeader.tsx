@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
@@ -62,7 +62,7 @@ const SalesListHeader = ({
 
               if (isSalesMatrix) {
                 return (
-                  <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                  <div className="page-btn" key={btn.actionname}>
                     <Link
                       href={`${basePath}/sales/sales_matrix`}
                       className={`btn btn-added ${btnColor}`}
@@ -97,7 +97,7 @@ const SalesListHeader = ({
 
               return (
                 <div
-                  className="page-btn d-none d-sm-block"
+                  className="page-btn"
                   key={btn.actionname}
                 >
                   <Link

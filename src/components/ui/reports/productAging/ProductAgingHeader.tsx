@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import PageHeader from "@/components/ui/PageHeader";
 import useMenu from "@/hooks/useMenu";
@@ -59,7 +59,7 @@ const ProductAgingHeader = ({ onExport, viewMode, setViewMode }: ProductAgingHea
               };
 
               return (
-                <div className="page-btn d-none d-sm-block" key={btn.actionname}>
+                <div className="page-btn" key={btn.actionname}>
                   <Link
                     href={isModalButton ? "#" : `${currentPath}/new`}
                     onClick={handleClick}
