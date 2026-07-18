@@ -12,8 +12,13 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 // import ThemeSettings from "@/components/ui/ThemeSettings";
 
 export const metadata: Metadata = {
-  title: "POS",
-  description: "POS",
+  title: "JewelPOS",
+  description: "JewelPOS",
+  icons: {
+    icon: "/assets/img/logo-small.png",
+    shortcut: "/assets/img/logo-small.png",
+    apple: "/assets/img/logo-small.png",
+  },
 };
 
 export default function RootLayout({
