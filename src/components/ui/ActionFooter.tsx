@@ -14,13 +14,13 @@ const ActionFooter = ({
   return (
     <div className="card sticky-footer">
       <div className="card-body">
-        <div className="d-flex align-items-center justify-content-between">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div>{leftContent}</div>
-          <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
               type="button"
               onClick={handleCancel}
-              className="btn btn-cancel me-3"
+              className="btn btn-cancel"
             >
               {cancelLabel}
             </button>

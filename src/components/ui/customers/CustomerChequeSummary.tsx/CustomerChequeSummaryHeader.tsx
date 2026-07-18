@@ -1,15 +1,11 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
-import FeatherIcon from "../../FeatherIcon";
-import Link from "next/link";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 const CustomerChequeSummaryHeader = ({
   setOpenAddChequeModal,
@@ -22,21 +18,24 @@ const CustomerChequeSummaryHeader = ({
 }) => {
   const { currentMenu } = useMenu();
 
-  const handleActionClick = (action: MenuAction) => {
-    switch (action.actionname) {
-      case "add_new_checks":
-        setOpenAddChequeModal(true);
-        break;
-      case "export_customer_onhand_check":
-        onExport();
-        break;
-      case "print_check_list":
-        onPrint();
-        break;
-      default:
-        break;
-    }
-  };
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
+    .map((btn: MenuAction): ActionDef => {
+      const onClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (btn.actionname === "add_new_checks") { setOpenAddChequeModal(true); return; }
+        if (btn.actionname === "export_customer_onhand_check") { onExport(); return; }
+        if (btn.actionname === "print_check_list") { onPrint(); return; }
+      };
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: renderActionButtonIconName(btn.actionname) || undefined,
+        colorClass: renderActionButtonColor(btn.actionname),
+        href: "#",
+        onClick,
+      };
+    });
 
   return (
     <PageHeader
@@ -44,34 +43,7 @@ const CustomerChequeSummaryHeader = ({
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
-            })
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              return (
-                <div
-                  className="page-btn"
-                  key={btn.actionname}
-                >
-                  <Link
-                    href="#"
-                    onClick={() => handleActionClick(btn)}
-                    className={`btn btn-added ${btnColor}`}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 };

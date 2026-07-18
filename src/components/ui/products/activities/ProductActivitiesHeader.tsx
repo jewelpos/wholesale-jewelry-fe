@@ -1,16 +1,32 @@
-﻿import React from "react";
+"use client";
+
+import React from "react";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
-import Link from "next/link";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
 import PageHeader from "../../PageHeader";
-import FeatherIcon from "../../FeatherIcon";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 export default function ProductActivitiesHeader({ onExport }: { onExport: () => void }) {
   const { currentMenu, currentPath } = useMenu();
+
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
+    .map((btn: MenuAction): ActionDef => {
+      const isExport = btn.actionname.includes("export");
+      const isModal  = btn.actionname.includes("print") || isExport;
+
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: renderActionButtonIconName(btn.actionname) || undefined,
+        colorClass: renderActionButtonColor(btn.actionname),
+        href: isModal ? "#" : `${currentPath}/new`,
+        onClick: isModal
+          ? (e: React.MouseEvent) => { e.preventDefault(); if (isExport) onExport(); }
+          : undefined,
+      };
+    });
 
   return (
     <PageHeader
@@ -18,44 +34,7 @@ export default function ProductActivitiesHeader({ onExport }: { onExport: () => 
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
-            })
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              const isExportButton = btn.actionname.includes("export");
-              const isModalButton =
-                btn.actionname.includes("print") || isExportButton;
-
-              const handleClick = (e: React.MouseEvent) => {
-                if (!isModalButton) return;
-                e.preventDefault();
-                if (isExportButton) onExport();
-              };
-
-              return (
-                <div
-                  className="page-btn"
-                  key={btn.actionname}
-                >
-                  <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
-                    onClick={handleClick}
-                    className={`btn btn-added ${btnColor}`}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 }

@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
+import React from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
-import Link from "next/link";
-import FeatherIcon from "@/components/ui/FeatherIcon";
+import MobileActionsDropdown, { ActionDef } from "@/components/ui/MobileActionsDropdown";
 
 interface ProductAgingHeaderProps {
   onExport?: () => void;
@@ -16,15 +16,33 @@ interface ProductAgingHeaderProps {
 const ProductAgingHeader = ({ onExport, viewMode, setViewMode }: ProductAgingHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
 
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
+    .map((btn: MenuAction): ActionDef => {
+      const isExport = btn.actionname.includes("export");
+      const isModal  = btn.actionname.includes("print") || isExport;
+
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: renderActionButtonIconName(btn.actionname) || undefined,
+        colorClass: renderActionButtonColor(btn.actionname),
+        href: isModal ? "#" : `${currentPath}/new`,
+        onClick: isModal
+          ? (e: React.MouseEvent) => { e.preventDefault(); if (isExport) onExport?.(); }
+          : undefined,
+      };
+    });
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex align-items-center gap-2 purchase-pg-btn">
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         {setViewMode && (
-          <div className="btn-group btn-group-sm me-2" role="group">
+          <div className="btn-group btn-group-sm" role="group">
             <button
               type="button"
               className={`btn ${viewMode === "grid" ? "btn-primary" : "btn-outline-secondary"}`}
@@ -43,34 +61,7 @@ const ProductAgingHeader = ({ onExport, viewMode, setViewMode }: ProductAgingHea
             </button>
           </div>
         )}
-        {!!currentMenu?.action.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              const isExportButton = btn.actionname.includes("export");
-              const isModalButton = btn.actionname.includes("print") || isExportButton;
-
-              const handleClick = (e: React.MouseEvent) => {
-                if (!isModalButton) return;
-                e.preventDefault();
-                if (isExportButton && onExport) onExport();
-              };
-
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <Link
-                    href={isModalButton ? "#" : `${currentPath}/new`}
-                    onClick={handleClick}
-                    className={`btn btn-added ${btnColor}`}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            })}
+        <MobileActionsDropdown actions={actions} />
       </div>
     </PageHeader>
   );
