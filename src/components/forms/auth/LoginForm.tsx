@@ -146,13 +146,16 @@ export const LoginForm = () => {
         </label>
 
         {/* Cloudflare Turnstile — auto-verifies silently, resets on failed login */}
-        <Turnstile
-          ref={turnstileRef}
-          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-          onSuccess={(token) => setTurnstileToken(token)}
-          onExpire={() => setTurnstileToken(null)}
-          onError={() => setTurnstileToken(null)}
-        />
+        <div style={{ width: "100%" }}>
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onSuccess={(token) => setTurnstileToken(token)}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+            options={{ size: "flexible" }}
+          />
+        </div>
 
         {/* Submit */}
         <button type="submit" className="jp-submit-btn" disabled={loginLoading || !turnstileToken}>
