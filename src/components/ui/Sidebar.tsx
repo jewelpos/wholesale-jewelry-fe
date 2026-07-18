@@ -88,6 +88,12 @@ const Sidebar = ({ menus }: Props) => {
     setSubsidebar((prev) => (prev === subitem ? "" : subitem));
   };
 
+  const closeMobileSidebar = () => {
+    document.querySelector(".main-wrapper")?.classList.remove("slide-nav");
+    document.querySelector(".sidebar-overlay")?.classList.remove("opened");
+    document.querySelector("html")?.classList.remove("menu-opened");
+  };
+
   return (
     <div>
       <div
@@ -176,9 +182,10 @@ const Sidebar = ({ menus }: Props) => {
                                             ? "subdrop"
                                             : ""
                                         }`}
-                                        onClick={() =>
-                                          toggleSubsidebar(item.menuname)
-                                        }
+                                        onClick={() => {
+                                          toggleSubsidebar(item.menuname);
+                                          closeMobileSidebar();
+                                        }}
                                       >
                                         {ChildIcon && (
                                           <ChildIcon

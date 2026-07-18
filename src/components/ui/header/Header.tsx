@@ -208,10 +208,10 @@ const Header = ({ onLogout, storeLoading }: Props) => {
         {/* Outlet title */}
         {currentOutletName && (
           <div
+            className="d-none d-lg-flex"
             style={{
               float: "left",
               height: "66px",
-              display: "flex",
               alignItems: "center",
               gap: 12,
               paddingLeft: 20,
