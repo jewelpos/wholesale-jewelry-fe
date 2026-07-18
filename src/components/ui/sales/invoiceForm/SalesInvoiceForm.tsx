@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
+import { Bookmark, Camera, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -56,6 +56,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import api from "@/lib/axios";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
 
 export type SalesInvoiceFormMode = "NEW_INVOICE" | "CREDIT_INVOICE";
 
@@ -517,6 +518,8 @@ const SalesInvoiceForm = ({
   const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [barcodeScanValue, setBarcodeScanValue] = useState<string | undefined>(undefined);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
   const pdfCloseNavigateBack = useRef(false);
 
@@ -2542,6 +2545,8 @@ const SalesInvoiceForm = ({
               <div className="row g-2 align-items-end">
                 <div className="col-lg-4 col-md-6 col-sm-12">
                   <label className="form-label small text-muted mb-1">Item</label>
+                  <div className="d-flex gap-2 align-items-center">
+                  <div style={{ flex: 1 }}>
                   <SelectProduct
                     storeId={parsedStoreId}
                     hasWarehouseId={true}
@@ -2555,6 +2560,7 @@ const SalesInvoiceForm = ({
                         : undefined
                     }
                     clearKey={productClearKey}
+                    scanValue={barcodeScanValue}
                     disableField={!!salesordernoFromSO || !!memonumber}
                     onChange={(val: number | undefined) => setToolItem((prev) => ({ ...prev, itemid: val }))}
                     onChangeAdditional={(selected: ItemDetails) => {
@@ -2602,6 +2608,17 @@ const SalesInvoiceForm = ({
                     }}
                     onNotFound={() => dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))}
                   />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary d-lg-none"
+                    style={{ flexShrink: 0, padding: "6px 10px" }}
+                    title="Scan barcode"
+                    onClick={() => setShowBarcodeScanner(true)}
+                  >
+                    <Camera size={18} />
+                  </button>
+                  </div>
                 </div>
 
                 <div className={`${allowPcsEntry ? "col-lg-2" : "col-lg-3"} col-md-6 col-sm-12`}>
@@ -2916,6 +2933,17 @@ const SalesInvoiceForm = ({
           done?.();
         }}
         onCollect={handleCollectPayment}
+      />
+    )}
+    {showBarcodeScanner && (
+      <BarcodeScannerModal
+        onScan={(code) => {
+          setBarcodeScanValue(code);
+          setShowBarcodeScanner(false);
+          // Reset so the same barcode can be scanned again on the next open
+          setTimeout(() => setBarcodeScanValue(undefined), 400);
+        }}
+        onClose={() => setShowBarcodeScanner(false)}
       />
     )}
     {pdfPreview && (

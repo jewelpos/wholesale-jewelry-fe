@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Settings, User, ChevronsLeft, LogOut } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
 import { useParams } from "next/navigation";
+import type { Menus } from "@/types/permissions";
 
 type Props = {
   onLogout: () => Promise<boolean | void>;
@@ -20,6 +21,13 @@ const Header = ({ onLogout, storeLoading }: Props) => {
   const [toggle, SetToggle] = useState(false);
   const user = useAppSelector((state) => state.user.data);
   const stores = useAppSelector((state) => state.stores.data);
+
+  const canAccessSettings =
+    user?.issysgenmasteraccount === 1 ||
+    (user?.permissions?.menus as Menus | undefined)?.some(
+      (m) => m.menuurl?.startsWith("/settings") ||
+             m.children?.some((c) => c.menuurl?.startsWith("/settings"))
+    );
 
   // Resolve current outlet name from Redux (available immediately after stores load)
   const currentOutletName = (() => {
@@ -622,10 +630,12 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                 <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
                   <User className="me-2" /> My Profile
                 </Link>
-                <Link className="dropdown-item" href="">
-                  <Settings className="me-2" />
-                  Settings
-                </Link>
+                {canAccessSettings && (
+                  <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/settings/system_settings` : "#"}>
+                    <Settings className="me-2" />
+                    Settings
+                  </Link>
+                )}
                 <hr className="m-0" />
                 <Link
                   className="dropdown-item logout pb-0"
@@ -654,9 +664,11 @@ const Header = ({ onLogout, storeLoading }: Props) => {
             <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
               My Profile
             </Link>
-            <Link className="dropdown-item" href="generalsettings">
-              Settings
-            </Link>
+            {canAccessSettings && (
+              <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/settings/system_settings` : "#"}>
+                Settings
+              </Link>
+            )}
             <Link className="dropdown-item" href="#" onClick={onLogout}>
               Logout
             </Link>

@@ -47,7 +47,16 @@ export const LoginForm = () => {
       if (data.success) {
         const { storeid, outletid, routeprefix } = data.data;
         if (storeid && outletid && routeprefix) {
-          router.push(`/${routeprefix}/${storeid}/${outletid}/home`);
+          const userInfo = data.data.user;
+          const dashboardByRole: Record<number, string> = {
+            1: "dashboard/admin",
+            2: "dashboard/manager",
+            3: "dashboard/cashier",
+          };
+          const landing = userInfo?.shouldcreatestore
+            ? "home"
+            : (dashboardByRole[userInfo?.roleid] ?? "dashboard/admin");
+          router.push(`/${routeprefix}/${storeid}/${outletid}/${landing}`);
         } else {
           router.push(`/${storePrefix}/home`);
         }

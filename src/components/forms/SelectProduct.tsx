@@ -27,6 +27,7 @@ const SelectProduct = ({
   initialLabel,
   onNotFound,
   clearKey,
+  scanValue,
   ...field
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) => {
@@ -90,6 +91,10 @@ const SelectProduct = ({
     [onChange, onChangeItemCode, onChangeAdditional, trigger, field.name]
   );
 
+  // Trigger search when a barcode value is injected externally (e.g. camera scan)
+  const searchImmediateRef = useRef<(query: string) => Promise<void>>(async () => {});
+  const prevScanValueRef = useRef<string | undefined>(undefined);
+
   // Immediate search triggered by Enter key on numeric input (barcode scan)
   const searchImmediate = useCallback(
     async (query: string) => {
@@ -107,6 +112,19 @@ const SelectProduct = ({
     },
     [searchInventoryItems, storeId, getWarehouseFilter, applyExactMatch, onNotFound]
   );
+
+  // Keep ref current so the scanValue effect below never uses a stale closure
+  useEffect(() => { searchImmediateRef.current = searchImmediate; }, [searchImmediate]);
+
+  useEffect(() => {
+    if (!scanValue) {
+      prevScanValueRef.current = undefined;
+      return;
+    }
+    if (scanValue === prevScanValueRef.current) return;
+    prevScanValueRef.current = scanValue;
+    searchImmediateRef.current(scanValue);
+  }, [scanValue]);
 
   const loadOptions = useCallback(
     (inputValue: string): Promise<ProductOption[]> => {

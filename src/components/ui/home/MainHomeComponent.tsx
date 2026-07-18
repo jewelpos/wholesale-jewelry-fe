@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store/hook";
 import { useQuery } from "@apollo/client";
 import { GET_STORE_CATEGORY_QUERY } from "@/lib/graphql/query/store";
@@ -11,8 +12,15 @@ import { catalogByStoreType, defaultCatalog } from "@/lib/utils/homeCatalogConfi
 import { CatalogTile } from "@/types/home";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 
+const dashboardByRole: Record<number, string> = {
+  1: "dashboard/admin",
+  2: "dashboard/manager",
+  3: "dashboard/cashier",
+};
+
 const MainHomeComponent = () => {
   const user = useAppSelector((state) => state.user.data);
+  const router = useRouter();
   const store = useAppSelector((state) => state.store.data);
 
   const { data: categoryData } = useQuery<GetStoreCategoryData>(GET_STORE_CATEGORY_QUERY);
@@ -24,6 +32,15 @@ const MainHomeComponent = () => {
   const tiles: CatalogTile[] = catalogByStoreType[categoryName ?? ""] ?? defaultCatalog;
   const { basePath } = useDefaultRoute();
   const storeName = store?.storename ?? "";
+
+  // Cashiers and managers should never land on the setup page
+  useEffect(() => {
+    if (!user) return;
+    const target = dashboardByRole[user.roleid];
+    if (target && user.roleid !== 1 && user.issysgenmasteraccount !== 1) {
+      router.replace(`${basePath}/${target}`);
+    }
+  }, [user, router, basePath]);
 
   const getDone = (tile: CatalogTile) =>
     tile.setupFlag ? !!(store as unknown as Record<string, unknown>)?.[tile.setupFlag] : false;
