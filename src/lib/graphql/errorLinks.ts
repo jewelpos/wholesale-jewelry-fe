@@ -5,14 +5,22 @@ import { Observable } from "@apollo/client";
 // Resets on page reload (which the Resume button triggers).
 let sessionExpiredFlag = false;
 
+// Singleton refresh: all concurrent 401 handlers share one request so the
+// refresh token is never used twice (rotation would invalidate the first caller's result).
+let inflightRefresh: Promise<boolean> | null = null;
+
 async function refreshToken(): Promise<boolean> {
-  try {
-    const response = await fetch("/api/auth/refresh", { method: "POST" });
-    if (response.ok) return true;
-    throw new Error("");
-  } catch {
-    throw new Error("");
+  if (!inflightRefresh) {
+    inflightRefresh = fetch("/api/auth/refresh", { method: "POST" })
+      .then(r => {
+        if (r.ok) return true;
+        throw new Error("");
+      })
+      .finally(() => {
+        setTimeout(() => { inflightRefresh = null; }, 1000);
+      });
   }
+  return inflightRefresh;
 }
 
 // Called when the refresh token is itself expired — can't silently recover.

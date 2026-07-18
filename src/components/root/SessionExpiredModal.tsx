@@ -73,7 +73,10 @@ export default function SessionExpiredModal() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(id);
-          logoutAndRedirect();
+          // Switch to "expired" prompt — user can still Resume if refresh token is valid.
+          // Actual logout only happens if they click Log Out or Resume fails.
+          setReason("expired");
+          setState("prompt");
           return 0;
         }
         return prev - 1;
@@ -85,18 +88,20 @@ export default function SessionExpiredModal() {
   if (!visible) return null;
 
   const handleResume = async () => {
-    if (reason === "idle") {
-      setVisible(false);
-      idleWarned.current   = false;
-      expiredShown.current = false;
-      lastActivity.current = Date.now();
-      return;
-    }
     setState("resuming");
     try {
       const res = await fetch("/api/auth/refresh", { method: "POST" });
       if (res.ok) {
-        setTimeout(() => window.location.reload(), 400);
+        if (reason === "idle") {
+          // Token refreshed — dismiss the modal without a full page reload
+          setVisible(false);
+          idleWarned.current   = false;
+          expiredShown.current = false;
+          lastActivity.current = Date.now();
+        } else {
+          // Apollo's operation cache may reference stale tokens; reload to reconnect
+          setTimeout(() => window.location.reload(), 400);
+        }
         return;
       }
     } catch { /* fall through */ }
