@@ -1,17 +1,25 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
-import FeatherIcon from "../../FeatherIcon";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 const SupplierInvoiceListHeader = ({ onAdd }: { onAdd?: () => void }) => {
   const { currentMenu } = useMenu();
+
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
+    .map((btn: MenuAction): ActionDef => ({
+      key: btn.actionname,
+      label: btn.actiondisplayname,
+      icon: renderActionButtonIconName(btn.actionname) || undefined,
+      colorClass: renderActionButtonColor(btn.actionname),
+      href: "#",
+      onClick: (e) => { e.preventDefault(); onAdd?.(); },
+    }));
 
   return (
     <PageHeader
@@ -19,34 +27,7 @@ const SupplierInvoiceListHeader = ({ onAdd }: { onAdd?: () => void }) => {
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              if (a.actionorder < b.actionorder) return -1;
-              if (a.actionorder > b.actionorder) return 1;
-              return 0;
-            })
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              return (
-                <div
-                  className="page-btn"
-                  key={btn.actionname}
-                >
-                  <button
-                    type="button"
-                    className={`btn btn-added ${btnColor}`}
-                    onClick={onAdd}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </button>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 };

@@ -1,13 +1,12 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import useMenu from "@/hooks/useMenu";
 import PageHeader from "../../PageHeader";
 import { MenuAction } from "@/types/permissions";
 import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
-import FeatherIcon from "../../FeatherIcon";
-import { CreditCard } from "react-feather";
 import { PAY_SUPPLIER } from "./PaySupplierModal";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 const BUTTON_ORDER: Record<string, number> = {
   [PAY_SUPPLIER]: 0,
@@ -31,53 +30,34 @@ interface SupplierPaymentsHeaderProps {
 export default function SupplierPaymentsHeader({ setPaymentModal, onExport }: SupplierPaymentsHeaderProps) {
   const { currentMenu } = useMenu();
 
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
+    .map((btn: MenuAction): ActionDef => {
+      const isPaySupplier = btn.actionname === PAY_SUPPLIER;
+      const isExport      = btn.actionname.includes("export");
+
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: isPaySupplier ? "credit-card" : (renderActionButtonIconName(btn.actionname) || undefined),
+        colorClass: isPaySupplier ? "" : renderActionButtonColor(btn.actionname),
+        href: "#",
+        style: isPaySupplier ? { background: "#15803d", borderColor: "#15803d", color: "#fff" } : undefined,
+        onClick: (e: React.MouseEvent) => {
+          e.preventDefault();
+          if (isPaySupplier) { setPaymentModal(PAY_SUPPLIER); return; }
+          if (isExport) { onExport(); return; }
+        },
+      };
+    });
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
-            .map((btn: MenuAction) => {
-              const isPaySupplier = btn.actionname === PAY_SUPPLIER;
-              const isExportButton = btn.actionname.includes("export");
-
-              if (isPaySupplier) {
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <button
-                      type="button"
-                      className="btn btn-added"
-                      onClick={() => setPaymentModal(PAY_SUPPLIER)}
-                      style={{ background: "#15803d", borderColor: "#15803d" }}
-                    >
-                      <CreditCard size={14} className="me-1" />
-                      {btn.actiondisplayname}
-                    </button>
-                  </div>
-                );
-              }
-
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <button
-                    type="button"
-                    className={`btn btn-added ${btnColor}`}
-                    onClick={isExportButton ? () => onExport() : undefined}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </button>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 }

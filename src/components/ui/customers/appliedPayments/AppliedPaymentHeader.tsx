@@ -1,15 +1,14 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
 import { MenuAction } from "@/types/permissions";
 import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
-import FeatherIcon from "../../FeatherIcon";
-import { DollarSign } from "react-feather";
 import { paymentModalTypes } from "@/lib/config/constants";
-import { RECEIVE_PAYMENT } from "./PaymentModal";
-import Link from "next/link";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
+
+const RECEIVE_PAYMENT = "receive_payment";
 
 const BUTTON_ORDER: Record<string, number> = {
   receive_payment: 0,
@@ -38,11 +37,54 @@ interface AppliedPaymentHeaderProps {
 const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: AppliedPaymentHeaderProps) => {
   const { currentMenu, basePath } = useMenu();
 
-  const isModalButton = (actionName: string) =>
-    actionName === RECEIVE_PAYMENT ||
-    actionName.includes(paymentModalTypes.add_customer_payment) ||
-    actionName.includes(paymentModalTypes.add_credit_adjustment) ||
-    actionName.includes(paymentModalTypes.add_invoice_credit_payment);
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
+    .map((btn: MenuAction): ActionDef => {
+      const isReceivePayment = btn.actionname === RECEIVE_PAYMENT;
+      const isPaymentMatrix  = btn.actionname.includes("payment_matrix");
+      const isPrint  = btn.actionname.includes("print");
+      const isEmail  = btn.actionname.toLowerCase().includes("email");
+      const isExport = btn.actionname.includes("export");
+      const isModal  =
+        btn.actionname.includes(paymentModalTypes.add_customer_payment) ||
+        btn.actionname.includes(paymentModalTypes.add_credit_adjustment) ||
+        btn.actionname.includes(paymentModalTypes.add_invoice_credit_payment);
+
+      if (isPaymentMatrix) {
+        return {
+          key: btn.actionname,
+          label: btn.actiondisplayname,
+          icon: renderActionButtonIconName(btn.actionname) || undefined,
+          colorClass: renderActionButtonColor(btn.actionname),
+          href: `${basePath}/accounts/payment_matrix`,
+        };
+      }
+
+      const onClick = isReceivePayment
+        ? (e: React.MouseEvent) => { e.preventDefault(); setPaymentModal(RECEIVE_PAYMENT); }
+        : isPrint
+          ? (e: React.MouseEvent) => { e.preventDefault(); onPrint?.(); }
+          : isEmail
+            ? (e: React.MouseEvent) => { e.preventDefault(); onEmail?.(); }
+            : isExport
+              ? (e: React.MouseEvent) => { e.preventDefault(); onExport?.(); }
+              : isModal
+                ? (e: React.MouseEvent) => { e.preventDefault(); setPaymentModal(btn.actionname); }
+                : undefined;
+
+      if (!onClick) return null as unknown as ActionDef;
+
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: isReceivePayment ? "dollar-sign" : (renderActionButtonIconName(btn.actionname) || undefined),
+        colorClass: isReceivePayment ? "" : renderActionButtonColor(btn.actionname),
+        href: "#",
+        style: isReceivePayment ? { background: "#1d4ed8", borderColor: "#1d4ed8", color: "#fff" } : undefined,
+        onClick,
+      };
+    })
+    .filter(Boolean) as ActionDef[];
 
   return (
     <PageHeader
@@ -50,77 +92,7 @@ const AppliedPaymentHeader = ({ setPaymentModal, onPrint, onEmail, onExport }: A
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => getButtonOrder(a.actionname) - getButtonOrder(b.actionname))
-            .map((btn: MenuAction) => {
-              const isReceivePayment = btn.actionname === RECEIVE_PAYMENT;
-              const isPrint = btn.actionname.includes("print");
-              const isEmail = btn.actionname.toLowerCase().includes("email");
-              const isExport = btn.actionname.includes("export");
-
-              const isPaymentMatrix = btn.actionname.includes("payment_matrix");
-
-              if (isPaymentMatrix) {
-                const btnColor = renderActionButtonColor(btn.actionname);
-                const iconName = renderActionButtonIconName(btn.actionname);
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <Link
-                      href={`${basePath}/accounts/payment_matrix`}
-                      className={`btn btn-added ${btnColor}`}
-                    >
-                      {iconName && <FeatherIcon icon={iconName} />}
-                      {btn.actiondisplayname}
-                    </Link>
-                  </div>
-                );
-              }
-
-              const handleClick = isReceivePayment
-                ? () => setPaymentModal(RECEIVE_PAYMENT)
-                : isPrint
-                  ? onPrint
-                  : isEmail
-                    ? onEmail
-                    : isExport
-                      ? onExport
-                      : isModalButton(btn.actionname)
-                        ? () => setPaymentModal(btn.actionname)
-                        : undefined;
-
-              if (!handleClick) return null;
-
-              if (isReceivePayment) {
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <button
-                      type="button"
-                      className="btn btn-added"
-                      onClick={handleClick}
-                      style={{ background: "#1d4ed8", borderColor: "#1d4ed8" }}
-                    >
-                      <DollarSign size={14} className="me-1" />
-                      {btn.actiondisplayname}
-                    </button>
-                  </div>
-                );
-              }
-
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <button type="button" className={`btn btn-added ${btnColor}`} onClick={handleClick}>
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </button>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 };

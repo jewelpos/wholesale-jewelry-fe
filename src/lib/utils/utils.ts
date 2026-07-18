@@ -39,6 +39,15 @@ export const renderActionButtonColor = (actionName: string) => {
     if (actionName.includes("matrix")) {
       return "grid";
     }
+    if (actionName.includes("pay_supplier")) {
+      return "credit-card";
+    }
+    if (actionName.includes("receive_payment")) {
+      return "dollar-sign";
+    }
+    if (actionName.includes("payment")) {
+      return "dollar-sign";
+    }
     return "zap";
   };
 

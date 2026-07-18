@@ -12,6 +12,7 @@ export type ActionDef = {
   onClick?: (e: React.MouseEvent) => void;
   disabled?: boolean;
   keepOnMobile?: boolean;
+  style?: React.CSSProperties;
 };
 
 /* JS-based breakpoint — avoids Bootstrap d-none conflicts with DreamPos theme CSS */
@@ -42,6 +43,7 @@ const ActionBtn = ({ action, showLabel }: { action: ActionDef; showLabel: boolea
       lineHeight: 1,
       whiteSpace: "nowrap",
       margin: 0,
+      ...action.style,
     }}
   >
     {action.icon ? (

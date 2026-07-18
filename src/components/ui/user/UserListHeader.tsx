@@ -1,18 +1,24 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import PageHeader from "../PageHeader";
 import useMenu from "@/hooks/useMenu";
-import Link from "next/link";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
-import FeatherIcon from "../FeatherIcon";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
+import MobileActionsDropdown, { ActionDef } from "../MobileActionsDropdown";
 
 const UserListHeader = () => {
   const { currentMenu, currentPath } = useMenu();
+
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
+    .map((btn: MenuAction): ActionDef => ({
+      key: btn.actionname,
+      label: btn.actiondisplayname,
+      icon: renderActionButtonIconName(btn.actionname) || undefined,
+      colorClass: renderActionButtonColor(btn.actionname),
+      href: `${currentPath}/new`,
+    }));
 
   return (
     <PageHeader
@@ -20,26 +26,7 @@ const UserListHeader = () => {
       subtitle={currentMenu?.permissiondescription ?? "User List"}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              return (
-                <div className="page-btn" key={btn.actionname}>
-                  <Link
-                    href={`${currentPath}/new`}
-                    className={`btn btn-added ${btnColor}`}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 };
