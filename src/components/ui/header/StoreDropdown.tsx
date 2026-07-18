@@ -30,17 +30,16 @@ const StoreDropdown = ({ storeLoading }: Props) => {
     return <></>;
   }
 
-  const role = user?.role?.toLowerCase() ?? "";
-  const isRestricted = role === "manager" || role === "cashier";
+  const isOwner = !!user?.issysgenmasteraccount;
 
+  // Count only the outlets that came back from the server (already filtered to user's access)
   const totalOutlets = stores.reduce(
     (sum, s) => sum + (s.outlets?.filter((o) => o.isenabled).length ?? 0),
     0
   );
 
-  // Non-restricted roles (owner/admin/etc) always see dropdown.
-  // Manager/cashier only see it if they have multiple outlets assigned.
-  const showDropdown = !isRestricted || totalOutlets > 1;
+  // Owner always gets the dropdown (all outlets); everyone else only if they have >1.
+  const showDropdown = isOwner || totalOutlets > 1;
 
   const defaultOutletName = (() => {
     for (const storeItem of stores) {
