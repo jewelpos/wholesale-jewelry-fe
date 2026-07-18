@@ -12,21 +12,25 @@ const ActionFooter = ({
   cancelLabel?: string;
 }>) => {
   return (
-    <div className="card sticky-footer">
-      <div className="card-body">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ minWidth: 0 }}>{leftContent}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="btn btn-cancel"
-            >
-              {cancelLabel}
-            </button>
-            {children}
-          </div>
-        </div>
+    <div
+      style={{
+        position: "sticky",
+        bottom: 0,
+        background: "#fff",
+        borderTop: "1px solid #e9ecef",
+        padding: "12px 24px",
+        zIndex: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <div style={{ minWidth: 0 }}>{leftContent}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <button type="button" onClick={handleCancel} className="btn btn-cancel">
+          {cancelLabel}
+        </button>
+        {children}
       </div>
     </div>
   );

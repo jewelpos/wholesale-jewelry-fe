@@ -2171,14 +2171,10 @@ const SalesInvoiceFormV2 = ({
 
       </fieldset>
       {readOnly ? (
-        <div className="card sticky-footer">
-          <div className="card-body">
-            <div className="text-end">
-              <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
-                Close
-              </button>
-            </div>
-          </div>
+        <div style={{ position: "sticky", bottom: 0, background: "#fff", borderTop: "1px solid #e9ecef", padding: "12px 24px", zIndex: 10, display: "flex", justifyContent: "flex-end" }}>
+          <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
+            Close
+          </button>
         </div>
       ) : (
         <ActionFooter
