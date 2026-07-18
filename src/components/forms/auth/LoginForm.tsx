@@ -152,23 +152,7 @@ export const LoginForm = () => {
           onSuccess={(token) => setTurnstileToken(token)}
           onExpire={() => setTurnstileToken(null)}
           onError={() => setTurnstileToken(null)}
-          options={{ size: "invisible" }}
         />
-
-        {/* Security check status */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 4 }}>
-          {turnstileToken ? (
-            <>
-              <Shield size={12} color="#16a34a" />
-              <span style={{ color: "#16a34a", fontWeight: 500 }}>Security check passed</span>
-            </>
-          ) : (
-            <>
-              <i className="fas fa-spinner fa-spin" style={{ fontSize: 11, color: "#64748b" }} />
-              <span style={{ color: "#64748b" }}>Running security check…</span>
-            </>
-          )}
-        </div>
 
         {/* Submit */}
         <button type="submit" className="jp-submit-btn" disabled={loginLoading || !turnstileToken}>
