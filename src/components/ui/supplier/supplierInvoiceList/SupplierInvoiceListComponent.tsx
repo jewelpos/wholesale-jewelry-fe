@@ -120,8 +120,8 @@ const SupplierInvoiceListComponent = () => {
               setViewInvoiceId={setViewInvoiceId}
             />
           ) : null,
-        width: 100,
-        minWidth: 100,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 100,
+        minWidth: 52,
         sortable: false,
         filter: false,
         pinned: "right",

@@ -56,7 +56,8 @@ export const getPromotionColumnDefs = (): ColDef[] => [
   {
     headerName: "Actions",
     field: "promotionid",
-    width: 130,
+    width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 130,
+    minWidth: 52,
     sortable: false,
     filter: false,
     cellRenderer: "promotionActionsRenderer",

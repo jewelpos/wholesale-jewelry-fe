@@ -14,6 +14,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import ProductAdjustmentModal from "./ProductAdjustmentModal";
 import PrintLabelsModal from "../labels/PrintLabelsModal";
 import ProductDrawer from "../productView/ProductDrawer";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface ProductActionsProps {
   data: ProductListType;
@@ -29,13 +30,12 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   const dispatch = useAppDispatch();
   const [deleteProduct] = useMutation(DELETE_PRODUCT_MUTATION);
   const { basePath } = useDefaultRoute();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { outletId: outletIdParam } = useParams();
-  const parsedOutletId = parseInt(outletIdParam as string, 10);
 
   const handleDelete = async (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -51,40 +51,17 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteProduct({
-          variables: {
-            itemid: data.itemid,
-            storeid: parsedStoreId,
-          },
+          variables: { itemid: data.itemid, storeid: parsedStoreId },
         });
-
         if (responseData?.deleteProduct.success) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteProduct.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
-          // Trigger the callback to refresh data
+          dispatch(showNotification({ message: responseData.deleteProduct.message, type: NOTIFICATION_TYPES.SUCCESS }));
           onDeleteSuccess?.();
         } else if (responseData?.deleteProduct.error) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteProduct.error,
-              type: NOTIFICATION_TYPES.ERROR,
-            })
-          );
+          dispatch(showNotification({ message: responseData.deleteProduct.error, type: NOTIFICATION_TYPES.ERROR }));
         }
         return true;
       });
-
-      if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
+      if (deleteResult.error) dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
@@ -94,34 +71,21 @@ const ProductActions: React.FC<ProductActionsProps> = ({
     Number(data.overall_qty ?? 0) !== 0
   );
 
-  const handleAdjustment = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    setIsAdjustmentModalOpen(true);
-  };
-
-  const handleCloseAdjustmentModal = () => {
-    setIsAdjustmentModalOpen(false);
-  };
-
-  const handlePrintLabels = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    setIsPrintLabelsOpen(true);
-  };
-
-  const handleAdjustmentModalSuccess = () => {
-    setIsAdjustmentModalOpen(false);
-    onAdjustmentSuccess?.();
-  };
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'Quick View', icon: <Eye size={14} />, onClick: () => setDrawerOpen(true) },
+    { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/products/${data.itemcode}/edit` },
+    hasTransactions
+      ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: "Item has transactions, can't be deleted", dangerous: true }
+      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: () => handleDelete(), dangerous: true },
+    { key: 'adjust', label: 'Adjust Stock', icon: <Settings size={14} />, onClick: () => setIsAdjustmentModalOpen(true) },
+    { key: 'labels', label: 'Print Labels', icon: <Printer size={14} />, onClick: () => setIsPrintLabelsOpen(true) },
+  ];
 
   return (
     <>
-    <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists"></div>
+      <RowActionsWrapper items={items}>
         <a
-          className="p-1 me-1"
+          className="p-1"
           href="#"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDrawerOpen(true); }}
           title="Quick View"
@@ -129,65 +93,44 @@ const ProductActions: React.FC<ProductActionsProps> = ({
           <Eye size={14} />
         </a>
         <Link
-          className="me-2 p-2"
+          className="p-1"
           href={`${basePath}/products/${data.itemcode}/edit`}
           onClick={(e) => e.stopPropagation()}
           scroll={false}
           title="Edit"
         >
-          <Edit className="feather-edit" />
+          <Edit size={14} />
         </Link>
         {hasTransactions ? (
           <span
-            className="p-2 me-2"
+            className="p-1"
             title="Item has transactions, can't be deleted"
             style={{ cursor: "not-allowed", opacity: 0.35, display: "inline-flex", alignItems: "center" }}
           >
             <Trash2 size={14} />
           </span>
         ) : (
-          <Link
-            className="confirm-text p-2 me-2"
-            href="#"
-            onClick={handleDelete}
-            scroll={false}
-            title="Delete"
-          >
+          <Link className="confirm-text p-1" href="#" onClick={handleDelete} scroll={false} title="Delete">
             <Trash2 size={14} />
           </Link>
         )}
-        <Link
-          className="p-2 p-2 me-2"
-          href="#"
-          onClick={handleAdjustment}
-          scroll={false}
-          title="Adjust Stock"
-        >
-          <Settings className="feather-view" />
+        <Link className="p-1" href="#" onClick={(e) => { e.preventDefault(); setIsAdjustmentModalOpen(true); }} scroll={false} title="Adjust Stock">
+          <Settings size={14} />
         </Link>
-        <Link
-          className="p-2 me-2"
-          href="#"
-          onClick={handlePrintLabels}
-          scroll={false}
-          title="Print Labels"
-        >
+        <Link className="p-1" href="#" onClick={(e) => { e.preventDefault(); setIsPrintLabelsOpen(true); }} scroll={false} title="Print Labels">
           <Printer size={14} />
         </Link>
-      </div>
+      </RowActionsWrapper>
+
       <ProductAdjustmentModal
         isOpen={isAdjustmentModalOpen}
-        onClose={handleCloseAdjustmentModal}
-        onSuccess={handleAdjustmentModalSuccess}
+        onClose={() => setIsAdjustmentModalOpen(false)}
+        onSuccess={() => { setIsAdjustmentModalOpen(false); onAdjustmentSuccess?.(); }}
         productData={data}
       />
       {isPrintLabelsOpen && (
-        <PrintLabelsModal
-          product={data}
-          onClose={() => setIsPrintLabelsOpen(false)}
-        />
+        <PrintLabelsModal product={data} onClose={() => setIsPrintLabelsOpen(false)} />
       )}
-    </div>
       {drawerOpen && (
         <ProductDrawer
           itemcode={data.itemcode ?? ""}

@@ -194,8 +194,8 @@ const SubCategoryComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 120,
-        minWidth: 120,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 120,
+        minWidth: 52,
         sortable: false,
         filter: false,
         pinned: "right",

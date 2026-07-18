@@ -10,6 +10,7 @@ import { GET_PHYSICAL_COUNT_BATCH_ITEMS_QUERY } from "@/lib/graphql/query/physic
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface RowData {
   batchid: number;
@@ -108,39 +109,47 @@ const PhysicalCountActions = ({ data, onRefresh }: { data: RowData; onRefresh?: 
     }
   };
 
+  const viewOrCountItem: RowActionItem = isPosted || isCancelled
+    ? { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${base}/${data.batchid}/view` }
+    : { key: 'count', label: 'Count', icon: <ClipboardList size={14} />, href: `${base}/${data.batchid}/count` };
+
+  const items: RowActionItem[] = [
+    viewOrCountItem,
+    { key: 'export', label: 'Export CSV', icon: <Download size={14} />, onClick: handleExport, disabled: exporting },
+    ...(isActive ? [{ key: 'cancel', label: 'Cancel Batch', icon: <XCircle size={14} />, onClick: handleCancel, dangerous: true }] : []),
+  ];
+
   return (
-    <div className="action-table-data">
-      <div className="edit-delete-action">
-        {isPosted || isCancelled ? (
-          <Link className="me-2 p-2" href={`${base}/${data.batchid}/view`} title="View">
-            <Eye size={14} />
-          </Link>
-        ) : (
-          <Link className="me-2 p-2" href={`${base}/${data.batchid}/count`} title="Count">
-            <ClipboardList size={14} />
-          </Link>
-        )}
-        <Link
-          className="me-2 p-2"
-          href="#"
-          title="Export CSV"
-          style={{ color: "#6366f1", opacity: exporting ? 0.5 : 1, pointerEvents: exporting ? "none" : "auto" }}
-          onClick={(e) => { e.preventDefault(); if (!exporting) handleExport(); }}
-        >
-          <Download size={14} />
+    <RowActionsWrapper items={items}>
+      {isPosted || isCancelled ? (
+        <Link className="p-1" href={`${base}/${data.batchid}/view`} title="View">
+          <Eye size={14} />
         </Link>
-        {isActive && (
-          <Link
-            className="confirm-text p-2"
-            href="#"
-            title="Cancel batch"
-            onClick={(e) => { e.preventDefault(); handleCancel(); }}
-          >
-            <XCircle size={14} />
-          </Link>
-        )}
-      </div>
-    </div>
+      ) : (
+        <Link className="p-1" href={`${base}/${data.batchid}/count`} title="Count">
+          <ClipboardList size={14} />
+        </Link>
+      )}
+      <Link
+        className="p-1"
+        href="#"
+        title="Export CSV"
+        style={{ color: "#6366f1", opacity: exporting ? 0.5 : 1, pointerEvents: exporting ? "none" : "auto" }}
+        onClick={(e) => { e.preventDefault(); if (!exporting) handleExport(); }}
+      >
+        <Download size={14} />
+      </Link>
+      {isActive && (
+        <Link
+          className="confirm-text p-1"
+          href="#"
+          title="Cancel batch"
+          onClick={(e) => { e.preventDefault(); handleCancel(); }}
+        >
+          <XCircle size={14} />
+        </Link>
+      )}
+    </RowActionsWrapper>
   );
 };
 

@@ -11,6 +11,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { useMutation } from "@apollo/client";
 import { RESEND_USER_VERIFICATION_OTP_MUTATION, RESEND_USER_VERIFICATION_EMAIL_MUTATION } from "@/lib/graphql/mutations/user";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface UserActionsProps {
   data: UsersListType;
@@ -62,10 +63,7 @@ const UserActions: React.FC<UserActionsProps> = ({ data, onRefresh }) => {
     try {
       const res = await api.put("/store/user/toggle-status", { userid: data.userid });
       if (res.data?.success) {
-        dispatch(showNotification({
-          message: isEnabled ? "User disabled" : "User enabled",
-          type: NOTIFICATION_TYPES.SUCCESS,
-        }));
+        dispatch(showNotification({ message: isEnabled ? "User disabled" : "User enabled", type: NOTIFICATION_TYPES.SUCCESS }));
         onRefresh();
       } else {
         throw new Error(res.data?.error || "Failed to update status");
@@ -96,8 +94,29 @@ const UserActions: React.FC<UserActionsProps> = ({ data, onRefresh }) => {
     }
   };
 
+  const items: RowActionItem[] = [
+    ...(!isDeleted && smsUnverified ? [{ key: 'sms', label: 'Resend SMS', icon: <MessageSquare size={14} />, onClick: handleResendOTP, disabled: otpLoading }] : []),
+    ...(!isDeleted && emailUnverified ? [{ key: 'email', label: 'Resend Email', icon: <Mail size={14} />, onClick: handleResendEmail, disabled: emailLoading }] : []),
+    ...(!isDeleted ? [{ key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/users/${data.id}` }] : []),
+    {
+      key: 'toggle',
+      label: isEnabled ? 'Disable User' : 'Enable User',
+      icon: isEnabled ? <UserX size={14} /> : <UserCheck size={14} />,
+      onClick: handleToggleStatus,
+      disabled: busy || isDeleted,
+    },
+    {
+      key: 'delete',
+      label: 'Remove User',
+      icon: <Trash2 size={14} />,
+      onClick: handleDelete,
+      disabled: busy || isDeleted,
+      dangerous: true,
+    },
+  ];
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    <RowActionsWrapper items={items}>
       {!isDeleted && smsUnverified && (
         <button
           type="button"
@@ -121,11 +140,7 @@ const UserActions: React.FC<UserActionsProps> = ({ data, onRefresh }) => {
         </button>
       )}
       {!isDeleted && (
-        <Link
-          className="btn btn-sm btn-outline-secondary p-1"
-          href={`${basePath}/users/${data.id}`}
-          title="Edit"
-        >
+        <Link className="btn btn-sm btn-outline-secondary p-1" href={`${basePath}/users/${data.id}`} title="Edit">
           <Edit size={14} />
         </Link>
       )}
@@ -147,7 +162,7 @@ const UserActions: React.FC<UserActionsProps> = ({ data, onRefresh }) => {
       >
         <Trash2 size={14} />
       </button>
-    </div>
+    </RowActionsWrapper>
   );
 };
 

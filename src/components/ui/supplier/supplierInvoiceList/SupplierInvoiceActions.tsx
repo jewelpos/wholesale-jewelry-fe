@@ -9,6 +9,7 @@ import { SupplierInvoiceType } from "@/types/supplier";
 import { Edit, Eye, Trash2 } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import { useParams } from "next/navigation";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface SupplierInvoiceActionsProps {
   data: SupplierInvoiceType;
@@ -31,6 +32,8 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
   const hasPaid = Number(data.veninvamtpaid) > 0;
   const canEdit = !hasPaid;
   const canDelete = !hasPaid;
+  const paidReason = "Cannot edit: invoice has been partially or fully paid";
+  const deleteReason = "Cannot delete: invoice has been partially or fully paid";
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -44,91 +47,54 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteSupplierInvoice({
-          variables: {
-            supplierinvoiceid: data.supplierinvoiceid,
-            storeid: parsedStoreId,
-          },
+          variables: { supplierinvoiceid: data.supplierinvoiceid, storeid: parsedStoreId },
         });
         if (responseData?.deleteSupplierInvoice.success) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteSupplierInvoice.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
+          dispatch(showNotification({ message: responseData.deleteSupplierInvoice.message, type: NOTIFICATION_TYPES.SUCCESS }));
           handleRefreshInvoice?.();
         }
         return true;
       });
-
-      if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
+      if (deleteResult.error) dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'View', icon: <Eye size={14} />, onClick: () => setViewInvoiceId?.(data.supplierinvoiceid) },
+    canEdit
+      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, onClick: () => setSelectedInvoiceId?.(data.supplierinvoiceid) }
+      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: paidReason },
+    canDelete
+      ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
+      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: deleteReason, dangerous: true },
+  ];
+
   return (
-    <div className="action-table-data">
-      <div className="edit-delete-action" style={{ gap: "2px" }}>
-        {/* View — always enabled */}
-        <button
-          type="button"
-          className="p-1 btn btn-link"
-          style={{ lineHeight: 1 }}
-          onClick={() => setViewInvoiceId?.(data.supplierinvoiceid)}
-          title="View"
-        >
-          <Eye size={14} />
+    <RowActionsWrapper items={items}>
+      <button type="button" className="p-1 btn btn-link" style={{ lineHeight: 1 }}
+        onClick={() => setViewInvoiceId?.(data.supplierinvoiceid)} title="View">
+        <Eye size={14} />
+      </button>
+      {canEdit ? (
+        <button type="button" className="p-1 btn btn-link" style={{ lineHeight: 1 }}
+          onClick={() => setSelectedInvoiceId?.(data.supplierinvoiceid)} title="Edit">
+          <Edit size={14} />
         </button>
-
-        {/* Edit — disabled when invoice has payments */}
-        {canEdit ? (
-          <button
-            type="button"
-            className="p-1 btn btn-link"
-            style={{ lineHeight: 1 }}
-            onClick={() => setSelectedInvoiceId?.(data.supplierinvoiceid)}
-            title="Edit"
-          >
-            <Edit size={14} />
-          </button>
-        ) : (
-          <span
-            className="p-1"
-            title="Cannot edit: invoice has been partially or fully paid"
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
-            <Edit size={14} style={{ opacity: 0.35 }} />
-          </span>
-        )}
-
-        {/* Delete — disabled when invoice has payments */}
-        {canDelete ? (
-          <button
-            type="button"
-            className="confirm-text p-1 btn btn-link"
-            style={{ lineHeight: 1 }}
-            onClick={handleDelete}
-            title="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
-        ) : (
-          <span
-            className="p-1"
-            title="Cannot delete: invoice has been partially or fully paid"
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
-            <Trash2 size={14} style={{ opacity: 0.35 }} />
-          </span>
-        )}
-      </div>
-    </div>
+      ) : (
+        <span className="p-1" title={paidReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
+          <Edit size={14} style={{ opacity: 0.35 }} />
+        </span>
+      )}
+      {canDelete ? (
+        <button type="button" className="confirm-text p-1 btn btn-link" style={{ lineHeight: 1 }} onClick={handleDelete} title="Delete">
+          <Trash2 size={14} />
+        </button>
+      ) : (
+        <span className="p-1" title={deleteReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
+          <Trash2 size={14} style={{ opacity: 0.35 }} />
+        </span>
+      )}
+    </RowActionsWrapper>
   );
 };
 

@@ -177,8 +177,8 @@ const ProductsListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 185,
-        minWidth: 185,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 185,
+        minWidth: 52,
         suppressAutoSize: true,
         sortable: false,
         filter: false,

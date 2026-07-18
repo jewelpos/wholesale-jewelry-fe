@@ -9,6 +9,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { DELETE_PROMOTION_MUTATION, TOGGLE_PROMOTION_ACTIVE_MUTATION } from "@/lib/graphql/mutations/promotions";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface Props {
   data: { promotionid: number; isactive: number; promotionname: string };
@@ -46,18 +47,30 @@ const PromotionActions: React.FC<Props> = ({ data, onRefresh }) => {
     else { dispatch(showNotification({ message: "Promotion deleted", type: NOTIFICATION_TYPES.SUCCESS })); onRefresh(); }
   };
 
+  const items: RowActionItem[] = [
+    { key: 'edit', label: 'Edit', icon: <Edit size={14} />, onClick: handleEdit },
+    {
+      key: 'toggle',
+      label: data.isactive === 1 ? 'Deactivate' : 'Activate',
+      icon: data.isactive === 1 ? <ToggleRight size={14} color="#16a34a" /> : <ToggleLeft size={14} color="#94a3b8" />,
+      onClick: handleToggle,
+    },
+    { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true },
+  ];
+
   return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center", height: "100%" }}>
+    <RowActionsWrapper items={items}>
       <button type="button" className="btn btn-sm btn-outline-secondary" style={{ padding: "2px 7px" }} title="Edit" onClick={handleEdit}>
         <Edit size={12} />
       </button>
-      <button type="button" className="btn btn-sm btn-outline-secondary" style={{ padding: "2px 7px" }} title={data.isactive === 1 ? "Deactivate" : "Activate"} onClick={handleToggle}>
+      <button type="button" className="btn btn-sm btn-outline-secondary" style={{ padding: "2px 7px" }}
+        title={data.isactive === 1 ? "Deactivate" : "Activate"} onClick={handleToggle}>
         {data.isactive === 1 ? <ToggleRight size={12} color="#16a34a" /> : <ToggleLeft size={12} color="#94a3b8" />}
       </button>
       <button type="button" className="btn btn-sm btn-outline-danger" style={{ padding: "2px 7px" }} title="Delete" onClick={handleDelete}>
         <Trash2 size={12} />
       </button>
-    </div>
+    </RowActionsWrapper>
   );
 };
 

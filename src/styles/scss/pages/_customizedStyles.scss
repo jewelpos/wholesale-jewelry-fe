@@ -650,9 +650,9 @@ div.ant-picker .ant-picker-input input {
   z-index: 9999;
 }
 .action-table-data a {
-  border: 1px solid rgba(145, 158, 171, 0.3);
-  background-color: #ffffff;
-  border-radius: 8px;
+  border: none;
+  background-color: transparent;
+  border-radius: 4px;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -662,7 +662,7 @@ div.ant-picker .ant-picker-input input {
   justify-content: center;
   -webkit-justify-content: center;
   -ms-flex-pack: center;
-  padding: 8px;
+  padding: 0.25rem;
 }
 .action-table-data a .feather-view {
   width: 14px;
@@ -740,9 +740,9 @@ div.rc-slider-handle:active {
   height: 14px;
 }
 .action-table-data a {
-  border: 1px solid rgba(145, 158, 171, 0.3);
-  background-color: #ffffff;
-  border-radius: 8px;
+  border: none;
+  background-color: transparent;
+  border-radius: 4px;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -752,7 +752,7 @@ div.rc-slider-handle:active {
   justify-content: center;
   -webkit-justify-content: center;
   -ms-flex-pack: center;
-  padding: 8px;
+  padding: 0.25rem;
 }
 .input-groupicon .ant-picker.ant-picker-outlined {
   display: flex;

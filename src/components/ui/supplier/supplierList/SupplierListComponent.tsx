@@ -152,8 +152,8 @@ const SupplierListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 130,
-        minWidth: 130,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 130,
+        minWidth: 52,
         sortable: false,
         filter: false,
         pinned: "right",

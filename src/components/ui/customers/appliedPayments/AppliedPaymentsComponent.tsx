@@ -291,8 +291,8 @@ const AppliedPaymentsComponent = () => {
         field: "transactionno",
         cellRenderer: (params: ICellRendererParams<CustomerPaymentListType>) =>
           params.data ? <CustomerPaymentActions data={params.data} onVoid={handleVoidClick} /> : null,
-        width: 80,
-        minWidth: 80,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 80,
+        minWidth: 52,
         sortable: false,
         filter: false,
         pinned: "right",

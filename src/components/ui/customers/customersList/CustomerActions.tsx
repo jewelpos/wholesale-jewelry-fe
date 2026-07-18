@@ -13,16 +13,14 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import CustomerStatementModal from "@/components/ui/customers/statement/CustomerStatementModal";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface CustomerActionsProps {
   data: CustomersListType;
   onDeleteSuccess?: () => void;
 }
 
-const CustomerActions: React.FC<CustomerActionsProps> = ({
-  data,
-  onDeleteSuccess,
-}) => {
+const CustomerActions: React.FC<CustomerActionsProps> = ({ data, onDeleteSuccess }) => {
   const dispatch = useAppDispatch();
   const [deleteCustomer] = useMutation(DELETE_CUSTOMER_MUTATION);
   const { basePath } = useDefaultRoute();
@@ -44,44 +42,33 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteCustomer({
-          variables: {
-            customerid: parseInt(data.customerid),
-            storeid: parsedStoreId,
-          },
+          variables: { customerid: parseInt(data.customerid), storeid: parsedStoreId },
         });
-
         if (responseData?.deleteCustomer.success) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteCustomer.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
-
-          // Trigger the callback to refresh data
+          dispatch(showNotification({ message: responseData.deleteCustomer.message, type: NOTIFICATION_TYPES.SUCCESS }));
           onDeleteSuccess?.();
         }
         return true;
       });
-
-      if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
+      if (deleteResult.error) dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
   const canDelete = Number(data.numberofsales) === 0;
   const deleteReason = canDelete ? "" : "Cannot delete: customer has existing sales";
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'Quick View', icon: <Eye size={14} />, onClick: () => setDrawerOpen(true) },
+    { key: 'statement', label: 'Statement', icon: <FileText size={14} />, onClick: () => setStatementOpen(true) },
+    { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/customers/${data.customerid}/edit` },
+    canDelete
+      ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
+      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: deleteReason, dangerous: true },
+  ];
+
   return (
     <>
-    <div className="action-table-data">
-      <div className="edit-delete-action" style={{ gap: "2px" }}>
+      <RowActionsWrapper items={items}>
         <a
           className="p-1"
           href="#"
@@ -99,12 +86,7 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
         >
           <FileText size={14} />
         </button>
-        <Link
-          className="p-1"
-          href={`${basePath}/customers/${data.customerid}/edit`}
-          scroll={false}
-          title="Edit"
-        >
+        <Link className="p-1" href={`${basePath}/customers/${data.customerid}/edit`} scroll={false} title="Edit">
           <Edit size={14} />
         </Link>
         {canDelete ? (
@@ -118,28 +100,24 @@ const CustomerActions: React.FC<CustomerActionsProps> = ({
             <Trash2 size={14} />
           </button>
         ) : (
-          <span
-            className="p-1"
-            title={deleteReason}
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
+          <span className="p-1" title={deleteReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
             <Trash2 size={14} style={{ opacity: 0.35 }} />
           </span>
         )}
-      </div>
+      </RowActionsWrapper>
+
       {statementOpen && (
         <CustomerStatementModal customer={data} onClose={() => setStatementOpen(false)} />
       )}
-    </div>
-    {drawerOpen && (
-      <CustomerDrawer
-        customerId={parseInt(data.customerid, 10)}
-        storeId={parsedStoreId}
-        outletId={parsedOutletId}
-        onClose={() => setDrawerOpen(false)}
-        mode="drawer"
-      />
-    )}
+      {drawerOpen && (
+        <CustomerDrawer
+          customerId={parseInt(data.customerid, 10)}
+          storeId={parsedStoreId}
+          outletId={parsedOutletId}
+          onClose={() => setDrawerOpen(false)}
+          mode="drawer"
+        />
+      )}
     </>
   );
 };

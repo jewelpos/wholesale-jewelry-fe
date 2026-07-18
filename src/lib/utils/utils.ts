@@ -33,7 +33,13 @@ export const renderActionButtonColor = (actionName: string) => {
     if (actionName.includes("outlet_matrix")) {
       return "grid";
     }
-    return "";
+    if (actionName.includes("sales_matrix")) {
+      return "bar-chart-2";
+    }
+    if (actionName.includes("matrix")) {
+      return "grid";
+    }
+    return "zap";
   };
 
   export const renderActionButtonUrl = (actionName: string, basePath: string) => {

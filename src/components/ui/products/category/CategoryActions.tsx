@@ -11,6 +11,7 @@ import { useParams } from "next/navigation";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import { ICellRendererParams } from "ag-grid-community";
 import Link from "next/link";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface CategoryActionsProps extends ICellRendererParams {
   onEditCategory?: (category: Category) => void;
@@ -24,9 +25,7 @@ const CategoryActions: React.FC<CategoryActionsProps> = (props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
 
-  const handleEdit = () => {
-    onEditCategory?.(data as Category);
-  };
+  const handleEdit = () => onEditCategory?.(data as Category);
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -45,49 +44,30 @@ const CategoryActions: React.FC<CategoryActionsProps> = (props) => {
             storeid: parsedStoreId,
           },
         });
-
         if (responseData?.deleteCategory.success) {
-          dispatch(
-            showNotification({
-              message: responseData.deleteCategory.message,
-              type: NOTIFICATION_TYPES.SUCCESS,
-            })
-          );
-
-          // Trigger the callback to refresh data
+          dispatch(showNotification({ message: responseData.deleteCategory.message, type: NOTIFICATION_TYPES.SUCCESS }));
           onDeleteSuccess?.();
         }
         return true;
       });
-
-      if (deleteResult.error) {
-        dispatch(
-          showNotification({
-            message: deleteResult.error,
-            type: NOTIFICATION_TYPES.ERROR,
-          })
-        );
-      }
+      if (deleteResult.error) dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
+  const items: RowActionItem[] = [
+    { key: 'edit', label: 'Edit', icon: <Edit size={14} />, onClick: handleEdit },
+    { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true },
+  ];
+
   return (
-    <div className="action-table-data">
-      <div className="edit-delete-action">
-        <div className="input-block add-lists"></div>
-        <Link className="me-2 p-2" href="#" scroll={false} onClick={handleEdit}>
-          <Edit className="feather-edit" />
-        </Link>
-        <Link
-          className="confirm-text p-2"
-          href="#"
-          onClick={handleDelete}
-          scroll={false}
-        >
-          <Trash2 className="feather-trash-2" />
-        </Link>
-      </div>
-    </div>
+    <RowActionsWrapper items={items}>
+      <Link className="p-1" href="#" scroll={false} onClick={handleEdit} title="Edit">
+        <Edit className="feather-edit" />
+      </Link>
+      <Link className="confirm-text p-1" href="#" onClick={handleDelete} scroll={false} title="Delete">
+        <Trash2 className="feather-trash-2" />
+      </Link>
+    </RowActionsWrapper>
   );
 };
 

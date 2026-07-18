@@ -12,6 +12,7 @@ import { MemoSummary } from "@/types/sales";
 import api from "@/lib/axios";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface MemoActionsProps {
   data: MemoSummary;
@@ -66,49 +67,43 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
   const iconBtn: React.CSSProperties = { lineHeight: 1 };
   const dimmed: React.CSSProperties = { cursor: "not-allowed", display: "inline-flex", alignItems: "center" };
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/sales/memo/${data.memonumber}/view` },
+    canEdit
+      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/sales/memo/${data.memonumber}/edit` }
+      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
+    { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: handlePrint, disabled: printing },
+    { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
+  ];
+
   return (
     <>
-      <div className="action-table-data">
-        <div className="edit-delete-action" style={{ gap: "2px" }}>
-
-          {/* Print */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
-            onClick={handlePrint} disabled={printing} title="Print Memo">
-            <Printer size={14} />
-          </button>
-
-          {/* Email */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
-            onClick={() => setShowEmail(true)} title="Email Memo">
-            <Mail size={14} />
-          </button>
-
-          {/* View */}
-          <Link className="p-1" href={`${basePath}/sales/memo/${data.memonumber}/view`} scroll={false} title="View">
-            <Eye size={14} />
+      <RowActionsWrapper items={items}>
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+          onClick={handlePrint} disabled={printing} title="Print Memo">
+          <Printer size={14} />
+        </button>
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+          onClick={() => setShowEmail(true)} title="Email Memo">
+          <Mail size={14} />
+        </button>
+        <Link className="p-1" href={`${basePath}/sales/memo/${data.memonumber}/view`} scroll={false} title="View">
+          <Eye size={14} />
+        </Link>
+        {canEdit ? (
+          <Link className="p-1" href={`${basePath}/sales/memo/${data.memonumber}/edit`} scroll={false} title="Edit">
+            <Edit size={14} className="feather-edit" />
           </Link>
-
-          {/* Edit */}
-          {canEdit ? (
-            <Link className="p-1" href={`${basePath}/sales/memo/${data.memonumber}/edit`} scroll={false} title="Edit">
-              <Edit size={14} className="feather-edit" />
-            </Link>
-          ) : (
-            <span className="p-1" title={editReason} style={dimmed}>
-              <Edit size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-        </div>
-      </div>
+        ) : (
+          <span className="p-1" title={editReason} style={dimmed}>
+            <Edit size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
+      </RowActionsWrapper>
 
       {pdfUrl && (
-        <PdfPreviewModal
-          pdfUrl={pdfUrl}
-          filename={`memo-${data.memonumber}.pdf`}
-          onClose={() => setPdfUrl(null)}
-        />
+        <PdfPreviewModal pdfUrl={pdfUrl} filename={`memo-${data.memonumber}.pdf`} onClose={() => setPdfUrl(null)} />
       )}
-
       {showEmail && (
         <DocumentEmailModal
           storeId={parsedStoreId}

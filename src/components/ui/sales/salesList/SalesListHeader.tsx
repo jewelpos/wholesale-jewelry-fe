@@ -1,16 +1,12 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import PageHeader from "../../PageHeader";
 import useMenu from "@/hooks/useMenu";
-import Link from "next/link";
 import { MenuAction } from "@/types/permissions";
-import {
-  renderActionButtonColor,
-  renderActionButtonIconName,
-} from "@/lib/utils/utils";
-import FeatherIcon from "../../FeatherIcon";
+import { renderActionButtonColor, renderActionButtonIconName } from "@/lib/utils/utils";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 interface SalesListHeaderProps {
   selectedInvoiceNumbers: number[];
@@ -18,6 +14,16 @@ interface SalesListHeaderProps {
   onEmailInvoice: () => void;
   onExport: () => void;
 }
+
+const sortRank = (name: string) => {
+  if (name === "add_new_invoice")    return 0;
+  if (name === "add_new_return")     return 1;
+  if (name.includes("print"))        return 2;
+  if (name.includes("email"))        return 3;
+  if (name.includes("export"))       return 4;
+  if (name.includes("sales_matrix")) return 5;
+  return 6;
+};
 
 const SalesListHeader = ({
   selectedInvoiceNumbers,
@@ -27,93 +33,59 @@ const SalesListHeader = ({
 }: SalesListHeaderProps) => {
   const { currentMenu, currentPath } = useMenu();
   const { basePath } = useDefaultRoute();
+
+  const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
+    .sort((a: MenuAction, b: MenuAction) => sortRank(a.actionname) - sortRank(b.actionname))
+    .map((btn: MenuAction): ActionDef => {
+      const isPrint  = btn.actionname.includes("print");
+      const isExport = btn.actionname.includes("export");
+      const isEmail  = btn.actionname.includes("email");
+      const isMatrix = btn.actionname.includes("sales_matrix");
+      const isAddInvoice = btn.actionname === "add_new_invoice";
+      const isAddReturn  = btn.actionname === "add_new_return";
+      const isActionBtn  = isPrint || isExport || isEmail;
+
+      const disabled = selectedInvoiceNumbers.length === 0 && (isPrint || isEmail);
+
+      const href = isAddInvoice
+        ? `${basePath}/sales/new_invoice`
+        : isAddReturn
+          ? `${basePath}/sales/new_credit_invoice`
+          : isMatrix
+            ? `${basePath}/sales/sales_matrix`
+            : isActionBtn
+              ? "#"
+              : `${currentPath}/new`;
+
+      const onClick = isActionBtn
+        ? (e: React.MouseEvent) => {
+            e.preventDefault();
+            if (disabled) return;
+            if (isEmail)  { onEmailInvoice(); return; }
+            if (isExport) { onExport(); return; }
+            onPrintInvoice();
+          }
+        : undefined;
+
+      return {
+        key: btn.actionname,
+        label: btn.actiondisplayname,
+        icon: renderActionButtonIconName(btn.actionname) || undefined,
+        colorClass: renderActionButtonColor(btn.actionname),
+        href,
+        onClick,
+        disabled,
+        keepOnMobile: isAddInvoice || isAddReturn,
+      };
+    });
+
   return (
     <PageHeader
       title={currentMenu?.permissiondisplayname}
       subtitle={currentMenu?.permissiondescription}
       showBreadcrumb
     >
-      <div className="d-flex purchase-pg-btn">
-        {!!currentMenu?.action?.length &&
-          [...currentMenu.action]
-            .sort((a: MenuAction, b: MenuAction) => {
-              const rank = (name: string) => {
-                if (name === "add_new_invoice")      return 0;
-                if (name === "add_new_return")       return 1;
-                if (name.includes("print"))          return 2;
-                if (name.includes("email"))          return 3;
-                if (name.includes("export"))         return 4;
-                if (name.includes("sales_matrix"))   return 5;
-                return 6;
-              };
-              return rank(a.actionname) - rank(b.actionname);
-            })
-            .map((btn: MenuAction) => {
-              const btnColor = renderActionButtonColor(btn.actionname);
-              const iconName = renderActionButtonIconName(btn.actionname);
-              const isPrintButton = btn.actionname.includes("print");
-              const isExportButton = btn.actionname.includes("export");
-              const isEmailButton = btn.actionname.includes("email");
-              const isActionButton = isPrintButton || isExportButton || isEmailButton;
-              const isSalesMatrix = btn.actionname.includes("sales_matrix");
-
-              const isAddNewInvoiceAction = btn.actionname === "add_new_invoice";
-              const isAddNewReturnAction = btn.actionname === "add_new_return";
-
-              if (isSalesMatrix) {
-                return (
-                  <div className="page-btn" key={btn.actionname}>
-                    <Link
-                      href={`${basePath}/sales/sales_matrix`}
-                      className={`btn btn-added ${btnColor}`}
-                    >
-                      {iconName && <FeatherIcon icon={iconName} />}
-                      {btn.actiondisplayname}
-                    </Link>
-                  </div>
-                );
-              }
-
-              // Export is always enabled; print and email require a selection
-              const disabledButton =
-                selectedInvoiceNumbers.length === 0 && (isPrintButton || isEmailButton);
-
-              const href = isActionButton
-                ? "#"
-                : isAddNewInvoiceAction
-                  ? `${basePath}/sales/new_invoice`
-                  : isAddNewReturnAction
-                    ? `${basePath}/sales/new_credit_invoice`
-                  : `${currentPath}/new`;
-
-              const handleClick = (e: React.MouseEvent) => {
-                if (!isActionButton) return;
-                e.preventDefault();
-                if (disabledButton) return;
-                if (isEmailButton) { onEmailInvoice(); return; }
-                if (isExportButton) { onExport(); return; }
-                onPrintInvoice();
-              };
-
-              return (
-                <div
-                  className="page-btn"
-                  key={btn.actionname}
-                >
-                  <Link
-                    href={href}
-                    onClick={handleClick}
-                    className={`btn btn-added ${btnColor} ${
-                      disabledButton ? "disabled" : ""
-                    }`}
-                  >
-                    {iconName && <FeatherIcon icon={iconName} />}
-                    {btn.actiondisplayname}
-                  </Link>
-                </div>
-              );
-            })}
-      </div>
+      <MobileActionsDropdown actions={actions} />
     </PageHeader>
   );
 };

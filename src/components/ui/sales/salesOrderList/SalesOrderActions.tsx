@@ -20,6 +20,7 @@ import { GridApi, IRowNode } from "ag-grid-community";
 import axiosApi from "@/lib/axios";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 const MySwal = withReactContent(Swal);
 
@@ -48,7 +49,6 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
   if (!data) return null;
 
   const ALLOWED_STATUS_NAMES = ["pending", "confirmed", "cancelled", "on hold", "backordered"];
-
   const currentStatus = data.statusname?.toLowerCase() ?? "";
   const isPending = currentStatus === "pending";
   const isInvoiceCreated = !!data.orderprocesseddate;
@@ -92,9 +92,7 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
         setStatuses(res?.getSalesOrderStatusList ?? []);
         return true;
       });
-      if (result.error) {
-        dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
-      }
+      if (result.error) dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
@@ -109,7 +107,6 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
       confirmButtonColor: "#d33",
     });
     if (!confirm.isConfirmed) return;
-
     const result = await handleTryCatch(async () => {
       const { data: res } = await deleteSalesOrder({
         variables: { salesorderno: data.salesorderno, outletid: data.outletid },
@@ -120,23 +117,14 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
       }
       return true;
     });
-
-    if (result.error) {
-      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
-    }
+    if (result.error) dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
   };
 
   const handleStatusChange = async () => {
     if (!selectedStatusId) return;
     const result = await handleTryCatch(async () => {
       const { data: res } = await updateStatus({
-        variables: {
-          input: {
-            storeid: parsedStoreId,
-            salesorderno: Number(data.salesorderno),
-            orderstatusid: selectedStatusId,
-          },
-        },
+        variables: { input: { storeid: parsedStoreId, salesorderno: Number(data.salesorderno), orderstatusid: selectedStatusId } },
       });
       if (res?.updateSalesOrderStatus?.success) {
         const newStatusName = statuses.find((s) => s.orderstatusid === selectedStatusId)?.statusname ?? data.statusname;
@@ -146,81 +134,65 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
       }
       return true;
     });
-    if (result.error) {
-      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
-    }
+    if (result.error) dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
   };
 
   const iconBtn: React.CSSProperties = { lineHeight: 1 };
   const dimmed: React.CSSProperties = { cursor: "not-allowed", display: "inline-flex", alignItems: "center" };
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/sales/view_sales_order/${data.salesorderno}` },
+    canEdit
+      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/sales/new_sales_order/${data.salesorderno}` }
+      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
+    { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: handlePrint, disabled: printing },
+    { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
+    canChangeStatus
+      ? { key: 'status', label: 'Change Status', icon: <RefreshCw size={14} />, onClick: handleOpenStatusModal }
+      : { key: 'status', label: 'Change Status', icon: <RefreshCw size={14} />, disabled: true, disabledReason: statusReason },
+    canDelete
+      ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
+      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: deleteReason, dangerous: true },
+  ];
+
   return (
     <>
-      <div className="action-table-data">
-        <div className="edit-delete-action" style={{ gap: "2px" }}>
-
-          {/* Print */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
-            onClick={handlePrint} disabled={printing} title="Print Sales Order">
-            <Printer size={14} />
-          </button>
-
-          {/* Email */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
-            onClick={() => setShowEmail(true)} title="Email Sales Order">
-            <Mail size={14} />
-          </button>
-
-          {/* View */}
-          <Link className="p-1" href={`${basePath}/sales/view_sales_order/${data.salesorderno}`} scroll={false} title="View">
-            <Eye size={14} />
+      <RowActionsWrapper items={items}>
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+          onClick={handlePrint} disabled={printing} title="Print Sales Order">
+          <Printer size={14} />
+        </button>
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+          onClick={() => setShowEmail(true)} title="Email Sales Order">
+          <Mail size={14} />
+        </button>
+        <Link className="p-1" href={`${basePath}/sales/view_sales_order/${data.salesorderno}`} scroll={false} title="View">
+          <Eye size={14} />
+        </Link>
+        {canEdit ? (
+          <Link className="p-1" href={`${basePath}/sales/new_sales_order/${data.salesorderno}`} scroll={false} title="Edit">
+            <Edit size={14} className="feather-edit" />
           </Link>
+        ) : (
+          <span className="p-1" title={editReason} style={dimmed}><Edit size={14} style={{ opacity: 0.35 }} /></span>
+        )}
+        {canChangeStatus ? (
+          <button type="button" className="p-1 btn btn-link" style={iconBtn} onClick={handleOpenStatusModal} title="Change Status">
+            <RefreshCw size={14} />
+          </button>
+        ) : (
+          <span className="p-1" title={statusReason} style={dimmed}><RefreshCw size={14} style={{ opacity: 0.35 }} /></span>
+        )}
+        {canDelete ? (
+          <button type="button" className="p-1 btn btn-link text-danger" style={iconBtn} onClick={handleDelete} title="Delete">
+            <Trash2 size={14} />
+          </button>
+        ) : (
+          <span className="p-1" title={deleteReason} style={dimmed}><Trash2 size={14} style={{ opacity: 0.35 }} /></span>
+        )}
+      </RowActionsWrapper>
 
-          {/* Edit */}
-          {canEdit ? (
-            <Link className="p-1" href={`${basePath}/sales/new_sales_order/${data.salesorderno}`} scroll={false} title="Edit">
-              <Edit size={14} className="feather-edit" />
-            </Link>
-          ) : (
-            <span className="p-1" title={editReason} style={dimmed}>
-              <Edit size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-
-          {/* Change Status */}
-          {canChangeStatus ? (
-            <button type="button" className="p-1 btn btn-link" style={iconBtn}
-              onClick={handleOpenStatusModal} title="Change Status">
-              <RefreshCw size={14} />
-            </button>
-          ) : (
-            <span className="p-1" title={statusReason} style={dimmed}>
-              <RefreshCw size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-
-          {/* Delete */}
-          {canDelete ? (
-            <button type="button" className="p-1 btn btn-link text-danger" style={iconBtn}
-              onClick={handleDelete} title="Delete">
-              <Trash2 size={14} />
-            </button>
-          ) : (
-            <span className="p-1" title={deleteReason} style={dimmed}>
-              <Trash2 size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-        </div>
-      </div>
-
-      {pdfUrl && (
-        <PdfPreviewModal
-          pdfUrl={pdfUrl}
-          filename={`sales-order-${data.salesorderno}.pdf`}
-          onClose={() => setPdfUrl(null)}
-        />
-      )}
-
+      {pdfUrl && <PdfPreviewModal pdfUrl={pdfUrl} filename={`sales-order-${data.salesorderno}.pdf`} onClose={() => setPdfUrl(null)} />}
       {showEmail && (
         <DocumentEmailModal
           storeId={parsedStoreId}
@@ -231,7 +203,6 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
           onError={(msg) => dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }))}
         />
       )}
-
       {showStatusModal && typeof document !== "undefined" && ReactDOM.createPortal(
         <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-sm modal-dialog-centered">
@@ -247,17 +218,11 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
                 ) : (
                   <div className="d-flex flex-column gap-2">
                     {statuses
-                      .filter((s) =>
-                        ALLOWED_STATUS_NAMES.includes(s.statusname.toLowerCase()) &&
-                        s.statusname.toLowerCase() !== currentStatus
-                      )
+                      .filter((s) => ALLOWED_STATUS_NAMES.includes(s.statusname.toLowerCase()) && s.statusname.toLowerCase() !== currentStatus)
                       .map((s) => (
-                        <button
-                          key={s.orderstatusid}
-                          type="button"
+                        <button key={s.orderstatusid} type="button"
                           className={`btn btn-sm ${selectedStatusId === s.orderstatusid ? "btn-primary" : "btn-outline-secondary"}`}
-                          onClick={() => setSelectedStatusId(s.orderstatusid)}
-                        >
+                          onClick={() => setSelectedStatusId(s.orderstatusid)}>
                           {s.statusname}
                         </button>
                       ))}
@@ -265,15 +230,8 @@ const SalesOrderActions: React.FC<SalesOrderActionsProps> = ({ data, node, api }
                 )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowStatusModal(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={handleStatusChange}
-                  disabled={!selectedStatusId || updatingStatus}
-                >
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowStatusModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={handleStatusChange} disabled={!selectedStatusId || updatingStatus}>
                   {updatingStatus ? "Saving..." : "Update Status"}
                 </button>
               </div>

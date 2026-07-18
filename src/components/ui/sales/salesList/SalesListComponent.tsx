@@ -260,8 +260,8 @@ const SalesListComponent = () => {
       {
         headerName: "Actions",
         field: "actions",
-        width: 220,
-        minWidth: 220,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 220,
+        minWidth: 52,
         cellRenderer: (params: ICellRendererParams<SalesInvoiceListType>) => {
           if (params.node.rowPinned) {
             return null;

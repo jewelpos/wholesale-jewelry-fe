@@ -185,8 +185,8 @@ const PurchaseOrderListComponent = () => {
               onDeleteSuccess={handleDeleteSuccess}
             />
           ) : null,
-        width: 200,
-        minWidth: 200,
+        width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 200,
+        minWidth: 52,
         sortable: false,
         filter: false,
         pinned: "right",

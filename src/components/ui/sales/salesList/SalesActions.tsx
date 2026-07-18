@@ -17,6 +17,7 @@ import { IRowNode } from "ag-grid-community";
 import api from "@/lib/axios";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 type PrintTemplate = 'compact' | 'thumbnail' | 'barcode' | 'packing_slip';
 
@@ -52,10 +53,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const handleSendSMS = async () => {
     setSmsSending(true);
     try {
-      await api.post(`/store/invoice/sms`, {
-        storeid: parsedStoreId,
-        invoicenumber: data.invoicenumber,
-      });
+      await api.post(`/store/invoice/sms`, { storeid: parsedStoreId, invoicenumber: data.invoicenumber });
       api.post('/store/comm-count/increment', { storeid: parsedStoreId, outletid: parsedOutletId, type: 'sms' }).catch(() => {});
       dispatch(showNotification({ message: `SMS sent for Invoice #${data.invoicenumber}`, type: NOTIFICATION_TYPES.SUCCESS }));
     } catch {
@@ -86,7 +84,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
           const parsed = JSON.parse(text);
           msg = parsed?.message || msg;
         }
-      } catch { /* ignore parse error */ }
+      } catch { /* ignore */ }
       dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
     } finally {
       setPrinting(false);
@@ -101,7 +99,6 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
       cancelButtonText: "Cancel",
       icon: "warning",
     });
-
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await cancelInvoice({
@@ -155,89 +152,99 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const iconBtn: React.CSSProperties = { lineHeight: 1 };
   const dimmed: React.CSSProperties = { cursor: "not-allowed", display: "inline-flex", alignItems: "center" };
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/sales/${data.invoicenumber}/view` },
+    canEdit
+      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/sales/${data.invoicenumber}/edit` }
+      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
+    { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: () => handlePrint(defaultTemplate), disabled: printing },
+    { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
+    ...(canSendSMS ? [{ key: 'sms', label: 'Share SMS', icon: <MessageCircle size={14} />, onClick: handleSendSMS, disabled: smsSending }] : []),
+    canCancel
+      ? { key: 'cancel', label: 'Cancel Invoice', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
+      : { key: 'cancel', label: 'Cancel Invoice', icon: <Trash2 size={14} />, disabled: true, disabledReason: cancelReason, dangerous: true },
+  ];
+
   return (
     <>
-      <div className="action-table-data">
-        <div className="edit-delete-action" style={{ gap: "2px" }}>
-
-          {/* SMS */}
-          {canSendSMS ? (
-            <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#198754" }}
-              onClick={handleSendSMS} disabled={smsSending} title="Share Invoice Link">
-              <MessageCircle size={14} />
-            </button>
-          ) : (
-            <span className="p-1" title="Cannot share link: invoice is cancelled" style={dimmed}>
-              <MessageCircle size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-
-          {/* Print split-button */}
-          <div ref={menuRef} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-            <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
-              onClick={() => handlePrint(defaultTemplate)} disabled={printing}
-              title={`Print Invoice (${TEMPLATE_LABELS[defaultTemplate]})`}>
-              <Printer size={14} />
-            </button>
-            <button type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, lineHeight: 1, paddingLeft: 1 }}
-              onClick={() => setShowTemplateMenu(v => !v)} disabled={printing} title="Choose print layout">
-              <ChevronDown size={10} />
-            </button>
-            {showTemplateMenu && (
-              <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 148, padding: "4px 0" }}
-                onMouseLeave={() => setShowTemplateMenu(false)}>
-                {(Object.keys(TEMPLATE_LABELS) as PrintTemplate[]).map(t => (
-                  <button key={t} type="button" className="dropdown-item"
-                    style={{ fontSize: 12, padding: "4px 12px", background: t === defaultTemplate ? "#f0f4ff" : undefined, fontWeight: t === defaultTemplate ? 600 : undefined }}
-                    onClick={() => handlePrint(t)}>
-                    {TEMPLATE_LABELS[t]}{t === defaultTemplate ? " ★" : ""}
-                  </button>
-                ))}
-                <div style={{ borderTop: "1px solid #dee2e6", margin: "4px 0" }} />
-                <Link href={`${basePath}/invoice-layout`} className="dropdown-item" scroll={false}
-                  style={{ fontSize: 12, padding: "4px 12px", color: "#0d6efd" }}
-                  onClick={() => setShowTemplateMenu(false)}>
-                  Change default…
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Email */}
-          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
-            onClick={() => setShowEmail(true)} title="Email Invoice">
-            <Mail size={14} />
+      <RowActionsWrapper items={items}>
+        {/* SMS */}
+        {canSendSMS ? (
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#198754" }}
+            onClick={handleSendSMS} disabled={smsSending} title="Share Invoice Link">
+            <MessageCircle size={14} />
           </button>
+        ) : (
+          <span className="p-1" title="Cannot share link: invoice is cancelled" style={dimmed}>
+            <MessageCircle size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
 
-          {/* View */}
-          <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/view`} scroll={false} title="View">
-            <Eye size={14} />
-          </Link>
-
-          {/* Edit */}
-          {canEdit ? (
-            <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/edit`} scroll={false} title="Edit">
-              <Edit size={14} />
-            </Link>
-          ) : (
-            <span className="p-1" title={editReason} style={dimmed}>
-              <Edit size={14} style={{ opacity: 0.35 }} />
-            </span>
-          )}
-
-          {/* Cancel */}
-          {canCancel ? (
-            <button type="button" className="confirm-text p-1 btn btn-link" style={{ ...iconBtn, color: "#dc3545" }}
-              onClick={handleDelete} title="Cancel Invoice">
-              <Trash2 size={14} />
-            </button>
-          ) : (
-            <span className="p-1" title={cancelReason} style={dimmed}>
-              <Trash2 size={14} style={{ opacity: 0.35 }} />
-            </span>
+        {/* Print split-button */}
+        <div ref={menuRef} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+          <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+            onClick={() => handlePrint(defaultTemplate)} disabled={printing}
+            title={`Print Invoice (${TEMPLATE_LABELS[defaultTemplate]})`}>
+            <Printer size={14} />
+          </button>
+          <button type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, paddingLeft: 1 }}
+            onClick={() => setShowTemplateMenu(v => !v)} disabled={printing} title="Choose print layout">
+            <ChevronDown size={10} />
+          </button>
+          {showTemplateMenu && (
+            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 148, padding: "4px 0" }}
+              onMouseLeave={() => setShowTemplateMenu(false)}>
+              {(Object.keys(TEMPLATE_LABELS) as PrintTemplate[]).map(t => (
+                <button key={t} type="button" className="dropdown-item"
+                  style={{ fontSize: 12, padding: "4px 12px", background: t === defaultTemplate ? "#f0f4ff" : undefined, fontWeight: t === defaultTemplate ? 600 : undefined }}
+                  onClick={() => handlePrint(t)}>
+                  {TEMPLATE_LABELS[t]}{t === defaultTemplate ? " ★" : ""}
+                </button>
+              ))}
+              <div style={{ borderTop: "1px solid #dee2e6", margin: "4px 0" }} />
+              <Link href={`${basePath}/invoice-layout`} className="dropdown-item" scroll={false}
+                style={{ fontSize: 12, padding: "4px 12px", color: "#0d6efd" }}
+                onClick={() => setShowTemplateMenu(false)}>
+                Change default…
+              </Link>
+            </div>
           )}
         </div>
-      </div>
+
+        {/* Email */}
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
+          onClick={() => setShowEmail(true)} title="Email Invoice">
+          <Mail size={14} />
+        </button>
+
+        {/* View */}
+        <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/view`} scroll={false} title="View">
+          <Eye size={14} />
+        </Link>
+
+        {/* Edit */}
+        {canEdit ? (
+          <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/edit`} scroll={false} title="Edit">
+            <Edit size={14} />
+          </Link>
+        ) : (
+          <span className="p-1" title={editReason} style={dimmed}>
+            <Edit size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
+
+        {/* Cancel */}
+        {canCancel ? (
+          <button type="button" className="confirm-text p-1 btn btn-link" style={{ ...iconBtn, color: "#dc3545" }}
+            onClick={handleDelete} title="Cancel Invoice">
+            <Trash2 size={14} />
+          </button>
+        ) : (
+          <span className="p-1" title={cancelReason} style={dimmed}>
+            <Trash2 size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
+      </RowActionsWrapper>
 
       {pdfUrl && (
         <PdfPreviewModal
@@ -246,7 +253,6 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
           onClose={() => setPdfUrl(null)}
         />
       )}
-
       {showEmail && (
         <DocumentEmailModal
           storeId={parsedStoreId}

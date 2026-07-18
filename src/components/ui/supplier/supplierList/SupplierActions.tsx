@@ -13,6 +13,7 @@ import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
 import SupplierStatementModal from "@/components/ui/supplier/statement/SupplierStatementModal";
+import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface SupplierActionsProps {
   data: SupplierListType;
@@ -49,19 +50,25 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
         }
         return true;
       });
-      if (deleteResult.error) {
-        dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
-      }
+      if (deleteResult.error) dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
   };
 
   const canDelete = Number(data.numberofpurchase) === 0;
   const deleteReason = canDelete ? "" : "Cannot delete: supplier has existing purchases";
 
+  const items: RowActionItem[] = [
+    { key: 'view', label: 'Quick View', icon: <Eye size={14} />, onClick: () => setDrawerOpen(true) },
+    { key: 'statement', label: 'Vendor Statement', icon: <FileText size={14} />, onClick: () => setStatementOpen(true) },
+    { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/supplier/${data.supplierid}/edit` },
+    canDelete
+      ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
+      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: deleteReason, dangerous: true },
+  ];
+
   return (
     <>
-    <div className="action-table-data">
-      <div className="edit-delete-action" style={{ gap: "2px" }}>
+      <RowActionsWrapper items={items}>
         <a
           className="p-1"
           href="#"
@@ -78,12 +85,7 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
         >
           <FileText size={14} />
         </a>
-        <Link
-          className="p-1"
-          href={`${basePath}/supplier/${data.supplierid}/edit`}
-          scroll={false}
-          title="Edit"
-        >
+        <Link className="p-1" href={`${basePath}/supplier/${data.supplierid}/edit`} scroll={false} title="Edit">
           <Edit size={14} />
         </Link>
         {canDelete ? (
@@ -97,31 +99,24 @@ const SupplierActions: React.FC<SupplierActionsProps> = ({ data, onDeleteSuccess
             <Trash2 size={14} />
           </button>
         ) : (
-          <span
-            className="p-1"
-            title={deleteReason}
-            style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}
-          >
+          <span className="p-1" title={deleteReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
             <Trash2 size={14} style={{ opacity: 0.35 }} />
           </span>
         )}
-      </div>
-    </div>
-    {drawerOpen && (
-      <SupplierDrawer
-        supplierId={data.supplierid}
-        storeId={parsedStoreId}
-        outletId={parsedOutletId}
-        onClose={() => setDrawerOpen(false)}
-        mode="drawer"
-      />
-    )}
-    {statementOpen && (
-      <SupplierStatementModal
-        supplier={data}
-        onClose={() => setStatementOpen(false)}
-      />
-    )}
+      </RowActionsWrapper>
+
+      {drawerOpen && (
+        <SupplierDrawer
+          supplierId={data.supplierid}
+          storeId={parsedStoreId}
+          outletId={parsedOutletId}
+          onClose={() => setDrawerOpen(false)}
+          mode="drawer"
+        />
+      )}
+      {statementOpen && (
+        <SupplierStatementModal supplier={data} onClose={() => setStatementOpen(false)} />
+      )}
     </>
   );
 };

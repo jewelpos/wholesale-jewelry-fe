@@ -34,7 +34,8 @@ const PhysicalCountListComponent = () => {
     {
       headerName: "Actions",
       field: "actions",
-      width: 110,
+      width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 110,
+      minWidth: 52,
       pinned: "right" as const,
       filter: false,
       sortable: false,
