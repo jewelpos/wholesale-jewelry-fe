@@ -14,9 +14,9 @@ const ActionFooter = ({
   return (
     <div className="card sticky-footer">
       <div className="card-body">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div>{leftContent}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ minWidth: 0 }}>{leftContent}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button
               type="button"
               onClick={handleCancel}
