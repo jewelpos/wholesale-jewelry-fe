@@ -27,7 +27,7 @@ const ActionFooter = ({
     >
       <div style={{ minWidth: 0 }}>{leftContent}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <button type="button" onClick={handleCancel} className="btn btn-cancel">
+        <button type="button" onClick={handleCancel} className="btn btn-cancel" style={{ padding: "0.5rem 0.85rem" }}>
           {cancelLabel}
         </button>
         {children}
