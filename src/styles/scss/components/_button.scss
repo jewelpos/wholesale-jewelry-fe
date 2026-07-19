@@ -2,6 +2,24 @@
 @use "../utils/variables" as *;
 @use "../utils/mixins" as *;
 
+
+// Sticky footer action buttons — force identical layout on Cancel + Save
+.sticky-footer-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+}
+
 .btn-submit {
   background: $primary;
   color: $white;
@@ -34,14 +52,6 @@
   @include respond-below(custom991) {
     min-width: auto;
   }
-}
-/* ActionFooter sticky bar — buttons fill the 40px container height explicitly */
-.action-footer-btns .btn {
-  height: 100% !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 .btn-cancel.add-cancel {
   padding: 8px 20px;
