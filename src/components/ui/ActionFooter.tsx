@@ -1,17 +1,5 @@
 import React from "react";
 
-// Shared button style applied to Cancel AND every child button.
-// Explicit boxSizing + padding + height so the total rendered height is
-// identical on every button regardless of which CSS class is in use.
-const BTN: React.CSSProperties = {
-  height: 40,
-  boxSizing: "border-box",
-  padding: "0 1rem",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
 const ActionFooter = ({
   children,
   handleCancel,
@@ -23,10 +11,16 @@ const ActionFooter = ({
   leftContent?: React.ReactNode;
   cancelLabel?: string;
 }>) => {
+  // alignItems:"stretch" on the row makes every child grow to the same height.
+  // We still inject boxSizing so border+padding are counted inside that height.
   const normalizedChildren = React.Children.map(children, (child) =>
     React.isValidElement(child)
       ? React.cloneElement(child as React.ReactElement<{ style?: React.CSSProperties }>, {
-          style: { ...BTN, ...(child.props as { style?: React.CSSProperties }).style },
+          style: {
+            boxSizing: "border-box" as const,
+            alignSelf: "stretch",
+            ...(child.props as { style?: React.CSSProperties }).style,
+          },
         })
       : child
   );
@@ -46,12 +40,13 @@ const ActionFooter = ({
       }}
     >
       <div style={{ minWidth: 0 }}>{leftContent}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      {/* alignItems:stretch forces all buttons to the height of the tallest one */}
+      <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexShrink: 0 }}>
         <button
           type="button"
           onClick={handleCancel}
           className="btn btn-cancel"
-          style={BTN}
+          style={{ boxSizing: "border-box" }}
         >
           {cancelLabel}
         </button>
