@@ -1,5 +1,19 @@
 import React from "react";
 
+// iOS Safari ignores align-items:stretch on <button> elements.
+// Fix: explicit height + WebkitAppearance:none (removes native button
+// sizing so height/box-sizing behave like a normal block element).
+const BTN: React.CSSProperties = {
+  height: 40,
+  minHeight: 40,
+  boxSizing: "border-box",
+  WebkitAppearance: "none",
+  padding: "0 1rem",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 const ActionFooter = ({
   children,
   handleCancel,
@@ -11,16 +25,10 @@ const ActionFooter = ({
   leftContent?: React.ReactNode;
   cancelLabel?: string;
 }>) => {
-  // alignItems:"stretch" on the row makes every child grow to the same height.
-  // We still inject boxSizing so border+padding are counted inside that height.
   const normalizedChildren = React.Children.map(children, (child) =>
     React.isValidElement(child)
       ? React.cloneElement(child as React.ReactElement<{ style?: React.CSSProperties }>, {
-          style: {
-            boxSizing: "border-box" as const,
-            alignSelf: "stretch",
-            ...(child.props as { style?: React.CSSProperties }).style,
-          },
+          style: { ...BTN, ...(child.props as { style?: React.CSSProperties }).style },
         })
       : child
   );
@@ -40,13 +48,12 @@ const ActionFooter = ({
       }}
     >
       <div style={{ minWidth: 0 }}>{leftContent}</div>
-      {/* alignItems:stretch forces all buttons to the height of the tallest one */}
-      <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <button
           type="button"
           onClick={handleCancel}
           className="btn btn-cancel"
-          style={{ boxSizing: "border-box" }}
+          style={BTN}
         >
           {cancelLabel}
         </button>
