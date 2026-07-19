@@ -687,22 +687,28 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                   <span className="dropdown-item disabled" style={{ fontSize: 11, color: "#6c757d", paddingTop: 4, paddingBottom: 4, lineHeight: "1.2" }}>
                     Switch Outlet
                   </span>
-                  {stores.map((str) =>
-                    str.outlets
-                      ?.filter((o) => o.isenabled)
-                      .map((o) => (
-                        <Link
-                          key={o.outletid}
-                          className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
-                          href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
-                        >
-                          {stores.length > 1 && (
-                            <span style={{ opacity: 0.6, marginRight: 4 }}>{str.storename} —</span>
-                          )}
-                          {o.outletname}
-                        </Link>
-                      ))
-                  )}
+                  {/* max-height + scroll so many outlets don't stretch the menu */}
+                  <div style={{ maxHeight: 220, overflowY: "auto" }}>
+                    {stores.map((str) =>
+                      str.outlets
+                        ?.filter((o) => o.isenabled)
+                        .map((o) => (
+                          <Link
+                            key={o.outletid}
+                            className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
+                            href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
+                            style={{ lineHeight: "normal", padding: "6px 10px", height: "auto" }}
+                          >
+                            {stores.length > 1 && (
+                              <div style={{ fontSize: 10, opacity: 0.65, marginBottom: 1 }}>
+                                {str.storename}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 13 }}>{o.outletname}</div>
+                          </Link>
+                        ))
+                    )}
+                  </div>
                 </>
               );
             })()}
