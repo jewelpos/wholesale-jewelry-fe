@@ -39,8 +39,8 @@ const ForgotPasswordPage = () => {
                 <div className="login-brand-contact" style={{ marginTop: 40 }}>
                   <p className="login-brand-contact-label">Need help? Contact support</p>
                   <div className="login-brand-contact-items">
-                    <a href="sms:+18005539367" className="login-brand-contact-item">
-                      <MessageSquare size={14} /><span>SMS: +1 800-JEWELPOS</span>
+                    <a href="sms:+18153935767" className="login-brand-contact-item">
+                      <MessageSquare size={14} /><span>SMS: +181-JEWELPOS</span>
                     </a>
                     <a href="mailto:support@jewelpos.com" className="login-brand-contact-item">
                       <Mail size={14} /><span>support@jewelpos.com</span>

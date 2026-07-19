@@ -102,16 +102,15 @@ export default function CustomerDocumentsSection({ customerid, storeid, pendingF
       style={{ border: "1px solid #e9ecef", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}
     >
       <div
-        className="card-header py-3 d-flex justify-content-between align-items-center"
-        style={{ background: "#fff", borderBottom: "1px solid #e9ecef", borderLeft: "3px solid #0d6efd" }}
+        className="card-header d-flex justify-content-between align-items-center py-2"
+        style={{ background: "#f8f9ff", borderBottom: "1px solid #f1f5f9", borderLeft: "3px solid #0d6efd" }}
       >
-        <h6
-          className="mb-0 fw-semibold d-flex align-items-center gap-2"
-          style={{ fontSize: 13, color: "#495057" }}
-        >
+        <div className="d-flex align-items-center gap-2">
           <FileText size={14} strokeWidth={2} color="#0d6efd" />
-          Customer Documents
-        </h6>
+          <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Customer Documents
+          </span>
+        </div>
         {isNewCustomer ? (
           <>
             <input

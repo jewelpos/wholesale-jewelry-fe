@@ -224,7 +224,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
             style={{
               background: "#f5f6f8",
               borderRadius: 10,
-              padding: "20px 20px 8px",
+              padding: "0 0 8px",
             }}
           >
             <div className="row g-3">
@@ -238,20 +238,17 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                   }}
                 >
                   <div
-                    className="card-header py-3"
+                    className="card-header d-flex align-items-center gap-2 py-2"
                     style={{
-                      background: "#fff",
-                      borderBottom: "1px solid #e9ecef",
+                      background: "#f8f9ff",
+                      borderBottom: "1px solid #f1f5f9",
                       borderLeft: "3px solid #0d6efd",
                     }}
                   >
-                    <h6
-                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
-                      style={{ fontSize: 13, color: "#495057" }}
-                    >
-                      <UserRound size={14} strokeWidth={2} color="#0d6efd" />
+                    <UserRound size={14} strokeWidth={2} color="#0d6efd" />
+                    <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       Customer Profile
-                    </h6>
+                    </span>
                   </div>
                   <div className="card-body">
                     <CustomerInputsA
@@ -279,20 +276,17 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                   }}
                 >
                   <div
-                    className="card-header py-3"
+                    className="card-header d-flex align-items-center gap-2 py-2"
                     style={{
-                      background: "#fff",
-                      borderBottom: "1px solid #e9ecef",
+                      background: "#f8f9ff",
+                      borderBottom: "1px solid #f1f5f9",
                       borderLeft: "3px solid #0d6efd",
                     }}
                   >
-                    <h6
-                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
-                      style={{ fontSize: 13, color: "#495057" }}
-                    >
-                      <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                    <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                    <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       Account Settings
-                    </h6>
+                    </span>
                   </div>
                   <div className="card-body">
                     <CustomerInputsB
@@ -316,15 +310,13 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
 
         {/* Documents section */}
         {!customerLoading && (
-          <div className="container-fluid">
-            <CustomerDocumentsSection
-              customerid={isNaN(parsedCustomerId) ? 0 : parsedCustomerId}
-              storeid={parsedStoreId}
-              pendingFiles={pendingDocFiles}
-              onAddPendingFile={(f) => setPendingDocFiles((prev) => [...prev, f])}
-              onRemovePendingFile={(i) => setPendingDocFiles((prev) => prev.filter((_, idx) => idx !== i))}
-            />
-          </div>
+          <CustomerDocumentsSection
+            customerid={isNaN(parsedCustomerId) ? 0 : parsedCustomerId}
+            storeid={parsedStoreId}
+            pendingFiles={pendingDocFiles}
+            onAddPendingFile={(f) => setPendingDocFiles((prev) => [...prev, f])}
+            onRemovePendingFile={(i) => setPendingDocFiles((prev) => prev.filter((_, idx) => idx !== i))}
+          />
         )}
 
         {!disableField && !customerLoading && (

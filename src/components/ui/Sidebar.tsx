@@ -1,11 +1,13 @@
 "use client";
 
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import { useAppSelector } from "@/lib/store/hook";
 import { Menus } from "@/types/permissions";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import * as LucideIcons from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Scrollbar } from "react-scrollbars-custom";
 
@@ -25,10 +27,46 @@ const Sidebar = ({ menus }: Props) => {
   const path = usePathname();
   const { basePath } = useDefaultRoute();
   const pathname = path.replace(basePath, "");
+  const { storePrefix, outletId } = useParams<{ storePrefix: string; outletId: string }>();
+
+  const stores = useAppSelector((state) => state.stores.data);
+  const store = useAppSelector((state) => state.store.data);
+  const user = useAppSelector((state) => state.user.data);
 
   const [subOpen, setSubopen] = useState<string>("");
   const [subsidebar, setSubsidebar] = useState("");
+  const [outletOpen, setOutletOpen] = useState(false);
   const [isMini, setIsMini] = useState(false);
+
+  const isOwner = !!user?.issysgenmasteraccount;
+  const totalOutlets = stores.reduce(
+    (sum, s) => sum + (s.outlets?.filter((o) => o.isenabled).length ?? 0),
+    0
+  );
+  const showMobileOutletSwitcher = isOwner || totalOutlets > 1;
+
+  const urlAfterOutlet = (() => {
+    const segments = path.split("/").filter(Boolean);
+    return segments.length > 3 ? `/${segments.slice(3).join("/")}` : "";
+  })();
+
+  const currentStoreName =
+    stores.find((s) => s.storeid === store?.storeid)?.storename ??
+    store?.storename ??
+    stores[0]?.storename ??
+    "";
+
+  const currentOutletName = (() => {
+    if (outletId) {
+      const fromStore = store?.outlets?.find((o) => o.outletid === Number(outletId));
+      if (fromStore) return fromStore.outletname;
+      for (const s of stores) {
+        const found = s.outlets?.find((o) => o.outletid === Number(outletId));
+        if (found) return found.outletname;
+      }
+    }
+    return store?.outlets?.[0]?.outletname ?? stores[0]?.outlets?.[0]?.outletname ?? "";
+  })();
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
 
   useEffect(() => {
@@ -105,6 +143,98 @@ const Sidebar = ({ menus }: Props) => {
         <Scrollbar>
           <div className="sidebar-inner slimscroll">
             <div id="sidebar-menu" className="sidebar-menu">
+              {/* Mobile outlet switcher — hidden on desktop (lg+) */}
+              {showMobileOutletSwitcher && (
+                <div className="d-lg-none" style={{ borderBottom: "1px solid #e9ecef", marginBottom: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setOutletOpen((p) => !p)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      background: "none",
+                      border: "none",
+                      padding: "10px 20px",
+                      cursor: "pointer",
+                      gap: 5,
+                      textAlign: "left",
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                      {currentStoreName}
+                    </span>
+                    <ChevronRight size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {currentOutletName}
+                    </span>
+                    <ChevronDown
+                      size={13}
+                      style={{
+                        color: "#64748b",
+                        flexShrink: 0,
+                        transform: outletOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                      }}
+                    />
+                  </button>
+                  <div
+                    style={{
+                      overflow: "hidden",
+                      maxHeight: outletOpen ? "600px" : "0",
+                      transition: "max-height 0.25s ease-in-out",
+                      background: "#f8f9fa",
+                    }}
+                  >
+                    {stores.map((str) => {
+                      const isCurrentStore = str.storeid === store?.storeid;
+                      const outlets = isCurrentStore ? (store?.outlets ?? str.outlets) : str.outlets;
+                      return (
+                        <div key={str.storeid}>
+                          {stores.length > 1 && (
+                            <div
+                              style={{
+                                padding: "6px 20px 4px",
+                                fontSize: 10,
+                                color: "#94a3b8",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.07em",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {str.storename}
+                            </div>
+                          )}
+                          {outlets?.filter((o) => o.isenabled).map((o) => {
+                            const isActive = o.outletid === Number(outletId);
+                            return (
+                              <Link
+                                key={o.outletid}
+                                href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlAfterOutlet}`}
+                                style={{
+                                  display: "block",
+                                  padding: `8px 20px 8px ${stores.length > 1 ? "32px" : "20px"}`,
+                                  fontSize: 13,
+                                  color: isActive ? "#6366f1" : "#334155",
+                                  fontWeight: isActive ? 600 : 400,
+                                  textDecoration: "none",
+                                  background: isActive ? "#ede9fe" : "transparent",
+                                }}
+                                onClick={() => {
+                                  setOutletOpen(false);
+                                  closeMobileSidebar();
+                                }}
+                              >
+                                {o.outletname}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <ul>
                 <li className="submenu-open">
                   <ul>

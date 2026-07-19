@@ -1,19 +1,5 @@
 import React from "react";
 
-// iOS Safari ignores align-items:stretch on <button> elements.
-// Fix: explicit height + WebkitAppearance:none (removes native button
-// sizing so height/box-sizing behave like a normal block element).
-const BTN: React.CSSProperties = {
-  height: 40,
-  minHeight: 40,
-  boxSizing: "border-box",
-  WebkitAppearance: "none",
-  padding: "0 1rem",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
 const ActionFooter = ({
   children,
   handleCancel,
@@ -25,14 +11,6 @@ const ActionFooter = ({
   leftContent?: React.ReactNode;
   cancelLabel?: string;
 }>) => {
-  const normalizedChildren = React.Children.map(children, (child) =>
-    React.isValidElement(child)
-      ? React.cloneElement(child as React.ReactElement<{ style?: React.CSSProperties }>, {
-          style: { ...BTN, ...(child.props as { style?: React.CSSProperties }).style },
-        })
-      : child
-  );
-
   return (
     <div
       style={{
@@ -48,16 +26,12 @@ const ActionFooter = ({
       }}
     >
       <div style={{ minWidth: 0 }}>{leftContent}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="btn btn-cancel"
-          style={BTN}
-        >
+      {/* action-footer-btns: SCSS class forces height:40px !important on every .btn inside */}
+      <div className="action-footer-btns" style={{ display: "flex", alignItems: "flex-start", height: 40, gap: 8, flexShrink: 0 }}>
+        <button type="button" onClick={handleCancel} className="btn btn-cancel" style={{ height: "100%", boxSizing: "border-box" }}>
           {cancelLabel}
         </button>
-        {normalizedChildren}
+        {children}
       </div>
     </div>
   );

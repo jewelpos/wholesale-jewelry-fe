@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       const refreshMaxAge = keepSignedIn ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
       const response = NextResponse.json({ success: true }, { status: 200 });
       setCookieResponse(response, "accessToken", accessToken, {
-        maxAge: 30 * 60,
+        maxAge: 60 * 60,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",

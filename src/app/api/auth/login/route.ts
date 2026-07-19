@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       const response = NextResponse.json({ success: true, data: routingData }, { status: 200 });
       if (accessToken) {
         setCookieResponse(response, "accessToken", accessToken as string, {
-          maxAge: 30 * 60,
+          maxAge: 60 * 60,
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "strict",

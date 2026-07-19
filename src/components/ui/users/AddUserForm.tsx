@@ -247,7 +247,7 @@ const AddUserForm = () => {
   }, [reset, userData, parsedStoreId]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="row">
         <div className="col-md-12">
           <UserProfileInputs register={register} errors={errors} />

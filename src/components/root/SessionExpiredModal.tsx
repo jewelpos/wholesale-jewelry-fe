@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { logoutAndRedirect } from "@/lib/graphql/errorLinks";
 import { Clock, LogIn, LogOut, RefreshCw } from "react-feather";
 
-const IDLE_WARN_MS   = 20 * 60 * 1000;
+const IDLE_WARN_MS   = 45 * 60 * 1000;
 const IDLE_CHECK_MS  = 60 * 1000;
 const COUNTDOWN_SECS = 10 * 60;
 
@@ -34,7 +34,7 @@ export default function SessionExpiredModal() {
     const id = setInterval(() => {
       if (visible) return;
       fetch("/api/auth/refresh", { method: "POST" }).catch(() => {/* silent */});
-    }, 29 * 60 * 1000);
+    }, 55 * 60 * 1000);
     return () => clearInterval(id);
   }, [visible]);
 
@@ -161,8 +161,8 @@ export default function SessionExpiredModal() {
             {state !== "resume-failed" ? (
               <p className="mb-0 text-muted" style={{ fontSize: 13 }}>
                 {reason === "idle"
-                  ? "You've been inactive for 20 minutes. Click Continue Working to stay logged in, or log out if you're done."
-                  : "Your session expired while you were away. You can resume and continue without losing your work."}
+                  ? "You've been inactive for 45 minutes. Click Continue Working to stay logged in, or log out if you're done."
+                  : "Your session has expired. Please log in again to continue."}
               </p>
             ) : (
               <div className="alert alert-danger mb-0 py-2" style={{ fontSize: 13 }}>
@@ -173,23 +173,24 @@ export default function SessionExpiredModal() {
           </div>
 
           <div className="modal-footer">
-            {state !== "resume-failed" && (
+            {/* Resume only offered during idle warning — not when session is already expired via API */}
+            {state !== "resume-failed" && reason === "idle" && (
               <button
                 className="btn btn-submit d-flex align-items-center gap-2"
                 onClick={handleResume}
                 disabled={isLoading}
               >
                 <RefreshCw size={14} className={state === "resuming" ? "spin" : ""} />
-                {reason === "idle" ? "Continue Working" : state === "resuming" ? "Resuming…" : "Resume Session"}
+                {state === "resuming" ? "Resuming…" : "Continue Working"}
               </button>
             )}
             <button
-              className={`btn d-flex align-items-center gap-2 ${state === "resume-failed" ? "btn-submit" : "btn-cancel"}`}
-              onClick={state === "resume-failed" ? handleLogout : handleLogout}
+              className={`btn d-flex align-items-center gap-2 ${(state === "resume-failed" || reason === "expired") ? "btn-submit" : "btn-cancel"}`}
+              onClick={handleLogout}
               disabled={isLoading}
             >
-              {state === "resume-failed"
-                ? <><LogIn size={14} />Log In Again</>
+              {(state === "resume-failed" || reason === "expired")
+                ? <><LogIn size={14} />{state === "logging-out" ? "Logging out…" : "Log In Again"}</>
                 : <><LogOut size={14} />{state === "logging-out" ? "Logging out…" : "Log Out"}</>}
             </button>
           </div>

@@ -35,6 +35,14 @@
     min-width: auto;
   }
 }
+/* ActionFooter sticky bar — buttons fill the 40px container height explicitly */
+.action-footer-btns .btn {
+  height: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 .btn-cancel.add-cancel {
   padding: 8px 20px;
   min-width: 0;

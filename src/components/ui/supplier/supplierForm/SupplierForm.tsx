@@ -171,7 +171,7 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
             style={{
               background: "#f5f6f8",
               borderRadius: 10,
-              padding: "20px 20px 8px",
+              padding: "0 0 8px",
             }}
           >
             <div className="row g-3">
@@ -185,20 +185,17 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
                   }}
                 >
                   <div
-                    className="card-header py-3"
+                    className="card-header d-flex align-items-center gap-2 py-2"
                     style={{
-                      background: "#fff",
-                      borderBottom: "1px solid #e9ecef",
+                      background: "#f8f9ff",
+                      borderBottom: "1px solid #f1f5f9",
                       borderLeft: "3px solid #0d6efd",
                     }}
                   >
-                    <h6
-                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
-                      style={{ fontSize: 13, color: "#495057" }}
-                    >
-                      <Truck size={14} strokeWidth={2} color="#0d6efd" />
+                    <Truck size={14} strokeWidth={2} color="#0d6efd" />
+                    <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       Supplier Profile
-                    </h6>
+                    </span>
                   </div>
                   <div className="card-body">
                     <SupplierInputsA
@@ -223,20 +220,17 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
                   }}
                 >
                   <div
-                    className="card-header py-3"
+                    className="card-header d-flex align-items-center gap-2 py-2"
                     style={{
-                      background: "#fff",
-                      borderBottom: "1px solid #e9ecef",
+                      background: "#f8f9ff",
+                      borderBottom: "1px solid #f1f5f9",
                       borderLeft: "3px solid #0d6efd",
                     }}
                   >
-                    <h6
-                      className="mb-0 fw-semibold d-flex align-items-center gap-2"
-                      style={{ fontSize: 13, color: "#495057" }}
-                    >
-                      <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                    <Settings size={14} strokeWidth={2} color="#0d6efd" />
+                    <span style={{ fontWeight: 700, fontSize: 12, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       Account Settings
-                    </h6>
+                    </span>
                   </div>
                   <div className="card-body">
                     <SupplierInputsB
