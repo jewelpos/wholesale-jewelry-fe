@@ -669,6 +669,44 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                 Settings
               </Link>
             )}
+            {/* Outlet switcher — mirrors StoreDropdown access control; stores already filtered by backend */}
+            {(() => {
+              const isOwner = !!user?.issysgenmasteraccount;
+              const totalOutlets = stores.reduce(
+                (sum, s) => sum + (s.outlets?.filter((o) => o.isenabled).length ?? 0),
+                0
+              );
+              if (!isOwner && totalOutlets <= 1) return null;
+              const urlSuffix = (() => {
+                const segments = location.pathname.split("/").filter(Boolean);
+                return segments.length > 3 ? `/${segments.slice(3).join("/")}` : "";
+              })();
+              return (
+                <>
+                  <hr className="my-1" />
+                  <span className="dropdown-item disabled" style={{ fontSize: 11, color: "#6c757d", paddingTop: 4, paddingBottom: 4, lineHeight: "1.2" }}>
+                    Switch Outlet
+                  </span>
+                  {stores.map((str) =>
+                    str.outlets
+                      ?.filter((o) => o.isenabled)
+                      .map((o) => (
+                        <Link
+                          key={o.outletid}
+                          className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
+                          href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
+                        >
+                          {stores.length > 1 && (
+                            <span style={{ opacity: 0.6, marginRight: 4 }}>{str.storename} —</span>
+                          )}
+                          {o.outletname}
+                        </Link>
+                      ))
+                  )}
+                </>
+              );
+            })()}
+            <hr className="my-1" />
             <Link className="dropdown-item" href="#" onClick={onLogout}>
               Logout
             </Link>

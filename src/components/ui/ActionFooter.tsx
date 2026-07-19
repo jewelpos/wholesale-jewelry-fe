@@ -1,8 +1,16 @@
 import React from "react";
 
-// 40px accommodates btn-cancel's 10px vertical padding (box-sizing:border-box) while
-// matching btn-primary and btn-submit at every screen size, overriding all CSS classes.
-const BTN_H = "40px";
+// Shared button style applied to Cancel AND every child button.
+// Explicit boxSizing + padding + height so the total rendered height is
+// identical on every button regardless of which CSS class is in use.
+const BTN: React.CSSProperties = {
+  height: 40,
+  boxSizing: "border-box",
+  padding: "0 1rem",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
 
 const ActionFooter = ({
   children,
@@ -18,7 +26,7 @@ const ActionFooter = ({
   const normalizedChildren = React.Children.map(children, (child) =>
     React.isValidElement(child)
       ? React.cloneElement(child as React.ReactElement<{ style?: React.CSSProperties }>, {
-          style: { height: BTN_H, ...(child.props as { style?: React.CSSProperties }).style },
+          style: { ...BTN, ...(child.props as { style?: React.CSSProperties }).style },
         })
       : child
   );
@@ -43,7 +51,7 @@ const ActionFooter = ({
           type="button"
           onClick={handleCancel}
           className="btn btn-cancel"
-          style={{ height: BTN_H }}
+          style={BTN}
         >
           {cancelLabel}
         </button>
