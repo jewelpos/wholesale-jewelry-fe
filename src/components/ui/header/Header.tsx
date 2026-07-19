@@ -689,25 +689,30 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                   </span>
                   {/* max-height + scroll so many outlets don't stretch the menu */}
                   <div style={{ maxHeight: 220, overflowY: "auto" }}>
-                    {stores.map((str) =>
-                      str.outlets
-                        ?.filter((o) => o.isenabled)
-                        .map((o) => (
-                          <Link
-                            key={o.outletid}
-                            className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
-                            href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
-                            style={{ lineHeight: "normal", padding: "6px 10px", height: "auto" }}
-                          >
-                            {stores.length > 1 && (
-                              <div style={{ fontSize: 10, opacity: 0.65, marginBottom: 1 }}>
-                                {str.storename}
-                              </div>
-                            )}
-                            <div style={{ fontSize: 13 }}>{o.outletname}</div>
-                          </Link>
-                        ))
-                    )}
+                    {stores.map((str) => {
+                      const visibleOutlets = str.outlets?.filter((o) => o.isenabled) ?? [];
+                      if (!visibleOutlets.length) return null;
+                      return (
+                        <React.Fragment key={str.storeid}>
+                          {/* Store header only when there are multiple stores */}
+                          {stores.length > 1 && (
+                            <div style={{ fontSize: 10, color: "#6c757d", padding: "6px 10px 2px", fontWeight: 600, letterSpacing: "0.4px", textTransform: "uppercase" }}>
+                              {str.storename}
+                            </div>
+                          )}
+                          {visibleOutlets.map((o) => (
+                            <Link
+                              key={o.outletid}
+                              className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
+                              href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
+                              style={{ lineHeight: "normal", padding: stores.length > 1 ? "5px 10px 5px 18px" : "6px 10px", height: "auto", fontSize: 13 }}
+                            >
+                              {o.outletname}
+                            </Link>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 </>
               );
