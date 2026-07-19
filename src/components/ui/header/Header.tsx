@@ -669,55 +669,6 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                 Settings
               </Link>
             )}
-            {/* Outlet switcher — mirrors StoreDropdown access control; stores already filtered by backend */}
-            {(() => {
-              const isOwner = !!user?.issysgenmasteraccount;
-              const totalOutlets = stores.reduce(
-                (sum, s) => sum + (s.outlets?.filter((o) => o.isenabled).length ?? 0),
-                0
-              );
-              if (!isOwner && totalOutlets <= 1) return null;
-              const urlSuffix = (() => {
-                const segments = location.pathname.split("/").filter(Boolean);
-                return segments.length > 3 ? `/${segments.slice(3).join("/")}` : "";
-              })();
-              return (
-                <>
-                  <hr className="my-1" />
-                  <span className="dropdown-item disabled" style={{ fontSize: 11, color: "#6c757d", paddingTop: 4, paddingBottom: 4, lineHeight: "1.2" }}>
-                    Switch Outlet
-                  </span>
-                  {/* max-height + scroll so many outlets don't stretch the menu */}
-                  <div style={{ maxHeight: 220, overflowY: "auto" }}>
-                    {stores.map((str) => {
-                      const visibleOutlets = str.outlets?.filter((o) => o.isenabled) ?? [];
-                      if (!visibleOutlets.length) return null;
-                      return (
-                        <React.Fragment key={str.storeid}>
-                          {/* Store header only when there are multiple stores */}
-                          {stores.length > 1 && (
-                            <div style={{ fontSize: 10, color: "#6c757d", padding: "6px 10px 2px", fontWeight: 600, letterSpacing: "0.4px", textTransform: "uppercase" }}>
-                              {str.storename}
-                            </div>
-                          )}
-                          {visibleOutlets.map((o) => (
-                            <Link
-                              key={o.outletid}
-                              className={`dropdown-item ${o.outletid === Number(outletId) ? "active" : ""}`}
-                              href={`/${storePrefix}/${str.storeid}/${o.outletid}${urlSuffix}`}
-                              style={{ lineHeight: "normal", padding: stores.length > 1 ? "5px 10px 5px 18px" : "6px 10px", height: "auto", fontSize: 13 }}
-                            >
-                              {o.outletname}
-                            </Link>
-                          ))}
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
-            <hr className="my-1" />
             <Link className="dropdown-item" href="#" onClick={onLogout}>
               Logout
             </Link>
