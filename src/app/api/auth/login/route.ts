@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     });
     const captchaData = await captchaRes.json();
     if (!captchaData.success) {
+      console.error("[Turnstile] verification failed:", JSON.stringify(captchaData));
       return NextResponse.json({ error: "CAPTCHA verification failed. Please refresh and try again." }, { status: 403 });
     }
     const { data } = await apolloClientServer.mutate({
