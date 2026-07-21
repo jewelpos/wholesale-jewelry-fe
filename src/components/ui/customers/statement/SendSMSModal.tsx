@@ -9,7 +9,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import api from "@/lib/axios";
-import DOMPurify from "dompurify";
+import { StatementType } from "./StatementPrintContent";
 
 interface SendSMSModalProps {
   customerName: string;
@@ -18,13 +18,17 @@ interface SendSMSModalProps {
   storeid: number;
   customerid: number;
   outletid: number;
-  previewHtml: string;
+  type: StatementType;
+  fromdate?: string;
+  todate?: string;
+  showaging: boolean;
+  showsummarycard: boolean;
   onClose: () => void;
   onSent: () => void;
 }
 
 const SendSMSModal: React.FC<SendSMSModalProps> = ({
-  customerName, defaultPhone, storeName, storeid, customerid, outletid, previewHtml, onClose, onSent,
+  customerName, defaultPhone, storeName, storeid, customerid, outletid, type, fromdate, todate, showaging, showsummarycard, onClose, onSent,
 }) => {
   const dispatch = useAppDispatch();
   const [phone, setPhone] = useState(defaultPhone);
@@ -38,10 +42,13 @@ const SendSMSModal: React.FC<SendSMSModalProps> = ({
     }
     setSending(true);
     try {
-      const safeHtml = DOMPurify.sanitize(previewHtml, { USE_PROFILES: { html: true } });
-      const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Statement</title></head><body style="margin:0;padding:16px;font-family:Arial,sans-serif;">${safeHtml}</body></html>`;
       const { data: result } = await sendSMS({
-        variables: { input: { customerid, outletid, phoneNumber: phone.trim(), htmlContent: fullHtml } },
+        variables: {
+          input: {
+            storeid, customerid, outletid, phoneNumber: phone.trim(),
+            type, fromdate, todate, showaging, showsummarycard,
+          },
+        },
       });
       if (result?.sendCustomerStatementSMS?.success) {
         dispatch(showNotification({ message: "Statement sent via SMS successfully", type: NOTIFICATION_TYPES.SUCCESS }));

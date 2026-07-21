@@ -11,12 +11,15 @@ import {
   GET_CUSTOMER_PAYMENT_LIST_QUERY,
   GET_INVOICE_AGING_REPORT_QUERY,
 } from "@/lib/graphql/query/customer";
-import { useAppSelector } from "@/lib/store/hook";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
+import { showNotification } from "@/lib/store/slice/notificationSlice";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { useParams } from "next/navigation";
 import { CustomersListType, CustomerBalanceAgingType, CustomerLedgerReportType, CustomerPaymentListType } from "@/types/customer";
-import DOMPurify from "dompurify";
+import api from "@/lib/axios";
 import StatementPrintContent, { StatementType, InvoiceBalanceDue, StatementCustomer } from "./StatementPrintContent";
 import SendSMSModal from "./SendSMSModal";
+import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 interface Props {
   customer: CustomersListType;
@@ -70,6 +73,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const storeName = useAppSelector((state) => state.store.data?.storename ?? "");
+  const dispatch = useAppDispatch();
 
   const [type, setType] = useState<StatementType>("open");
   const [preset, setPreset] = useState<Preset>("open");
@@ -78,6 +82,8 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const [showAging, setShowAging] = useState(true);
   const [showSummaryCard, setShowSummaryCard] = useState(true);
   const [smsOpen, setSmsOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -188,33 +194,41 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
     opencredit: customer.opencredit,
   };
 
-  // ── Print ──
-  const handlePrint = () => {
-    if (!previewRef.current) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    const safeBody = DOMPurify.sanitize(previewRef.current.innerHTML);
-    win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Statement — ${(customer.custcompanyname || customer.fullname || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 24px 32px; }
-    table { width: 100%; border-collapse: collapse; }
-    @media print {
-      body { padding: 0; }
-      @page { margin: 18mm 14mm; }
+  // ── Print (real PDF, via backend + PdfPreviewModal) ──
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      const response = await api.post(
+        `/store/customer/statement/detailed-pdf`,
+        {
+          storeid: parsedStoreId,
+          outletid: parsedOutletId,
+          customerid: customerIdNum,
+          type,
+          fromdate: type !== "open" && fromDate ? fromDate.format("YYYY-MM-DD") : undefined,
+          todate: type !== "open" && toDate ? toDate.format("YYYY-MM-DD") : undefined,
+          showaging: showAging,
+          showsummarycard: showSummaryCard,
+        },
+        { responseType: "blob", headers: { "Content-Type": "application/json" } }
+      );
+      if (response.data) {
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+        setPdfUrl(url);
+      }
+    } catch (err: any) {
+      let msg = "Failed to generate statement PDF";
+      try {
+        if (err?.response?.data instanceof Blob) {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          msg = parsed?.message || msg;
+        }
+      } catch { /* ignore */ }
+      dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
+    } finally {
+      setPrinting(false);
     }
-  </style>
-</head>
-<body>
-${safeBody}
-</body>
-</html>`);
-    win.document.close();
-    setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
   const customerName = customer.custcompanyname || customer.fullname;
@@ -341,16 +355,16 @@ ${safeBody}
             <div style={{ padding: "12px 16px", borderTop: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 8 }}>
               <button
                 onClick={handlePrint}
-                disabled={isLoading}
+                disabled={isLoading || printing}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "9px 12px", border: "none", borderRadius: 7,
                   background: "#0f172a", color: "#fff", fontSize: 13, fontWeight: 600,
-                  cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.6 : 1,
+                  cursor: isLoading || printing ? "not-allowed" : "pointer", opacity: isLoading || printing ? 0.6 : 1,
                 }}
               >
                 <Printer size={14} />
-                Print Statement
+                {printing ? "Generating PDF..." : "Print Statement"}
               </button>
               <button
                 onClick={() => setSmsOpen(true)}
@@ -418,9 +432,22 @@ ${safeBody}
           storeid={parsedStoreId}
           customerid={customerIdNum}
           outletid={parsedOutletId}
-          previewHtml={previewRef.current?.innerHTML ?? ""}
+          type={type}
+          fromdate={type !== "open" && fromDate ? fromDate.format("YYYY-MM-DD") : undefined}
+          todate={type !== "open" && toDate ? toDate.format("YYYY-MM-DD") : undefined}
+          showaging={showAging}
+          showsummarycard={showSummaryCard}
           onClose={() => setSmsOpen(false)}
           onSent={() => { setSmsOpen(false); }}
+        />
+      )}
+
+      {/* PDF preview */}
+      {pdfUrl && (
+        <PdfPreviewModal
+          pdfUrl={pdfUrl}
+          filename={`statement-${customer.customerid}-${type}.pdf`}
+          onClose={() => setPdfUrl(null)}
         />
       )}
     </>,
