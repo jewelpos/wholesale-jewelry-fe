@@ -70,7 +70,11 @@ export async function POST(request: NextRequest) {
       safeData = rest;
     }
     return NextResponse.json({ ...loginResult, data: safeData }, { status: 200 });
-  } catch {
-    return NextResponse.json({ error: "Login failed. Please check your credentials and try again." }, { status: 401 });
+  } catch (error) {
+    const message =
+      (error as { graphQLErrors?: { message?: string }[] })?.graphQLErrors?.[0]?.message ||
+      (error as { message?: string })?.message ||
+      "Login failed. Please check your credentials and try again.";
+    return NextResponse.json({ graphQLErrors: [{ message }] }, { status: 401 });
   }
 }
