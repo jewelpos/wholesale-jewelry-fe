@@ -56,8 +56,10 @@ const SelectPurchaseOrder = ({
   const fetchPurchaseOrders = async (searchText?: string) => {
     if (!storeId) return;
 
-    const statusId = Number(postatus);
-    if (Number.isFinite(statusId) && statusId > 0) {
+    const statusIds = (Array.isArray(postatus) ? postatus : [postatus])
+      .map((s) => Number(s))
+      .filter((s) => Number.isFinite(s) && s > 0);
+    if (statusIds.length > 0) {
       const { data } = await getPurchaseOrdersByStatus({
         variables: {
           storeid: Number(storeId),
@@ -65,7 +67,7 @@ const SelectPurchaseOrder = ({
             supplierId != null && Number.isFinite(Number(supplierId))
               ? Number(supplierId)
               : undefined,
-          postatus: statusId,
+          postatus: statusIds,
         },
         fetchPolicy: "no-cache",
       });

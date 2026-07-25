@@ -265,6 +265,7 @@ const ReceivePurchaseOrderForm = () => {
                       }}
                       trigger={trigger}
                       storeId={parsedStoreId}
+                      postatus={[2, 3]}
                       className=""
                     />
                   )}

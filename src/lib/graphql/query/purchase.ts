@@ -59,7 +59,7 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_BY_STATUS_QUERY = gql`
   query GetSupplierPurchaseOrderListByStatus(
     $storeid: Int!
     $supplierid: Int
-    $postatus: Int!
+    $postatus: [Int!]!
   ) {
     getSupplierPurchaseOrderListByStatus(
       storeid: $storeid
