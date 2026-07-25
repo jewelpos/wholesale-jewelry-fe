@@ -573,6 +573,31 @@
   }
 }
 
+.jp-modal-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(17, 21, 31, .55);
+  padding: 20px;
+}
+.jp-modal-card {
+  width: 100%; max-width: 380px;
+  background: #fff; border-radius: 14px;
+  padding: 28px 26px 24px;
+  text-align: center;
+  box-shadow: 0 24px 60px -12px rgba(20, 28, 48, .35);
+}
+.jp-modal-icon {
+  width: 48px; height: 48px; margin: 0 auto 16px;
+  border-radius: 50%; background: #fdf1e7; color: #b9762f;
+  display: flex; align-items: center; justify-content: center;
+}
+.jp-modal-title {
+  margin: 0 0 8px; font-size: 17px; font-weight: 700; color: #161b26;
+}
+.jp-modal-message {
+  margin: 0 0 20px; font-size: 13.5px; line-height: 1.5; color: #5b6475;
+}
+
 /* ── JewelPOS split-panel login ── */
 .login-wrapper.login-split {
   display: flex;

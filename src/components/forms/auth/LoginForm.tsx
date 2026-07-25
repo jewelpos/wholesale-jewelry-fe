@@ -9,7 +9,7 @@ import { emailOrUsernameValidation } from "@/lib/utils/validations/authValidatio
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from "react-feather";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users } from "react-feather";
 import { Turnstile, TurnstileInstance } from "@marsidev/react-turnstile";
 
 export const LoginForm = () => {
@@ -21,6 +21,7 @@ export const LoginForm = () => {
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [sessionLimitError, setSessionLimitError] = useState<string | null>(null);
 
   const {
     register,
@@ -76,7 +77,14 @@ export const LoginForm = () => {
         "An unexpected error occurred. Please try again.";
       turnstileRef.current?.reset();
       setTurnstileToken(null);
-      dispatch(showNotification({ message: errorMessage, type: NOTIFICATION_TYPES.ERROR }));
+      // Concurrent-session-limit rejections carry an action the user must actually
+      // read ("ask another user to log out") — a toast that auto-dismisses in a few
+      // seconds isn't reliable for that, so this one gets a blocking modal instead.
+      if (errorMessage.toLowerCase().includes("concurrent user limit")) {
+        setSessionLimitError(errorMessage);
+      } else {
+        dispatch(showNotification({ message: errorMessage, type: NOTIFICATION_TYPES.ERROR }));
+      }
     }
   };
 
@@ -185,6 +193,27 @@ export const LoginForm = () => {
         </span>
         <span>© {new Date().getFullYear()} JewelPOS</span>
       </div>
+
+      {/* Blocking modal — concurrent-session-limit rejection requires the user to
+          actually read the remediation step, so it must not auto-dismiss like a toast. */}
+      {sessionLimitError && (
+        <div className="jp-modal-overlay" role="alertdialog" aria-modal="true">
+          <div className="jp-modal-card">
+            <div className="jp-modal-icon">
+              <Users size={22} />
+            </div>
+            <h3 className="jp-modal-title">Login Limit Reached</h3>
+            <p className="jp-modal-message">{sessionLimitError}</p>
+            <button
+              type="button"
+              className="jp-submit-btn"
+              onClick={() => setSessionLimitError(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
