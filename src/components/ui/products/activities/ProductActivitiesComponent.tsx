@@ -52,7 +52,6 @@ const ProductActivitiesComponent = () => {
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedItemInfo, setSelectedItemInfo] = useState<{ code: string; description: string } | null>(null);
-  const [onHandQty, setOnHandQty] = useState<number | null>(null);
   const [availableQty, setAvailableQty] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
@@ -84,17 +83,17 @@ const ProductActivitiesComponent = () => {
     setClearKey((k) => k + 1);
     setSelectedItemId(null);
     setSelectedItemInfo(null);
-    setOnHandQty(null);
     setAvailableQty(null);
     setDateFrom("");
     setDateTo("");
   }, []);
 
 
-  // Fetch actual on-hand qty from product list whenever item/outlet/warehouse changes
+  // "Available" (on-hand minus booked/reserved qty) isn't derivable from the activity
+  // ledger, so it still comes from the live product list.
   useEffect(() => {
     if (!selectedItemId || !selectedOutlet) {
-      setOnHandQty(null);
+      setAvailableQty(null);
       return;
     }
     const filters: { key: string; value: object }[] = [
@@ -107,10 +106,21 @@ const ProductActivitiesComponent = () => {
       variables: { outletid: selectedOutlet, page: 1, perpage: 1, filters, sortModel: [], rowGroupCols: [], groupKeys: [] },
     }).then(({ data }) => {
       const row = data?.getProductListNew?.data?.[0];
-      setOnHandQty(row?.itemquantityinhand ?? null);
       setAvailableQty(row?.availableqty ?? null);
-    }).catch(() => { setOnHandQty(null); setAvailableQty(null); });
+    }).catch(() => { setAvailableQty(null); });
   }, [selectedItemId, selectedOutlet, selectedWarehouse, getProductList]);
+
+  // On-hand is derived from the activity timeline's own running_balance (same number the
+  // timeline displays and has been verified correct) rather than a separately-maintained
+  // stock total, which can drift from the ledger if a past transaction mutated stock
+  // incorrectly. Only valid when no date filter narrows the ledger — with dateFrom/dateTo
+  // set, the balance calculation starts from 0 at the first row inside that window, not
+  // the true all-time total, so we fall back to null rather than show a misleading number.
+  const onHandQty = useMemo(() => {
+    if (dateFrom || dateTo) return null;
+    if (!chartData.length) return null;
+    return chartData[chartData.length - 1].running_balance;
+  }, [chartData, dateFrom, dateTo]);
 
   // Fetch chart data whenever item/outlet/warehouse/dates change
   useEffect(() => {

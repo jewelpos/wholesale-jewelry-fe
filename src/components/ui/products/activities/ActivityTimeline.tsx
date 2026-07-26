@@ -6,20 +6,24 @@ import { ProductActivityChartPoint } from "@/types/product";
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; border: string; text: string; label: string; icon: string }> = {
   purchase:   { color: "#198754", bg: "#dcfce7", border: "#86efac", text: "#166534", label: "Purchase",   icon: "↓" },
-  invoice:    { color: "#dc3545", bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", label: "Sale",       icon: "↑" },
+  sale:       { color: "#dc3545", bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", label: "Sale",       icon: "↑" },
   memo:       { color: "#0891b2", bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e", label: "Memo",       icon: "✎" },
   adjustment: { color: "#fd7e14", bg: "#ffedd5", border: "#fdba74", text: "#9a3412", label: "Adjustment", icon: "~" },
   return:     { color: "#0d6efd", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af", label: "Return",     icon: "↩" },
   transfer:   { color: "#7c3aed", bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8", label: "Transfer",   icon: "⇄" },
 };
 
-const resolveKey = (type: string): string => {
+// activity_category comes straight from the backend view (driven by salemodeid, not
+// string-matching on transaction_type, which for sales rows is the raw salemode name and
+// can't be reliably substring-matched — e.g. "Purchase Invoice" contains "purchase").
+const resolveKey = (type: string, category?: string): string => {
+  if (category && TYPE_CONFIG[category]) return category;
   const lower = type?.toLowerCase() ?? "";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
-  if (lower.includes("invoice") || lower.includes("sale")) return "invoice";
-  if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("return")) return "return";
+  if (lower.includes("invoice") || lower.includes("sale")) return "sale";
+  if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("transfer")) return "transfer";
   return "adjustment";
 };
@@ -54,7 +58,7 @@ const ActivityTimeline = ({ data }: Props) => {
             <div style={{ position: "absolute", left: 11, top: 6, bottom: 6, width: 2, background: "#e2e8f0", borderRadius: 2 }} />
 
             {reversed.map((item, i) => {
-              const key = resolveKey(item.transaction_type);
+              const key = resolveKey(item.transaction_type, item.activity_category);
               const cfg = TYPE_CONFIG[key];
               const isPositive = (item.quantity ?? 0) > 0;
               const date = dayjs(Number(item.transation_date)).format("MMM DD, YYYY");
