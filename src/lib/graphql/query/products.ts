@@ -440,7 +440,9 @@ export const GET_PRODUCT_ACTIVITY_CHART_QUERY = gql`
     ) {
       transation_date
       transaction_type
+      activity_category
       quantity
+      stock_impact
       reference
       running_balance
     }
@@ -473,9 +475,11 @@ export const GET_PRODUCT_ACTIVITY_LIST_QUERY = gql`
         itemcode
         itemdescription
         transaction_type
+        activity_category
         transation_date
         reference
         quantity
+        stock_impact
         warehouse
         warehouseid
       }

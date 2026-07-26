@@ -24,12 +24,19 @@ const TYPE_COLOR: Record<string, string> = {
   return:     "#0d6efd",
 };
 
-const resolveColor = (type: string) => {
+// activity_category (from the backend view, driven by salemodeid) is unambiguous —
+// transaction_type alone is the salemode name for sales rows and can't be reliably
+// substring-matched (e.g. a mode literally named "Purchase Invoice" or "Credit").
+const resolveColor = (type: string, category?: string) => {
+  if (category === "purchase") return TYPE_COLOR.purchase;
+  if (category === "sale") return TYPE_COLOR.invoice;
+  if (category === "adjustment") return TYPE_COLOR.adjustment;
+  if (category === "return") return TYPE_COLOR.return;
   const key = type?.toLowerCase() ?? "";
   if (key.includes("purchase") || key.includes("receive")) return TYPE_COLOR.purchase;
+  if (key.includes("return")) return TYPE_COLOR.return;
   if (key.includes("invoice") || key.includes("sale")) return TYPE_COLOR.invoice;
   if (key.includes("adjust")) return TYPE_COLOR.adjustment;
-  if (key.includes("return")) return TYPE_COLOR.return;
   return "#6c757d";
 };
 
@@ -51,7 +58,7 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
   }
 
   const labels = data.map((d) => dayjs(Number(d.transation_date)).format("MMM DD"));
-  const pointColors = data.map((d) => resolveColor(d.transaction_type));
+  const pointColors = data.map((d) => resolveColor(d.transaction_type, d.activity_category));
 
   const chartData = {
     labels,
@@ -88,9 +95,12 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
           },
           label: (ctx) => {
             const d = data[ctx.dataIndex];
-            const sign = (d.quantity ?? 0) > 0 ? "+" : "";
+            // stock_impact is what actually moves the balance line — show that, not the
+            // raw quantity (which for sales rows is a sales delta, not a stock delta).
+            const impact = d.stock_impact ?? d.quantity ?? 0;
+            const sign = impact > 0 ? "+" : "";
             return [
-              `  ${d.transaction_type}   ${sign}${d.quantity}`,
+              `  ${d.transaction_type}   ${sign}${impact}`,
               `  Balance: ${d.running_balance}`,
             ];
           },

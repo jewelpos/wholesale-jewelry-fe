@@ -119,7 +119,9 @@ export type ProductActivityListResponseType = {
 export type ProductActivityChartPoint = {
   transation_date: string;
   transaction_type: string;
+  activity_category?: string;
   quantity: number;
+  stock_impact?: number;
   reference: string;
   running_balance: number;
 };

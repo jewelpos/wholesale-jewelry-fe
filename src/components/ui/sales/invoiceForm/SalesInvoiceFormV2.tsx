@@ -2150,7 +2150,8 @@ const SalesInvoiceFormV2 = ({
                       <input
                         type="number"
                         step="0.01"
-                        className="form-control form-control-sm text-end d-inline-block"
+                        readOnly
+                        className="form-control form-control-sm text-end d-inline-block bg-light"
                         style={{ width: 120 }}
                         {...register("amountreceived", { valueAsNumber: true })}
                       />

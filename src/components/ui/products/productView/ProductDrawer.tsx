@@ -855,7 +855,6 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
                   <div style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Sold</div>
                     <DetailRow label="Qty Sold"  value={stats?.totalsoldqty  != null ? String(stats.totalsoldqty)  : "—"} />
-                    <DetailRow label="Pcs Sold"  value={stats?.pcssold       != null ? String(stats.pcssold)       : "—"} />
                     <DetailRow label="Revenue"   value={stats?.totalsoldvalue != null ? fmt(stats.totalsoldvalue)   : "—"} />
                     {isAtLeastManager && <>
                       <DetailRow label="Cost"   value={stats?.totalsoldcost   != null ? fmt(stats.totalsoldcost)   : "—"} />

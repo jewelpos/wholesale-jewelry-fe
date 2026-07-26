@@ -5,20 +5,25 @@ import { ProductActivityChartPoint } from "@/types/product";
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
   purchase:   { label: "Purchase",   bg: "#dcfce7", border: "#86efac", text: "#166534" },
-  invoice:    { label: "Sale",       bg: "#fee2e2", border: "#fca5a5", text: "#991b1b" },
+  sale:       { label: "Sale",       bg: "#fee2e2", border: "#fca5a5", text: "#991b1b" },
   memo:       { label: "Memo",       bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e" },
   adjustment: { label: "Adjustment", bg: "#ffedd5", border: "#fdba74", text: "#9a3412" },
   return:     { label: "Return",     bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
   transfer:   { label: "Transfer",   bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8" },
 };
 
-const resolveKey = (type: string): string => {
+// activity_category comes straight from the backend view (driven by salemodeid, not
+// string-matching on the human-readable transaction_type label — a sale mode literally
+// named "Purchase Invoice" or "Credit" used to get misrouted under substring matching).
+// Older cached data without the field falls back to a best-effort guess.
+const resolveKey = (type: string, category?: string): string => {
+  if (category && TYPE_CONFIG[category]) return category;
   const lower = type?.toLowerCase() ?? "";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
-  if (lower.includes("invoice") || lower.includes("sale")) return "invoice";
-  if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("return")) return "return";
+  if (lower.includes("invoice") || lower.includes("sale")) return "sale";
+  if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("transfer")) return "transfer";
   return "adjustment";
 };
@@ -33,7 +38,7 @@ const ActivitySummaryChart = ({ data, onHandQty, availableQty }: Props) => {
   const summary = useMemo(() => {
     const map: Record<string, { txns: number; qty: number }> = {};
     for (const d of data) {
-      const key = resolveKey(d.transaction_type);
+      const key = resolveKey(d.transaction_type, d.activity_category);
       if (!map[key]) map[key] = { txns: 0, qty: 0 };
       map[key].txns += 1;
       map[key].qty += Math.abs(Number(d.quantity ?? 0));
