@@ -820,26 +820,40 @@ const PurchaseOrderForm = ({
       poshiptocountry: formData.poshiptocountry,
       poshiptophone: formData.poshiptophone,
       postatus: formData.postatus !== "" ? Number(formData.postatus) : undefined,
-      items: formData.items?.map((item, index) => ({
-        poitemid: item.poitemid,
-        itemid: item.itemid,
-        itemcode: item.itemcode != null ? String(item.itemcode) : "",
-        itemunit: item.itemunit,
-        qtyordered: isReturnOrder
-          ? -Math.abs(Number(item.qtyordered || 0))
-          : Number(item.qtyordered || 0),
-        orderunitcost: item.orderunitcost,
-        orddiscount: item.orddiscount,
-        ordextendedprice: calculateOrdExtendedPrice(
-          isReturnOrder
+      items: formData.items?.map((item) => {
+        // additionalcost/finalunitcost only get a real value once "Distribute Charges to
+        // Items" has been used. When it hasn't, default to additionalcost=0 and
+        // finalunitcost=net unit cost (post-discount) instead of leaving them null —
+        // downstream cost calculations (e.g. inventory averaging) should never see null here.
+        const rawAdditionalCost = Number(item.additionalcost);
+        const rawFinalUnitCost = Number(item.finalunitcost);
+        const hasDistributedCost = Number.isFinite(rawAdditionalCost) && rawAdditionalCost > 0;
+        const netCost = Number(item.orderunitcost || 0) * (1 - Number(item.orddiscount || 0) / 100);
+
+        return {
+          poitemid: item.poitemid,
+          itemid: item.itemid,
+          itemcode: item.itemcode != null ? String(item.itemcode) : "",
+          itemunit: item.itemunit,
+          qtyordered: isReturnOrder
             ? -Math.abs(Number(item.qtyordered || 0))
             : Number(item.qtyordered || 0),
-          item.orderunitcost,
-          item.orddiscount
-        ),
-        additionalcost: itemFields[index]?.additionalcost ?? undefined,
-        finalunitcost: itemFields[index]?.finalunitcost ?? undefined,
-      })) || [],
+          orderunitcost: item.orderunitcost,
+          orddiscount: item.orddiscount,
+          ordextendedprice: calculateOrdExtendedPrice(
+            isReturnOrder
+              ? -Math.abs(Number(item.qtyordered || 0))
+              : Number(item.qtyordered || 0),
+            item.orderunitcost,
+            item.orddiscount
+          ),
+          additionalcost: hasDistributedCost ? rawAdditionalCost : 0,
+          finalunitcost:
+            hasDistributedCost && Number.isFinite(rawFinalUnitCost) && rawFinalUnitCost > 0
+              ? rawFinalUnitCost
+              : Math.round(netCost * 1000) / 1000,
+        };
+      }) || [],
     };
 
     if (isReturnOrder) {
@@ -1462,6 +1476,14 @@ const PurchaseOrderForm = ({
                                 {...register(`items.${index}.itemid` as const, { valueAsNumber: true })}
                               />
                               <input type="hidden" {...register(`items.${index}.itemcode` as const)} />
+                              <input
+                                type="hidden"
+                                {...register(`items.${index}.additionalcost` as const, { valueAsNumber: true })}
+                              />
+                              <input
+                                type="hidden"
+                                {...register(`items.${index}.finalunitcost` as const, { valueAsNumber: true })}
+                              />
                             </td>
                             <td className="text-nowrap">{displayItemCode}</td>
                             <td>{description}</td>
