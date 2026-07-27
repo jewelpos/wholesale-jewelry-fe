@@ -1119,13 +1119,41 @@ const PurchaseOrderForm = ({
                 </div>
                 <div className="vr align-self-stretch" />
 
-                {/* Warehouse */}
+                {/* Warehouse — a return checks stock against this specific warehouse, so for
+                    returns it's a visible, changeable dropdown (defaulting to the outlet's
+                    system warehouse) instead of a hidden auto-selected value, since an item's
+                    stock may actually live under a different warehouse. */}
                 <div>
                   <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Warehouse</div>
-                  <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
-                    {currentWarehouse?.warehousename || "—"}
-                  </div>
-                  <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+                  {isReturnOrder && !disableField ? (
+                    <Controller
+                      name="warehouseid"
+                      control={control}
+                      rules={{ required: true, min: 1 }}
+                      render={({ field }) => (
+                        <select
+                          className="form-select form-select-sm"
+                          style={{ width: 180 }}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                        >
+                          <option value="">Select</option>
+                          {warehouses.map((w) => (
+                            <option key={w.warehouseid} value={w.warehouseid}>
+                              {w.warehousename}{w.issystem ? " (System)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    />
+                  ) : (
+                    <>
+                      <div className="fw-semibold" style={{ fontSize: "0.9rem", paddingTop: 6 }}>
+                        {currentWarehouse?.warehousename || "—"}
+                      </div>
+                      <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+                    </>
+                  )}
                 </div>
 
                 {/* Return order: source PO selector */}
