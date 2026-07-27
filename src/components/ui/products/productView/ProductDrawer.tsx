@@ -158,7 +158,10 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
 
   const [fetchActivity, { data: activityData, loading: activityLoading }] = useLazyQuery(
     GET_PRODUCT_ACTIVITY_CHART_QUERY,
-    { fetchPolicy: "cache-first" },
+    // network-only — this tab is opened on demand, so it should always reflect what's
+    // actually happened since (a stale cache-first result was hiding a supplier return
+    // created after the last time this item's Activity tab was viewed).
+    { fetchPolicy: "network-only" },
   );
   const chartData: ProductActivityChartPoint[] = activityData?.getProductActivityChart ?? [];
 
@@ -201,6 +204,13 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
   });
 
   const product = productData?.getProductByItemCode;
+
+  // activityLoaded only ever flips true→true once fetched — without resetting it here, a
+  // drawer instance reused for a different item (or reopened for the same item after new
+  // activity happened) would keep showing whatever was fetched the very first time.
+  useEffect(() => {
+    setActivityLoaded(false);
+  }, [itemcode]);
 
   useEffect(() => {
     if (activeTab === "activity" && !activityLoaded && product?.itemid && storeId) {
