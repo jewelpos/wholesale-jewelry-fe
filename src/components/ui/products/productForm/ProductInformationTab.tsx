@@ -648,7 +648,11 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                     { value: "Pc", label: "Pc — Piece", tooltip: "Sold by pieces (counted as individual units)" },
                     { value: "Wt", label: "Wt — Weight", tooltip: "Sold by weight (quantity entered in grams, oz, etc.)" },
                   ] as const).map(opt => {
-                    const active = field.value === opt.value;
+                    // Stored itemunit values aren't always cleanly "Pc"/"Wt" (case/whitespace
+                    // can vary depending on how the item was created) — normalize before
+                    // comparing, matching the defensive check already used elsewhere in this
+                    // file for itemunit.
+                    const active = (field.value ?? "").trim().toLowerCase() === opt.value.toLowerCase();
                     return (
                       <button
                         key={opt.value}

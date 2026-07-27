@@ -316,11 +316,15 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
 
   const profitPct = useMemo(() => {
     if (!product || !isAtLeastManager) return null;
-    const tag = parseFloat(product.itemtagprice as any);
+    // itemtagprice is deliberately marked up above the actual sell price (by the store's
+    // configured tag-price multiplier) for display/negotiation purposes — using it here
+    // wildly overstated margin (e.g. 10% actual profit showing as 1000%). Sell price is
+    // the real revenue figure.
+    const sellPrice = parseFloat(listProduct?.itemsellprice as any);
     const cost = parseFloat(product.itempurchaseprice as any);
-    if (!cost || isNaN(cost) || isNaN(tag)) return null;
-    return Math.round(((tag - cost) / cost) * 100);
-  }, [product, isAtLeastManager]);
+    if (!cost || !sellPrice || isNaN(cost) || isNaN(sellPrice)) return null;
+    return Math.round(((sellPrice - cost) / cost) * 100);
+  }, [product, listProduct, isAtLeastManager]);
 
   type StatEntry = { label: string; value: React.ReactNode; color?: string };
 
