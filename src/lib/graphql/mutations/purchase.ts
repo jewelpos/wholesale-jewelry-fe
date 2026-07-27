@@ -33,6 +33,17 @@ export const RETURN_PURCHASE_ORDER_MUTATION = gql`
   }
 `;
 
+export const CREATE_SUPPLIER_RETURN_MUTATION = gql`
+  mutation CreateSupplierReturn($input: CreateSupplierReturnInput!) {
+    createSupplierReturn(createSupplierReturnInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
 export const DELETE_PURCHASE_ORDER_MUTATION = gql`
   mutation DeletePurchaseOrder($storeid: Int!, $ponumber: Int!) {
     deletePurchaseOrder(storeid: $storeid, ponumber: $ponumber) {

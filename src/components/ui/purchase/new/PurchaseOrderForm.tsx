@@ -21,6 +21,7 @@ import {
   CREATE_PURCHASE_ORDER_MUTATION,
   EDIT_PURCHASE_ORDER_MUTATION,
   RETURN_PURCHASE_ORDER_MUTATION,
+  CREATE_SUPPLIER_RETURN_MUTATION,
 } from "@/lib/graphql/mutations/purchase";
 import {
   GET_PURCHASE_ORDER_STATUS_LIST_QUERY,
@@ -91,6 +92,10 @@ const PurchaseOrderForm = ({
 
   const [returnPurchaseOrder, { loading: returning }] = useMutation(
     RETURN_PURCHASE_ORDER_MUTATION
+  );
+
+  const [createSupplierReturn, { loading: creatingSupplierReturn }] = useMutation(
+    CREATE_SUPPLIER_RETURN_MUTATION
   );
 
   const { data: poData, loading: poLoading } = useQuery(
@@ -663,7 +668,7 @@ const PurchaseOrderForm = ({
   };
 
   const openSaveModeModalAndSubmit = async () => {
-    if (creating || updating || returning || poLoading) return;
+    if (creating || updating || returning || creatingSupplierReturn || poLoading) return;
 
     if (isReturnOrder) {
       await handleSubmit(onSubmit)();
@@ -772,6 +777,46 @@ const PurchaseOrderForm = ({
           type: NOTIFICATION_TYPES.ERROR,
         })
       );
+      return;
+    }
+
+    // A return with no PO selected isn't tied to any existing purchase order — handled by
+    // a separate mutation (createSupplierReturn) that only adjusts stock/cost, since
+    // returnPurchaseOrder requires an existing PO to modify.
+    const isStandaloneReturn =
+      isReturnOrder && !(Number.isFinite(returnOrderPoNumber) && returnOrderPoNumber > 0);
+
+    if (isStandaloneReturn) {
+      const standaloneResult = await handleTryCatch(async () => {
+        const response = await createSupplierReturn({
+          variables: {
+            input: {
+              storeid: parsedStoreId,
+              supplierid: supplierIdNumber,
+              warehouseid: warehouseIdNumber,
+              returndate: selectedDate.format("YYYY-MM-DD"),
+              remarks: formData.poremarks || undefined,
+              items: formData.items.map((item) => ({
+                itemid: Number(item.itemid),
+                itemcode: item.itemcode != null ? String(item.itemcode) : undefined,
+                qty: Math.abs(Number(item.qtyordered) || 0),
+                unitcost: Number(item.orderunitcost) || 0,
+              })),
+            },
+          },
+        });
+        const successData = response.data?.createSupplierReturn;
+        if (successData?.success) {
+          dispatch(showNotification({ message: successData.message, type: NOTIFICATION_TYPES.SUCCESS }));
+          router.back();
+        } else if (successData?.error) {
+          dispatch(showNotification({ message: successData.error, type: NOTIFICATION_TYPES.ERROR }));
+        }
+        return true;
+      });
+      if (standaloneResult.error) {
+        dispatch(showNotification({ message: standaloneResult.error, type: NOTIFICATION_TYPES.ERROR }));
+      }
       return;
     }
 
@@ -1088,7 +1133,7 @@ const PurchaseOrderForm = ({
                   <>
                     <div className="vr align-self-stretch" />
                     <div>
-                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Return for PO <span className="text-danger">*</span></div>
+                      <div className="text-uppercase fw-semibold text-muted mb-1" style={sectionLabel}>Return for PO <span className="text-muted" style={{ fontWeight: 400, textTransform: "none" }}>(optional)</span></div>
                       <SelectPurchaseOrder
                         value={returnOrderPoNumber}
                         onChange={(v: number) => setReturnOrderPoNumber(Number(v || 0))}
@@ -1096,6 +1141,9 @@ const PurchaseOrderForm = ({
                         postatus={4}
                         disableField={disableField}
                       />
+                      <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                        Leave blank for a supplier return not tied to a specific PO.
+                      </div>
                     </div>
                   </>
                 )}
@@ -1959,7 +2007,7 @@ const PurchaseOrderForm = ({
         ) : (
           <ActionFooter handleCancel={handleCancel}>
             <ButtonLoader
-              loading={creating || updating || returning || poLoading}
+              loading={creating || updating || returning || creatingSupplierReturn || poLoading}
               btnText={isEdit ? "Update" : "Save"}
               loadingText={isEdit ? "Updating ..." : "Saving ..."}
               type="button"
