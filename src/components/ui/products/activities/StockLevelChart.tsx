@@ -18,10 +18,13 @@ import { ProductActivityChartPoint } from "@/types/product";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 const TYPE_COLOR: Record<string, string> = {
-  purchase:   "#198754",
-  invoice:    "#dc3545",
-  adjustment: "#fd7e14",
-  return:     "#0d6efd",
+  purchase:        "#198754",
+  invoice:         "#dc3545",
+  adjustment:      "#fd7e14",
+  // Sales return (stock IN) and supplier return (stock OUT) move stock in opposite
+  // directions — kept visually distinct rather than one shared "return" color.
+  sales_return:    "#0d6efd",
+  supplier_return: "#d97706",
 };
 
 // activity_category (from the backend view, driven by salemodeid) is unambiguous —
@@ -31,10 +34,12 @@ const resolveColor = (type: string, category?: string) => {
   if (category === "purchase") return TYPE_COLOR.purchase;
   if (category === "sale") return TYPE_COLOR.invoice;
   if (category === "adjustment") return TYPE_COLOR.adjustment;
-  if (category === "return") return TYPE_COLOR.return;
+  if (category === "sales_return") return TYPE_COLOR.sales_return;
+  if (category === "supplier_return") return TYPE_COLOR.supplier_return;
   const key = type?.toLowerCase() ?? "";
   if (key.includes("purchase") || key.includes("receive")) return TYPE_COLOR.purchase;
-  if (key.includes("return")) return TYPE_COLOR.return;
+  if (key.includes("supplier") && key.includes("return")) return TYPE_COLOR.supplier_return;
+  if (key.includes("return")) return TYPE_COLOR.sales_return;
   if (key.includes("invoice") || key.includes("sale")) return TYPE_COLOR.invoice;
   if (key.includes("adjust")) return TYPE_COLOR.adjustment;
   return "#6c757d";
@@ -130,7 +135,7 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
             {Object.entries(TYPE_COLOR).map(([type, color]) => (
               <span key={type} className="d-flex align-items-center gap-1" style={{ fontSize: 11, color: "#475569" }}>
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: color, display: "inline-block" }} />
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {type.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
               </span>
             ))}
           </div>

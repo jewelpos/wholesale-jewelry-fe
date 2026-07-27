@@ -5,12 +5,15 @@ import dayjs from "dayjs";
 import { ProductActivityChartPoint } from "@/types/product";
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; border: string; text: string; label: string; icon: string }> = {
-  purchase:   { color: "#198754", bg: "#dcfce7", border: "#86efac", text: "#166534", label: "Purchase",   icon: "↓" },
-  sale:       { color: "#dc3545", bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", label: "Sale",       icon: "↑" },
-  memo:       { color: "#0891b2", bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e", label: "Memo",       icon: "✎" },
-  adjustment: { color: "#fd7e14", bg: "#ffedd5", border: "#fdba74", text: "#9a3412", label: "Adjustment", icon: "~" },
-  return:     { color: "#0d6efd", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af", label: "Return",     icon: "↩" },
-  transfer:   { color: "#7c3aed", bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8", label: "Transfer",   icon: "⇄" },
+  purchase:        { color: "#198754", bg: "#dcfce7", border: "#86efac", text: "#166534", label: "Purchase",       icon: "↓" },
+  sale:             { color: "#dc3545", bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", label: "Sale",           icon: "↑" },
+  memo:             { color: "#0891b2", bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e", label: "Memo",           icon: "✎" },
+  adjustment:       { color: "#fd7e14", bg: "#ffedd5", border: "#fdba74", text: "#9a3412", label: "Adjustment",     icon: "~" },
+  // Sales return (stock IN) and supplier return (stock OUT) move stock in opposite
+  // directions — kept visually and categorically distinct rather than one shared "Return".
+  sales_return:     { color: "#0d6efd", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af", label: "Sales Return",    icon: "↩" },
+  supplier_return:  { color: "#d97706", bg: "#fef3c7", border: "#fcd34d", text: "#92400e", label: "Supplier Return", icon: "↪" },
+  transfer:         { color: "#7c3aed", bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8", label: "Transfer",       icon: "⇄" },
 };
 
 // activity_category comes straight from the backend view (driven by salemodeid, not
@@ -21,7 +24,8 @@ const resolveKey = (type: string, category?: string): string => {
   const lower = type?.toLowerCase() ?? "";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
-  if (lower.includes("return")) return "return";
+  if (lower.includes("supplier") && lower.includes("return")) return "supplier_return";
+  if (lower.includes("return")) return "sales_return";
   if (lower.includes("invoice") || lower.includes("sale")) return "sale";
   if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("transfer")) return "transfer";

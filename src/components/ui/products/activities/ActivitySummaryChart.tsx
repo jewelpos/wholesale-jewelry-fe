@@ -4,12 +4,16 @@ import React, { useMemo } from "react";
 import { ProductActivityChartPoint } from "@/types/product";
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  purchase:   { label: "Purchase",   bg: "#dcfce7", border: "#86efac", text: "#166534" },
-  sale:       { label: "Sale",       bg: "#fee2e2", border: "#fca5a5", text: "#991b1b" },
-  memo:       { label: "Memo",       bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e" },
-  adjustment: { label: "Adjustment", bg: "#ffedd5", border: "#fdba74", text: "#9a3412" },
-  return:     { label: "Return",     bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
-  transfer:   { label: "Transfer",   bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8" },
+  purchase:        { label: "Purchase",       bg: "#dcfce7", border: "#86efac", text: "#166534" },
+  sale:             { label: "Sale",           bg: "#fee2e2", border: "#fca5a5", text: "#991b1b" },
+  memo:             { label: "Memo",           bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e" },
+  adjustment:       { label: "Adjustment",     bg: "#ffedd5", border: "#fdba74", text: "#9a3412" },
+  // Sales return (customer gives stock back — stock IN) and supplier return (we give stock
+  // back to the supplier — stock OUT) move stock in opposite directions, so they get
+  // separate cards instead of one combined "Return" total that would mean nothing.
+  sales_return:     { label: "Sales Return",    bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
+  supplier_return:  { label: "Supplier Return", bg: "#fef3c7", border: "#fcd34d", text: "#92400e" },
+  transfer:         { label: "Transfer",       bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8" },
 };
 
 // activity_category comes straight from the backend view (driven by salemodeid, not
@@ -21,7 +25,8 @@ const resolveKey = (type: string, category?: string): string => {
   const lower = type?.toLowerCase() ?? "";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
-  if (lower.includes("return")) return "return";
+  if (lower.includes("supplier") && lower.includes("return")) return "supplier_return";
+  if (lower.includes("return")) return "sales_return";
   if (lower.includes("invoice") || lower.includes("sale")) return "sale";
   if (lower.includes("adjust")) return "adjustment";
   if (lower.includes("transfer")) return "transfer";
