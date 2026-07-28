@@ -2,7 +2,7 @@ export type MenuAction = {
   actionid: number;
   actionname: string;
   actionorder: number;
-  actionparentId: number;
+  actionparentid: number;
   actiondescription: string;
   actiondisplayname: string;
 };
@@ -58,23 +58,29 @@ export type AddUserMenuAction = {
 
 export type AddUserMenuChildType = {
   permissionid: number;
-  permissionname: number;
+  permissionname: string;
   permissiondisplayname: string;
   permissiondescription: string;
   parentid: number;
   storemenuid: number;
   permissionorder: number;
   storetypeid: number;
-  packageid: number;
+  packageid: string;
   permissionparentid: number;
-  rolesnotallowed: number;
+  rolesnotallowed: number[];
   action: AddUserMenuAction[];
   status?: "SELECTED" | "SELECTABLE" | "NOT_ALLOWED";
 };
 
 export type AddUserMenuType = {
   permissiondisplayname: string;
-  permissionid: number;
+  // The section's storemenu.menuid — derived (both on the candidate list and on
+  // save) from the storemenu PARENT of each child permission's own storemenu row,
+  // never from permissions.permissionid or permissiondisplayname. Those live in a
+  // separate, independently-numbered/named hierarchy that only coincidentally
+  // lines up with storemenu for a few sections, so matching on them silently
+  // breaks header-to-header matching for every other section.
+  permissionid: number | null;
   storetypeid: number;
   children: AddUserMenuChildType[];
 };
@@ -89,7 +95,7 @@ export type AddUserPermissionType = {
 export type UsersListChildMenuType = {
   name: string;
   action: MenuAction[];
-  menuid: number;
+  storemenuid: number;
   roleid: number;
   iconurl: string;
   menuurl: string;
@@ -115,6 +121,8 @@ export type UsersListMenuType = {
   slugname: string;
   menuorder: number;
   storetypeid: number;
+  permissionid: number | null;
+  permissiondisplayname: string;
   children: UsersListChildMenuType[];
 };
 

@@ -105,11 +105,11 @@ const UserPermissionInputs = ({
   };
 
   const toggleAction = (
-    menuId: number,
+    menuPermissionId: number | null,
     permissionId: number,
     action: AddUserMenuAction
   ) => {
-    const menu = permittedMenus.find((m) => m.permissionid === menuId);
+    const menu = permittedMenus.find((m) => m.permissionid === menuPermissionId);
     const perm = menu?.children?.find((p) => p.permissionid === permissionId);
     if (!perm) return;
     const actionIndex = perm.action?.findIndex(
@@ -121,7 +121,7 @@ const UserPermissionInputs = ({
       const newPerm = { ...perm, action: newActions };
       setPermittedMenus((prev) =>
         prev.map((m) =>
-          m.permissionid === menuId
+          m.permissionid === menuPermissionId
             ? {
                 ...m,
                 children: m.children.map((p) =>
@@ -137,7 +137,7 @@ const UserPermissionInputs = ({
       const newPerm = { ...perm, action: newActions };
       setPermittedMenus((prev) =>
         prev.map((m) =>
-          m.permissionid === menuId
+          m.permissionid === menuPermissionId
             ? {
                 ...m,
                 children: m.children.map((p) =>

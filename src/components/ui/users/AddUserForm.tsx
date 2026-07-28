@@ -26,7 +26,7 @@ import UserRolesAndPermissionsInputs from "./UserRolesAndPermissionsInputs";
 import { RolesType } from "@/types/role";
 import { GET_ROLES_QUERY } from "@/lib/graphql/query/role";
 import { GET_PERMISSION_QUERY } from "@/lib/graphql/query/permission";
-import { AddUserMenusType, AddUserPermissionType, UsersListChildMenuType, UsersListMenuType } from "@/types/permissions";
+import { AddUserMenusType, AddUserPermissionType, UsersListMenuType } from "@/types/permissions";
 import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
@@ -86,6 +86,7 @@ const AddUserForm = () => {
   const { data: userData } = useQuery(GET_USER_QUERY, {
     variables: { id: parsedUserId },
     skip: !parsedUserId,
+    fetchPolicy: 'network-only',
   });
   const permissions: AddUserPermissionType | undefined =
     permissionData?.getPermissionList?.data[0];
@@ -211,37 +212,34 @@ const AddUserForm = () => {
         roleid: user.roleid,
         storeid: parsedStoreId,
       });
+      // The saved permissions tree is already correctly grouped by storemenu
+      // hierarchy (each child's parentid matches its wrapper's menuid) — map it
+      // directly instead of re-grouping by permissionparentid, which reflects a
+      // different (and sometimes divergent) hierarchy and previously produced
+      // mismatched groupings.
       const rawMenus: UsersListMenuType[] = user.userpermissions?.[0]?.menus ?? [];
-      const childrenByParent = new Map<number, UsersListChildMenuType[]>();
-      rawMenus.forEach((menu: UsersListMenuType) => {
-        (menu.children ?? []).forEach((child: UsersListChildMenuType) => {
-          const ppid = child.permissionparentid;
-          if (ppid != null) {
-            if (!childrenByParent.has(ppid)) childrenByParent.set(ppid, []);
-            childrenByParent.get(ppid)!.push(child);
-          }
-        });
-      });
-      const normalizedMenus: AddUserMenusType = Array.from(childrenByParent.entries()).map(([ppid, children]) => ({
-        permissionid: ppid,
-        permissiondisplayname: '',
-        storetypeid: children[0]?.storetypeid ?? 1,
-        children: children.map(c => ({
-          permissionid: c.permissionid,
-          permissionname: 0,
-          permissiondisplayname: c.permissiondisplayname,
-          permissiondescription: c.permissiondescription ?? '',
-          parentid: c.parentid ?? 0,
-          storemenuid: c.menuid,
-          permissionorder: c.permissionorder ?? 0,
-          storetypeid: c.storetypeid,
-          packageid: 0,
-          permissionparentid: c.permissionparentid,
-          rolesnotallowed: 0,
-          action: [],
-          status: 'SELECTED' as const,
-        })),
-      }));
+      const normalizedMenus: AddUserMenusType = rawMenus
+        .filter((menu) => (menu.children ?? []).length > 0)
+        .map((menu) => ({
+          permissionid: menu.permissionid,
+          permissiondisplayname: menu.permissiondisplayname ?? '',
+          storetypeid: menu.storetypeid,
+          children: menu.children.map((c) => ({
+            permissionid: c.permissionid,
+            permissionname: c.permissionname,
+            permissiondisplayname: c.permissiondisplayname,
+            permissiondescription: c.permissiondescription ?? '',
+            parentid: c.parentid ?? 0,
+            storemenuid: c.storemenuid,
+            permissionorder: c.permissionorder ?? 0,
+            storetypeid: c.storetypeid,
+            packageid: c.packageid,
+            permissionparentid: c.permissionparentid,
+            rolesnotallowed: [],
+            action: c.action ?? [],
+            status: 'SELECTED' as const,
+          })),
+        }));
       setPermittedMenus(normalizedMenus);
     }
   }, [reset, userData, parsedStoreId]);

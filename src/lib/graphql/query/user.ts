@@ -80,6 +80,12 @@ export const GET_USER_QUERY = gql`
         roleid
         rolename
         menus {
+          menuid
+          iconurl
+          menuurl
+          menuname
+          slugname
+          menuorder
           storetypeid
           permissionid
           permissiondisplayname
