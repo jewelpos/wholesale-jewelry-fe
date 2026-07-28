@@ -23,6 +23,7 @@ import {
   Bell,
   StickyNote,
   UserCheck,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ interface Props {
   warehouseId: string;
   status: number;
   custalert: number;
+  marketingoptin: number;
   disableField?: boolean;
 }
 
@@ -59,6 +61,7 @@ const CustomerInputsB = ({
   warehouseId,
   status,
   custalert,
+  marketingoptin,
   disableField,
 }: Props) => {
   return (
@@ -332,6 +335,56 @@ const CustomerInputsB = ({
           {errors.custalertremarks && (
             <div className="invalid-feedback">{errors.custalertremarks.message}</div>
           )}
+        </div>
+      </div>
+
+      {/* Marketing */}
+      <SectionLabel label="Marketing" icon={Mail} />
+      <div className="row">
+        <div className="col-12 mb-3">
+          <div
+            style={{
+              background: marketingoptin === 1 ? "#f0fdf4" : "#f8f9fa",
+              border: `1px solid ${marketingoptin === 1 ? "#bbf7d0" : "#dee2e6"}`,
+              borderRadius: 8,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "background 0.2s, border-color 0.2s",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: marketingoptin === 1 ? "#15803d" : "#6c757d",
+                }}
+              >
+                {marketingoptin === 1 ? "Subscribed" : "Not Subscribed"}
+              </div>
+              <div style={{ fontSize: 11, color: marketingoptin === 1 ? "#4ade80" : "#adb5bd", marginTop: 1 }}>
+                Customer has agreed to receive marketing emails about new products
+              </div>
+            </div>
+            <div className="form-check form-switch mb-0">
+              <Controller
+                name="marketingoptin"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    style={{ width: 42, height: 22, cursor: "pointer" }}
+                    checked={Number(field.value) === 1}
+                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)}
+                  />
+                )}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

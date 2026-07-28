@@ -174,6 +174,7 @@ export type CustomersListType = {
   custzip: string;
   custaddress: string;
   hasdocuments?: number;
+  marketingoptin?: number;
 };
 
 export type CustomersListResponseType = {
@@ -213,6 +214,7 @@ export type CustomerFormType = {
   file: any;
   custalert: number;
   default_salesrep_userid?: number | null;
+  marketingoptin: number;
 };
 
 export type CustomerType = {
@@ -244,6 +246,7 @@ export type CustomerType = {
   custalertremarks: string;
   custphotopath: string;
   custalert: number;
+  marketingoptin?: number;
 }
 
 export type CheckOnHandType={

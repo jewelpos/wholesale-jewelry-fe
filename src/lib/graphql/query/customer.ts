@@ -290,6 +290,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
         warehouseid
         outletid
         hasdocuments
+        marketingoptin
       }
     }
   }
@@ -351,6 +352,7 @@ export const GET_CUSTOMER_QUERY = gql`
       custphotopath
       custalert
       default_salesrep_userid
+      marketingoptin
     }
   }
 `;

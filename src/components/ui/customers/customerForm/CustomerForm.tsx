@@ -76,12 +76,14 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
       customerid: "",
       custalert: 0,
       default_salesrep_userid: null,
+      marketingoptin: 0,
     },
   });
   const storeId = getValues("storeid");
   const warehouseId = getValues("warehouseid");
   const status = watch("status");
   const custalert = watch("custalert");
+  const marketingoptin = watch("marketingoptin");
   const photoPath = getValues("custphotopath");
   const customerid = getValues("customerid");
   const [loading, setLoading] = useState(false);
@@ -299,6 +301,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                       warehouseId={warehouseId}
                       status={status}
                       custalert={custalert}
+                      marketingoptin={marketingoptin}
                       disableField={disableField}
                     />
                   </div>
