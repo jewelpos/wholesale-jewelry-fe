@@ -32,7 +32,7 @@ interface PromotionFormProps {
 }
 
 const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
-  const { storeId: storeIdParam, outletId } = useParams();
+  const { storePrefix, storeId: storeIdParam, outletId } = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -158,7 +158,7 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
       dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
     } else {
       dispatch(showNotification({ message: isEdit ? "Promotion updated" : "Promotion created", type: NOTIFICATION_TYPES.SUCCESS }));
-      router.push(`/jw/${storeIdParam}/${outletId}/products/promotions`);
+      router.push(`/${storePrefix}/${storeIdParam}/${outletId}/products/promotions`);
     }
   };
 

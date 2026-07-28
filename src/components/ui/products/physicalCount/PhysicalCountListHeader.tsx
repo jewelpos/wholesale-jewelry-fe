@@ -2,14 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ClipboardPlus } from "lucide-react";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 const PhysicalCountListHeader = () => {
-  const params = useParams();
-  const storeId = params.storeId as string;
-  const outletId = params.outletId as string;
-  const base = `/jw/${storeId}/${outletId}/products/physical_count`;
+  const { basePath } = useDefaultRoute();
+  const base = `${basePath}/products/physical_count`;
 
   return (
     <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">

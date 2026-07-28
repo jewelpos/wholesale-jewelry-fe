@@ -118,7 +118,7 @@ const TierRow = ({
 
 // ─── Main Component ─────────────────────────────────────────
 const CommissionRatesComponent = () => {
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storePrefix, storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const router = useRouter();
@@ -302,7 +302,7 @@ const CommissionRatesComponent = () => {
           <button
             type="button"
             onClick={() =>
-              router.push(`/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`)
+              router.push(`/${storePrefix}/${storeIdParam}/${outletIdParam}/settings/system_settings`)
             }
             style={{
               background: "none",

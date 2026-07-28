@@ -1,6 +1,9 @@
 import React, { useState, useRef } from "react";
 import Image from "next/image";
 import { PlusCircle } from "react-feather";
+import { useAppDispatch } from "@/lib/store/hook";
+import { showNotification } from "@/lib/store/slice/notificationSlice";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 
 interface ImageCaptureUploadProps {
   value?: File | null;
@@ -21,6 +24,7 @@ const ImageCaptureUpload: React.FC<ImageCaptureUploadProps> = ({
   );
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const dispatch = useAppDispatch();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,7 +44,7 @@ const ImageCaptureUpload: React.FC<ImageCaptureUploadProps> = ({
       }
       streamRef.current = stream;
     } catch (err) {
-      alert("Unable to access camera.");
+      dispatch(showNotification({ message: "Unable to access camera.", type: NOTIFICATION_TYPES.ERROR }));
       setShowCamera(false);
     }
   };

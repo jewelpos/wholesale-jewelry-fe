@@ -46,7 +46,7 @@ const CustomerIntelligence = ({ agingRows, customerRows, loading }: Props) => {
       .slice(0, 10),
   [agingRows]);
 
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
 
   const agingData = {
     labels: ["0-30d", "31-60d", "61-90d", "91-120d", "120d+"],
@@ -148,7 +148,7 @@ const CustomerIntelligence = ({ agingRows, customerRows, loading }: Props) => {
                     <tr key={c.customerid}>
                       <td style={{ color: i < 3 ? "#f59e0b" : "var(--text-tertiary)", fontWeight: 700, fontSize: 10 }}>{i + 1}</td>
                       <td>
-                        <Link href={`/jw/${storeId}/${outletId}/customers/${c.customerid}/view`} style={{ fontSize: 11, color: "#6366f1", textDecoration: "none", fontWeight: 600 }}>
+                        <Link href={`/${storePrefix}/${storeId}/${outletId}/customers/${c.customerid}/view`} style={{ fontSize: 11, color: "#6366f1", textDecoration: "none", fontWeight: 600 }}>
                           {c.custcompanyname || c.fullname || "—"}
                         </Link>
                       </td>
@@ -163,7 +163,7 @@ const CustomerIntelligence = ({ agingRows, customerRows, loading }: Props) => {
                     <tr key={`${c.customerid}-${i}`}>
                       <td style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{i + 1}</td>
                       <td>
-                        <Link href={`/jw/${storeId}/${outletId}/customers/${c.customerid}/view`} style={{ fontSize: 11, color: "#f43f5e", textDecoration: "none", fontWeight: 600 }}>
+                        <Link href={`/${storePrefix}/${storeId}/${outletId}/customers/${c.customerid}/view`} style={{ fontSize: 11, color: "#f43f5e", textDecoration: "none", fontWeight: 600 }}>
                           {c.companyname || c.customername || "—"}
                         </Link>
                       </td>

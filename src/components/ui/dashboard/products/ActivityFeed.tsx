@@ -25,7 +25,7 @@ const timeAgo = (dateStr: string | null | undefined): string => {
 };
 
 const ActivityFeed = ({ products, loading: productsLoading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
   const [tab, setTab] = useState<Tab>("adjustments");
   const [topMoversN, setTopMoversN] = useState<"top" | "bottom">("top");
@@ -124,7 +124,7 @@ const ActivityFeed = ({ products, loading: productsLoading }: Props) => {
                   <div className="flex-grow-1 min-w-0">
                     <div className="d-flex justify-content-between align-items-center">
                       <Link
-                        href={`/jw/${storeId}/${outletId}/products/${adj.itemcode}/view`}
+                        href={`/${storePrefix}/${storeId}/${outletId}/products/${adj.itemcode}/view`}
                         className="fw-semibold text-decoration-none"
                         style={{ fontSize: 12, color: "#6366f1" }}
                       >
@@ -229,7 +229,7 @@ const ActivityFeed = ({ products, loading: productsLoading }: Props) => {
                     <div className="flex-grow-1 min-w-0">
                       <div className="d-flex justify-content-between align-items-center">
                         <Link
-                          href={`/jw/${storeId}/${outletId}/products/${p.itemcode}/view`}
+                          href={`/${storePrefix}/${storeId}/${outletId}/products/${p.itemcode}/view`}
                           className="fw-semibold text-decoration-none"
                           style={{ fontSize: 12, color: "#6366f1" }}
                         >

@@ -16,7 +16,7 @@ import ButtonLoader from "@/components/ui/ButtonLoader";
 interface ProductAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (updated?: { itemid: number; itemquantityinhand: number }) => void;
   productData?: ProductListType | null;
 }
 
@@ -37,6 +37,9 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const [loading, setLoading] = useState(false);
+  // Mirrors the "Adjusted Quantity" input's raw text so an in-progress "-" (before any
+  // digits follow it) isn't clobbered by react-hook-form's numeric value on re-render.
+  const [adjustQtyText, setAdjustQtyText] = useState("0");
 
   const [adjustProduct] = useMutation(ADJUST_PRODUCT_MUTATION);
 
@@ -61,12 +64,14 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
     if (isOpen && productData) {
       // Pre-fill form with product data
       setValue("warehouseid", productData.itemwarehouseid || 0);
+      setAdjustQtyText("0");
     } else if (isOpen) {
       // Reset form for new adjustment
       reset({
         newquantity: 0,
         warehouseid: 0,
       });
+      setAdjustQtyText("0");
     }
   }, [isOpen, productData, setValue, reset]);
 
@@ -83,7 +88,10 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
         updateremarks: data.updateremarks,
       };
       if (data.newquantity !== 0) {
-        adjustInput.newquantity = data.newquantity;
+        // Backend expects the absolute resulting quantity, not the typed delta —
+        // the form's "Adjusted Quantity" field is a +/- delta on top of current stock.
+        adjustInput.newquantity =
+          (productData.itemquantityinhand || 0) + data.newquantity;
       }
       if (data.newcost !== 0) {
         adjustInput.newcost = data.newcost;
@@ -100,7 +108,17 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
             type: NOTIFICATION_TYPES.SUCCESS,
           })
         );
-        onSuccess();
+        // Echo the already-known resulting quantity straight into the grid row instead
+        // of refetching the whole list — same instant-update feel as Gmail's read/star toggles.
+        onSuccess(
+          typeof adjustInput.productid === "number"
+            ? {
+                itemid: adjustInput.productid,
+                itemquantityinhand:
+                  adjustInput.newquantity ?? productData.itemquantityinhand ?? 0,
+              }
+            : undefined
+        );
         onClose();
       }
       return true;
@@ -173,14 +191,30 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
                   }}
                   render={({ field }) => (
                     <Form.Control
-                      {...field}
-                      type="number"
+                      name={field.name}
+                      ref={field.ref}
+                      // type="text" (not "number") — a native number input reports an
+                      // empty value for an in-progress "-", so parsing it immediately
+                      // snapped the field back to 0 and the minus sign could never be typed.
+                      type="text"
+                      inputMode="decimal"
                       step="1"
-                      placeholder="Enter adjusted quantity"
+                      placeholder="Enter adjusted quantity (+/-)"
                       isInvalid={!!errors.newquantity}
+                      value={adjustQtyText}
                       onChange={(e) => {
-                        field.onChange(parseFloat(e.target.value) || 0);
+                        const raw = e.target.value;
+                        if (raw !== "" && raw !== "-" && !/^-?\d*\.?\d*$/.test(raw)) {
+                          return;
+                        }
+                        setAdjustQtyText(raw);
+                        const parsed = parseFloat(raw);
+                        field.onChange(Number.isNaN(parsed) ? 0 : parsed);
                         trigger(["newquantity", "newcost"]);
+                      }}
+                      onBlur={() => {
+                        field.onBlur();
+                        setAdjustQtyText(String(field.value || 0));
                       }}
                     />
                   )}

@@ -3,6 +3,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Camera, User, ImagePlus, Video } from "lucide-react";
+import { useAppDispatch } from "@/lib/store/hook";
+import { showNotification } from "@/lib/store/slice/notificationSlice";
+import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 
 interface AvatarUploadProps {
   value?: File | string | null;
@@ -30,6 +33,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -59,7 +63,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
       if (videoRef.current) videoRef.current.srcObject = stream;
       streamRef.current = stream;
     } catch {
-      alert("Unable to access camera.");
+      dispatch(showNotification({ message: "Unable to access camera.", type: NOTIFICATION_TYPES.ERROR }));
       setShowCamera(false);
     }
   };

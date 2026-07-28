@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 type Payment = {
@@ -40,6 +41,7 @@ const RecentPayments = ({
   storeId,
   outletId,
 }: Props) => {
+  const { storePrefix } = useParams();
   return (
     <div className="card h-100" style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-card)" }}>
       <div className="card-body">
@@ -51,7 +53,7 @@ const RecentPayments = ({
             </div>
           </div>
           <Link
-            href={`/jw/${storeId}/${outletId}/customers/applied_payments?customerid=${customerId}`}
+            href={`/${storePrefix}/${storeId}/${outletId}/customers/applied_payments?customerid=${customerId}`}
             className="small text-decoration-none"
           >
             View all →

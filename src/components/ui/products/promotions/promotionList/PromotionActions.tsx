@@ -7,6 +7,7 @@ import { useMutation } from "@apollo/client";
 import { useDispatch } from "react-redux";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 import { DELETE_PROMOTION_MUTATION, TOGGLE_PROMOTION_ACTIVE_MUTATION } from "@/lib/graphql/mutations/promotions";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
@@ -17,7 +18,7 @@ interface Props {
 }
 
 const PromotionActions: React.FC<Props> = ({ data, onRefresh }) => {
-  const { storeId: storeIdParam, outletId } = useParams();
+  const { storePrefix, storeId: storeIdParam, outletId } = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -26,7 +27,7 @@ const PromotionActions: React.FC<Props> = ({ data, onRefresh }) => {
   const [toggleActive] = useMutation(TOGGLE_PROMOTION_ACTIVE_MUTATION);
 
   const handleEdit = () =>
-    router.push(`/jw/${storeIdParam}/${outletId}/products/promotions/${data.promotionid}/edit`);
+    router.push(`/${storePrefix}/${storeIdParam}/${outletId}/products/promotions/${data.promotionid}/edit`);
 
   const handleToggle = async () => {
     const result = await handleTryCatch(async () => {
@@ -38,7 +39,11 @@ const PromotionActions: React.FC<Props> = ({ data, onRefresh }) => {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete promotion "${data.promotionname}"?`)) return;
+    const confirmResult = await showConfirmationDialog({
+      title: `Delete promotion "${data.promotionname}"?`,
+      confirmButtonText: "Yes, delete it!",
+    });
+    if (!confirmResult.isConfirmed) return;
     const result = await handleTryCatch(async () => {
       await deletePromotion({ variables: { storeid: parsedStoreId, promotionid: data.promotionid } });
       return true;

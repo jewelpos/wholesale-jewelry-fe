@@ -3,11 +3,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const NewExpenseRedirect = () => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const router = useRouter();
   useEffect(() => {
-    router.replace(`/jw/${storeId}/${outletId}/accounts/expense_list`);
-  }, [storeId, outletId, router]);
+    router.replace(`/${storePrefix}/${storeId}/${outletId}/accounts/expense_list`);
+  }, [storePrefix, storeId, outletId, router]);
   return null;
 };
 

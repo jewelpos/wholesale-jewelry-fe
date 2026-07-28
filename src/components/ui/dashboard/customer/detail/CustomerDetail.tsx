@@ -174,20 +174,20 @@ const CustomerDetail = () => {
       {/* Top nav */}
       <div className="d-flex align-items-center justify-content-between flex-wrap mb-3 gap-2">
         <Link
-          href={`/jw/${parsedStoreId}/${parsedOutletId}/dashboard/customer`}
+          href={`/${params.storePrefix}/${parsedStoreId}/${parsedOutletId}/dashboard/customer`}
           className="d-inline-flex align-items-center text-decoration-none small text-muted"
         >
           <ArrowLeft size={14} className="me-1" /> Back to dashboard
         </Link>
         <div className="d-flex gap-2">
           <Link
-            href={`/jw/${parsedStoreId}/${parsedOutletId}/customers/${parsedCustomerId}/edit`}
+            href={`/${params.storePrefix}/${parsedStoreId}/${parsedOutletId}/customers/${parsedCustomerId}/edit`}
             className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
           >
             <Edit2 size={13} /> Edit
           </Link>
           <Link
-            href={`/jw/${parsedStoreId}/${parsedOutletId}/customers/applied_payments?customerid=${parsedCustomerId}`}
+            href={`/${params.storePrefix}/${parsedStoreId}/${parsedOutletId}/customers/applied_payments?customerid=${parsedCustomerId}`}
             className="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
           >
             <DollarSign size={13} /> Record Payment

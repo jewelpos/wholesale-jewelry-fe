@@ -10,7 +10,9 @@ import { GET_PHYSICAL_COUNT_BATCH_ITEMS_QUERY } from "@/lib/graphql/query/physic
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 interface RowData {
   batchid: number;
@@ -63,20 +65,26 @@ const exportToCSV = (batchnumber: string, items: Record<string, unknown>[]) => {
 const PhysicalCountActions = ({ data, onRefresh }: { data: RowData; onRefresh?: () => void }) => {
   const params = useParams();
   const storeId = params.storeId as string;
-  const outletId = params.outletId as string;
   const dispatch = useAppDispatch();
+  const { basePath } = useDefaultRoute();
   const [cancelBatch] = useMutation(CANCEL_PHYSICAL_COUNT_MUTATION);
   const [fetchItems] = useLazyQuery(GET_PHYSICAL_COUNT_BATCH_ITEMS_QUERY);
   const [exporting, setExporting] = useState(false);
 
-  const base = `/jw/${storeId}/${outletId}/products/physical_count`;
+  const base = `${basePath}/products/physical_count`;
   const status = (data.countstatus ?? "").toUpperCase();
   const isPosted = status === "POSTED";
   const isCancelled = status === "CANCELLED";
-  const isActive = status === "OPEN" || status === "REVIEW" || status === "APPROVED";
+  const isReviewOrApproved = status === "REVIEW" || status === "APPROVED";
+  const isActive = status === "OPEN" || isReviewOrApproved;
 
   const handleCancel = async () => {
-    if (!confirm(`Cancel batch ${data.batchnumber}? This cannot be undone.`)) return;
+    const result = await showConfirmationDialog({
+      title: `Cancel batch ${data.batchnumber}?`,
+      text: "This cannot be undone.",
+      confirmButtonText: "Yes, cancel it!",
+    });
+    if (!result.isConfirmed) return;
     try {
       const res = await cancelBatch({ variables: { storeid: parseInt(storeId), batchid: data.batchid } });
       if (res.data?.cancelPhysicalCount?.success) {
@@ -109,9 +117,13 @@ const PhysicalCountActions = ({ data, onRefresh }: { data: RowData; onRefresh?: 
     }
   };
 
+  // A batch already past counting (REVIEW/APPROVED) needs the review screen — that's
+  // where Approve/Post live — not the count entry screen it's done with.
   const viewOrCountItem: RowActionItem = isPosted || isCancelled
     ? { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${base}/${data.batchid}/view` }
-    : { key: 'count', label: 'Count', icon: <ClipboardList size={14} />, href: `${base}/${data.batchid}/count` };
+    : isReviewOrApproved
+      ? { key: 'review', label: 'Review', icon: <Eye size={14} />, href: `${base}/${data.batchid}/review` }
+      : { key: 'count', label: 'Count', icon: <ClipboardList size={14} />, href: `${base}/${data.batchid}/count` };
 
   const items: RowActionItem[] = [
     viewOrCountItem,
@@ -123,6 +135,10 @@ const PhysicalCountActions = ({ data, onRefresh }: { data: RowData; onRefresh?: 
     <RowActionsWrapper items={items}>
       {isPosted || isCancelled ? (
         <Link className="p-1" href={`${base}/${data.batchid}/view`} title="View">
+          <Eye size={14} />
+        </Link>
+      ) : isReviewOrApproved ? (
+        <Link className="p-1" href={`${base}/${data.batchid}/review`} title="Review">
           <Eye size={14} />
         </Link>
       ) : (

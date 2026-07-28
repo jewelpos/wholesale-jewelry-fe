@@ -142,7 +142,7 @@ const StoreDropdown = ({ storeLoading }: Props) => {
                           return (
                             <Dropdown.Item
                               as={Link}
-                              href={`/jw/${str.storeid}/${o.outletid}${urlAfterStoreIdAndOutletId}`}
+                              href={`/${str.routeprefix || "jw"}/${str.storeid}/${o.outletid}${urlAfterStoreIdAndOutletId}`}
                               key={o.outletid}
                               className={active ? "active" : ""}
                             >

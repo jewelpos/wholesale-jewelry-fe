@@ -10,7 +10,7 @@ import { getPromotionColumnDefs } from "./ColumnDef";
 import PromotionActions from "./PromotionActions";
 
 const PromotionListComponent = () => {
-  const { storeId: storeIdParam, outletId } = useParams();
+  const { storePrefix, storeId: storeIdParam, outletId } = useParams();
   const router = useRouter();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const gridRef = useRef<AgGridReact>(null);
@@ -40,7 +40,7 @@ const PromotionListComponent = () => {
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            onClick={() => router.push(`/jw/${storeIdParam}/${outletId}/products/promotions/new`)}
+            onClick={() => router.push(`/${storePrefix}/${storeIdParam}/${outletId}/products/promotions/new`)}
           >
             <PlusCircle size={14} style={{ marginRight: 5 }} />
             New Promotion

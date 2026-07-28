@@ -11,7 +11,7 @@ import { num, formatCurrency, daysSince } from "./utils";
 type Props = { products: ProductListType[]; loading: boolean };
 
 const AlertPanels = ({ products, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const [lowStockThreshold, setLowStockThreshold] = useState(10);
   const [dormantDays, setDormantDays] = useState(90);
 
@@ -46,7 +46,7 @@ const AlertPanels = ({ products, loading }: Props) => {
     >
       <div className="min-w-0 flex-grow-1">
         <Link
-          href={`/jw/${storeId}/${outletId}/products/${p.itemcode}/view`}
+          href={`/${storePrefix}/${storeId}/${outletId}/products/${p.itemcode}/view`}
           className="text-decoration-none fw-semibold d-block text-truncate"
           style={{ fontSize: 12, color: "var(--text-primary)" }}
         >

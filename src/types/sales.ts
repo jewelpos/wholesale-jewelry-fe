@@ -93,6 +93,9 @@ export type MemoSummary = {
   lastmodifieddate: string;
   statusname: string;
   custcrediapplied: number | null;
+  isinvoiced: boolean | null;
+  hascreditreturn: boolean | null;
+  hasremaining: boolean | null;
 };
 
 export type MemoSummaryTotals = {

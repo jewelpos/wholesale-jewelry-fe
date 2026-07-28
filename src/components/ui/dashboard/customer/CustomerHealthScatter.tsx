@@ -28,7 +28,7 @@ const MAX_BUBBLE = 20;
 const MIN_BUBBLE = 4;
 
 const CustomerHealthScatter = ({ customers, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
 
   const { datasets, quadrantStats } = useMemo(() => {
     const named = customers
@@ -127,7 +127,7 @@ const CustomerHealthScatter = ({ customers, loading }: Props) => {
       const ds = chart.data.datasets[el.datasetIndex] as unknown as { data: Array<{ _customer: DashboardCustomer }> };
       const c = ds.data[el.index]._customer;
       if (c?.customerid && storeId && outletId) {
-        window.location.href = `/jw/${storeId}/${outletId}/dashboard/customer/${c.customerid}`;
+        window.location.href = `/${storePrefix}/${storeId}/${outletId}/dashboard/customer/${c.customerid}`;
       }
     },
   };
@@ -184,7 +184,7 @@ const CustomerHealthScatter = ({ customers, loading }: Props) => {
 
         <div className="d-flex justify-content-end mt-1">
           <Link
-            href={`/jw/${storeId}/${outletId}/customers/list`}
+            href={`/${storePrefix}/${storeId}/${outletId}/customers/list`}
             className="small text-decoration-none"
           >
             View all customers →

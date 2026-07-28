@@ -9,6 +9,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { CREATE_PHYSICAL_COUNT_BATCH_MUTATION } from "@/lib/graphql/mutations/physicalcount";
 import useWarehouse from "@/hooks/useWarehouse";
 import useCategory from "@/hooks/useCategory";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 type Scope = "ALL" | "CATEGORY" | "SUBCATEGORY" | "LOCATION";
 
@@ -20,6 +21,7 @@ const CreateCountBatchForm = () => {
   const parsedOutletId = Number(outletIdParam);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { basePath } = useDefaultRoute();
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   const { fetchCategoriesByStoreId, fetchSubCategoriesByStoreId, categories, subCategories } = useCategory();
@@ -75,7 +77,7 @@ const CreateCountBatchForm = () => {
       if (result?.success) {
         dispatch(showNotification({ message: result.message || "Batch created", type: NOTIFICATION_TYPES.SUCCESS }));
         const batchid = result.data?.batchid;
-        const base = `/jw/${storeIdParam}/${outletIdParam}/products/physical_count`;
+        const base = `${basePath}/products/physical_count`;
         router.push(batchid ? `${base}/${batchid}/count` : `${base}/list`);
       } else {
         dispatch(showNotification({ message: result?.error || "Failed to create batch", type: NOTIFICATION_TYPES.ERROR }));

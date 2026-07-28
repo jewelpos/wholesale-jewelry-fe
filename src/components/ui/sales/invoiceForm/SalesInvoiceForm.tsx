@@ -13,6 +13,7 @@ import { useDispatch } from "react-redux";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
 import SelectEmployee from "@/components/forms/SelectEmployee";
+import SelectMemo from "@/components/forms/SelectMemo";
 import SelectPaymentTerms from "@/components/forms/SelectPaymentTerms";
 import SelectProduct from "@/components/forms/SelectProduct";
 import SelectShippingModes from "@/components/forms/SelectShippingModes";
@@ -487,6 +488,17 @@ const SalesInvoiceForm = ({
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+
+  // Standalone "New Credit Memo" (documentType=MEMO, mode=CREDIT_INVOICE, no memonumber prop)
+  // has no memo pre-selected via route — the user picks one in-form via SelectMemo below.
+  // Once picked, it drives the exact same memo-item-loading/restriction logic as the
+  // route-driven invoice-from-memo flows (memonumber prop).
+  const [pickedMemoNumber, setPickedMemoNumber] = useState<number | undefined>(undefined);
+  const isStandaloneCreditMemo = documentType === "MEMO" && mode === "CREDIT_INVOICE" && !memonumber;
+  const effectiveMemoNumber = memonumber ?? (isStandaloneCreditMemo ? pickedMemoNumber : undefined);
+  // True whenever items must come from a memo — including before one's been picked in the
+  // standalone flow, so free item entry stays locked out until a memo is selected.
+  const memoRestrictsItems = !!effectiveMemoNumber || isStandaloneCreditMemo;
   const { data: metalRatesQueryData } = useQuery(GET_CURRENT_METAL_RATES_QUERY, {
     variables: { storeid: parsedStoreId },
     skip: !parsedStoreId,
@@ -744,8 +756,8 @@ const SalesInvoiceForm = ({
 
   // Load memo data for pre-population when creating invoice from memo
   const { data: memoQueryData, error: memoQueryError, loading: memoQueryLoading, refetch: refetchMemo } = useQuery(GET_MEMO_DETAIL_QUERY, {
-    variables: { storeid: parsedStoreId, memonumber },
-    skip: !memonumber || !parsedStoreId,
+    variables: { storeid: parsedStoreId, memonumber: effectiveMemoNumber },
+    skip: !effectiveMemoNumber || !parsedStoreId,
     fetchPolicy: "network-only",
   });
 
@@ -772,10 +784,10 @@ const SalesInvoiceForm = ({
 
   // Auto-retry on transient connection errors (race condition during navigation)
   useEffect(() => {
-    if (!memoQueryError || !memonumber) return;
+    if (!memoQueryError || !effectiveMemoNumber) return;
     const t = setTimeout(() => refetchMemo(), 600);
     return () => clearTimeout(t);
-  }, [memoQueryError, memonumber, refetchMemo]);
+  }, [memoQueryError, effectiveMemoNumber, refetchMemo]);
 
   useEffect(() => {
     const so = soQueryData?.getSalesOrder;
@@ -1345,6 +1357,23 @@ const SalesInvoiceForm = ({
       return;
     }
 
+    // Lines loaded from a memo/SO carry maxqty/maxpcs (the remaining balance at load time) —
+    // catch an over-return/over-invoice here instead of waiting on the backend's rejection.
+    if (editingIndex != null) {
+      const existingItem = getValues(`items.${editingIndex}`) as any;
+      const maxQty = existingItem?.maxqty;
+      const maxPcs = existingItem?.maxpcs;
+      if (typeof maxQty === "number" && qtyAbs > maxQty) {
+        dispatch(showNotification({ message: `Quantity cannot exceed remaining balance (${maxQty})`, type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+      const pcsAbs = Math.abs(Number(toolItem.itempcs || 0));
+      if (typeof maxPcs === "number" && pcsAbs > maxPcs) {
+        dispatch(showNotification({ message: `Pcs cannot exceed remaining balance (${maxPcs})`, type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+    }
+
     const normalizedQty = mode === "CREDIT_INVOICE" ? -qtyAbs : qtyAbs;
     const unitPrice = Math.max(0, Number(toolItem.unitprice || 0));
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
@@ -1466,6 +1495,10 @@ const SalesInvoiceForm = ({
       dispatch(showNotification({ message: "Shipping method is required", type: NOTIFICATION_TYPES.ERROR }));
       return;
     }
+    if (isStandaloneCreditMemo && !effectiveMemoNumber) {
+      dispatch(showNotification({ message: "Select a memo to credit against", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
 
     const reps = (formData.salesreps ?? []).filter(r => r.userid);
     if (reps.length > 0) {
@@ -1496,6 +1529,15 @@ const SalesInvoiceForm = ({
         warehouseid: warehouseId,
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
+        // Links this line back to the specific memo item it was split from, so the
+        // backend invoices exactly the (possibly partial/edited) qty here rather than
+        // falling back to the memo's full remaining quantity when no items are provided.
+        oldmemoitemseqno: (it as any).salesorderitemid ?? null,
+        // createCreditMemo requires refmemonumber on every item — it uses this to look up
+        // the source memo line and enforce the item-must-be-in-memo / qty-cannot-exceed-
+        // remaining checks server-side.
+        refmemonumber:
+          documentType === "MEMO" && mode === "CREDIT_INVOICE" ? effectiveMemoNumber ?? null : undefined,
       };
     });
 
@@ -1631,6 +1673,7 @@ const SalesInvoiceForm = ({
                       storeid: parsedStoreId,
                       memonumber,
                       creditreturn: creditFromMemo,
+                      items,
                     },
                   },
                 })
@@ -1890,7 +1933,7 @@ const SalesInvoiceForm = ({
     );
   }
 
-  if (memonumber && memoQueryLoading) {
+  if (effectiveMemoNumber && memoQueryLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center py-5">
         <div className="spinner-border text-primary me-3" />
@@ -2151,7 +2194,18 @@ const SalesInvoiceForm = ({
                       control={control}
                       rules={{ required: "Bill To customer is required" }}
                       render={({ field }) => (
-                        <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
+                        <SelectCustomer
+                          trigger={trigger}
+                          storeId={parsedStoreId}
+                          disableField={typeof invoiceId === "number" && invoiceId > 0}
+                          {...field}
+                          onChange={(val: unknown) => {
+                            field.onChange(val);
+                            // A picked memo belongs to the previous customer — clear it so
+                            // items don't stay restricted to a memo that's no longer relevant.
+                            if (isStandaloneCreditMemo) setPickedMemoNumber(undefined);
+                          }}
+                        />
                       )}
                     />
                   </div>
@@ -2259,7 +2313,7 @@ const SalesInvoiceForm = ({
                 <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Reference</div>
                 <div className="row g-2">
                   <div className="col-6">
-                    <label className="form-label small text-muted mb-1">{salesordernoFromSO ? "SO #" : (creditFromMemo || memonumber || viewedFromMemoNumber) ? "Memo #" : "Customer PO#"}</label>
+                    <label className="form-label small text-muted mb-1">{salesordernoFromSO ? "SO #" : (creditFromMemo || effectiveMemoNumber || viewedFromMemoNumber) ? "Memo #" : "Customer PO#"}</label>
                     <input type="text" className="form-control form-control-sm" {...register("invoicereference")} />
                   </div>
                   <div className="col-6">
@@ -2433,6 +2487,39 @@ const SalesInvoiceForm = ({
       <div className="card mb-3">
         <div className="card-body">
 
+          {isStandaloneCreditMemo && !readOnly && (
+            <div className="row g-2 mb-3">
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <label className="form-label small text-muted mb-1">
+                  Memo to Credit <span className="text-danger">*</span>
+                </label>
+                <SelectMemo
+                  storeId={parsedStoreId}
+                  outletId={parsedOutletId}
+                  customerId={watch("customerid")}
+                  value={pickedMemoNumber}
+                  onChange={(val: number | undefined) => {
+                    if (!val) {
+                      setPickedMemoNumber(undefined);
+                      return;
+                    }
+                    setPickedMemoNumber(val);
+                  }}
+                />
+                {!watch("customerid") && (
+                  <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                    Select a Bill To customer above first.
+                  </div>
+                )}
+                {pickedMemoNumber && !memoQueryLoading && (memoQueryData?.getMemoDetail?.items ?? []).length === 0 && (
+                  <div className="text-danger" style={{ fontSize: 11, marginTop: 4 }}>
+                    This memo has no remaining balance to credit.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scrollable items table */}
           <div style={{ maxHeight: 400, overflowY: "auto", overflowX: "auto" }}>
             <table className="table datanew mb-0">
@@ -2537,7 +2624,7 @@ const SalesInvoiceForm = ({
           </div>
 
           {/* ADD / EDIT LINE ROW */}
-          {((!salesordernoFromSO && !memonumber) || editingIndex != null) && (
+          {((!salesordernoFromSO && !memoRestrictsItems) || editingIndex != null) && (
             <div className="border-top pt-3 mt-1">
               <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
                 {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
@@ -2561,7 +2648,7 @@ const SalesInvoiceForm = ({
                     }
                     clearKey={productClearKey}
                     scanValue={barcodeScanValue}
-                    disableField={!!salesordernoFromSO || !!memonumber}
+                    disableField={!!salesordernoFromSO || memoRestrictsItems}
                     onChange={(val: number | undefined) => setToolItem((prev) => ({ ...prev, itemid: val }))}
                     onChangeAdditional={(selected: ItemDetails) => {
                       if (!selected) {

@@ -106,6 +106,9 @@ export const GET_MEMO_LIST_QUERY = gql`
         lastmodifieddate
         statusname
         custcrediapplied
+        isinvoiced
+        hascreditreturn
+        hasremaining
       }
       totalsRow {
         totalamount

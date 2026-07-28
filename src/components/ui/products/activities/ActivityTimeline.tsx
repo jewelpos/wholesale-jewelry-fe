@@ -8,6 +8,9 @@ const TYPE_CONFIG: Record<string, { color: string; bg: string; border: string; t
   purchase:        { color: "#198754", bg: "#dcfce7", border: "#86efac", text: "#166534", label: "Purchase",       icon: "↓" },
   sale:             { color: "#dc3545", bg: "#fee2e2", border: "#fca5a5", text: "#991b1b", label: "Sale",           icon: "↑" },
   memo:             { color: "#0891b2", bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e", label: "Memo",           icon: "✎" },
+  // Credit memo (a return against a memo) shares salemodeid range (6, 8) with a regular
+  // memo in the raw feed, but is a stock-in reversal, not a fresh commitment — distinct tag.
+  memo_credit:      { color: "#0d9488", bg: "#ccfbf1", border: "#5eead4", text: "#0f766e", label: "Memo Credit",    icon: "↩" },
   adjustment:       { color: "#fd7e14", bg: "#ffedd5", border: "#fdba74", text: "#9a3412", label: "Adjustment",     icon: "~" },
   // Sales return (stock IN) and supplier return (stock OUT) move stock in opposite
   // directions — kept visually and categorically distinct rather than one shared "Return".
@@ -22,6 +25,7 @@ const TYPE_CONFIG: Record<string, { color: string; bg: string; border: string; t
 const resolveKey = (type: string, category?: string): string => {
   if (category && TYPE_CONFIG[category]) return category;
   const lower = type?.toLowerCase() ?? "";
+  if (lower.includes("memo") && lower.includes("credit")) return "memo_credit";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
   if (lower.includes("supplier") && lower.includes("return")) return "supplier_return";

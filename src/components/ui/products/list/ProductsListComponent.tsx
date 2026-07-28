@@ -151,6 +151,30 @@ const ProductsListComponent = () => {
     if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
   }, [gridReady]);
 
+  // Patch just the adjusted row in place (Gmail-style instant update) instead of a full
+  // grid purge+refetch — we already know the resulting quantity from the modal itself.
+  // Falls back to a full refresh if the row isn't currently loaded in the grid's cache.
+  const handleAdjustmentSuccess = useCallback(
+    (updated?: { itemid: number; itemquantityinhand: number }) => {
+      if (!gridReady) return;
+      const api = gridRef.current?.api;
+      if (!api) return;
+      if (!updated) {
+        api.refreshServerSide({ purge: true });
+        return;
+      }
+      let patched = false;
+      api.forEachNode((node) => {
+        if (node.data?.itemid === updated.itemid) {
+          node.setData({ ...node.data, itemquantityinhand: updated.itemquantityinhand });
+          patched = true;
+        }
+      });
+      if (!patched) api.refreshServerSide({ purge: true });
+    },
+    [gridReady]
+  );
+
   // Set datasource once when grid is ready
   useEffect(() => {
     if (gridReady) gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
@@ -175,6 +199,7 @@ const ProductsListComponent = () => {
             <ProductActions
               data={params.data}
               onDeleteSuccess={handleDeleteSuccess}
+              onAdjustmentSuccess={handleAdjustmentSuccess}
             />
           ) : null,
         width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 185,
@@ -189,7 +214,7 @@ const ProductsListComponent = () => {
         enableRowGroup: false,
       },
     ],
-    [handleDeleteSuccess]
+    [handleDeleteSuccess, handleAdjustmentSuccess]
   );
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("product-list");

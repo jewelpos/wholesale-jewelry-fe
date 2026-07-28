@@ -7,6 +7,7 @@ import { Eye, Download, Trash2, Upload, FileText, X } from "lucide-react";
 import dayjs from "dayjs";
 import { GET_CUSTOMER_DOCUMENTS_QUERY } from "@/lib/graphql/query/customerDocuments";
 import { DELETE_CUSTOMER_DOCUMENT_MUTATION } from "@/lib/graphql/mutations/customerDocuments";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 
 interface CustomerDocument {
   documentid: number;
@@ -92,7 +93,11 @@ export default function CustomerDocumentsSection({ customerid, storeid, pendingF
   };
 
   const handleDelete = async (doc: CustomerDocument) => {
-    if (!confirm(`Delete "${doc.documentname}"?`)) return;
+    const result = await showConfirmationDialog({
+      title: `Delete "${doc.documentname}"?`,
+      confirmButtonText: "Yes, delete it!",
+    });
+    if (!result.isConfirmed) return;
     await deleteDocument({ variables: { documentid: doc.documentid, storeid } });
   };
 

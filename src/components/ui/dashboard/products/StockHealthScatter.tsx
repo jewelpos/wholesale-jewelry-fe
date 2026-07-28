@@ -17,7 +17,7 @@ const BUCKET_LABELS: Record<string, string> = { "0-30": "Fresh (0-30d)", "31-90"
 const MIN_R = 4, MAX_R = 22;
 
 const StockHealthScatter = ({ agingData, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
 
   const { datasets, quadrantStats } = useMemo(() => {
     const valid = agingData.filter((r) => num(r.itemquantityinhand) > 0);
@@ -93,7 +93,7 @@ const StockHealthScatter = ({ agingData, loading }: Props) => {
       const ds = chart.data.datasets[el.datasetIndex] as unknown as { data: Array<{ _item: ItemAgingSummary }> };
       const item = ds.data[el.index]?._item;
       if (item?.itemcode && storeId && outletId) {
-        window.location.href = `/jw/${storeId}/${outletId}/products/${item.itemcode}/view`;
+        window.location.href = `/${storePrefix}/${storeId}/${outletId}/products/${item.itemcode}/view`;
       }
     },
   };

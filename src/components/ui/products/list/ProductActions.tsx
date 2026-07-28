@@ -19,7 +19,7 @@ import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowAction
 interface ProductActionsProps {
   data: ProductListType;
   onDeleteSuccess?: () => void;
-  onAdjustmentSuccess?: () => void;
+  onAdjustmentSuccess?: (updated?: { itemid: number; itemquantityinhand: number }) => void;
 }
 
 const ProductActions: React.FC<ProductActionsProps> = ({
@@ -125,7 +125,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({
       <ProductAdjustmentModal
         isOpen={isAdjustmentModalOpen}
         onClose={() => setIsAdjustmentModalOpen(false)}
-        onSuccess={() => { setIsAdjustmentModalOpen(false); onAdjustmentSuccess?.(); }}
+        onSuccess={(updated) => { setIsAdjustmentModalOpen(false); onAdjustmentSuccess?.(updated); }}
         productData={data}
       />
       {isPrintLabelsOpen && (

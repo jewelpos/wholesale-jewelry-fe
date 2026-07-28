@@ -10,7 +10,7 @@ import { num, formatCurrency, classifyABC, abcBadgeStyle, type AbcClass } from "
 type Props = { products: ProductListType[]; loading: boolean };
 
 const AbcAnalysis = ({ products, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const [docFilter, setDocFilter] = useState<number>(30);
   const [classFilter, setClassFilter] = useState<AbcClass | "ALL">("ALL");
 
@@ -119,7 +119,7 @@ const AbcAnalysis = ({ products, loading }: Props) => {
                     <td className="text-muted" style={{ fontSize: 11 }}>{i + 1}</td>
                     <td>
                       <Link
-                        href={`/jw/${storeId}/${outletId}/products/${p.itemcode}/view`}
+                        href={`/${storePrefix}/${storeId}/${outletId}/products/${p.itemcode}/view`}
                         className="text-decoration-none fw-semibold d-block"
                         style={{ fontSize: 12, color: "#6366f1" }}
                       >

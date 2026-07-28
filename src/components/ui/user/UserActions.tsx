@@ -9,6 +9,7 @@ import api from "@/lib/axios";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 import { useMutation } from "@apollo/client";
 import { RESEND_USER_VERIFICATION_OTP_MUTATION, RESEND_USER_VERIFICATION_EMAIL_MUTATION } from "@/lib/graphql/mutations/user";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
@@ -77,7 +78,13 @@ const UserActions: React.FC<UserActionsProps> = ({ data, onRefresh }) => {
 
   const handleDelete = async () => {
     if (isDeleted) return;
-    if (!window.confirm(`Remove ${data.userfullname}? They will be logged out and cannot log back in. This action keeps their history.`)) return;
+    const result = await showConfirmationDialog({
+      title: `Remove ${data.userfullname}?`,
+      text: "They will be logged out and cannot log back in. This action keeps their history.",
+      confirmButtonText: "Yes, remove them!",
+      icon: "warning",
+    });
+    if (!result.isConfirmed) return;
     setBusy(true);
     try {
       const res = await api.put("/store/user/soft-delete", { userid: data.userid });

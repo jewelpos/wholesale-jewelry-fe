@@ -17,7 +17,7 @@ import POSGridClient from "../../grid/POSGridClient";
 import PaymentModeModal, { PaymentModeRow } from "./PaymentModeModal";
 
 const PaymentModeComponent = () => {
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storePrefix, storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
   const router = useRouter();
@@ -129,7 +129,7 @@ const PaymentModeComponent = () => {
         <div className="add-item d-flex flex-column">
           <button
             type="button"
-            onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`)}
+            onClick={() => router.push(`/${storePrefix}/${storeIdParam}/${outletIdParam}/settings/system_settings`)}
             style={{ background: "none", border: "none", padding: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b", cursor: "pointer" }}
           >
             ← System Settings

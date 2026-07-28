@@ -36,7 +36,7 @@ type AgingRow = {
 };
 
 const AgingBreakdown = ({ outletid, allOutlets, collectionRate }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const { data, loading, error } = useQuery(GET_INVOICE_AGING_REPORT_QUERY, {
     variables: {
       outletid,
@@ -127,7 +127,7 @@ const AgingBreakdown = ({ outletid, allOutlets, collectionRate }: Props) => {
             </div>
           </div>
           <Link
-            href={`/jw/${storeId}/${outletId}/customers/balance_aging`}
+            href={`/${storePrefix}/${storeId}/${outletId}/customers/balance_aging`}
             className="small text-decoration-none"
           >
             View report →

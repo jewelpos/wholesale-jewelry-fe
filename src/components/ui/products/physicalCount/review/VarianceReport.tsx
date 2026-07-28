@@ -11,10 +11,12 @@ import { APPROVE_PHYSICAL_COUNT_MUTATION, CANCEL_PHYSICAL_COUNT_MUTATION } from 
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
 import POSGrid from "@/components/ui/grid/POSGrid";
 import PostConfirmModal from "./PostConfirmModal";
 import RecountRequestModal from "./RecountRequestModal";
 import { Printer, CheckCircle2, RotateCcw, ClipboardList } from "lucide-react";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 interface BatchItem {
   countitemid: number;
@@ -59,6 +61,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
   const parsedBatchId = parseInt(batchId as string, 10);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { basePath } = useDefaultRoute();
   const gridRef = useRef<AgGridReact>(null);
 
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
@@ -225,7 +228,13 @@ const VarianceReport = ({ readOnly = false }: Props) => {
   }, [filteredItems]);
 
   const handleApprove = async () => {
-    if (!confirm("Approve this count? This will allow posting of stock adjustments.")) return;
+    const result = await showConfirmationDialog({
+      title: "Approve this count?",
+      text: "This will allow posting of stock adjustments.",
+      confirmButtonText: "Yes, approve it!",
+      icon: "question",
+    });
+    if (!result.isConfirmed) return;
     setApprovingLoading(true);
     try {
       const res = await approveCount({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
@@ -244,11 +253,16 @@ const VarianceReport = ({ readOnly = false }: Props) => {
   };
 
   const handleCancel = async () => {
-    if (!confirm("Cancel this count batch? This cannot be undone.")) return;
+    const result = await showConfirmationDialog({
+      title: "Cancel this count batch?",
+      text: "This cannot be undone.",
+      confirmButtonText: "Yes, cancel it!",
+    });
+    if (!result.isConfirmed) return;
     try {
       await cancelCount({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
       dispatch(showNotification({ message: "Count cancelled", type: NOTIFICATION_TYPES.SUCCESS }));
-      router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/list`);
+      router.push(`${basePath}/products/physical_count/list`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error";
       dispatch(showNotification({ message: msg, type: NOTIFICATION_TYPES.ERROR }));
@@ -356,7 +370,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
           {!readOnly && (
             <button
               className="btn btn-sm btn-outline-secondary"
-              onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/${batchId}/count`)}
+              onClick={() => router.push(`${basePath}/products/physical_count/${batchId}/count`)}
             >
               ← Back to Count
             </button>

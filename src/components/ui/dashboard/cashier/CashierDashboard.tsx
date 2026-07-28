@@ -194,7 +194,7 @@ const CashierDashboard = () => {
 
   const invoiceRows: InvoiceRow[] = invoiceData?.getInvoiceList?.data ?? [];
 
-  const basePath = `/jw/${params.storeId}/${params.outletId}`;
+  const basePath = `/${params.storePrefix}/${params.storeId}/${params.outletId}`;
 
   return (
     <div>

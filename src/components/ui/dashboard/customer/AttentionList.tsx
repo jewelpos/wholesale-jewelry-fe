@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { AlertTriangle, Clock, DollarSign, RefreshCw } from "lucide-react";
 import { Slider } from "antd";
 import DashboardCustomer from "./types";
@@ -34,6 +35,7 @@ type AttentionItem = {
 };
 
 const AttentionList = ({ customers, loading, storeId, outletId }: Props) => {
+  const { storePrefix } = useParams();
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [balanceThreshold, setBalanceThreshold] = useState<number>(5000);
   const [dormantDays, setDormantDays] = useState<number>(180);
@@ -198,7 +200,7 @@ const AttentionList = ({ customers, loading, storeId, outletId }: Props) => {
                       <div className="mt-1 flex-shrink-0">{iconFor(item.reason)}</div>
                       <div className="min-w-0">
                         <Link
-                          href={`/jw/${storeId}/${outletId}/dashboard/customer/${item.customer.customerid}`}
+                          href={`/${storePrefix}/${storeId}/${outletId}/dashboard/customer/${item.customer.customerid}`}
                           className="text-decoration-none fw-semibold d-block text-truncate"
                           style={{ fontSize: 13, maxWidth: 160 }}
                         >
@@ -230,7 +232,7 @@ const AttentionList = ({ customers, loading, storeId, outletId }: Props) => {
                         }} />
                       </div>
                       <Link
-                        href={`/jw/${storeId}/${outletId}/customers/applied_payments?customerid=${item.customer.customerid}`}
+                        href={`/${storePrefix}/${storeId}/${outletId}/customers/applied_payments?customerid=${item.customer.customerid}`}
                         className="btn btn-sm btn-outline-primary"
                         style={{ fontSize: 11, padding: "1px 8px" }}
                       >

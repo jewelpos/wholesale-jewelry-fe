@@ -7,6 +7,7 @@ const TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; t
   purchase:        { label: "Purchase",       bg: "#dcfce7", border: "#86efac", text: "#166534" },
   sale:             { label: "Sale",           bg: "#fee2e2", border: "#fca5a5", text: "#991b1b" },
   memo:             { label: "Memo",           bg: "#e0f2fe", border: "#7dd3fc", text: "#0c4a6e" },
+  memo_credit:      { label: "Memo Credit",     bg: "#ccfbf1", border: "#5eead4", text: "#0f766e" },
   adjustment:       { label: "Adjustment",     bg: "#ffedd5", border: "#fdba74", text: "#9a3412" },
   // Sales return (customer gives stock back — stock IN) and supplier return (we give stock
   // back to the supplier — stock OUT) move stock in opposite directions, so they get
@@ -23,6 +24,7 @@ const TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; t
 const resolveKey = (type: string, category?: string): string => {
   if (category && TYPE_CONFIG[category]) return category;
   const lower = type?.toLowerCase() ?? "";
+  if (lower.includes("memo") && lower.includes("credit")) return "memo_credit";
   if (lower.includes("memo")) return "memo";
   if (lower.includes("purchase") || lower.includes("receive")) return "purchase";
   if (lower.includes("supplier") && lower.includes("return")) return "supplier_return";
@@ -37,9 +39,10 @@ interface Props {
   data: ProductActivityChartPoint[];
   onHandQty?: number | null;
   availableQty?: number | null;
+  soQty?: number | null;
 }
 
-const ActivitySummaryChart = ({ data, onHandQty, availableQty }: Props) => {
+const ActivitySummaryChart = ({ data, onHandQty, availableQty, soQty }: Props) => {
   const summary = useMemo(() => {
     const map: Record<string, { txns: number; qty: number }> = {};
     for (const d of data) {
@@ -84,7 +87,17 @@ const ActivitySummaryChart = ({ data, onHandQty, availableQty }: Props) => {
             </div>
           )}
           {availableQty !== null && availableQty !== undefined && (
-            <div style={{ flex: "1 1 calc(50% - 4px)", padding: "8px 12px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #86efac" }}>
+            <div style={{ position: "relative", flex: "1 1 calc(50% - 4px)", padding: "8px 12px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #86efac" }}>
+              {/* Available = On Hand minus booked (Sales Order) qty — shown here so the gap
+                  between the two cards is self-explanatory instead of looking like a bug. */}
+              {!!soQty && (
+                <div
+                  title="Quantity reserved on open Sales Orders, not yet invoiced"
+                  style={{ position: "absolute", top: 6, right: 8, fontSize: 9, fontWeight: 600, color: "#b45309", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 4, padding: "1px 5px" }}
+                >
+                  SO: {soQty}
+                </div>
+              )}
               <div style={{ fontSize: 10, color: "#166534", fontWeight: 600, letterSpacing: "0.3px" }}>AVAILABLE</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: "#166534", lineHeight: 1.3 }}>{availableQty}</div>
               <div style={{ fontSize: 11, color: "#166534", opacity: 0.75 }}>available to sell</div>

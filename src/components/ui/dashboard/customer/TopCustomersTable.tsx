@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Slider } from "antd";
 import DashboardCustomer from "./types";
 import { formatCurrency, num, isSystemAccount } from "./utils";
@@ -22,6 +23,7 @@ type Props = {
 };
 
 const TopCustomersTable = ({ customers, loading, storeId, outletId }: Props) => {
+  const { storePrefix } = useParams();
   const [topN, setTopN] = useState<number>(10);
 
   const { top, totalRevenue, concentrationPct } = useMemo(() => {
@@ -52,7 +54,7 @@ const TopCustomersTable = ({ customers, loading, storeId, outletId }: Props) => 
               </span>
             </div>
           </div>
-          <Link href={`/jw/${storeId}/${outletId}/customers/list`} className="small text-decoration-none">
+          <Link href={`/${storePrefix}/${storeId}/${outletId}/customers/list`} className="small text-decoration-none">
             All customers →
           </Link>
         </div>
@@ -110,7 +112,7 @@ const TopCustomersTable = ({ customers, loading, storeId, outletId }: Props) => 
                     <td className="text-muted fw-semibold" style={{ fontSize: 11 }}>{i + 1}</td>
                     <td>
                       <Link
-                        href={`/jw/${storeId}/${outletId}/dashboard/customer/${c.customerid}`}
+                        href={`/${storePrefix}/${storeId}/${outletId}/dashboard/customer/${c.customerid}`}
                         className="text-decoration-none fw-semibold d-block"
                         style={{ fontSize: 12 }}
                       >

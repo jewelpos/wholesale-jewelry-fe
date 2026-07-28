@@ -21,6 +21,8 @@ const TYPE_COLOR: Record<string, string> = {
   purchase:        "#198754",
   invoice:         "#dc3545",
   adjustment:      "#fd7e14",
+  memo:            "#0891b2",
+  memo_credit:     "#0d9488",
   // Sales return (stock IN) and supplier return (stock OUT) move stock in opposite
   // directions — kept visually distinct rather than one shared "return" color.
   sales_return:    "#0d6efd",
@@ -34,9 +36,13 @@ const resolveColor = (type: string, category?: string) => {
   if (category === "purchase") return TYPE_COLOR.purchase;
   if (category === "sale") return TYPE_COLOR.invoice;
   if (category === "adjustment") return TYPE_COLOR.adjustment;
+  if (category === "memo") return TYPE_COLOR.memo;
+  if (category === "memo_credit") return TYPE_COLOR.memo_credit;
   if (category === "sales_return") return TYPE_COLOR.sales_return;
   if (category === "supplier_return") return TYPE_COLOR.supplier_return;
   const key = type?.toLowerCase() ?? "";
+  if (key.includes("memo") && key.includes("credit")) return TYPE_COLOR.memo_credit;
+  if (key.includes("memo")) return TYPE_COLOR.memo;
   if (key.includes("purchase") || key.includes("receive")) return TYPE_COLOR.purchase;
   if (key.includes("supplier") && key.includes("return")) return TYPE_COLOR.supplier_return;
   if (key.includes("return")) return TYPE_COLOR.sales_return;

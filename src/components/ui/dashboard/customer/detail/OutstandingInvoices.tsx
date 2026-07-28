@@ -43,7 +43,7 @@ const formatDate = (s: string | null | undefined) => {
 };
 
 const OutstandingInvoices = ({ invoices, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const total = invoices.reduce((s, i) => s + num(i.balancedue), 0);
 
   return (
@@ -89,7 +89,7 @@ const OutstandingInvoices = ({ invoices, loading }: Props) => {
                     <tr key={inv.invoicenumber}>
                       <td className="fw-semibold">
                         <Link
-                          href={`/jw/${storeId}/${outletId}/sales_invoices/${inv.invoicenumber}/view`}
+                          href={`/${storePrefix}/${storeId}/${outletId}/sales_invoices/${inv.invoicenumber}/view`}
                           className="text-decoration-none text-primary"
                         >
                           #{inv.invoicenumber}

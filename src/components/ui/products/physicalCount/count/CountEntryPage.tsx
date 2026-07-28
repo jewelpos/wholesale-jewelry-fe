@@ -8,6 +8,8 @@ import { SAVE_COUNT_ITEMS_MUTATION, COMPLETE_COUNT_MUTATION, CANCEL_PHYSICAL_COU
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
+import { showConfirmationDialog } from "@/lib/utils/confirmationDialog";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 import CountProgressBar from "./CountProgressBar";
 import BarcodeScannerModal from "./BarcodeScannerModal";
 import { Camera, Save, CheckCircle2, XCircle } from "lucide-react";
@@ -38,6 +40,7 @@ const CountEntryPage = () => {
   const parsedBatchId = parseInt(batchId as string, 10);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { basePath } = useDefaultRoute();
 
   // Local qty / skip state (pending saves)
   const [localQty, setLocalQty] = useState<Record<number, string>>({});
@@ -178,7 +181,7 @@ const CountEntryPage = () => {
       const res = await cancelBatch({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
       if (res.data?.cancelPhysicalCount?.success) {
         dispatch(showNotification({ message: "Batch cancelled", type: NOTIFICATION_TYPES.SUCCESS }));
-        router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/list`);
+        router.push(`${basePath}/products/physical_count/list`);
       } else {
         dispatch(showNotification({ message: res.data?.cancelPhysicalCount?.error || "Failed to cancel", type: NOTIFICATION_TYPES.ERROR }));
       }
@@ -212,14 +215,20 @@ const CountEntryPage = () => {
   };
 
   const handleComplete = async () => {
-    if (!confirm("Mark count as complete? All items must be counted or skipped.")) return;
+    const result = await showConfirmationDialog({
+      title: "Mark count as complete?",
+      text: "All items must be counted or skipped.",
+      confirmButtonText: "Yes, complete it!",
+      icon: "question",
+    });
+    if (!result.isConfirmed) return;
     setCompleting(true);
     try {
       await handleSaveProgress();
       const res = await completeCount({ variables: { storeid: parsedStoreId, batchid: parsedBatchId } });
       if (res.data?.completeCount?.success) {
         dispatch(showNotification({ message: "Count completed — moved to Review", type: NOTIFICATION_TYPES.SUCCESS }));
-        router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/${batchId}/review`);
+        router.push(`${basePath}/products/physical_count/${batchId}/review`);
       } else {
         dispatch(showNotification({ message: res.data?.completeCount?.error || "Failed", type: NOTIFICATION_TYPES.ERROR }));
       }
@@ -274,7 +283,7 @@ const CountEntryPage = () => {
           <div className="d-flex align-items-center gap-2">
             <button
               className="btn btn-sm btn-outline-secondary"
-              onClick={() => router.push(`/jw/${storeIdParam}/${outletIdParam}/products/physical_count/list`)}
+              onClick={() => router.push(`${basePath}/products/physical_count/list`)}
             >
               ← Back
             </button>

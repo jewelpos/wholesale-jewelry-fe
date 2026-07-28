@@ -121,8 +121,8 @@ const SectionHeader = ({ title }: { title: string }) => (
 // ─── Hub ────────────────────────────────────────────────────
 const SystemSettingsHub = () => {
   const router = useRouter();
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
-  const base = `/jw/${storeIdParam}/${outletIdParam}/settings/system_settings`;
+  const { storePrefix, storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const base = `/${storePrefix}/${storeIdParam}/${outletIdParam}/settings/system_settings`;
 
   const storeIdInt = parseInt(storeIdParam as string, 10);
 

@@ -30,18 +30,26 @@ const MemoActions: React.FC<MemoActionsProps> = ({ data }) => {
 
   if (!data) return null;
 
+  const isCreditMemo = data.salemodename === "Memo Credit";
+
   const canEdit =
+    !isCreditMemo &&
     data.statusname !== "Shipped" &&
     data.statusname !== "Cancelled" &&
     Number(data.custcrediapplied) !== 1 &&
-    Number(data.amountreceived) === 0;
+    Number(data.amountreceived) === 0 &&
+    !data.isinvoiced &&
+    !data.hascreditreturn;
 
   let editReason = "";
   if (!canEdit) {
-    if (data.statusname === "Shipped") editReason = "Cannot edit: memo has been shipped";
+    if (isCreditMemo) editReason = "Cannot edit: credit memos cannot be edited";
+    else if (data.statusname === "Shipped") editReason = "Cannot edit: memo has been shipped";
     else if (data.statusname === "Cancelled") editReason = "Cannot edit: memo is cancelled";
     else if (Number(data.custcrediapplied) === 1) editReason = "Cannot edit: credit already applied";
     else if (Number(data.amountreceived) > 0) editReason = "Cannot edit: payment already received";
+    else if (data.isinvoiced) editReason = "Cannot edit: memo has already been invoiced";
+    else if (data.hascreditreturn) editReason = "Cannot edit: a credit memo has been created against this memo";
     else editReason = "Cannot edit in current status";
   }
 

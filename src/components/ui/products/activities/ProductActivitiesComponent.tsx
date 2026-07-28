@@ -53,6 +53,7 @@ const ProductActivitiesComponent = () => {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedItemInfo, setSelectedItemInfo] = useState<{ code: string; description: string } | null>(null);
   const [availableQty, setAvailableQty] = useState<number | null>(null);
+  const [soQty, setSoQty] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [clearKey, setClearKey] = useState(0);
@@ -84,6 +85,7 @@ const ProductActivitiesComponent = () => {
     setSelectedItemId(null);
     setSelectedItemInfo(null);
     setAvailableQty(null);
+    setSoQty(null);
     setDateFrom("");
     setDateTo("");
   }, []);
@@ -94,6 +96,7 @@ const ProductActivitiesComponent = () => {
   useEffect(() => {
     if (!selectedItemId || !selectedOutlet) {
       setAvailableQty(null);
+      setSoQty(null);
       return;
     }
     const filters: { key: string; value: object }[] = [
@@ -107,7 +110,8 @@ const ProductActivitiesComponent = () => {
     }).then(({ data }) => {
       const row = data?.getProductListNew?.data?.[0];
       setAvailableQty(row?.availableqty ?? null);
-    }).catch(() => { setAvailableQty(null); });
+      setSoQty(row?.soquantity ?? null);
+    }).catch(() => { setAvailableQty(null); setSoQty(null); });
   }, [selectedItemId, selectedOutlet, selectedWarehouse, getProductList]);
 
   // On-hand is derived from the activity timeline's own running_balance (same number the
@@ -287,7 +291,7 @@ const ProductActivitiesComponent = () => {
             />
           </div>
           <div className="col-lg-5">
-            <ActivitySummaryChart data={chartLoading ? [] : chartData} onHandQty={onHandQty} availableQty={availableQty} />
+            <ActivitySummaryChart data={chartLoading ? [] : chartData} onHandQty={onHandQty} availableQty={availableQty} soQty={soQty} />
           </div>
         </div>
       )}

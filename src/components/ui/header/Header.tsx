@@ -73,8 +73,9 @@ const Header = ({ onLogout, storeLoading }: Props) => {
     .join(", ") || null;
 
   const defaultPage = (() => {
-    if (!storeId || !outletId) return `/jw/home`;
-    const base = `/jw/${storeId}/${outletId}`;
+    const prefix = storePrefix || "jw";
+    if (!storeId || !outletId) return `/${prefix}/home`;
+    const base = `/${prefix}/${storeId}/${outletId}`;
     const role = user?.role?.toLowerCase();
     if (role === "admin") return `${base}/dashboard/admin`;
     if (role === "manager") return `${base}/dashboard/manager`;

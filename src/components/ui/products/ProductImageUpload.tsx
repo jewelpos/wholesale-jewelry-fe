@@ -26,6 +26,7 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [cameraMode, setCameraMode] = useState<"usb" | "ip">("usb");
+  const [usbCameraError, setUsbCameraError] = useState("");
 
   // IP camera
   const [ipCameraUrl, setIpCameraUrl] = useState("");
@@ -50,8 +51,9 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         videoRef.current.srcObject = stream;
       }
       streamRef.current = stream;
+      setUsbCameraError("");
     } catch {
-      alert("Unable to access camera. Please allow camera permissions or select a different device.");
+      setUsbCameraError("Unable to access camera. Please allow camera permissions or select a different device.");
     }
   }, []);
 
@@ -314,6 +316,9 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                 {/* USB mode */}
                 {cameraMode === "usb" && (
                   <>
+                    {usbCameraError && (
+                      <div className="alert alert-danger py-2 small">{usbCameraError}</div>
+                    )}
                     <div className="d-flex align-items-center gap-2 mb-2">
                       <select
                         className="form-select form-select-sm"

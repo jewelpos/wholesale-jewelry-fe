@@ -44,7 +44,7 @@ const StatusPill = ({ status }: { status: string }) => {
 };
 
 const ProfitDrillDown = ({ selectedYear, warehouseFilter }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
   const parsedOutletId = parseInt(outletId as string, 10);
   const [maxMargin, setMaxMargin] = useState(100);
@@ -145,7 +145,7 @@ const ProfitDrillDown = ({ selectedYear, warehouseFilter }: Props) => {
                   <tr key={inv.invoicenumber}>
                     <td>
                       <Link
-                        href={`/jw/${parsedStoreId}/${parsedOutletId}/sales_invoices/${inv.invoicenumber}/view`}
+                        href={`/${storePrefix}/${parsedStoreId}/${parsedOutletId}/sales_invoices/${inv.invoicenumber}/view`}
                         className="text-decoration-none fw-semibold"
                         style={{ fontSize: 12, color: "#6366f1" }}
                       >

@@ -37,7 +37,7 @@ const formatDate = (d: Date) =>
   d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 const ActivityTimeline = ({ invoices, payments, loading }: Props) => {
-  const { storeId, outletId } = useParams();
+  const { storePrefix, storeId, outletId } = useParams();
 
   const entries = useMemo<TimelineEntry[]>(() => {
     const out: TimelineEntry[] = [];
@@ -97,7 +97,7 @@ const ActivityTimeline = ({ invoices, payments, loading }: Props) => {
                         <div style={{ fontSize: 13, fontWeight: 600 }}>
                           Invoice{" "}
                           <Link
-                            href={`/jw/${storeId}/${outletId}/sales_invoices/${inv.invoicenumber}/view`}
+                            href={`/${storePrefix}/${storeId}/${outletId}/sales_invoices/${inv.invoicenumber}/view`}
                             className="text-decoration-none text-primary"
                           >
                             #{inv.invoicenumber}
