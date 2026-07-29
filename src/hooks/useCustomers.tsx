@@ -12,12 +12,12 @@ const useCustomers = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [getCustomers] = useLazyQuery(GET_CUSTOMERS_QUERY, { fetchPolicy: 'cache-and-network' });
 
-  const fetchCustomersByStoreId = useCallback(async (storeId: number) => {
+  const fetchCustomersByStoreId = useCallback(async (storeId: number, outletId?: number) => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
         const { data } = await getCustomers({
-          variables: { storeid: storeId },
+          variables: { storeid: storeId, outletid: outletId },
         });
         if (data.getCustomers) {
           setCustomers(data.getCustomers);

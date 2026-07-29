@@ -716,10 +716,10 @@ const SalesInvoiceForm = ({
     name: "items",
   });
 
-  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
-    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
-  }, [fetchWarehouseByStoreId, parsedStoreId]);
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [fetchWarehouseByOutletId, parsedOutletId]);
 
   const currentWarehouse = useMemo(
     () => warehouses.find((w) => w.issystem) ?? warehouses[0],
@@ -2197,6 +2197,7 @@ const SalesInvoiceForm = ({
                         <SelectCustomer
                           trigger={trigger}
                           storeId={parsedStoreId}
+                          outletId={parsedOutletId}
                           disableField={typeof invoiceId === "number" && invoiceId > 0}
                           {...field}
                           onChange={(val: unknown) => {
@@ -2263,7 +2264,7 @@ const SalesInvoiceForm = ({
                           name="shiptocustomerid"
                           control={control}
                           render={({ field }) => (
-                            <SelectCustomer trigger={trigger} storeId={parsedStoreId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
+                            <SelectCustomer trigger={trigger} storeId={parsedStoreId} outletId={parsedOutletId} disableField={typeof invoiceId === "number" && invoiceId > 0} {...field} />
                           )}
                         />
                       </div>

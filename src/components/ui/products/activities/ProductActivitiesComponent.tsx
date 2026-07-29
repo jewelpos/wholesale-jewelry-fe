@@ -29,16 +29,21 @@ import SelectProduct from "@/components/forms/SelectProduct";
 const LABEL_STYLE = { fontSize: 12, fontWeight: 600, color: "#475569" } as const;
 
 const ProductActivitiesComponent = () => {
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
 
   const [getProductActivitiesList] = useLazyQuery(GET_PRODUCT_ACTIVITY_LIST_QUERY);
   const [getProductActivityChart] = useLazyQuery(GET_PRODUCT_ACTIVITY_CHART_QUERY);
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
   const dispatch = useAppDispatch();
 
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>(-1);
+
+  useEffect(() => {
+    if (parsedOutletId) setSelectedOutlet(parsedOutletId);
+  }, [parsedOutletId]);
 
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
   const { fetchWarehouseByStoreId, fetchWarehouseByOutletId, loading: warehousesLoading, warehouses } = useWarehouse();
@@ -49,6 +54,14 @@ const ProductActivitiesComponent = () => {
       fetchWarehouseByStoreId(parsedStoreId);
     }
   }, [fetchWarehouseByOutletId, fetchWarehouseByStoreId, selectedOutlet, parsedStoreId]);
+
+  // Item search must be scoped to the same outlet the activity grid/chart is filtered
+  // to — otherwise the picker surfaces items regardless of outlet (in practice, whatever
+  // sorts first store-wide).
+  const searchWarehouseId = useMemo(() => {
+    if (selectedWarehouse && selectedWarehouse !== -1) return selectedWarehouse;
+    return warehouses.find((w) => w.issystem)?.warehouseid ?? warehouses[0]?.warehouseid;
+  }, [selectedWarehouse, warehouses]);
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedItemInfo, setSelectedItemInfo] = useState<{ code: string; description: string } | null>(null);
@@ -222,6 +235,8 @@ const ProductActivitiesComponent = () => {
               <label className="form-label mb-1" style={LABEL_STYLE}>Product</label>
               <SelectProduct
                 storeId={parsedStoreId}
+                hasWarehouseId={true}
+                warehouseId={searchWarehouseId}
                 onChange={(itemId: number | null) => setSelectedItemId(itemId)}
                 onChangeAdditional={(data: { itemcode?: string; itemdescription?: string } | null) => {
                   setSelectedItemInfo(data ? { code: data.itemcode ?? "", description: data.itemdescription ?? "" } : null);

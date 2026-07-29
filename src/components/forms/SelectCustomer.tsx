@@ -12,6 +12,7 @@ const SelectCustomer = ({
   className,
   trigger,
   storeId,
+  outletId,
   disableField,
   ...field
 }: // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,9 +25,9 @@ any) => {
 
   useEffect(() => {
     if (storeId) {
-      fetchCustomersByStoreId(storeId);
+      fetchCustomersByStoreId(storeId, outletId);
     }
-  }, [fetchCustomersByStoreId, storeId]);
+  }, [fetchCustomersByStoreId, storeId, outletId]);
 
   const customerOptions: SelectOption[] = useMemo(
     () =>

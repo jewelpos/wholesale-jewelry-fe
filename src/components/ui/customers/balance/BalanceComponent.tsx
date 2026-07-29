@@ -187,7 +187,7 @@ const BalanceComponent = () => {
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
-            setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
+            setSelectedOutlet={setSelectedOutlet}
           />
 
           <div className="d-flex gap-1 flex-wrap mb-2">

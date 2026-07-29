@@ -4,6 +4,7 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
   query GetSupplierPurchaseOrderList(
     $storeid: Int!
     $supplierid: Int
+    $outletid: Int
     $page: Int!
     $perpage: Int!
     $filters: [FilterKeyValuePair]
@@ -14,6 +15,7 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
     getSupplierPurchaseOrderList(
       storeid: $storeid
       supplierid: $supplierid
+      outletid: $outletid
       page: $page
       perpage: $perpage
       filters: $filters

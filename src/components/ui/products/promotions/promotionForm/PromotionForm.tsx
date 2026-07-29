@@ -14,6 +14,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { PromotionItem } from "@/types/promotion";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 import SelectProduct from "@/components/forms/SelectProduct";
+import useWarehouse from "@/hooks/useWarehouse";
 
 const emptyRule = (): PromotionItem => ({
   itemid: null,
@@ -36,7 +37,14 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletId as string, 10);
   const isEdit = !!promotionId;
+
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  useEffect(() => {
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [parsedOutletId, fetchWarehouseByOutletId]);
+  const defaultWarehouseId = warehouses.find((w) => w.issystem)?.warehouseid ?? warehouses[0]?.warehouseid;
 
   const [name, setName] = useState("");
   const [startdate, setStartdate] = useState("");
@@ -46,6 +54,9 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
   const [rules, setRules] = useState<PromotionItem[]>([emptyRule()]);
   const [saving, setSaving] = useState(false);
   const [loadingPromo, setLoadingPromo] = useState(isEdit);
+  // Preserve the promotion's original outlet on edit — must not silently reassign it to
+  // whichever outlet the editing user happens to be logged into.
+  const [loadedWarehouseId, setLoadedWarehouseId] = useState<number | null>(null);
 
   const [getPromotion] = useLazyQuery(GET_PROMOTION_QUERY, { fetchPolicy: "network-only" });
   const [getCategories] = useLazyQuery(GET_ITEM_CATEGORIES_QUERY);
@@ -79,6 +90,7 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
       setEnddate(p.enddate ? p.enddate.slice(0, 10) : "");
       setIsactive(p.isactive ?? 0);
       setDescription(p.description ?? "");
+      setLoadedWarehouseId(p.warehouseid ?? null);
       const loaded = (p.items ?? []).map((i: any) => ({ ...i }));
       setRules(loaded.length > 0 ? loaded : [emptyRule()]);
     });
@@ -134,19 +146,20 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
       }));
 
     setSaving(true);
+    const effectiveWarehouseId = isEdit ? (loadedWarehouseId ?? defaultWarehouseId ?? null) : (defaultWarehouseId ?? null);
     const result = await handleTryCatch(async () => {
       if (isEdit) {
         await updatePromotion({
           variables: {
             storeid: parsedStoreId,
-            input: { promotionid: promotionId, promotionname: name, promotiontype: "standard", startdate, enddate, isactive, description: description || null, items: cleanRules },
+            input: { promotionid: promotionId, promotionname: name, promotiontype: "standard", startdate, enddate, isactive, description: description || null, warehouseid: effectiveWarehouseId, items: cleanRules },
           },
         });
       } else {
         await createPromotion({
           variables: {
             storeid: parsedStoreId,
-            input: { promotionname: name, promotiontype: "standard", startdate, enddate, isactive, description: description || null, items: cleanRules },
+            input: { promotionname: name, promotiontype: "standard", startdate, enddate, isactive, description: description || null, warehouseid: effectiveWarehouseId, items: cleanRules },
           },
         });
       }
@@ -241,7 +254,8 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
                     <td style={{ padding: "4px 6px" }}>
                       <SelectProduct
                         storeId={parsedStoreId}
-                        hasWarehouseId={false}
+                        hasWarehouseId={true}
+                        warehouseId={defaultWarehouseId}
                         value={rule.itemid ? Number(rule.itemid) : null}
                         initialLabel={
                           rule.itemid && (rule.itemcode || rule.itemname)

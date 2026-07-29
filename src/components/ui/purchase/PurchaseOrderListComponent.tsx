@@ -76,6 +76,7 @@ const PurchaseOrderListComponent = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<number | undefined>(
     -1
   );
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
@@ -98,10 +99,12 @@ const PurchaseOrderListComponent = () => {
   // Refs so datasource closure always reads the latest filter values without recreating
   const debouncedSearchRef = useRef(debouncedSearch);
   const selectedSupplierRef = useRef(selectedSupplier);
+  const selectedOutletRef = useRef(selectedOutlet);
   const statusFilterRef = useRef(statusFilter);
   const datePresetRef = useRef(datePreset);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
   useEffect(() => { selectedSupplierRef.current = selectedSupplier; }, [selectedSupplier]);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
   useEffect(() => { datePresetRef.current = datePreset; }, [datePreset]);
 
@@ -131,6 +134,9 @@ const PurchaseOrderListComponent = () => {
         let variables: any = { storeid: parsedStoreId };
         if (selectedSupplierRef.current !== -1) {
           variables = { ...variables, supplierid: selectedSupplierRef.current };
+        }
+        if (selectedOutletRef.current) {
+          variables = { ...variables, outletid: selectedOutletRef.current };
         }
         const result = await handleTryCatch(async () => {
           const { data } = await getPurchaseOrdersList({
@@ -213,7 +219,7 @@ const PurchaseOrderListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, selectedSupplier, statusFilter, datePreset]);
+  }, [debouncedSearch, selectedSupplier, selectedOutlet, statusFilter, datePreset]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 
@@ -300,6 +306,8 @@ const PurchaseOrderListComponent = () => {
               gridRef={gridRef}
               search={search}
               setSearch={setSearch}
+              selectedOutlet={selectedOutlet}
+              setSelectedOutlet={setSelectedOutlet}
               selectedSupplier={selectedSupplier}
               setSelectedSupplier={setSelectedSupplier}
             />

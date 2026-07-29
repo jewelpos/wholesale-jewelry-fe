@@ -12,12 +12,16 @@ const useOutlets = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [getOutlets] = useLazyQuery(GET_OUTLETS_QUERY, { fetchPolicy: 'cache-and-network' });
 
-  const fetchOutletsList = useCallback(async (storeIds: number[]) => {
+  // includeAll bypasses outlet-access scoping — only use it for admin-facing pickers
+  // (assigning a user's outlets, choosing a supplier outlet on a transfer Request) that
+  // legitimately need every outlet. List-page filters must leave this false so a user
+  // only sees/selects outlets they're actually assigned to.
+  const fetchOutletsList = useCallback(async (storeIds: number[], includeAll = false) => {
     const result = await handleTryCatch(
       async () => {
         setLoading(true);
         const { data } = await getOutlets({
-          variables: { storeid: storeIds },
+          variables: { storeid: storeIds, includeAll },
         });
         if (data.getOutlets) {
           setOutlets(data.getOutlets);

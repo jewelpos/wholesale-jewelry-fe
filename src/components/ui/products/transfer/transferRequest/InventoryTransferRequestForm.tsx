@@ -8,10 +8,11 @@ import { useParams, useRouter } from "next/navigation";
 import Select from "react-select/base";
 
 import SelectProduct from "@/components/forms/SelectProduct";
-import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
+import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import useOutlets from "@/hooks/useOutlets";
 import { GET_WAREHOUSES_BY_OUTLET_ID_QUERY } from "@/lib/graphql/query/warehouse";
 import { REQUEST_INVENTORY_TRANSFER_MUTATION } from "@/lib/graphql/mutations/products";
 import { WarehouseType } from "@/types/warehouse";
@@ -19,9 +20,13 @@ import ActionFooter from "@/components/ui/ActionFooter";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 import { SelectOption } from "@/types/form";
 
+// A "Request Transfer" is a PULL: the outlet you're logged into is always the one
+// asking to RECEIVE stock (the destination/"To Outlet", fixed to your current outlet —
+// you can only request transfers for yourself). "From Outlet" is the other outlet you
+// pick as the supplier; its stock is what actually needs to be sufficient.
 type InventoryTransferRequestFormType = {
-  toOutletId?: number;
-  towarehouse?: number;
+  fromOutletId?: number;
+  fromwarehouse?: number;
   remarks?: string;
 };
 
@@ -33,7 +38,7 @@ type RequestInventoryTransferItemInput = {
 type RequestInventoryTransferInput = {
   storeid: number;
   outletid: number;
-  towarehouse: number;
+  fromwarehouse: number;
   remarks?: string;
   items: RequestInventoryTransferItemInput[];
 };
@@ -43,13 +48,12 @@ type RequestRow = {
   itemcode: string;
   itemdescription: string;
   quantityrequest: number;
+  availableqty: number;
 };
 
 const InventoryTransferRequestForm = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-
-  const store = useAppSelector((state) => state.store.data);
 
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -57,23 +61,31 @@ const InventoryTransferRequestForm = () => {
 
   const portalTarget = typeof window !== "undefined" ? document.body : undefined;
 
-  const [toOutletMenuIsOpen, setToOutletMenuIsOpen] = useState(false);
-  const [toOutletInput, setToOutletInput] = useState("");
+  const [fromOutletMenuIsOpen, setFromOutletMenuIsOpen] = useState(false);
+  const [fromOutletInput, setFromOutletInput] = useState("");
   const [getWarehousesByOutletId] = useLazyQuery(GET_WAREHOUSES_BY_OUTLET_ID_QUERY);
+  // The requester doesn't need login access to the supplying outlet, so this must list
+  // every outlet in the store, not the caller's own permission-scoped outlet list (which
+  // getStore/state.store.data deliberately restricts to outlets the user is assigned to).
+  const { fetchOutletsList, outlets: allStoreOutlets } = useOutlets();
 
-  const [defaultOutletWarehouses, setDefaultOutletWarehouses] = useState<WarehouseType[]>([]);
-  const [toOutletWarehouses, setToOutletWarehouses] = useState<WarehouseType[]>([]);
+  // The current (logged-in) outlet's own warehouses — this is always the destination.
+  const [currentOutletWarehouses, setCurrentOutletWarehouses] = useState<WarehouseType[]>([]);
+  // The picked supplier outlet's warehouses.
+  const [fromOutletWarehouses, setFromOutletWarehouses] = useState<WarehouseType[]>([]);
 
   const [toolItem, setToolItem] = useState<{
     itemid?: number;
     itemcode?: string;
     itemdescription?: string;
     quantityrequest: number;
+    availableqty: number;
   }>(() => ({
     itemid: undefined,
     itemcode: undefined,
     itemdescription: undefined,
     quantityrequest: 1,
+    availableqty: 0,
   }));
 
   const [selectProductClearKey, setSelectProductClearKey] = useState(0);
@@ -85,28 +97,36 @@ const InventoryTransferRequestForm = () => {
     REQUEST_INVENTORY_TRANSFER_MUTATION
   );
 
-  const toOutletOptions: SelectOption[] = useMemo(() => {
-    const enabled = (store?.outlets || []).filter((o) => o.isenabled);
+  useEffect(() => {
+    if (parsedStoreId) fetchOutletsList([parsedStoreId], true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedStoreId]);
+
+  const currentOutletName = useMemo(
+    () => ((allStoreOutlets || []) as any[]).find((o) => Number(o.outletid) === parsedOutletId)?.outletname || "",
+    [allStoreOutlets, parsedOutletId]
+  );
+
+  const fromOutletOptions: SelectOption[] = useMemo(() => {
+    const enabled = (allStoreOutlets || []).filter((o: any) => o.isenabled);
     return enabled
-      .filter((o) => Number(o.outletid) !== parsedOutletId)
-      .map((o) => ({ value: o.outletid, label: o.outletname }));
-  }, [store?.outlets, parsedOutletId]);
+      .filter((o: any) => Number(o.outletid) !== parsedOutletId)
+      .map((o: any) => ({ value: o.outletid, label: o.outletname }));
+  }, [allStoreOutlets, parsedOutletId]);
 
   const resolveSystemWarehouse = (warehouses: WarehouseType[]) => {
     const sys = warehouses.find((w) => w.issystem);
     return sys;
   };
 
-  const defaultSysWarehouse = useMemo(
-    () => resolveSystemWarehouse(defaultOutletWarehouses),
-    [defaultOutletWarehouses]
+  const currentOutletSysWarehouse = useMemo(
+    () => resolveSystemWarehouse(currentOutletWarehouses),
+    [currentOutletWarehouses]
   );
 
-  const defaultSysWarehouseId = defaultSysWarehouse?.warehouseid;
-
-  const toOutletSysWarehouse = useMemo(
-    () => resolveSystemWarehouse(toOutletWarehouses),
-    [toOutletWarehouses]
+  const fromOutletSysWarehouse = useMemo(
+    () => resolveSystemWarehouse(fromOutletWarehouses),
+    [fromOutletWarehouses]
   );
 
   const {
@@ -123,22 +143,22 @@ const InventoryTransferRequestForm = () => {
     mode: "all",
   });
 
-  const toOutletId = watch("toOutletId");
+  const fromOutletId = watch("fromOutletId");
 
   useEffect(() => {
-    const toId = Number(toOutletId);
+    const fromId = Number(fromOutletId);
     if (
       Number.isFinite(parsedOutletId) &&
       parsedOutletId > 0 &&
-      Number.isFinite(toId) &&
-      toId > 0 &&
-      toId === parsedOutletId
+      Number.isFinite(fromId) &&
+      fromId > 0 &&
+      fromId === parsedOutletId
     ) {
-      setValue("toOutletId", undefined);
+      setValue("fromOutletId", undefined);
     }
-  }, [toOutletId, parsedOutletId, setValue]);
+  }, [fromOutletId, parsedOutletId, setValue]);
 
-  const fetchWarehouses = async (outletId: number, kind: "DEFAULT" | "TO") => {
+  const fetchWarehouses = async (outletId: number, kind: "CURRENT" | "FROM") => {
     const result = await handleTryCatch(async () => {
       const { data } = await getWarehousesByOutletId({
         variables: { outletid: outletId },
@@ -146,8 +166,8 @@ const InventoryTransferRequestForm = () => {
       });
       const list = (data?.getWarehousesByOutletId || []) as WarehouseType[];
 
-      if (kind === "DEFAULT") setDefaultOutletWarehouses(list);
-      if (kind === "TO") setToOutletWarehouses(list);
+      if (kind === "CURRENT") setCurrentOutletWarehouses(list);
+      if (kind === "FROM") setFromOutletWarehouses(list);
 
       return true;
     });
@@ -164,27 +184,27 @@ const InventoryTransferRequestForm = () => {
 
   useEffect(() => {
     if (parsedOutletId) {
-      fetchWarehouses(parsedOutletId, "DEFAULT");
+      fetchWarehouses(parsedOutletId, "CURRENT");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedOutletId]);
 
   useEffect(() => {
-    if (toOutletId) {
-      fetchWarehouses(Number(toOutletId), "TO");
+    if (fromOutletId) {
+      fetchWarehouses(Number(fromOutletId), "FROM");
     } else {
-      setToOutletWarehouses([]);
-      setValue("towarehouse", undefined);
+      setFromOutletWarehouses([]);
+      setValue("fromwarehouse", undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toOutletId]);
+  }, [fromOutletId]);
 
   useEffect(() => {
-    if (toOutletSysWarehouse?.warehouseid) {
-      setValue("towarehouse", toOutletSysWarehouse.warehouseid);
+    if (fromOutletSysWarehouse?.warehouseid) {
+      setValue("fromwarehouse", fromOutletSysWarehouse.warehouseid);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toOutletSysWarehouse?.warehouseid]);
+  }, [fromOutletSysWarehouse?.warehouseid]);
 
   const resetToolItem = () => {
     setToolItem({
@@ -192,9 +212,17 @@ const InventoryTransferRequestForm = () => {
       itemcode: undefined,
       itemdescription: undefined,
       quantityrequest: 1,
+      availableqty: 0,
     });
     setSelectProductClearKey((k) => k + 1);
   };
+
+  // Available qty is scoped to whichever "From Outlet" warehouse is picked — switching
+  // outlets invalidates whatever was selected/typed against the previous one.
+  useEffect(() => {
+    resetToolItem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromOutletSysWarehouse?.warehouseid]);
 
   const totalItemTransfered = useMemo(() => rows.length, [rows.length]);
   const totalQuantities = useMemo(
@@ -202,12 +230,16 @@ const InventoryTransferRequestForm = () => {
     [rows]
   );
 
+  const fromWarehouseName = fromOutletSysWarehouse?.warehousename || "";
+  const toWarehouseName = currentOutletSysWarehouse?.warehousename || "";
+  const toolDescription = toolItem.itemdescription || "";
+
   const addRow = () => {
-    const toWh = Number(watch("towarehouse"));
-    if (!Number.isFinite(toWh) || toWh <= 0) {
+    const fromWh = Number(watch("fromwarehouse"));
+    if (!Number.isFinite(fromWh) || fromWh <= 0) {
       dispatch(
         showNotification({
-          message: "To Outlet is required",
+          message: "From Outlet is required",
           type: NOTIFICATION_TYPES.ERROR,
         })
       );
@@ -245,6 +277,16 @@ const InventoryTransferRequestForm = () => {
       return;
     }
 
+    if (qtyValue > Number(toolItem.availableqty || 0)) {
+      dispatch(
+        showNotification({
+          message: `Requested qty cannot exceed available qty at ${fromWarehouseName || "the selected outlet"} (${toolItem.availableqty})`,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+      return;
+    }
+
     const exists = rows.some((r) => r.itemid === toolItem.itemid);
     if (exists) {
       dispatch(
@@ -263,6 +305,7 @@ const InventoryTransferRequestForm = () => {
         itemcode: String(toolItem.itemcode || ""),
         itemdescription: toolItem.itemdescription || "",
         quantityrequest: qtyValue,
+        availableqty: Number(toolItem.availableqty || 0),
       },
     ]);
 
@@ -276,11 +319,11 @@ const InventoryTransferRequestForm = () => {
   const onSubmit = async (data: InventoryTransferRequestFormType) => {
     if (!parsedStoreId || !parsedOutletId) return;
 
-    const toWh = Number(data.towarehouse);
-    if (!Number.isFinite(toWh) || toWh <= 0) {
+    const fromWh = Number(data.fromwarehouse);
+    if (!Number.isFinite(fromWh) || fromWh <= 0) {
       dispatch(
         showNotification({
-          message: "To Outlet is required",
+          message: "From Outlet is required",
           type: NOTIFICATION_TYPES.ERROR,
         })
       );
@@ -314,7 +357,7 @@ const InventoryTransferRequestForm = () => {
     const payload: RequestInventoryTransferInput = {
       storeid: parsedStoreId,
       outletid: parsedOutletId,
-      towarehouse: toWh,
+      fromwarehouse: fromWh,
       remarks: data.remarks || "",
       items: rows.map<RequestInventoryTransferItemInput>((r) => ({
         itemid: r.itemid,
@@ -358,15 +401,43 @@ const InventoryTransferRequestForm = () => {
     }
   };
 
-  const fromWarehouseName = defaultSysWarehouse?.warehousename || "";
-  const toWarehouseName = toOutletSysWarehouse?.warehousename || "";
-  const toolDescription = toolItem.itemdescription || "";
-
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="card">
         <div className="card-body">
           <div className="row g-3">
+            <div className="col-lg-6 col-md-6 col-sm-12">
+              <div className="input-blocks mb-0 row align-items-center">
+                <label className="col-form-label col-md-4">From Outlet</label>
+                <div className="col-md-8">
+                  <Controller
+                    control={control}
+                    name="fromOutletId"
+                    render={({ field }) => (
+                      <Select<SelectOption>
+                        options={fromOutletOptions}
+                        value={fromOutletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
+                        onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                        isClearable
+                        className="form-control p-0 select-form-custom"
+                        menuPortalTarget={portalTarget}
+                        menuPosition="fixed"
+                        styles={{
+                          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                          menu: (base) => ({ ...base, zIndex: 9999 }),
+                        }}
+                        menuIsOpen={fromOutletMenuIsOpen}
+                        onMenuOpen={() => setFromOutletMenuIsOpen(true)}
+                        onMenuClose={() => setFromOutletMenuIsOpen(false)}
+                        inputValue={fromOutletInput}
+                        onInputChange={setFromOutletInput}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="col-lg-6 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">From Warehouse</label>
@@ -380,30 +451,7 @@ const InventoryTransferRequestForm = () => {
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">To Outlet</label>
                 <div className="col-md-8">
-                  <Controller
-                    control={control}
-                    name="toOutletId"
-                    render={({ field }) => (
-                      <Select<SelectOption>
-                        options={toOutletOptions}
-                        value={toOutletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
-                        onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
-                        isClearable
-                        className="form-control p-0 select-form-custom"
-                        menuPortalTarget={portalTarget}
-                        menuPosition="fixed"
-                        styles={{
-                          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                          menu: (base) => ({ ...base, zIndex: 9999 }),
-                        }}
-                        menuIsOpen={toOutletMenuIsOpen}
-                        onMenuOpen={() => setToOutletMenuIsOpen(true)}
-                        onMenuClose={() => setToOutletMenuIsOpen(false)}
-                        inputValue={toOutletInput}
-                        onInputChange={setToOutletInput}
-                      />
-                    )}
-                  />
+                  <input className="form-control" value={currentOutletName} disabled />
                 </div>
               </div>
             </div>
@@ -430,13 +478,22 @@ const InventoryTransferRequestForm = () => {
                           <SelectProduct
                             storeId={parsedStoreId}
                             hasWarehouseId={true}
-                            warehouseId={defaultSysWarehouseId}
+                            warehouseId={fromOutletSysWarehouse?.warehouseid}
+                            disableField={!fromOutletSysWarehouse?.warehouseid}
                             trigger={trigger}
                             value={toolItem.itemid}
                             clearKey={selectProductClearKey}
                             onChange={(val: number | undefined) =>
                               setToolItem((prev) => ({ ...prev, itemid: val }))
                             }
+                            onNotFound={() => {
+                              dispatch(
+                                showNotification({
+                                  message: `Item not available at ${fromWarehouseName || "the selected outlet"}`,
+                                  type: NOTIFICATION_TYPES.ERROR,
+                                })
+                              );
+                            }}
                             onChangeAdditional={(selected: any) => {
                               if (!selected) {
                                 setToolItem((prev) => ({
@@ -444,6 +501,7 @@ const InventoryTransferRequestForm = () => {
                                   itemid: undefined,
                                   itemcode: undefined,
                                   itemdescription: undefined,
+                                  availableqty: 0,
                                 }));
                                 return;
                               }
@@ -458,10 +516,16 @@ const InventoryTransferRequestForm = () => {
                                   selected?.itemdescription != null
                                     ? String(selected.itemdescription)
                                     : prev.itemdescription,
+                                availableqty: Number(selected?.itemquantityinhand ?? 0),
                               }));
                               setTimeout(() => qtyInputRef.current?.focus(), 50);
                             }}
                           />
+                          {!fromOutletSysWarehouse?.warehouseid && (
+                            <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                              Select a From Outlet first
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -479,12 +543,20 @@ const InventoryTransferRequestForm = () => {
 
                       <div className="col-lg-2 col-md-6 col-sm-12">
                         <div className="input-blocks">
-                          <label>Quantity <span className="text-danger">*</span></label>
+                          <label>
+                            Quantity <span className="text-danger">*</span>
+                            {toolItem.itemid ? (
+                              <span className="text-muted ms-1" style={{ fontSize: 11 }}>
+                                (Available: {toolItem.availableqty})
+                              </span>
+                            ) : null}
+                          </label>
                           <input
                             ref={qtyInputRef}
                             type="number"
                             step="0.001"
                             min={0}
+                            max={toolItem.availableqty || undefined}
                             className="form-control px-1 text-end"
                             value={toolItem.quantityrequest}
                             onChange={(e) => {
@@ -520,14 +592,15 @@ const InventoryTransferRequestForm = () => {
                             <th className="text-nowrap">#</th>
                             <th className="text-nowrap">Item Code</th>
                             <th>Description</th>
-                            <th className="text-end text-nowrap">Qty</th>
+                            <th className="text-end text-nowrap">Available Qty</th>
+                            <th className="text-end text-nowrap">Requested Qty</th>
                             <th className="text-center text-nowrap">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {!rows.length ? (
                             <tr>
-                              <td colSpan={5} className="text-center">
+                              <td colSpan={6} className="text-center">
                                 No items
                               </td>
                             </tr>
@@ -540,6 +613,7 @@ const InventoryTransferRequestForm = () => {
                                 </td>
                                 <td className="text-nowrap">{r.itemcode}</td>
                                 <td>{r.itemdescription}</td>
+                                <td className="text-end">{r.availableqty}</td>
                                 <td className="text-end">{r.quantityrequest}</td>
                                 <td className="text-center">
                                   <button

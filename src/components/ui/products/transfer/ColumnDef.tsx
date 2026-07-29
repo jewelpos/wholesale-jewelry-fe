@@ -3,10 +3,12 @@ import { ColDef } from "ag-grid-community";
 import { InventoryTransfer } from "@/types/product";
 
 export const STATUS_LABEL: Record<number, string> = {
-  1: "Pending",
+  1: "Request / Initiated",
   2: "Approved",
-  3: "Ready to Receive",
+  3: "Intransit",
+  4: "Received / Completed",
   5: "Cancelled",
+  6: "Partially Received",
 };
 
 export const statusBadgeStyle = (statusId: number): React.CSSProperties => {
@@ -17,8 +19,12 @@ export const statusBadgeStyle = (statusId: number): React.CSSProperties => {
       return { background: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe" };
     case 3:
       return { background: "#e0e7ff", color: "#3730a3", border: "1px solid #c7d2fe" };
+    case 4:
+      return { background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" };
     case 5:
       return { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" };
+    case 6:
+      return { background: "#ffedd5", color: "#9a3412", border: "1px solid #fed7aa" };
     default:
       return { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" };
   }

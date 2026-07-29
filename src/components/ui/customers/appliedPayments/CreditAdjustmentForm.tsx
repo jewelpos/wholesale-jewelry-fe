@@ -298,6 +298,7 @@ const CreditAdjustmentForm = ({
                 <SelectCustomer
                   trigger={trigger}
                   storeId={storeId}
+                  outletId={outletId}
                   {...field}
                   value={field.value}
                   onChange={(v: number) => {

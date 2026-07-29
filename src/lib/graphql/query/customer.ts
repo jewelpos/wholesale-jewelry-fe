@@ -282,6 +282,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
         numberofsales
         balancedue
         totalsale
+        amountpaid
         opencredit
         mobile
         custregistrationdate
@@ -297,8 +298,8 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
 `;
 
 export const GET_CUSTOMERS_QUERY = gql`
-  query GetCustomers($storeid: Int!) {
-    getCustomers(storeid: $storeid) {
+  query GetCustomers($storeid: Int!, $outletid: Int) {
+    getCustomers(storeid: $storeid, outletid: $outletid) {
         customerid
         custcompanyname
         fullname

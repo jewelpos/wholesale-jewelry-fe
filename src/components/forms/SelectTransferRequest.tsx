@@ -16,7 +16,7 @@ type Props = {
   className?: string;
   trigger?: (name?: string) => void;
   storeId: number;
-  transferstatusid: number;
+  transferstatusid: number | number[];
   disableField?: boolean;
   name?: string;
 };
@@ -42,14 +42,19 @@ const SelectTransferRequest = ({
 
   const portalTarget = typeof window !== "undefined" ? document.body : undefined;
 
+  const statusIds = useMemo(
+    () => (Array.isArray(transferstatusid) ? transferstatusid : [transferstatusid]).filter(Boolean),
+    [transferstatusid]
+  );
+
   useEffect(() => {
-    if (!storeId || !transferstatusid) return;
+    if (!storeId || !statusIds.length) return;
 
     const run = async () => {
       const { data } = await getTransfers({
         variables: {
           storeid: Number(storeId),
-          transferstatusid: Number(transferstatusid),
+          transferstatusid: statusIds.map(Number),
         },
         fetchPolicy: "no-cache",
       });
@@ -59,7 +64,7 @@ const SelectTransferRequest = ({
 
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeId, transferstatusid]);
+  }, [storeId, statusIds]);
 
   const filteredTransfers = useMemo(() => {
     const q = String(input || "").trim().toLowerCase();

@@ -400,7 +400,7 @@ const AppliedPaymentsComponent = () => {
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
-            setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
+            setSelectedOutlet={setSelectedOutlet}
           />
 
           {/* Date period pills */}
@@ -483,6 +483,7 @@ const AppliedPaymentsComponent = () => {
                 <SelectCustomer
                   className=""
                   storeId={parsedStoreId}
+                  outletId={parsedOutletId}
                   trigger={() => {}}
                   value={printCustomerId}
                   onChange={(val: number) => setPrintCustomerId(val || null)}

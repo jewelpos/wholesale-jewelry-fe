@@ -466,10 +466,10 @@ const SalesInvoiceFormV2 = ({
     name: "items",
   });
 
-  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
-    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
-  }, [fetchWarehouseByStoreId, parsedStoreId]);
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [fetchWarehouseByOutletId, parsedOutletId]);
 
   const currentWarehouse = useMemo(
     () => warehouses.find((w) => w.issystem) ?? warehouses[0],
@@ -1613,7 +1613,7 @@ const SalesInvoiceFormV2 = ({
                     control={control}
                     rules={{ required: "Bill To customer is required" }}
                     render={({ field }) => (
-                      <SelectCustomer trigger={trigger} storeId={parsedStoreId} {...field} />
+                      <SelectCustomer trigger={trigger} storeId={parsedStoreId} outletId={parsedOutletId} {...field} />
                     )}
                   />
                 </div>
@@ -1671,7 +1671,7 @@ const SalesInvoiceFormV2 = ({
                         name="shiptocustomerid"
                         control={control}
                         render={({ field }) => (
-                          <SelectCustomer trigger={trigger} storeId={parsedStoreId} {...field} />
+                          <SelectCustomer trigger={trigger} storeId={parsedStoreId} outletId={parsedOutletId} {...field} />
                         )}
                       />
                     </div>

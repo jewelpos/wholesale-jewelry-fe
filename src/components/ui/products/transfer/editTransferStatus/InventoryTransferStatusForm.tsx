@@ -125,10 +125,10 @@ const InventoryTransferStatusForm = () => {
       return;
     }
 
-    if (transferstatusid === 4) {
+    if (transferstatusid === 4 || transferstatusid === 6) {
       dispatch(
         showNotification({
-          message: "Status 4 cannot be set here. Use Receive Transfer to complete.",
+          message: "This status is set automatically by Receive Transfer, not here.",
           type: NOTIFICATION_TYPES.ERROR,
         })
       );
@@ -193,7 +193,13 @@ const InventoryTransferStatusForm = () => {
                     render={({ field }) => (
                       <SelectTransferRequest
                         storeId={parsedStoreId}
-                        transferstatusid={4}
+                        // Approved (2) transfers are the ones actually waiting on this
+                        // form's action — moving them to Ready to Receive (3) so they
+                        // become visible in the Receive Transfer picker (which filters
+                        // for status 3). Nothing legitimately sits at status 4
+                        // (Received/terminal) waiting for a status change, so filtering
+                        // on 4 here made this picker permanently empty.
+                        transferstatusid={2}
                         value={field.value}
                         onChange={(v) => field.onChange(v)}
                         className=""
@@ -216,14 +222,14 @@ const InventoryTransferStatusForm = () => {
                       <SelectInventoryStatus
                         storeId={parsedStoreId}
                         value={field.value}
-                        excludeIds={[4]}
+                        excludeIds={[4, 6]}
                         onChange={(v) => {
                           const n = Number(v);
-                          if (n === 4) {
+                          if (n === 4 || n === 6) {
                             dispatch(
                               showNotification({
                                 message:
-                                  "Status 4 cannot be set here. Use Receive Transfer to complete.",
+                                  "This status is set automatically by Receive Transfer, not here.",
                                 type: NOTIFICATION_TYPES.ERROR,
                               })
                             );

@@ -304,7 +304,7 @@ const CustomerListComponent = () => {
             search={search}
             setSearch={setSearch}
             selectedOutlet={selectedOutlet}
-            setSelectedOutlet={isAdmin ? setSelectedOutlet : undefined}
+            setSelectedOutlet={setSelectedOutlet}
             extraActions={
               <button
                 type="button"

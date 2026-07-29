@@ -163,6 +163,7 @@ export type CustomersListType = {
   numberofsales: number;
   balancedue: number;
   totalsale: number;
+  amountpaid?: number;
   opencredit: number;
   mobile: string;
   custregistrationdate: string;

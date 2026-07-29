@@ -145,10 +145,14 @@ const MemoListComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
+  useEffect(() => { if (parsedOutletId) setSelectedOutlet(parsedOutletId); }, [parsedOutletId]);
   const debouncedSearchRef = useRef(debouncedSearch);
+  const selectedOutletRef = useRef(selectedOutlet);
   const selectedWarehouseRef = useRef(selectedWarehouse);
   const statusFilterRef = useRef(statusFilter);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { selectedWarehouseRef.current = selectedWarehouse; }, [selectedWarehouse]);
   useEffect(() => { statusFilterRef.current = statusFilter; }, [statusFilter]);
 
@@ -172,7 +176,7 @@ const MemoListComponent = () => {
       const { data } = await getMemoList({
         variables: {
           storeid: parsedStoreId,
-          outletid: parsedOutletId,
+          outletid: selectedOutletRef.current,
           warehouseid: selectedWarehouseRef.current,
           ...filters,
         },
@@ -222,7 +226,7 @@ const MemoListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWarehouse, debouncedSearch, statusFilter, datePreset]);
+  }, [selectedOutlet, selectedWarehouse, debouncedSearch, statusFilter, datePreset]);
 
   const handleSelectionChanged = useCallback(() => {
     const selected = gridRef.current?.api?.getSelectedRows?.() || [];
@@ -293,8 +297,8 @@ const MemoListComponent = () => {
   const memoTodayStr = new Date().toISOString().slice(0, 10);
   const memoSummaryRange = memoDateRange ?? { startdate: "2000-01-01", enddate: memoTodayStr };
   const { data: summaryData, loading: summaryLoading } = useQuery(GET_MEMO_DAILY_SUMMARY_QUERY, {
-    variables: { outletid: parsedOutletId, startdate: memoSummaryRange.startdate, enddate: memoSummaryRange.enddate },
-    skip: !parsedOutletId,
+    variables: { outletid: selectedOutlet, startdate: memoSummaryRange.startdate, enddate: memoSummaryRange.enddate },
+    skip: !selectedOutlet,
   });
   const summary = summaryData?.getMemoDailySummary ?? null;
 
@@ -336,6 +340,8 @@ const MemoListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            selectedOutlet={selectedOutlet}
+            setSelectedOutlet={setSelectedOutlet}
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
           />

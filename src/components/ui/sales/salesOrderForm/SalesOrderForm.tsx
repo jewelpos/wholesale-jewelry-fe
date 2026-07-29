@@ -885,6 +885,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         <>
                           <SelectCustomer
                             storeId={parsedStoreId}
+                            outletId={parsedOutletId}
                             value={field.value}
                             onChange={(val: number | undefined) => field.onChange(val)}
                             trigger={trigger}
@@ -923,7 +924,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         control={control}
                         name="shiptocustomerid"
                         render={({ field }) => (
-                          <SelectCustomer storeId={parsedStoreId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
+                          <SelectCustomer storeId={parsedStoreId} outletId={parsedOutletId} value={field.value} onChange={(val: number | undefined) => field.onChange(val)} trigger={trigger} />
                         )}
                       />
                     </div>

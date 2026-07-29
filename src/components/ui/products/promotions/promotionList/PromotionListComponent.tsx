@@ -8,13 +8,21 @@ import { PlusCircle } from "lucide-react";
 import { GET_PROMOTION_LIST_QUERY } from "@/lib/graphql/query/promotions";
 import { getPromotionColumnDefs } from "./ColumnDef";
 import PromotionActions from "./PromotionActions";
+import useWarehouse from "@/hooks/useWarehouse";
 
 const PromotionListComponent = () => {
   const { storePrefix, storeId: storeIdParam, outletId } = useParams();
   const router = useRouter();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletId as string, 10);
   const gridRef = useRef<AgGridReact>(null);
   const [rowData, setRowData] = useState<any[]>([]);
+
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  React.useEffect(() => {
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [parsedOutletId, fetchWarehouseByOutletId]);
+  const defaultWarehouseId = warehouses.find((w) => w.issystem)?.warehouseid ?? warehouses[0]?.warehouseid;
 
   const [getPromotions, { loading }] = useLazyQuery(GET_PROMOTION_LIST_QUERY, {
     fetchPolicy: "network-only",
@@ -22,8 +30,10 @@ const PromotionListComponent = () => {
   });
 
   const loadData = useCallback(() => {
-    if (parsedStoreId) getPromotions({ variables: { storeid: parsedStoreId } });
-  }, [parsedStoreId, getPromotions]);
+    if (parsedStoreId && defaultWarehouseId) {
+      getPromotions({ variables: { storeid: parsedStoreId, warehouseid: defaultWarehouseId } });
+    }
+  }, [parsedStoreId, defaultWarehouseId, getPromotions]);
 
   React.useEffect(() => { loadData(); }, [loadData]);
 

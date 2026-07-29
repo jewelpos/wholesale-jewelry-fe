@@ -239,6 +239,7 @@ const LedgerActivityComponent = () => {
               <SelectCustomer
                 className=""
                 storeId={parsedStoreId}
+                outletId={selectedOutlet ?? parsedOutletId}
                 trigger={() => {}}
                 value={customerid}
                 onChange={(val: number) => setCustomerid(val || null)}

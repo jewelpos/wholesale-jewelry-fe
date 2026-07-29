@@ -33,7 +33,7 @@ export const GET_TRANSFER_STATUS_LIST_QUERY = gql`
 `;
 
 export const GET_INVENTORY_TRANSFER_LIST_BY_STATUS_QUERY = gql`
-  query GetInventoryTransferListByStatus($storeid: Int!, $transferstatusid: Int!) {
+  query GetInventoryTransferListByStatus($storeid: Int!, $transferstatusid: [Int!]!) {
     getInventoryTransferListByStatus(storeid: $storeid, transferstatusid: $transferstatusid) {
       inventoryitemtransferid
       transfermode

@@ -326,6 +326,7 @@ const NewPaymentForm = ({
                   className={`${errors.customerid && "is-invalid"} `}
                   trigger={trigger}
                   storeId={storeId}
+                  outletId={outletId}
                   {...field}
                   onChange={(v: number) => {
                     field.onChange(v);

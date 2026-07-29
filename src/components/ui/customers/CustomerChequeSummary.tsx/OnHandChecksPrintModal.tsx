@@ -37,8 +37,9 @@ const fmtDate = (val: string | null | undefined) =>
   val ? dayjs(val).format("MM/DD/YYYY") : "";
 
 const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
-  const { storeId } = useParams();
+  const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
+  const parsedOutletId = parseInt(outletId as string, 10);
   const storeName = useAppSelector((state) => state.store.data?.storename ?? "");
 
   const [selectedCustomer, setSelectedCustomer] = useState<number>(0);
@@ -136,6 +137,7 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
                   trigger={() => {}}
                   setValue={() => {}}
                   storeId={parsedStoreId}
+                  outletId={parsedOutletId}
                   value={selectedCustomer}
                   onChange={(v: React.SetStateAction<number>) => setSelectedCustomer(v)}
                 />

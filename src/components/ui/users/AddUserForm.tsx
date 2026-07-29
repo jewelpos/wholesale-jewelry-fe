@@ -125,7 +125,9 @@ const AddUserForm = () => {
 
   useEffect(() => {
     if (storeId) {
-      fetchOutletsList([storeId]);
+      // Assigning a user's outlet access is an admin action — the picker must show every
+      // outlet in the store, not just the ones the person doing the assigning can access.
+      fetchOutletsList([storeId], true);
     }
   }, [storeId, fetchOutletsList]);
 
@@ -211,6 +213,7 @@ const AddUserForm = () => {
         ],
         roleid: user.roleid,
         storeid: parsedStoreId,
+        defaultoutletid: user.isdefaultoutlet ? user.outletid : 0,
       });
       // The saved permissions tree is already correctly grouped by storemenu
       // hierarchy (each child's parentid matches its wrapper's menuid) — map it
@@ -250,59 +253,32 @@ const AddUserForm = () => {
         <div className="col-md-12">
           <UserProfileInputs register={register} errors={errors} />
           {userId ? (
-            <div className="mb-4">
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label className="form-label">Store</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={userData?.getUserByIdUnderStore?.storename || ""}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label className="form-label">Outlet</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      value={userData?.getUserByIdUnderStore?.outletname || ""}
-                      readOnly
-                      disabled
-                    />
-                    {!userData?.getUserByIdUnderStore?.isdefaultoutlet && (
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="makeDefaultOutlet"
-                          checked={!!watch("defaultoutletid")}
-                          onChange={(e) => {
-                            setValue(
-                              "defaultoutletid",
-                              e.target.checked
-                                ? userData?.getUserByIdUnderStore?.outletid || 0
-                                : 0,
-                              { shouldValidate: true }
-                            );
-                          }}
-                        />
-                        <label
-                          className="form-check-label"
-                          htmlFor="makeDefaultOutlet"
-                        >
-                          Make as default outlet
-                        </label>
-                      </div>
-                    )}
+            <>
+              <div className="mb-4">
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Store</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={userData?.getUserByIdUnderStore?.storename || ""}
+                        readOnly
+                        disabled
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              <UserOutletInputs
+                control={control}
+                errors={errors}
+                outlets={outlets}
+                outletsLoading={outletsLoading}
+                selectedOutlets={[...selectedOutlets]}
+                trigger={trigger}
+              />
+            </>
           ) : (
             <>
               <UserStoreInputs

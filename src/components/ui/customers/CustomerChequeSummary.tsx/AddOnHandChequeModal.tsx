@@ -265,6 +265,7 @@ const AddOnHandChequeModal = ({
                             <SelectCustomer
                               className={`form-control-sm${rowErrors.customerid ? " is-invalid" : ""}`}
                               storeId={parsedStoreId}
+                              outletId={parsedOutletId}
                               trigger={trigger}
                               disableField={!isEditable}
                               {...field}

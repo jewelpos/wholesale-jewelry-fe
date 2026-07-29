@@ -276,7 +276,10 @@ const InventoryTransferReceiveForm = () => {
                     render={({ field }) => (
                       <SelectTransferRequest
                         storeId={parsedStoreId}
-                        transferstatusid={3}
+                        // Intransit (3) is the normal entry point; Partially Received (6)
+                        // must also show here so the remaining lines of a split receipt
+                        // can still be completed.
+                        transferstatusid={[3, 6]}
                         value={field.value}
                         onChange={(v) => field.onChange(v)}
                         className=""

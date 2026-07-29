@@ -258,6 +258,7 @@ const CustomerChequeSummaryComponent = () => {
                     trigger={() => {}}
                     setValue={() => {}}
                     storeId={parsedStoreId}
+                    outletId={parsedOutletId}
                     value={selectedCustomer}
                     onChange={(value: React.SetStateAction<number>) => setSelectedCustomer(value)}
                   />

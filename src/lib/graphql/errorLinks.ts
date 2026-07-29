@@ -76,6 +76,12 @@ export const errorLink = onError(
             return handleUnauth(operation, forward);
 
           case "FORBIDDEN": {
+            // Log before the hard redirect — otherwise a single failing request among
+            // many concurrent ones bounces the whole page with zero trace of which
+            // operation/variables actually triggered it.
+            console.error(
+              `[GraphQL FORBIDDEN]: operation=${operation.operationName}, variables=${JSON.stringify(operation.variables)}, message=${err.message}`
+            );
             const prefix = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "jw" : "jw";
             window.location.href = `/unauthorized?prefix=${prefix}`;
             break;
