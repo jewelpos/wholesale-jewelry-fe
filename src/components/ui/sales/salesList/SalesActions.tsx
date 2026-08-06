@@ -202,7 +202,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
                 </button>
               ))}
               <div style={{ borderTop: "1px solid #dee2e6", margin: "4px 0" }} />
-              <Link href={`${basePath}/invoice-layout`} className="dropdown-item" scroll={false}
+              <Link href={`${basePath}/settings/invoice-layout`} className="dropdown-item" scroll={false}
                 style={{ fontSize: 12, padding: "4px 12px", color: "#0d6efd" }}
                 onClick={() => setShowTemplateMenu(false)}>
                 Change default…

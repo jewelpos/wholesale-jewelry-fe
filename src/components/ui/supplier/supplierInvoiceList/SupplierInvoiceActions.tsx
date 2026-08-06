@@ -1,7 +1,7 @@
 import React from "react";
 import { useMutation } from "@apollo/client";
 import { DELETE_SUPPLIER_INVOICE_MUTATION } from "@/lib/graphql/mutations/supplier";
-import { useAppDispatch } from "@/lib/store/hook";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
@@ -26,14 +26,26 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const [deleteSupplierInvoice] = useMutation(DELETE_SUPPLIER_INVOICE_MUTATION);
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
+
+  // Supplier invoices are outlet-specific transactions — editing or deleting one
+  // is locked to the outlet it was created at, the store owner bypasses this,
+  // matching the backend's assertRecordEditableFromOutlet check.
+  const isOwner = !!useAppSelector((state) => state.user.data?.issysgenmasteraccount);
+  const isOtherOutlet =
+    !isOwner &&
+    data.outletid != null &&
+    !Number.isNaN(parsedOutletId) &&
+    Number(data.outletid) !== parsedOutletId;
+  const otherOutletReason = "This invoice was created at a different outlet";
 
   const hasPaid = Number(data.veninvamtpaid) > 0;
-  const canEdit = !hasPaid;
-  const canDelete = !hasPaid;
-  const paidReason = "Cannot edit: invoice has been partially or fully paid";
-  const deleteReason = "Cannot delete: invoice has been partially or fully paid";
+  const canEdit = !hasPaid && !isOtherOutlet;
+  const canDelete = !hasPaid && !isOtherOutlet;
+  const paidReason = isOtherOutlet ? otherOutletReason : "Cannot edit: invoice has been partially or fully paid";
+  const deleteReason = isOtherOutlet ? otherOutletReason : "Cannot delete: invoice has been partially or fully paid";
 
   const handleDelete = async () => {
     const result = await showConfirmationDialog({
@@ -47,7 +59,7 @@ const SupplierInvoiceActions: React.FC<SupplierInvoiceActionsProps> = ({
     if (result.isConfirmed) {
       const deleteResult = await handleTryCatch(async () => {
         const { data: responseData } = await deleteSupplierInvoice({
-          variables: { supplierinvoiceid: data.supplierinvoiceid, storeid: parsedStoreId },
+          variables: { supplierinvoiceid: data.supplierinvoiceid, storeid: parsedStoreId, outletid: parsedOutletId },
         });
         if (responseData?.deleteSupplierInvoice.success) {
           dispatch(showNotification({ message: responseData.deleteSupplierInvoice.message, type: NOTIFICATION_TYPES.SUCCESS }));

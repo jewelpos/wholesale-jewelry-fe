@@ -12,8 +12,8 @@ export const ADD_SUPPLIER_MUTATION = gql`
 `;
 
 export const DELETE_SUPPLIER_MUTATION = gql`
-  mutation DeleteSupplier($supplierid: Int!, $storeid: Int!) {
-    deleteSupplier(supplierid: $supplierid, storeid: $storeid) {
+  mutation DeleteSupplier($supplierid: Int!, $storeid: Int!, $outletid: Int) {
+    deleteSupplier(supplierid: $supplierid, storeid: $storeid, outletid: $outletid) {
       success
       message
       error
@@ -45,8 +45,8 @@ export const ADD_SUPPLIER_INVOICE_MUTATION = gql`
 `;
 
 export const DELETE_SUPPLIER_INVOICE_MUTATION = gql`
-  mutation DeleteSupplierInvoice($supplierinvoiceid: Int!, $storeid: Int!) {
-    deleteSupplierInvoice(supplierinvoiceid: $supplierinvoiceid, storeid: $storeid) {
+  mutation DeleteSupplierInvoice($supplierinvoiceid: Int!, $storeid: Int!, $outletid: Int) {
+    deleteSupplierInvoice(supplierinvoiceid: $supplierinvoiceid, storeid: $storeid, outletid: $outletid) {
       success
       message
       error

@@ -25,6 +25,10 @@ type PropsType = {
   setSelectedOutlet: Dispatch<SetStateAction<number | undefined>>;
   selectedOutlet: number | undefined;
   stacked?: boolean;
+  // Some screens (Category/Subcategory lists, Ledger Activity, Statement) are meant
+  // to be global-by-default with this filter as a pure opt-in narrow-down — pass
+  // false to skip auto-selecting the current route's outlet on load.
+  autoSelectCurrentOutlet?: boolean;
 };
 
 const OutletsFilter = ({
@@ -34,6 +38,7 @@ const OutletsFilter = ({
   setSelectedOutlet,
   selectedOutlet,
   stacked,
+  autoSelectCurrentOutlet = true,
 }: PropsType) => {
   const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
@@ -51,6 +56,7 @@ const OutletsFilter = ({
   }));
 
   useEffect(() => {
+    if (!autoSelectCurrentOutlet) return;
     if (outlets.length && parsedOutletId) {
       const outlet = outlets.find(
         (outlet) => outlet.outletid === parsedOutletId
@@ -59,7 +65,7 @@ const OutletsFilter = ({
         setSelectedOutlet(outlet.outletid);
       }
     }
-  }, [outlets, setSelectedOutlet, parsedOutletId]);
+  }, [outlets, setSelectedOutlet, parsedOutletId, autoSelectCurrentOutlet]);
 
   if (stacked) {
     return (

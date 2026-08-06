@@ -217,6 +217,12 @@ export const GET_ITEM_SUB_CATEGORY_LIST_QUERY = gql`
   }
 `;
 
+export const CHECK_ITEM_CODE_EXISTS_QUERY = gql`
+  query CheckItemCodeExists($itemcode: String!, $storeid: Int!) {
+    checkItemCodeExists(itemcode: $itemcode, storeid: $storeid)
+  }
+`;
+
 export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
   query GetProductByItemCode($itemcode: String!, $storeid: Int!) {
     getProductByItemCode(itemcode: $itemcode, storeid: $storeid) {

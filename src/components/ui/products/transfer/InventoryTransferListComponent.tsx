@@ -5,7 +5,7 @@ import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import { ColDef, GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import { useAppDispatch } from "@/lib/store/hook";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
@@ -19,6 +19,7 @@ import { useParams } from "next/navigation";
 import { GET_INVENTORY_TRANSFER_LIST_QUERY } from "@/lib/graphql/query/products";
 import { inventoryTransferColumnDefs, statusBadgeStyle, STATUS_LABEL } from "./ColumnDef";
 import InventoryTransferListHeader from "./InventoryTransferListHeader";
+import CancelTransferModal from "./CancelTransferModal";
 import { CHANGE_INVENTORY_TRANSFER_STATUS_MUTATION } from "@/lib/graphql/mutations/products";
 
 const STATUS_PILLS = [
@@ -95,27 +96,37 @@ const pillStyle = (active: boolean, statusId: number | null): React.CSSPropertie
 };
 
 const InventoryTransferListComponent = () => {
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [getInventoryTransferList] = useLazyQuery(GET_INVENTORY_TRANSFER_LIST_QUERY);
   const dispatch = useAppDispatch();
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<number | undefined>(-1);
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
   const [datePreset, setDatePreset] = useState<DatePreset>("month");
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
 
+  // Same "does this user actually have more than one outlet to look at" check as the
+  // header's store/outlet switcher (StoreDropdown.tsx) — no point showing an outlet
+  // picker to someone who only ever sees their own single outlet's transfers anyway.
+  const isOwner = !!useAppSelector((state) => state.user.data?.issysgenmasteraccount);
+  const storeOutlets = useAppSelector((state) => state.store.data?.outlets) ?? [];
+  const enabledOutlets = useMemo(() => storeOutlets.filter((o) => o.isenabled), [storeOutlets]);
+  const showOutletFilter = isOwner || enabledOutlets.length > 1;
+
   // Refs so getRows always reads the latest filter state without needing a new datasource
-  const selectedWarehouseRef = useRef(selectedWarehouse);
   const selectedStatusRef = useRef(selectedStatus);
+  const selectedOutletRef = useRef(selectedOutlet);
   const datePresetRef = useRef(datePreset);
   const debouncedSearchRef = useRef(debouncedSearch);
 
-  useEffect(() => { selectedWarehouseRef.current = selectedWarehouse; }, [selectedWarehouse]);
   useEffect(() => { selectedStatusRef.current = selectedStatus; }, [selectedStatus]);
+  useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { datePresetRef.current = datePreset; }, [datePreset]);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
 
@@ -132,13 +143,17 @@ const InventoryTransferListComponent = () => {
       debouncedSearchRef.current,
       "transfersource, destination, transfertype, username"
     );
-    const warehouse = selectedWarehouseRef.current;
-    if (warehouse !== -1) {
+    // The backend already scopes this list to transfers the caller's own outlet(s) are
+    // party to (fromwarhouse OR towarehouse) — this picker only exists for owners/multi-
+    // outlet users to narrow further to ONE specific outlet, on either side of the
+    // transfer (fromoutletid/tooutletid), not the ambiguous single-sided warehouseid.
+    const outlet = selectedOutletRef.current;
+    if (outlet !== undefined) {
       filtersMain = {
         ...filtersMain,
         filters: [
           ...filtersMain.filters,
-          { key: "warehouseid", value: { filterType: "text", type: "equals", filter: warehouse } },
+          { key: "fromoutletid,tooutletid", value: { filterType: "text", type: "equals", filter: outlet } },
         ],
       };
     }
@@ -197,13 +212,18 @@ const InventoryTransferListComponent = () => {
     if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
   }, [gridReady]);
 
-  const handleChangeStatus = async (inventoryitemtransferid: number, transferstatusid: number) => {
+  const handleChangeStatus = async (
+    inventoryitemtransferid: number,
+    transferstatusid: number,
+    remarks?: string
+  ) => {
     if (!parsedStoreId) return;
 
     const payload: UpdateInventoryTransferStatusInput = {
       storeid: parsedStoreId,
       inventoryitemtransferid,
       transferstatusid,
+      ...(remarks ? { remarks } : {}),
     };
 
     setActionLoadingId(inventoryitemtransferid);
@@ -217,7 +237,10 @@ const InventoryTransferListComponent = () => {
           message: successData.message,
           type: successData.success ? NOTIFICATION_TYPES.SUCCESS : NOTIFICATION_TYPES.ERROR,
         }));
-        if (successData.success) refreshGrid();
+        if (successData.success) {
+          refreshGrid();
+          setCancelTargetId(null);
+        }
       }
       return true;
     });
@@ -226,6 +249,11 @@ const InventoryTransferListComponent = () => {
     if (result.error) {
       dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
     }
+  };
+
+  const handleConfirmCancel = (remarks: string) => {
+    if (cancelTargetId == null) return;
+    handleChangeStatus(cancelTargetId, 5, remarks);
   };
 
   const columnDefs = useMemo(() => {
@@ -244,12 +272,19 @@ const InventoryTransferListComponent = () => {
 
         if (statusId === 1) {
           const disabled = actionLoadingId === id;
+          // Approval is a source-outlet decision (their own stock is on the line) —
+          // the requesting/destination outlet can't approve its own request. Backend
+          // already enforces this (assertUserCanActOnTransfer); this just keeps the
+          // button from being clickable only to bounce off a "not authorized" error.
+          const isRequestingOutlet =
+            Number.isFinite(parsedOutletId) && Number(row.tooutletid) === parsedOutletId;
           return (
             <div className="d-flex gap-2">
               <button
                 type="button"
                 className="btn btn-sm btn-success"
-                disabled={disabled}
+                disabled={disabled || isRequestingOutlet}
+                title={isRequestingOutlet ? "Only the supplying outlet can approve this request" : undefined}
                 onClick={() => handleChangeStatus(id, 2)}
               >
                 Approve
@@ -258,7 +293,7 @@ const InventoryTransferListComponent = () => {
                 type="button"
                 className="btn btn-sm btn-danger"
                 disabled={disabled}
-                onClick={() => handleChangeStatus(id, 5)}
+                onClick={() => setCancelTargetId(id)}
               >
                 Cancel
               </button>
@@ -285,7 +320,7 @@ const InventoryTransferListComponent = () => {
       },
     };
     return [...inventoryTransferColumnDefs, actionsCol];
-  }, [actionLoadingId, refreshGrid]);
+  }, [actionLoadingId, refreshGrid, parsedOutletId]);
 
   // Set datasource once when grid is ready
   useEffect(() => {
@@ -300,7 +335,7 @@ const InventoryTransferListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWarehouse, selectedStatus, datePreset, debouncedSearch]);
+  }, [selectedStatus, selectedOutlet, datePreset, debouncedSearch]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
@@ -311,8 +346,6 @@ const InventoryTransferListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
-            selectedWarehouse={selectedWarehouse}
-            setSelectedWarehouse={setSelectedWarehouse}
           />
 
           {/* Status + date filter pills */}
@@ -328,6 +361,21 @@ const InventoryTransferListComponent = () => {
                   {pill.label}
                 </button>
               ))}
+              {showOutletFilter && (
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: "auto", fontSize: 12 }}
+                  value={selectedOutlet ?? ""}
+                  onChange={(e) => setSelectedOutlet(e.target.value ? Number(e.target.value) : undefined)}
+                >
+                  <option value="">All Outlets</option>
+                  {enabledOutlets.map((o) => (
+                    <option key={o.outletid} value={o.outletid}>
+                      {o.outletname}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="btn-group btn-group-sm">
               {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((p) => (
@@ -357,6 +405,14 @@ const InventoryTransferListComponent = () => {
           </div>
         </div>
       </div>
+
+      {cancelTargetId != null && (
+        <CancelTransferModal
+          onClose={() => setCancelTargetId(null)}
+          onConfirm={handleConfirmCancel}
+          loading={actionLoadingId === cancelTargetId}
+        />
+      )}
     </div>
   );
 };

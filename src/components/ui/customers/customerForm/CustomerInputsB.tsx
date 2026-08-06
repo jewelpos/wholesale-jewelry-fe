@@ -34,11 +34,16 @@ interface Props {
   trigger: UseFormTrigger<CustomerFormType>;
   setValue: UseFormSetValue<CustomerFormType>;
   storeId: number;
+  outletId?: number;
   warehouseId: string;
   status: number;
   custalert: number;
   marketingoptin: number;
   disableField?: boolean;
+  // New customers always record the outlet they were actually created at — this is
+  // a historical field, never a manual choice, so it's locked for creation regardless
+  // of the user's own outlet access. Editing an existing customer is unaffected.
+  disableWarehouseField?: boolean;
 }
 
 const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
@@ -58,11 +63,13 @@ const CustomerInputsB = ({
   trigger,
   setValue,
   storeId,
+  outletId,
   warehouseId,
   status,
   custalert,
   marketingoptin,
   disableField,
+  disableWarehouseField,
 }: Props) => {
   return (
     <>
@@ -91,7 +98,14 @@ const CustomerInputsB = ({
           )}
         </div>
         <div className="col-6 mb-3">
-          <label className="form-label">Warehouse <span className="text-danger">*</span></label>
+          <label className="form-label">
+            Warehouse <span className="text-danger">*</span>
+            {disableWarehouseField && (
+              <span className="text-muted ms-1" style={{ fontSize: 11, fontWeight: 400 }}>
+                (this outlet's default — recorded automatically)
+              </span>
+            )}
+          </label>
           <Controller
             name="warehouseid"
             control={control}
@@ -103,7 +117,10 @@ const CustomerInputsB = ({
                 setValue={setValue}
                 warehouseId={warehouseId}
                 storeId={storeId}
-                isDisabled={disableField}
+                // New customers: scope the dropdown to this outlet's own warehouse(s)
+                // only, not the whole store — matches it being locked/disabled below.
+                outletId={disableWarehouseField ? outletId : undefined}
+                disableField={disableField || disableWarehouseField}
                 {...field}
               />
             )}

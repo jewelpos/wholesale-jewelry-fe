@@ -13,7 +13,7 @@ import {
   GET_INVENTORY_TRANSFER_ITEM_QUERY,
 } from "@/lib/graphql/query/products";
 import { CHANGE_INVENTORY_TRANSFER_STATUS_MUTATION } from "@/lib/graphql/mutations/products";
-import { UpdateInventoryTransferStatusInput } from "@/types/product";
+import { InventoryItemTransfer, UpdateInventoryTransferStatusInput } from "@/types/product";
 import ActionFooter from "@/components/ui/ActionFooter";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 import SelectInventoryStatus from "@/components/forms/SelectInventoryStatus";
@@ -36,10 +36,12 @@ const InventoryTransferStatusForm = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
 
   const [selectedTransferItems, setSelectedTransferItems] = useState<TransferItem[]>([]);
+  const [selectedTransfer, setSelectedTransfer] = useState<InventoryItemTransfer | undefined>();
   const [getTransferItems] = useLazyQuery(GET_INVENTORY_TRANSFER_ITEM_QUERY);
 
   const [changeStatus, { loading: saving }] = useMutation(
@@ -49,6 +51,7 @@ const InventoryTransferStatusForm = () => {
   const {
     control,
     watch,
+    resetField,
     handleSubmit,
     formState: { isValid },
   } = useForm<FormType>({
@@ -60,6 +63,19 @@ const InventoryTransferStatusForm = () => {
   });
 
   const selectedTransferId = watch("inventoryitemtransferid");
+
+  // This form only ever deals with Approved(2) transfers (see SelectTransferRequest
+  // below), so the only legitimate next step is Intransit(3) — and only the SOURCE
+  // outlet can make that call (their own stock is what's actually shipping). The
+  // destination/requester has no valid status change to make here at all; approving
+  // and receiving already happen through their own dedicated flows.
+  const isSourceOutlet =
+    Number.isFinite(parsedOutletId) && Number(selectedTransfer?.fromoutletid) === parsedOutletId;
+  const statusExcludeIds = selectedTransferId
+    ? isSourceOutlet
+      ? [1, 2, 4, 5, 6]
+      : [1, 2, 3, 4, 5, 6]
+    : [4, 6];
 
   const loadTransferPreview = async (inventoryitemtransferid: number) => {
     if (!parsedStoreId) return;
@@ -93,12 +109,20 @@ const InventoryTransferStatusForm = () => {
   useEffect(() => {
     if (!selectedTransferId || Number(selectedTransferId) <= 0) {
       setSelectedTransferItems([]);
+      setSelectedTransfer(undefined);
       return;
     }
 
     loadTransferPreview(Number(selectedTransferId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTransferId]);
+
+  // Which statuses are valid depends on who's acting (source vs destination) — reset
+  // whatever was picked so a stale, no-longer-valid selection can't be submitted.
+  useEffect(() => {
+    resetField("transferstatusid");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTransferId, isSourceOutlet]);
 
   const onSubmit = async (data: FormType) => {
     if (!parsedStoreId) return;
@@ -182,7 +206,7 @@ const InventoryTransferStatusForm = () => {
       <div className="card">
         <div className="card-body">
           <div className="row g-3">
-            <div className="col-lg-6 col-md-12 col-sm-12">
+            <div className="col-lg-6 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Select Transfer Request</label>
                 <div className="col-md-8">
@@ -200,17 +224,25 @@ const InventoryTransferStatusForm = () => {
                         // (Received/terminal) waiting for a status change, so filtering
                         // on 4 here made this picker permanently empty.
                         transferstatusid={2}
+                        restrictToOutletRole="source"
+                        outletId={parsedOutletId}
                         value={field.value}
                         onChange={(v) => field.onChange(v)}
+                        onChangeAdditional={(selected) => setSelectedTransfer(selected)}
                         className=""
                       />
                     )}
                   />
+                  {selectedTransferId && !isSourceOutlet && (
+                    <div className="text-danger mt-1" style={{ fontSize: 11 }}>
+                      Only {selectedTransfer?.transfersource || "the supplying outlet"} can update this transfer&apos;s status.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="col-lg-6 col-md-12 col-sm-12">
+            <div className="col-lg-6 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">Status</label>
                 <div className="col-md-8">
@@ -222,7 +254,8 @@ const InventoryTransferStatusForm = () => {
                       <SelectInventoryStatus
                         storeId={parsedStoreId}
                         value={field.value}
-                        excludeIds={[4, 6]}
+                        excludeIds={statusExcludeIds}
+                        disableField={!selectedTransferId || !isSourceOutlet}
                         onChange={(v) => {
                           const n = Number(v);
                           if (n === 4 || n === 6) {

@@ -67,7 +67,9 @@ const LedgerActivityComponent = () => {
   const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
   const parsedOutletId = parseInt(outletId as string, 10);
-  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(parsedOutletId || undefined);
+  // Global by default (ledger spans outlets) — starts undefined (all outlets), the
+  // OutletsFilter below is a pure optional narrow-down, not auto-selected.
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
   const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
 
   const gridRef = useRef<AgGridReact>(null);
@@ -85,14 +87,13 @@ const LedgerActivityComponent = () => {
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("ledger-activity");
 
   useEffect(() => {
-    if (parsedOutletId) setSelectedOutlet(parsedOutletId);
-  }, [parsedOutletId]);
-
-  useEffect(() => {
     if (!customerid) { setViewBalance(0); return; }
     getCustomerBalanceReport({
       variables: {
-        outletid: selectedOutlet ?? parsedOutletId,
+        // outletid is routing-only (which tenant DB); filterOutletId is the optional
+        // narrow-down — a customer's balance report is global across outlets by default.
+        outletid: parsedOutletId,
+        filterOutletId: selectedOutlet,
         page: 1,
         perpage: 1,
         filters: [{ key: "customerid", value: { filterType: "number", type: "equals", filter: customerid } }],
@@ -110,14 +111,17 @@ const LedgerActivityComponent = () => {
     params?.api?.autoSizeAllColumns?.();
   };
 
-  const fetchLedger = async (cid: number | null, from: Dayjs | null, to: Dayjs | null, outletid: number | undefined) => {
+  const fetchLedger = async (cid: number | null, from: Dayjs | null, to: Dayjs | null, filterOutletId: number | undefined) => {
     if (!cid) return;
 
     setLoading(true);
     const result = await handleTryCatch(async () => {
       const { data } = await getCustomerLedgerReport({
         variables: {
-          outletid: outletid ?? parsedOutletId,
+          // outletid is routing-only (which tenant DB); filterOutletId is the optional
+          // narrow-down — a customer's ledger is global across outlets by default.
+          outletid: parsedOutletId,
+          filterOutletId,
           customerid: cid,
           fromdate: from ? from.format("YYYY-MM-DD") : null,
           todate: to ? to.format("YYYY-MM-DD") : null,
@@ -229,6 +233,7 @@ const LedgerActivityComponent = () => {
                   setSelectedOutlet={setSelectedOutlet}
                   selectedOutlet={selectedOutlet}
                   stacked
+                  autoSelectCurrentOutlet={false}
                 />
               </div>
             )}

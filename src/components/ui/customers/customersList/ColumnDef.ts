@@ -32,12 +32,6 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     filter: "agNumberColumnFilter",
   },
   {
-    headerName: "Balance due",
-    field: "balancedue",
-    cellRenderer: currencyFormattedCellRenderer,
-    filter: "agNumberColumnFilter",
-  },
-  {
     headerName: "Total sale",
     field: "totalsale",
     cellRenderer: currencyFormattedCellRenderer,
@@ -52,6 +46,12 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
   {
     headerName: "Open credit",
     field: "opencredit",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Balance due",
+    field: "balancedue",
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
   },

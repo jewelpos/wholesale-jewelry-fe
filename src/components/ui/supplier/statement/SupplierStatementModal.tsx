@@ -21,6 +21,8 @@ import SupplierStatementPrintContent, {
   StatementSupplier,
 } from "./SupplierStatementPrintContent";
 import { SupplierLedgerListType } from "@/types/supplier";
+import OutletsFilter from "../../grid/OutletsFilter";
+import useOutlets from "@/hooks/useOutlets";
 
 interface Props {
   supplier: SupplierListType;
@@ -79,6 +81,10 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
   const [fromDate, setFromDate] = useState<Dayjs | null>(null);
   const [toDate, setToDate] = useState<Dayjs | null>(null);
   const [showSummaryCard, setShowSummaryCard] = useState(true);
+  // Global by default — every section (open payables, ledger, payments) pulls
+  // across all outlets unless the user narrows to one here.
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
+  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +104,9 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
       fetchOpenInvoices({
         variables: {
           storeid: parsedStoreId,
-          outletid: parsedOutletId,
+          // Global by default: omit the outlet filter entirely so payables from
+          // every outlet come back; narrowed only when selectedOutlet is set.
+          outletid: selectedOutlet ?? null,
           supplierid: supplierId,
         },
       });
@@ -116,6 +124,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
       fetchLedger({
         variables: {
           outletid: parsedOutletId,
+          filterOutletId: selectedOutlet,
           page: 1,
           perpage: 10000,
           filters,
@@ -129,6 +138,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
         variables: {
           storeid: parsedStoreId,
           supplierid: supplierId,
+          filterOutletId: selectedOutlet,
         },
       });
     }
@@ -137,7 +147,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
   useEffect(() => {
     load(type, fromDate, toDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, fromDate, toDate]);
+  }, [type, fromDate, toDate, selectedOutlet]);
 
   const handlePreset = (p: Preset) => {
     setPreset(p);
@@ -265,6 +275,22 @@ ${safeBody}
             overflowY: "auto",
           }}>
             <div style={{ padding: "16px 16px 0" }}>
+              {/* Outlet — global (all outlets) by default, optionally narrow to one */}
+              <div style={{ marginBottom: 18 }}>
+                <ControlLabel>Outlet (optional)</ControlLabel>
+                <OutletsFilter
+                  fetchOutletsList={fetchOutletsList}
+                  outlets={outlets}
+                  loading={outletsLoading}
+                  setSelectedOutlet={setSelectedOutlet}
+                  selectedOutlet={selectedOutlet}
+                  autoSelectCurrentOutlet={false}
+                />
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                  {selectedOutlet ? "Showing this outlet only" : "Showing all outlets"}
+                </div>
+              </div>
+
               {/* Statement Type */}
               <div style={{ marginBottom: 18 }}>
                 <ControlLabel>Statement Type</ControlLabel>
@@ -382,6 +408,7 @@ ${safeBody}
                   toDate={type !== "open" ? toDate : null}
                   showSummaryCard={showSummaryCard}
                   storeName={storeName}
+                  primaryOutletId={selectedOutlet ?? parsedOutletId}
                 />
               </div>
             </div>

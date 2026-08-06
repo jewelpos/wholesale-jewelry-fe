@@ -6,11 +6,13 @@ import VoidPaymentForm from "./VoidPaymentForm";
 const VoidPaymentModal = ({
   setShowVoidModal,
   storeId,
+  outletId,
   supplierid,
   paymentid,
 }: {
   setShowVoidModal: (value: boolean) => void;
   storeId: number;
+  outletId: number;
   supplierid: number;
   paymentid: number;
 }) => {
@@ -38,6 +40,7 @@ const VoidPaymentModal = ({
               <div className="card-body modal-default-height pb-0">
                 <VoidPaymentForm
                   storeId={storeId}
+                  outletId={outletId}
                   closePaymentModal={() => setShowVoidModal(false)}
                   supplierid={supplierid}
                   paymentid={paymentid}

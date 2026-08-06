@@ -131,7 +131,7 @@ const CommissionRatesComponent = () => {
   const [savingRows, setSavingRows] = useState<Set<number>>(new Set());
 
   const { data, loading, refetch } = useQuery(GET_EMPLOYEE_COMMISSION_RATES_QUERY, {
-    variables: { storeid: parsedStoreId },
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId },
     skip: !parsedStoreId,
   });
 

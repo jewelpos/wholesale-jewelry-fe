@@ -12,8 +12,8 @@ export const ADD_CUSTOMER_MUTATION = gql`
 `;
 
 export const DELETE_CUSTOMER_MUTATION = gql`
-  mutation DeleteCustomer($customerid: Int!, $storeid: Int!) {
-    deleteCustomer(customerid: $customerid, storeid: $storeid) {
+  mutation DeleteCustomer($customerid: Int!, $storeid: Int!, $outletid: Int) {
+    deleteCustomer(customerid: $customerid, storeid: $storeid, outletid: $outletid) {
       success
       message
       error

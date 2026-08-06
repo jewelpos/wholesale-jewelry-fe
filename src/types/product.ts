@@ -295,6 +295,7 @@ export type UpdateInventoryTransferStatusInput = {
   storeid: number;
   inventoryitemtransferid: number;
   transferstatusid: number;
+  remarks?: string;
 };
 
 export type ReceiveInventoryTransferItemInput = {

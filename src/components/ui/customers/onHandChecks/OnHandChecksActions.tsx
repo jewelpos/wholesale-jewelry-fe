@@ -16,11 +16,19 @@ interface OnHandChecksActionsProps {
 }
 
 const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps) => {
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [changeOnHandCheckStatus] = useMutation(CHANGE_ON_HAND_CHECK_STATUS_MUTATION);
   const dispatch = useAppDispatch();
   const currentStatus = data.checkstatus;
+
+  // A cheque is a physical object held at one specific outlet — void/hold are
+  // decisions made while physically handling it, so they're only actionable from
+  // the outlet that actually holds it. The list itself stays global for visibility.
+  const isOtherOutlet =
+    data.outletid != null && parsedOutletId != null && Number(data.outletid) !== parsedOutletId;
+  const otherOutletReason = `Held at ${data.warehousename || "another outlet"} — actions only available there`;
 
   const handleChangeStatus = async (status: string) => {
     const deleteResult = await handleTryCatch(async () => {
@@ -39,8 +47,17 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
   const isVoided = currentStatus === CHECK_STATUS.VOID_CHECK;
 
   const items: RowActionItem[] = [
-    { key: 'void', label: 'Delete (Void)', icon: <XSquare size={14} />, onClick: () => handleChangeStatus(CHECK_STATUS.VOID_CHECK), dangerous: true },
-    { key: 'hold', label: 'Hold', icon: <PauseCircle size={14} />, onClick: () => handleChangeStatus(CHECK_STATUS.CHECK_ON_HOLD), disabled: isVoided, disabledReason: "Already voided" },
+    {
+      key: 'void', label: 'Delete (Void)', icon: <XSquare size={14} />,
+      onClick: () => handleChangeStatus(CHECK_STATUS.VOID_CHECK), dangerous: true,
+      disabled: isOtherOutlet, disabledReason: isOtherOutlet ? otherOutletReason : undefined,
+    },
+    {
+      key: 'hold', label: 'Hold', icon: <PauseCircle size={14} />,
+      onClick: () => handleChangeStatus(CHECK_STATUS.CHECK_ON_HOLD),
+      disabled: isVoided || isOtherOutlet,
+      disabledReason: isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined,
+    },
   ];
 
   return (
@@ -48,6 +65,8 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
       <button
         className="btn btn-sm btn-warning btn-wave waves-effect waves-light"
         onClick={() => handleChangeStatus(CHECK_STATUS.VOID_CHECK)}
+        disabled={isOtherOutlet}
+        title={isOtherOutlet ? otherOutletReason : undefined}
       >
         <i className="feather-x align-middle me-2 d-inline-block" />
         Delete
@@ -55,7 +74,8 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
       <button
         className="btn btn-sm btn-danger btn-wave waves-effect waves-light mx-2"
         onClick={() => handleChangeStatus(CHECK_STATUS.CHECK_ON_HOLD)}
-        disabled={isVoided}
+        disabled={isVoided || isOtherOutlet}
+        title={isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined}
       >
         <i className="feather-stop-circle align-middle me-2 d-inline-block" />
         Hold

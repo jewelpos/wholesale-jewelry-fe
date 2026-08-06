@@ -24,7 +24,6 @@ import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ReportSummaryCards, { SummaryCardDef } from "../../reports/shared/ReportSummaryCards";
 import ReportMiniChart from "../../reports/shared/ReportMiniChart";
-import useWarehouse from "@/hooks/useWarehouse";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_CHIPS = [
@@ -54,24 +53,10 @@ const CustomerChequeSummaryComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("cheque-summary");
 
-  // Load warehouses to auto-select the system/default warehouse on mount
-  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
-  useEffect(() => {
-    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsedOutletId]);
-
-  const defaultWarehouse = useMemo(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    () => warehouses.find((w: any) => w.issystem) ?? warehouses[0],
-    [warehouses]
-  );
-
-  useEffect(() => {
-    if (defaultWarehouse?.warehouseid && !selectedWarehouse) {
-      setSelectedWarehouse(Number(defaultWarehouse.warehouseid));
-    }
-  }, [defaultWarehouse, selectedWarehouse]);
+  // On-hand cheques are global by default (a held cheque is tied to the customer's
+  // account, not one outlet) — the warehouse picker below is an optional narrow-down,
+  // so selectedWarehouse intentionally starts at 0 (all warehouses) instead of
+  // auto-selecting the current outlet's system warehouse.
 
   useEffect(() => {
     if (!gridRef.current?.api) return;
@@ -140,18 +125,13 @@ const CustomerChequeSummaryComponent = () => {
     Number.isInteger(Number(r.customerid)) && Number(r.customerid) > 0;
 
   // Filter by current outlet — include records assigned to this outlet OR with no outlet (legacy data)
-  const filteredRowData = useMemo(() => {
-    const outletFiltered = !parsedOutletId || !rowData.length
-      ? rowData
-      : rowData.filter((r) => !r.outletid || Number(r.outletid) === parsedOutletId);
-    return outletFiltered.filter(isValidCustomerRow);
-  }, [rowData, parsedOutletId]);
+  // On-hand cheques are global by default — no outlet exclusion here. Narrowing to one
+  // outlet/warehouse is handled entirely by the SelectWarehouse picker above (selectedWarehouse),
+  // which is passed straight to the backend query.
+  const filteredRowData = useMemo(() => rowData.filter(isValidCustomerRow), [rowData]);
 
   const pinnedGrandTotal = useMemo(() => {
-    const raw = !parsedOutletId || !rowData.length
-      ? rowData
-      : rowData.filter((r) => !r.outletid || Number(r.outletid) === parsedOutletId);
-    const grandRow = raw.find((r) => !isValidCustomerRow(r));
+    const grandRow = rowData.find((r) => !isValidCustomerRow(r));
     if (grandRow) return [{ ...grandRow, custcompanyname: "Grand Total" }];
     // Compute from valid rows if backend doesn't include one
     if (!filteredRowData.length) return [];
@@ -166,7 +146,7 @@ const CustomerChequeSummaryComponent = () => {
       Jul: String(sum("Jul")), Aug: String(sum("Aug")), Sep: String(sum("Sep")),
       Oct: String(sum("Oct")), Nov: String(sum("Nov")), Dec: String(sum("Dec")),
     }];
-  }, [rowData, parsedOutletId, filteredRowData]);
+  }, [rowData, filteredRowData]);
 
   const chequeStats = useMemo(() => {
     if (!filteredRowData.length) return { totalValue: 0, customerCount: 0, largestValue: 0, largestName: "—", monthlyTotals: Array(12).fill(0) as number[] };

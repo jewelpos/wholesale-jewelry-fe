@@ -8,6 +8,8 @@ import { useAppSelector } from "@/lib/store/hook";
 import SelectCustomer from "@/components/forms/SelectCustomer";
 import DOMPurify from "dompurify";
 import dayjs from "dayjs";
+import OutletsFilter from "../../grid/OutletsFilter";
+import useOutlets from "@/hooks/useOutlets";
 
 interface CheckPrintItem {
   customerid: number;
@@ -19,6 +21,9 @@ interface CheckPrintItem {
   checkentrydate: string;
   enteredby: string;
   customercheckdetailid: number;
+  warehousename?: string;
+  warehouseid?: number;
+  outletid?: number;
 }
 
 const STATUS_OPTIONS = [
@@ -48,6 +53,9 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [checks, setChecks] = useState<CheckPrintItem[]>([]);
   const [fetched, setFetched] = useState(false);
+  // Global by default — no outlet selected means checks from every outlet.
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
+  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
 
   const [fetchChecks, { loading }] = useLazyQuery(GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY, {
     fetchPolicy: "network-only",
@@ -61,6 +69,7 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
         fromdate: fromDate || null,
         todate: toDate || null,
         checkstatus: statusFilter === "ALL" ? null : statusFilter,
+        filterOutletId: selectedOutlet ?? null,
       },
     });
     setChecks(data?.getCustomerChecksForPrint ?? []);
@@ -172,6 +181,17 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
                   ))}
                 </select>
               </div>
+              <div className="col-md-2">
+                <label className="form-label mb-1" style={{ fontSize: 12 }}>Outlet (optional)</label>
+                <OutletsFilter
+                  fetchOutletsList={fetchOutletsList}
+                  outlets={outlets}
+                  loading={outletsLoading}
+                  setSelectedOutlet={setSelectedOutlet}
+                  selectedOutlet={selectedOutlet}
+                  autoSelectCurrentOutlet={false}
+                />
+              </div>
               <div className="col-md-2 d-flex">
                 <button
                   className="btn btn-success btn-sm w-100"
@@ -222,7 +242,7 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#f0f0f0" }}>
-                      {["Customer Name", "Check #", "Posting Date", "Amount", "Status", "Entry Date", "Entered By"].map((h) => (
+                      {["Customer Name", "Check #", "Posting Date", "Amount", "Status", "Outlet", "Entry Date", "Entered By"].map((h) => (
                         <th key={h} style={{ padding: "5px 7px", border: "1px solid #ccc", fontSize: 10, textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
@@ -235,6 +255,7 @@ const OnHandChecksPrintModal = ({ onClose }: { onClose: () => void }) => {
                         <td style={{ padding: "4px 7px", border: "1px solid #ddd", whiteSpace: "nowrap" }}>{fmtDate(row.checkpostingdate)}</td>
                         <td style={{ padding: "4px 7px", border: "1px solid #ddd", textAlign: "right" }}>{fmt(row.checkamount)}</td>
                         <td style={{ padding: "4px 7px", border: "1px solid #ddd" }}>{row.checkstatus}</td>
+                        <td style={{ padding: "4px 7px", border: "1px solid #ddd" }}>{row.warehousename ?? ""}</td>
                         <td style={{ padding: "4px 7px", border: "1px solid #ddd", whiteSpace: "nowrap" }}>{fmtDate(row.checkentrydate)}</td>
                         <td style={{ padding: "4px 7px", border: "1px solid #ddd" }}>{row.enteredby}</td>
                       </tr>

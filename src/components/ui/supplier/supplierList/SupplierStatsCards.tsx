@@ -8,7 +8,10 @@ import { formatCurrency } from "@/lib/utils/currencyFormat";
 const fmt = (n: number) => formatCurrency(n);
 
 interface Props {
+  // Routing outletid (always present, picks the tenant DB) — separate from the
+  // optional narrow-down filter, so stats are global by default.
   outletid: number | undefined;
+  filterOutletId?: number;
 }
 
 const CARDS = [
@@ -22,15 +25,15 @@ const Skeleton = () => (
   <div style={{ height: 28, width: "60%", background: "var(--border-subtle)", borderRadius: 6, animation: "pulse 1.5s ease-in-out infinite" }} />
 );
 
-const SupplierStatsCards = ({ outletid }: Props) => {
+const SupplierStatsCards = ({ outletid, filterOutletId }: Props) => {
   const [getStats, { data, loading }] = useLazyQuery(GET_SUPPLIER_STATS_QUERY, {
     errorPolicy: "ignore",
   });
 
   useEffect(() => {
     if (!outletid) return;
-    getStats({ variables: { outletid } });
-  }, [outletid, getStats]);
+    getStats({ variables: { outletid, filterOutletId } });
+  }, [outletid, filterOutletId, getStats]);
 
   const stats = data?.getSupplierStats;
 

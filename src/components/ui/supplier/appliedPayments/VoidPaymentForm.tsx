@@ -22,11 +22,13 @@ const fmt = (n: number) => formatCurrency(n);
 
 const VoidPaymentForm = ({
   storeId,
+  outletId,
   closePaymentModal,
   supplierid: supplierIdProp,
   paymentid: paymentIdProp,
 }: {
   storeId: number;
+  outletId: number;
   closePaymentModal: () => void;
   supplierid?: number;
   paymentid?: number;
@@ -74,6 +76,9 @@ const VoidPaymentForm = ({
       supplierid: formData.supplierid,
       postingdate: formData.postingdate.format("YYYY-MM-DD"),
       paymentid: formData.paymentid.toString(),
+      // Lets the backend verify this void is happening from the payment's own
+      // outlet (or bypassed for the store owner).
+      outletid: outletId,
     };
 
     const result = await handleTryCatch(async () => {

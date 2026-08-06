@@ -1,9 +1,9 @@
 import Content from "@/components/layout/Content";
-import WarehouseListComponent from "@/components/ui/systemSettings/warehouses/WarehouseListComponent";
+import CreateOutletForm from "@/components/ui/outlet/CreateOutletForm";
 
 const SettingsStoreSetupPage = () => (
   <Content>
-    <WarehouseListComponent />
+    <CreateOutletForm />
   </Content>
 );
 

@@ -48,7 +48,6 @@ type RequestRow = {
   itemcode: string;
   itemdescription: string;
   quantityrequest: number;
-  availableqty: number;
 };
 
 const InventoryTransferRequestForm = () => {
@@ -79,13 +78,11 @@ const InventoryTransferRequestForm = () => {
     itemcode?: string;
     itemdescription?: string;
     quantityrequest: number;
-    availableqty: number;
   }>(() => ({
     itemid: undefined,
     itemcode: undefined,
     itemdescription: undefined,
     quantityrequest: 1,
-    availableqty: 0,
   }));
 
   const [selectProductClearKey, setSelectProductClearKey] = useState(0);
@@ -116,7 +113,7 @@ const InventoryTransferRequestForm = () => {
 
   const resolveSystemWarehouse = (warehouses: WarehouseType[]) => {
     const sys = warehouses.find((w) => w.issystem);
-    return sys;
+    return sys ?? warehouses[0];
   };
 
   const currentOutletSysWarehouse = useMemo(
@@ -133,6 +130,7 @@ const InventoryTransferRequestForm = () => {
     control,
     watch,
     setValue,
+    resetField,
     trigger,
     handleSubmit,
     formState: { isValid },
@@ -154,9 +152,9 @@ const InventoryTransferRequestForm = () => {
       fromId > 0 &&
       fromId === parsedOutletId
     ) {
-      setValue("fromOutletId", undefined);
+      resetField("fromOutletId");
     }
-  }, [fromOutletId, parsedOutletId, setValue]);
+  }, [fromOutletId, parsedOutletId, resetField]);
 
   const fetchWarehouses = async (outletId: number, kind: "CURRENT" | "FROM") => {
     const result = await handleTryCatch(async () => {
@@ -194,7 +192,7 @@ const InventoryTransferRequestForm = () => {
       fetchWarehouses(Number(fromOutletId), "FROM");
     } else {
       setFromOutletWarehouses([]);
-      setValue("fromwarehouse", undefined);
+      resetField("fromwarehouse");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromOutletId]);
@@ -212,13 +210,12 @@ const InventoryTransferRequestForm = () => {
       itemcode: undefined,
       itemdescription: undefined,
       quantityrequest: 1,
-      availableqty: 0,
     });
     setSelectProductClearKey((k) => k + 1);
   };
 
-  // Available qty is scoped to whichever "From Outlet" warehouse is picked — switching
-  // outlets invalidates whatever was selected/typed against the previous one.
+  // Switching "From Outlet" invalidates whatever item was selected/typed against the
+  // previous one.
   useEffect(() => {
     resetToolItem();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,16 +274,6 @@ const InventoryTransferRequestForm = () => {
       return;
     }
 
-    if (qtyValue > Number(toolItem.availableqty || 0)) {
-      dispatch(
-        showNotification({
-          message: `Requested qty cannot exceed available qty at ${fromWarehouseName || "the selected outlet"} (${toolItem.availableqty})`,
-          type: NOTIFICATION_TYPES.ERROR,
-        })
-      );
-      return;
-    }
-
     const exists = rows.some((r) => r.itemid === toolItem.itemid);
     if (exists) {
       dispatch(
@@ -305,7 +292,6 @@ const InventoryTransferRequestForm = () => {
         itemcode: String(toolItem.itemcode || ""),
         itemdescription: toolItem.itemdescription || "",
         quantityrequest: qtyValue,
-        availableqty: Number(toolItem.availableqty || 0),
       },
     ]);
 
@@ -314,6 +300,15 @@ const InventoryTransferRequestForm = () => {
 
   const deleteRow = (itemid: number) => {
     setRows((prev) => prev.filter((r) => r.itemid !== itemid));
+  };
+
+  // Items already added are scoped to whichever "From Outlet" was picked — switching
+  // outlets mid-request would silently carry over items that no longer make sense, so
+  // the outlet picker locks after selection and can only be changed via an explicit Reset.
+  const handleResetFromOutlet = () => {
+    resetField("fromOutletId");
+    setRows([]);
+    resetToolItem();
   };
 
   const onSubmit = async (data: InventoryTransferRequestFormType) => {
@@ -409,31 +404,42 @@ const InventoryTransferRequestForm = () => {
             <div className="col-lg-6 col-md-6 col-sm-12">
               <div className="input-blocks mb-0 row align-items-center">
                 <label className="col-form-label col-md-4">From Outlet</label>
-                <div className="col-md-8">
-                  <Controller
-                    control={control}
-                    name="fromOutletId"
-                    render={({ field }) => (
-                      <Select<SelectOption>
-                        options={fromOutletOptions}
-                        value={fromOutletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
-                        onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
-                        isClearable
-                        className="form-control p-0 select-form-custom"
-                        menuPortalTarget={portalTarget}
-                        menuPosition="fixed"
-                        styles={{
-                          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                          menu: (base) => ({ ...base, zIndex: 9999 }),
-                        }}
-                        menuIsOpen={fromOutletMenuIsOpen}
-                        onMenuOpen={() => setFromOutletMenuIsOpen(true)}
-                        onMenuClose={() => setFromOutletMenuIsOpen(false)}
-                        inputValue={fromOutletInput}
-                        onInputChange={setFromOutletInput}
-                      />
-                    )}
-                  />
+                <div className="col-md-8 d-flex align-items-center gap-2">
+                  <div className="flex-grow-1">
+                    <Controller
+                      control={control}
+                      name="fromOutletId"
+                      render={({ field }) => (
+                        <Select<SelectOption>
+                          options={fromOutletOptions}
+                          value={fromOutletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
+                          onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                          isDisabled={!!field.value}
+                          className="form-control p-0 select-form-custom"
+                          menuPortalTarget={portalTarget}
+                          menuPosition="fixed"
+                          styles={{
+                            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                            menu: (base) => ({ ...base, zIndex: 9999 }),
+                          }}
+                          menuIsOpen={fromOutletMenuIsOpen}
+                          onMenuOpen={() => setFromOutletMenuIsOpen(true)}
+                          onMenuClose={() => setFromOutletMenuIsOpen(false)}
+                          inputValue={fromOutletInput}
+                          onInputChange={setFromOutletInput}
+                        />
+                      )}
+                    />
+                  </div>
+                  {fromOutletId ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary text-nowrap"
+                      onClick={handleResetFromOutlet}
+                    >
+                      Reset
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -501,7 +507,6 @@ const InventoryTransferRequestForm = () => {
                                   itemid: undefined,
                                   itemcode: undefined,
                                   itemdescription: undefined,
-                                  availableqty: 0,
                                 }));
                                 return;
                               }
@@ -516,7 +521,6 @@ const InventoryTransferRequestForm = () => {
                                   selected?.itemdescription != null
                                     ? String(selected.itemdescription)
                                     : prev.itemdescription,
-                                availableqty: Number(selected?.itemquantityinhand ?? 0),
                               }));
                               setTimeout(() => qtyInputRef.current?.focus(), 50);
                             }}
@@ -545,18 +549,12 @@ const InventoryTransferRequestForm = () => {
                         <div className="input-blocks">
                           <label>
                             Quantity <span className="text-danger">*</span>
-                            {toolItem.itemid ? (
-                              <span className="text-muted ms-1" style={{ fontSize: 11 }}>
-                                (Available: {toolItem.availableqty})
-                              </span>
-                            ) : null}
                           </label>
                           <input
                             ref={qtyInputRef}
                             type="number"
                             step="0.001"
                             min={0}
-                            max={toolItem.availableqty || undefined}
                             className="form-control px-1 text-end"
                             value={toolItem.quantityrequest}
                             onChange={(e) => {
@@ -592,7 +590,6 @@ const InventoryTransferRequestForm = () => {
                             <th className="text-nowrap">#</th>
                             <th className="text-nowrap">Item Code</th>
                             <th>Description</th>
-                            <th className="text-end text-nowrap">Available Qty</th>
                             <th className="text-end text-nowrap">Requested Qty</th>
                             <th className="text-center text-nowrap">Action</th>
                           </tr>
@@ -600,7 +597,7 @@ const InventoryTransferRequestForm = () => {
                         <tbody>
                           {!rows.length ? (
                             <tr>
-                              <td colSpan={6} className="text-center">
+                              <td colSpan={5} className="text-center">
                                 No items
                               </td>
                             </tr>
@@ -613,7 +610,6 @@ const InventoryTransferRequestForm = () => {
                                 </td>
                                 <td className="text-nowrap">{r.itemcode}</td>
                                 <td>{r.itemdescription}</td>
-                                <td className="text-end">{r.availableqty}</td>
                                 <td className="text-end">{r.quantityrequest}</td>
                                 <td className="text-center">
                                   <button

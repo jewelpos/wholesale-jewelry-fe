@@ -14,7 +14,7 @@ const sharedTiles: CatalogTile[] = [
     title: "Choose your invoice layout",
     para: "Pick how your invoices and documents look when printed or emailed to customers.",
     btnText: "Choose layout",
-    btnUrl: "/invoice-layout",
+    btnUrl: "/settings/invoice-layout",
     setupFlag: "hassetuplayout",
   },
   {

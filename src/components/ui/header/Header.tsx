@@ -6,7 +6,7 @@ import { useQuery } from "@apollo/client";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Settings, User, ChevronsLeft, LogOut } from "react-feather";
+import { Settings, User, ChevronsLeft, LogOut, Clipboard } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
 import { useParams } from "next/navigation";
 import type { Menus } from "@/types/permissions";
@@ -28,6 +28,12 @@ const Header = ({ onLogout, storeLoading }: Props) => {
       (m) => m.menuurl?.startsWith("/settings") ||
              m.children?.some((c) => c.menuurl?.startsWith("/settings"))
     );
+
+  // Owner-only for now. To also allow admin, extend to: `|| user?.roleid === 1`
+  // (1 = admin per dashboardByRole in InitialDataLoader/MainHomeComponent) — this
+  // link isn't tied to the DB-driven menu/permission system, so no permission row
+  // is required either way.
+  const canAccessInitialSetup = !!user?.issysgenmasteraccount;
 
   // Resolve current outlet name from Redux (available immediately after stores load)
   const currentOutletName = (() => {
@@ -631,6 +637,12 @@ const Header = ({ onLogout, storeLoading }: Props) => {
                 <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
                   <User className="me-2" /> My Profile
                 </Link>
+                {canAccessInitialSetup && (
+                  <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/home` : "#"}>
+                    <Clipboard className="me-2" />
+                    Continue Setup
+                  </Link>
+                )}
                 {canAccessSettings && (
                   <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/settings/system_settings` : "#"}>
                     <Settings className="me-2" />
@@ -665,6 +677,11 @@ const Header = ({ onLogout, storeLoading }: Props) => {
             <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/profile` : "#"}>
               My Profile
             </Link>
+            {canAccessInitialSetup && (
+              <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/home` : "#"}>
+                Continue Setup
+              </Link>
+            )}
             {canAccessSettings && (
               <Link className="dropdown-item" href={storeId && outletId ? `/${storePrefix}/${storeId}/${outletId}/settings/system_settings` : "#"}>
                 Settings

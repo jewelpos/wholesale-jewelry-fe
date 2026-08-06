@@ -280,6 +280,8 @@ const InventoryTransferReceiveForm = () => {
                         // must also show here so the remaining lines of a split receipt
                         // can still be completed.
                         transferstatusid={[3, 6]}
+                        restrictToOutletRole="destination"
+                        outletId={parsedOutletId}
                         value={field.value}
                         onChange={(v) => field.onChange(v)}
                         className=""

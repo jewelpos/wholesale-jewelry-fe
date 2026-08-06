@@ -34,9 +34,8 @@ interface Props {
 
 const OnHandChecksComponent = ({ data }: Props) => {
   const [getCustomerChequeList] = useLazyQuery(GET_CUSTOMER_CHEQUE_LIST_QUERY);
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
-  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const dispatch = useAppDispatch();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
@@ -56,17 +55,15 @@ const OnHandChecksComponent = ({ data }: Props) => {
           params.success({ rowData: [], rowCount: 0 });
           return;
         }
+        // On-hand cheques are global by default (a held cheque is tied to the customer's
+        // account, not one outlet) — no outlet filter applied here.
         const filters = filterVariables(params);
-        const outletFilter = parsedOutletId
-          ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: parsedOutletId } }]
-          : [];
         const result = await handleTryCatch(async () => {
           const { data: chequeData } = await getCustomerChequeList({
             variables: {
               customerid: Number(data.customerid),
               storeid: parsedStoreId,
               ...filters,
-              filters: [...filters.filters, ...outletFilter],
             },
           });
           if (chequeData.getCustomerChequeList) {
@@ -94,7 +91,7 @@ const OnHandChecksComponent = ({ data }: Props) => {
         }
       },
     }),
-    [dispatch, getCustomerChequeList, data.customerid, parsedStoreId, parsedOutletId]
+    [dispatch, getCustomerChequeList, data.customerid, parsedStoreId]
   );
 
   useEffect(() => {

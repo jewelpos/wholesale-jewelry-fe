@@ -300,9 +300,13 @@ const PaySupplierModal = ({ storeId, outletId, closeModal }: PaySupplierModalPro
   const [supplierInput, setSupplierInput] = useState("");
 
   // ── Supplier list ─────────────────────────────────────────────────────
+  // Global (any supplier, any outlet) — suppliers are shared store-wide, so this
+  // picker must not exclude a supplier whose home warehouse is a different outlet.
+  // The actual balance/credit fetched below stays scoped to the current outlet,
+  // since paying down a balance is a transaction that happens at one outlet.
   const { data: supplierListData, loading: suppliersLoading } = useQuery(GET_SUPPLIER_BY_OUTLET_ID_QUERY, {
-    variables: { storeid: storeId, outletid: outletId },
-    skip: !storeId || !outletId,
+    variables: { storeid: storeId },
+    skip: !storeId,
   });
 
   const supplierOptions = useMemo(() => {

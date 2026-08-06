@@ -19,6 +19,14 @@ type Props = {
   transferstatusid: number | number[];
   disableField?: boolean;
   name?: string;
+  // Restricts the list to transfers the given outlet can actually act on — 'source' for
+  // screens that only the supplying outlet may progress (e.g. Approved -> Intransit),
+  // 'destination' for screens only the requesting/receiving outlet may act on (Receive).
+  // Without this, the picker shows every transfer the outlet is merely a party to
+  // (per the backend's fromwarhouse-OR-towarehouse scoping), including ones it can only
+  // watch, not act on.
+  restrictToOutletRole?: "source" | "destination";
+  outletId?: number;
 };
 
 const SelectTransferRequest = ({
@@ -30,6 +38,8 @@ const SelectTransferRequest = ({
   storeId,
   transferstatusid,
   disableField,
+  restrictToOutletRole,
+  outletId,
   ...field
 }: Props) => {
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -66,11 +76,17 @@ const SelectTransferRequest = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId, statusIds]);
 
+  const roleFilteredTransfers = useMemo(() => {
+    if (!restrictToOutletRole || !Number.isFinite(outletId)) return transfers;
+    const roleKey = restrictToOutletRole === "source" ? "fromoutletid" : "tooutletid";
+    return transfers.filter((t) => Number(t[roleKey]) === Number(outletId));
+  }, [transfers, restrictToOutletRole, outletId]);
+
   const filteredTransfers = useMemo(() => {
     const q = String(input || "").trim().toLowerCase();
-    if (!q) return transfers;
+    if (!q) return roleFilteredTransfers;
 
-    return transfers.filter((t) => {
+    return roleFilteredTransfers.filter((t) => {
       const hay = [
         t.inventoryitemtransferid,
         t.transfersource,
@@ -84,7 +100,7 @@ const SelectTransferRequest = ({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [transfers, input]);
+  }, [roleFilteredTransfers, input]);
 
   const options: SelectOption[] = useMemo(() => {
     return filteredTransfers.map((t) => {

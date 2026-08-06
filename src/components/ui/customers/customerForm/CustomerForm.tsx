@@ -24,8 +24,9 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const { customerId } = useParams();
   const dispatch = useDispatch();
   const router = useRouter();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const parsedCustomerId = parseInt(customerId as string, 10);
   const { data: customerData, loading: customerLoading } = useQuery(
     GET_CUSTOMER_QUERY,
@@ -89,11 +90,20 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const [loading, setLoading] = useState(false);
   const [pendingDocFiles, setPendingDocFiles] = useState<File[]>([]);
 
-  const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  const { fetchWarehouseByStoreId, fetchWarehouseByOutletId, warehouses } = useWarehouse();
 
   useEffect(() => {
-    if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
-  }, [parsedStoreId, fetchWarehouseByStoreId]);
+    // New customer: the home warehouse must always be the current outlet's own —
+    // it's a historical "created at outlet X" record, never a manual choice, so we
+    // only fetch (and only show) this outlet's warehouse, not the whole store's.
+    // Editing an existing customer still resolves against the whole store so the
+    // warehouse the customer already has (possibly a different outlet) shows correctly.
+    if (!customerId && parsedOutletId) {
+      fetchWarehouseByOutletId(parsedOutletId);
+    } else if (customerId && parsedStoreId) {
+      fetchWarehouseByStoreId(parsedStoreId);
+    }
+  }, [parsedStoreId, parsedOutletId, customerId, fetchWarehouseByStoreId, fetchWarehouseByOutletId]);
 
   // Pre-select default warehouse on new customer only
   useEffect(() => {
@@ -123,6 +133,9 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
       updatedParams = {
         ...updatedParams,
         customerid: Number(formData.customerid),
+        // Lets the backend verify this edit is happening from the customer's
+        // own home outlet (or bypassed for the store owner).
+        outletid: parsedOutletId,
       };
     }
     const { file, customerid, ...rest } = formData;
@@ -298,11 +311,13 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                       trigger={trigger}
                       setValue={setValue}
                       storeId={storeId}
+                      outletId={parsedOutletId}
                       warehouseId={warehouseId}
                       status={status}
                       custalert={custalert}
                       marketingoptin={marketingoptin}
                       disableField={disableField}
+                      disableWarehouseField={!customerId}
                     />
                   </div>
                 </div>

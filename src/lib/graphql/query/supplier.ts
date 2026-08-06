@@ -9,6 +9,7 @@ export const GET_SUPPLIER_LEDGER_LIST_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $filterOutletId: Int
   ) {
     getSupplierLedgerList(
       outletid: $outletid
@@ -18,6 +19,7 @@ export const GET_SUPPLIER_LEDGER_LIST_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      filterOutletId: $filterOutletId
     ) {
       total
       data {
@@ -267,6 +269,7 @@ export const GET_SUPPLIER_PAYMENTS_QUERY = gql`
         bankname
         warehousename
         warehouseid
+        outletid
         voided
         username
         lastmodifieddate
@@ -350,7 +353,7 @@ query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
 `;
 
 export const GET_SUPPLIER_BALANCE_DUE_QUERY = gql`
-query GetSupplierBalanceDue($storeid: Int!, $outletid: Int!, $supplierid: Int!) {
+query GetSupplierBalanceDue($storeid: Int!, $outletid: Int, $supplierid: Int!) {
   getSupplierBalanceDue(storeid: $storeid, outletid: $outletid, supplierid: $supplierid) {
     supplierinvoiceid
     supplierid
@@ -360,13 +363,15 @@ query GetSupplierBalanceDue($storeid: Int!, $outletid: Int!, $supplierid: Int!) 
     veninvamtpaid
     veninvamtbalance
     warehouseid
+    warehousename
+    outletid
   }
 }
 `;
 
 export const GET_NON_VOIDED_SUPPLIER_PAYMENT_TRANSACTION_LIST_QUERY = gql`
-  query GetNonVoidedSupplierPaymentTransactionList($storeid: Int!, $supplierid: Int!) {
-    getNonVoidedSupplierPaymentTransactionList(storeid: $storeid, supplierid: $supplierid) {
+  query GetNonVoidedSupplierPaymentTransactionList($storeid: Int!, $supplierid: Int!, $filterOutletId: Int) {
+    getNonVoidedSupplierPaymentTransactionList(storeid: $storeid, supplierid: $supplierid, filterOutletId: $filterOutletId) {
       paymentid
       companyname
       postingdate
@@ -379,6 +384,7 @@ export const GET_NON_VOIDED_SUPPLIER_PAYMENT_TRANSACTION_LIST_QUERY = gql`
       bankname
       warehousename
       warehouseid
+      outletid
       voided
       username
       lastmodifieddate
@@ -499,7 +505,7 @@ export const GET_SUPPLIER_CREDIT_APPLY_SUMMARY_QUERY = gql`
 `;
 
 export const GET_SUPPLIER_BY_OUTLET_ID_QUERY = gql`
-  query GetSupplierByOutletId($storeid: Int!, $outletid: Int!) {
+  query GetSupplierByOutletId($storeid: Int!, $outletid: Int) {
     getSupplierByOutletId(storeid: $storeid, outletid: $outletid) {
       supplierid
       companyname
@@ -590,8 +596,8 @@ export const GET_ON_HAND_CHEQUE_SUMMARY_LIST_QUERY = gql`
 `;
 
 export const GET_SUPPLIER_STATS_QUERY = gql`
-  query GetSupplierStats($outletid: Int!) {
-    getSupplierStats(outletid: $outletid) {
+  query GetSupplierStats($outletid: Int!, $filterOutletId: Int) {
+    getSupplierStats(outletid: $outletid, filterOutletId: $filterOutletId) {
       totalSuppliers
       totalBalanceDue
       totalOpenCredit

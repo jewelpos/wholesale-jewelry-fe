@@ -95,6 +95,12 @@ type SalesInvoiceItemForm = {
   goldprice_used?: number;
   premium_used?: number;
   labour_used?: number;
+
+  // Only set for rows added via carriage/rapid-entry auto-add (autoAddItem), which
+  // bypasses the manual qty-entry hint below — lets the rows table show the same
+  // "not enough in stock" warning for those rows too.
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 const extractMemoNumber = (raw: unknown): number | undefined => {
@@ -221,6 +227,12 @@ type ToolItem = {
   // discount metadata (not persisted to form)
   _itemdiscount?: number;
   _itemcategoryid?: number | null;
+
+  // On-hand qty at the invoice's warehouse when this item was selected, and whether
+  // it's tracked at all — used only to show an early "may not have enough stock"
+  // hint next to the qty field. The backend's own check at save time is authoritative.
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 const toNum = (v: unknown) => {
@@ -1256,6 +1268,20 @@ const SalesInvoiceForm = ({
     const unitprice = Number(selected.itemsellprice || 0);
     const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
     const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    const availableqty = toNum(selected.itemquantityinhand);
+    const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
+    const tracked = mode !== "CREDIT_INVOICE" && trackinventory !== 0;
+
+    const warnIfShort = (newQty: number) => {
+      if (tracked && Math.abs(newQty) > availableqty) {
+        dispatch(
+          showNotification({
+            message: `${selected.itemcode || "Item"}: only ${availableqty} in stock (added ${Math.abs(newQty)})`,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    };
 
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
@@ -1275,14 +1301,15 @@ const SalesInvoiceForm = ({
           warehouseid: getValues('warehouseid'),
         });
         const prevDisc = toNum(existing.discountpercent);
-        const updated = { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid };
+        const updated = { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid, availableqty, trackinventory };
         update(dupIndex, updated);
         if (resolved.discountpercent !== prevDisc && resolved.discountsource) {
           dispatch(showNotification({ message: `Discount updated: ${resolved.label}`, type: NOTIFICATION_TYPES.SUCCESS }));
         }
       } else {
-        update(dupIndex, { ...existing, itemquantity: newQty });
+        update(dupIndex, { ...existing, itemquantity: newQty, availableqty, trackinventory });
       }
+      warnIfShort(newQty);
     } else {
       const bulkTiers = await getBulkTiers(itemid);
       const resolved = resolveDiscount({
@@ -1295,6 +1322,7 @@ const SalesInvoiceForm = ({
         categoryid: selected.itemcategoryid ?? null,
         warehouseid: getValues('warehouseid'),
       });
+      const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
       append({
         itemid,
         itemcode: selected.itemcode,
@@ -1302,12 +1330,15 @@ const SalesInvoiceForm = ({
         itemtaxable: toNum(selected.itemtaxable),
         itemunit: selected.itemunit,
         itempcs: 0,
-        itemquantity: mode === "CREDIT_INVOICE" ? -1 : 1,
+        itemquantity: initQty,
         unitprice,
         discountpercent: resolved.discountpercent,
         discountsource: resolved.discountsource,
         discountpromotionid: resolved.discountpromotionid,
+        availableqty,
+        trackinventory,
       });
+      warnIfShort(initQty);
     }
     resetToolItem();
     setProductClearKey((k) => k + 1);
@@ -1438,6 +1469,8 @@ const SalesInvoiceForm = ({
       discountpercent: discountPct,
       discountsource: resolvedSource,
       discountpromotionid: resolvedPromotionId,
+      availableqty: toolItem.availableqty,
+      trackinventory: toolItem.trackinventory,
     };
 
     if (editingIndex == null) {
@@ -2560,7 +2593,17 @@ const SalesInvoiceForm = ({
                       <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                         <td>{index + 1}</td>
                         <td className="text-nowrap">{item?.itemcode || ""}</td>
-                        <td>{item?.itemdescription || ""}</td>
+                        <td>
+                          {item?.itemdescription || ""}
+                          {mode !== "CREDIT_INVOICE" &&
+                            (item as any)?.trackinventory !== 0 &&
+                            (item as any)?.availableqty !== undefined &&
+                            Math.abs(toNum(item?.itemquantity)) > toNum((item as any)?.availableqty) && (
+                              <div className="text-danger" style={{ fontSize: 11 }}>
+                                Only {toNum((item as any)?.availableqty)} in stock
+                              </div>
+                            )}
+                        </td>
                         <td className="text-center">{toNum(item?.itemtaxable) === 1 ? "Y" : "N"}</td>
                         <td className="text-center">
                           <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: (item?.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (item?.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
@@ -2602,6 +2645,8 @@ const SalesInvoiceForm = ({
                                   itemquantity: toNum(item?.itemquantity),
                                   unitprice: toNum(item?.unitprice),
                                   discountpercent: toNum(item?.discountpercent),
+                                  availableqty: (item as any)?.availableqty,
+                                  trackinventory: (item as any)?.trackinventory,
                                 });
                               }}
                             >
@@ -2684,6 +2729,8 @@ const SalesInvoiceForm = ({
                         labour_used: isWtItem ? labour : undefined,
                         _itemdiscount: toNum(selected.itemdiscount),
                         _itemcategoryid: selected.itemcategoryid ?? null,
+                        availableqty: toNum(selected.itemquantityinhand),
+                        trackinventory: selected.trackinventory != null ? toNum(selected.trackinventory) : 1,
                       }));
                       if (Number(selected.itemalertwarning) === 1 && selected.itemwarningmessage?.trim()) {
                         MySwal.fire({
@@ -2740,25 +2787,38 @@ const SalesInvoiceForm = ({
                       </span>
                     )}
                   </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    className="form-control text-end"
-                    value={toolItem.itemquantity}
-                    onChange={(e) => {
-                      const abs = Math.abs(Number(e.target.value || 0));
-                      const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
-                      setToolItem((prev) => {
-                        if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
-                          const rateField = getRateField(prev.itemmetal, metalTypeList);
-                          const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
-                          const newUnitPrice = calcWtUnitPrice(prev.itemmetal, currentRates as any, prev.itempremium ?? 0, prev.broakerage ?? 0, metalTypeList);
-                          return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
-                        }
-                        return { ...prev, itemquantity: normalized };
-                      });
-                    }}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="number"
+                      step="0.001"
+                      className="form-control text-end"
+                      value={toolItem.itemquantity}
+                      onChange={(e) => {
+                        const abs = Math.abs(Number(e.target.value || 0));
+                        const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
+                        setToolItem((prev) => {
+                          if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
+                            const rateField = getRateField(prev.itemmetal, metalTypeList);
+                            const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+                            const newUnitPrice = calcWtUnitPrice(prev.itemmetal, currentRates as any, prev.itempremium ?? 0, prev.broakerage ?? 0, metalTypeList);
+                            return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
+                          }
+                          return { ...prev, itemquantity: normalized };
+                        });
+                      }}
+                    />
+                    {toolItem.itemid != null &&
+                      mode !== "CREDIT_INVOICE" &&
+                      toolItem.trackinventory !== 0 &&
+                      Math.abs(toolItem.itemquantity || 0) > (toolItem.availableqty ?? 0) && (
+                        <div
+                          className="text-danger text-nowrap"
+                          style={{ fontSize: 11, position: "absolute", top: "100%", left: 0, marginTop: 4 }}
+                        >
+                          Only {toolItem.availableqty ?? 0} in stock
+                        </div>
+                      )}
+                  </div>
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">

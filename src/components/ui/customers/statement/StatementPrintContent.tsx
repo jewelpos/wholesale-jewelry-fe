@@ -12,6 +12,9 @@ export type InvoiceBalanceDue = {
   totalamount: number;
   amountreceived: number;
   balancedue: number;
+  warehouseid?: number;
+  warehousename?: string;
+  outletid?: number;
 };
 
 export type StatementCustomer = {
@@ -40,6 +43,10 @@ interface Props {
   showSummaryCard: boolean;
   storeName: string;
   agingData?: CustomerBalanceAgingType | null;
+  // The outlet this statement is being viewed/printed from — rows whose own outlet
+  // differs get a "*" marker instead of a wide always-on Outlet column (cross-outlet
+  // activity is rare, so a full column would just waste space on the common case).
+  primaryOutletId?: number;
 }
 
 const fmt = (n: number | null | undefined) =>
@@ -69,9 +76,54 @@ const TH: React.CSSProperties = {
 const TD: React.CSSProperties = { padding: "4px 8px", border: "1px solid #e8e8e8", fontSize: 11 };
 const TDR: React.CSSProperties = { ...TD, textAlign: "right" };
 
+// Rows whose own outlet differs from the outlet the statement is being viewed from are
+// the rare case worth flagging. Rather than a line per transaction (which repeats the
+// same outlet name over and over), each DISTINCT other-outlet gets one marker
+// (*, **, ***…), and the legend lists each outlet exactly once regardless of how many
+// rows reference it.
+type OutletMarkers = { markerOf: (outletId: number | null | undefined) => string | null; legend: string[] };
+
+function buildOutletMarkers<T>(
+  rows: T[],
+  getOutletId: (row: T) => number | null | undefined,
+  getName: (row: T) => string | undefined,
+  primaryOutletId: number | undefined,
+): OutletMarkers {
+  const markerMap = new Map<number, string>();
+  const legend: string[] = [];
+  rows.forEach((row) => {
+    const oid = getOutletId(row);
+    if (oid == null || primaryOutletId == null || Number(oid) === Number(primaryOutletId)) return;
+    const key = Number(oid);
+    if (!markerMap.has(key)) {
+      const marker = "*".repeat(markerMap.size + 1);
+      markerMap.set(key, marker);
+      legend.push(`${marker} ${getName(row) || "Outlet " + oid}`);
+    }
+  });
+  return {
+    markerOf: (outletId) => {
+      if (outletId == null) return null;
+      return markerMap.get(Number(outletId)) ?? null;
+    },
+    legend,
+  };
+}
+
+const OutletMark = ({ marker }: { marker: string | null }) =>
+  marker ? <sup style={{ color: "#d97706", fontWeight: 700, marginLeft: 2 }}>{marker}</sup> : null;
+
+const CitationFooter = ({ legend }: { legend: string[] }) =>
+  legend.length ? (
+    <div style={{ marginTop: 6, fontSize: 10, color: "#94a3b8" }}>
+      {legend.map((line, i) => <span key={i} style={{ marginRight: 14 }}>{line}</span>)}
+    </div>
+  ) : null;
+
 const StatementPrintContent = ({
   type, customer, openInvoices, ledgerRows, openingBalance,
   payments, fromDate, toDate, showAging, showSummaryCard, storeName, agingData,
+  primaryOutletId,
 }: Props) => {
   const today = dayjs().format("MM/DD/YYYY");
 
@@ -220,125 +272,149 @@ const StatementPrintContent = ({
       )}
 
       {/* ── Open Invoices Table ── */}
-      {type === "open" && (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>{["Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Balance Due", "Days Outstanding"].map(h => (
-              <th key={h} style={TH}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {openInvoices.length === 0 ? (
-              <tr><td colSpan={6} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No open invoices found.</td></tr>
-            ) : openInvoices.map((inv, i) => {
-              const age = ageInDays(inv.saledate);
-              const ageColor = age > 90 ? "#dc2626" : age > 60 ? "#ea580c" : age > 30 ? "#d97706" : "#16a34a";
-              return (
-                <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                  <td style={TD}>{inv.invoicenumber}</td>
-                  <td style={TD}>{fmtDate(inv.saledate)}</td>
-                  <td style={TDR}>{fmt(inv.totalamount)}</td>
-                  <td style={TDR}>{fmt(inv.amountreceived)}</td>
-                  <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(inv.balancedue)}</td>
-                  <td style={{ ...TDR, color: ageColor, fontWeight: 600 }}>{age}d</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          {openInvoices.length > 0 && (
-            <tfoot>
-              <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
-                <td style={TD} colSpan={4}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
-                <td style={{ ...TDR, fontWeight: 800, color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</td>
-                <td style={TD} />
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      )}
+      {type === "open" && (() => {
+        const { markerOf, legend } = buildOutletMarkers(
+          openInvoices, inv => inv.outletid, inv => inv.warehousename, primaryOutletId,
+        );
+        return (
+          <>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>{["Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Balance Due", "Days Outstanding"].map(h => (
+                  <th key={h} style={TH}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {openInvoices.length === 0 ? (
+                  <tr><td colSpan={6} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No open invoices found.</td></tr>
+                ) : openInvoices.map((inv, i) => {
+                  const age = ageInDays(inv.saledate);
+                  const ageColor = age > 90 ? "#dc2626" : age > 60 ? "#ea580c" : age > 30 ? "#d97706" : "#16a34a";
+                  return (
+                    <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
+                      <td style={TD}>{inv.invoicenumber}<OutletMark marker={markerOf(inv.outletid)} /></td>
+                      <td style={TD}>{fmtDate(inv.saledate)}</td>
+                      <td style={TDR}>{fmt(inv.totalamount)}</td>
+                      <td style={TDR}>{fmt(inv.amountreceived)}</td>
+                      <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(inv.balancedue)}</td>
+                      <td style={{ ...TDR, color: ageColor, fontWeight: 600 }}>{age}d</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {openInvoices.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
+                    <td style={TD} colSpan={4}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
+                    <td style={{ ...TDR, fontWeight: 800, color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</td>
+                    <td style={TD} />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+            <CitationFooter legend={legend} />
+          </>
+        );
+      })()}
 
       {/* ── Transaction History Table ── */}
-      {type === "history" && (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>{["Date", "Activity", "Description", "Reference", "Debit", "Credit", "Balance"].map(h => (
-              <th key={h} style={TH}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {fromDate && (
-              <tr style={{ background: "#eef2ff", fontStyle: "italic" }}>
-                <td style={TD} /><td style={TD} />
-                <td style={{ ...TD, fontWeight: 700 }}>Opening Balance</td>
-                <td style={TD} /><td style={TDR} /><td style={TDR} />
-                <td style={{ ...TDR, fontWeight: 700 }}>{fmt(openingBalance)}</td>
-              </tr>
-            )}
-            {ledgerRows.length === 0 ? (
-              <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No transactions found.</td></tr>
-            ) : ledgerRows.map((row, i) => (
-              <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                <td style={{ ...TD, whiteSpace: "nowrap" }}>{fmtDate(row.ledgerdate)}</td>
-                <td style={TD}>{row.ledgercode}</td>
-                <td style={TD}>{row.ledgerdescription}</td>
-                <td style={TD}>{row.ledgerreference}</td>
-                <td style={TDR}>{row.ledamountdebit ? fmt(row.ledamountdebit) : ""}</td>
-                <td style={TDR}>{row.ledamountcredit ? fmt(row.ledamountcredit) : ""}</td>
-                <td style={{ ...TDR, color: (row.running_balance ?? 0) < 0 ? "#dc2626" : undefined }}>{fmt(row.running_balance)}</td>
-              </tr>
-            ))}
-          </tbody>
-          {ledgerRows.length > 0 && (
-            <tfoot>
-              <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
-                <td style={TD} colSpan={4}>TOTAL</td>
-                <td style={TDR}>{fmt(totalDebits)}</td>
-                <td style={TDR}>{fmt(totalCredits)}</td>
-                <td style={{ ...TDR, color: closingBalance < 0 ? "#dc2626" : undefined }}>{fmt(closingBalance)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      )}
+      {type === "history" && (() => {
+        const { markerOf, legend } = buildOutletMarkers(
+          ledgerRows, row => row.outletid, row => row.warehousename, primaryOutletId,
+        );
+        return (
+          <>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>{["Date", "Activity", "Description", "Reference", "Debit", "Credit", "Balance"].map(h => (
+                  <th key={h} style={TH}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {fromDate && (
+                  <tr style={{ background: "#eef2ff", fontStyle: "italic" }}>
+                    <td style={TD} /><td style={TD} />
+                    <td style={{ ...TD, fontWeight: 700 }}>Opening Balance</td>
+                    <td style={TD} /><td style={TDR} /><td style={TDR} />
+                    <td style={{ ...TDR, fontWeight: 700 }}>{fmt(openingBalance)}</td>
+                  </tr>
+                )}
+                {ledgerRows.length === 0 ? (
+                  <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No transactions found.</td></tr>
+                ) : ledgerRows.map((row, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
+                    <td style={{ ...TD, whiteSpace: "nowrap" }}>{fmtDate(row.ledgerdate)}<OutletMark marker={markerOf(row.outletid)} /></td>
+                    <td style={TD}>{row.ledgercode}</td>
+                    <td style={TD}>{row.ledgerdescription}</td>
+                    <td style={TD}>{row.ledgerreference}</td>
+                    <td style={TDR}>{row.ledamountdebit ? fmt(row.ledamountdebit) : ""}</td>
+                    <td style={TDR}>{row.ledamountcredit ? fmt(row.ledamountcredit) : ""}</td>
+                    <td style={{ ...TDR, color: (row.running_balance ?? 0) < 0 ? "#dc2626" : undefined }}>{fmt(row.running_balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              {ledgerRows.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
+                    <td style={TD} colSpan={4}>TOTAL</td>
+                    <td style={TDR}>{fmt(totalDebits)}</td>
+                    <td style={TDR}>{fmt(totalCredits)}</td>
+                    <td style={{ ...TDR, color: closingBalance < 0 ? "#dc2626" : undefined }}>{fmt(closingBalance)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+            <CitationFooter legend={legend} />
+          </>
+        );
+      })()}
 
       {/* ── Payment Summary Table ── */}
-      {type === "payments" && (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>{["Txn #", "Payment Date", "Invoice #", "Mode", "Reference", "Amount Paid", "Status"].map(h => (
-              <th key={h} style={TH}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {payments.length === 0 ? (
-              <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No payments found.</td></tr>
-            ) : payments.map((pay, i) => (
-              <tr key={i} style={{
-                background: i % 2 === 0 ? "#fff" : "#f8fafc",
-                textDecoration: pay.voidpayment ? "line-through" : undefined,
-                color: pay.voidpayment ? "#94a3b8" : undefined,
-              }}>
-                <td style={TD}>{pay.transactionno}</td>
-                <td style={TD}>{fmtDate(pay.paymentdate)}</td>
-                <td style={TD}>{pay.invoiceno}</td>
-                <td style={TD}>{pay.paymode}</td>
-                <td style={TD}>{pay.paymentreference}</td>
-                <td style={TDR}>{fmt(pay.amountpaid)}</td>
-                <td style={TD}>{pay.paymentstatus}</td>
-              </tr>
-            ))}
-          </tbody>
-          {payments.length > 0 && (
-            <tfoot>
-              <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
-                <td style={TD} colSpan={5}>TOTAL PAID ({activePayments.length} payment{activePayments.length !== 1 ? "s" : ""})</td>
-                <td style={{ ...TDR, color: "#16a34a", fontWeight: 800 }}>{fmt(totalPaid)}</td>
-                <td style={TD} />
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      )}
+      {type === "payments" && (() => {
+        const { markerOf, legend } = buildOutletMarkers(
+          payments, pay => pay.outletid, pay => pay.warehousename, primaryOutletId,
+        );
+        return (
+          <>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>{["Txn #", "Payment Date", "Invoice #", "Mode", "Reference", "Amount Paid", "Status"].map(h => (
+                  <th key={h} style={TH}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {payments.length === 0 ? (
+                  <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No payments found.</td></tr>
+                ) : payments.map((pay, i) => (
+                  <tr key={i} style={{
+                    background: i % 2 === 0 ? "#fff" : "#f8fafc",
+                    textDecoration: pay.voidpayment ? "line-through" : undefined,
+                    color: pay.voidpayment ? "#94a3b8" : undefined,
+                  }}>
+                    <td style={TD}>{pay.transactionno}<OutletMark marker={markerOf(pay.outletid)} /></td>
+                    <td style={TD}>{fmtDate(pay.paymentdate)}</td>
+                    <td style={TD}>{pay.invoiceno}</td>
+                    <td style={TD}>{pay.paymode}</td>
+                    <td style={TD}>{pay.paymentreference}</td>
+                    <td style={TDR}>{fmt(pay.amountpaid)}</td>
+                    <td style={TD}>{pay.paymentstatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+              {payments.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
+                    <td style={TD} colSpan={5}>TOTAL PAID ({activePayments.length} payment{activePayments.length !== 1 ? "s" : ""})</td>
+                    <td style={{ ...TDR, color: "#16a34a", fontWeight: 800 }}>{fmt(totalPaid)}</td>
+                    <td style={TD} />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+            <CitationFooter legend={legend} />
+          </>
+        );
+      })()}
 
       {/* ── Footer ── */}
       <div style={{ marginTop: 28, paddingTop: 10, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: 10 }}>

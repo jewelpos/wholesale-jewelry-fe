@@ -41,8 +41,11 @@ const SupplierListComponent = () => {
   const [getSupplierList] = useLazyQuery(GET_SUPPLIER_LIST_QUERY);
   const [refreshSupplierListMutation, { loading: refreshing }] = useMutation(REFRESH_SUPPLIER_LIST_MUTATION);
   const dispatch = useAppDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
+  // Suppliers are global to the store — selectedOutlet is an optional narrow-down
+  // filter only, not required to load the list.
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
@@ -71,8 +74,17 @@ const SupplierListComponent = () => {
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierList({
             variables: {
-              outletid: selectedOutletRef.current,
+              // outletid routes to the right tenant DB; it's always the current route's
+              // outlet. The optional narrow-down filter, if picked, is pushed into
+              // `filters` below via the outletid AG-Grid equality clause.
+              outletid: parsedOutletId,
               ...filters,
+              filters: [
+                ...filters.filters,
+                ...(selectedOutletRef.current
+                  ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutletRef.current } }]
+                  : []),
+              ],
             },
           });
           if (data.getSupplierList) {
@@ -100,7 +112,7 @@ const SupplierListComponent = () => {
         }
       },
     }),
-    [dispatch, getSupplierList]
+    [dispatch, getSupplierList, parsedOutletId]
   );
 
   const handleDeleteSuccess = useCallback(() => {
@@ -123,19 +135,19 @@ const SupplierListComponent = () => {
 
   // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
-    if (selectedOutlet && gridReady && gridRef.current?.api) {
+    if (gridReady && gridRef.current?.api) {
       gridRef.current.api.setGridOption("serverSideDatasource", datasource);
     }
-  }, [gridReady, datasource, selectedOutlet]);
+  }, [gridReady, datasource]);
 
-  // Refresh only when search text changes — initial load and outlet changes are handled by Effect 1
+  // Refresh when search text or the optional outlet narrow-down changes
   const isFirstSearch = useRef(true);
   useEffect(() => {
     if (isFirstSearch.current) { isFirstSearch.current = false; return; }
     if (!gridReady) return;
     gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
-  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedOutlet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("supplier-list");
 
@@ -176,7 +188,7 @@ const SupplierListComponent = () => {
         />
         {isAdmin && (
           <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Supplier Summary">
-            <SupplierStatsCards outletid={selectedOutlet} />
+            <SupplierStatsCards outletid={parsedOutletId} filterOutletId={selectedOutlet} />
           </SummaryPanelWrapper>
         )}
         <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
@@ -187,6 +199,7 @@ const SupplierListComponent = () => {
               setSearch={setSearch}
               selectedOutlet={selectedOutlet}
               setSelectedOutlet={setSelectedOutlet}
+              autoSelectCurrentOutlet={false}
               extraActions={
                 <button
                   type="button"

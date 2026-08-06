@@ -9,6 +9,7 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $filterOutletId: Int
   ) {
     getInvoiceAgingReport(
       outletid: $outletid
@@ -18,6 +19,7 @@ export const GET_INVOICE_AGING_REPORT_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      filterOutletId: $filterOutletId
     ) {
       total
       data {
@@ -48,6 +50,7 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $filterOutletId: Int
   ) {
     getCustomerChequeList(
       storeid: $storeid
@@ -58,6 +61,7 @@ export const GET_CUSTOMER_CHEQUE_LIST_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      filterOutletId: $filterOutletId
     ) {
       total
       data {
@@ -99,6 +103,7 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
     $excludeInternalEntries: Boolean
+    $filterOutletId: Int
   ) {
     getCustomerLedgerReport(
       outletid: $outletid
@@ -112,6 +117,7 @@ export const GET_CUSTOMER_LEDGER_REPORT_QUERY = gql`
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
       excludeInternalEntries: $excludeInternalEntries
+      filterOutletId: $filterOutletId
     ) {
       total
       openingBalance
@@ -145,6 +151,7 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $filterOutletId: Int
   ) {
     getCustomerBalanceReport(
       outletid: $outletid
@@ -154,6 +161,7 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      filterOutletId: $filterOutletId
     ) {
       total
       data {
@@ -181,6 +189,7 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $filterOutletId: Int
   ) {
     getCustomerPaymentList(
       outletid: $outletid
@@ -190,6 +199,7 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      filterOutletId: $filterOutletId
     ) {
       total
       data {
@@ -259,6 +269,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
     $sortModel: [SortModelInput]
     $rowGroupCols: [RowGroupColInput]
     $groupKeys: [String]
+    $showAllOutlets: Boolean
   ) {
     getCustomerList(
       storeid: $storeid
@@ -268,6 +279,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
       sortModel: $sortModel
       rowGroupCols: $rowGroupCols
       groupKeys: $groupKeys
+      showAllOutlets: $showAllOutlets
     ) {
       total
       data {
@@ -375,9 +387,9 @@ export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
   query GetCustomerBalanceDueInvoices(
     $storeid: Int!
     $customerid: Int!
-    $outletid: Int!
-    $warehouseid: Int!
-    $isCredit: Boolean!
+    $outletid: Int
+    $warehouseid: Int
+    $isCredit: Boolean
   ) {
     getCustomerBalanceDueInvoices(
       storeid: $storeid
@@ -393,6 +405,8 @@ export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
       amountreceived
       balancedue
       warehouseid
+      warehousename
+      outletid
       salemodeid
     }
   }
@@ -480,6 +494,7 @@ export const GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY = gql`
     $fromdate: String
     $todate: String
     $checkstatus: String
+    $filterOutletId: Int
   ) {
     getCustomerChecksForPrint(
       storeid: $storeid
@@ -487,6 +502,7 @@ export const GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY = gql`
       fromdate: $fromdate
       todate: $todate
       checkstatus: $checkstatus
+      filterOutletId: $filterOutletId
     ) {
       customerid
       custcompanyname
@@ -497,6 +513,9 @@ export const GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY = gql`
       checkentrydate
       enteredby
       customercheckdetailid
+      warehousename
+      warehouseid
+      outletid
     }
   }
 `;

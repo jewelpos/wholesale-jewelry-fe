@@ -24,6 +24,7 @@ interface Props {
   >;
   gridRef?: React.RefObject<AgGridReact | null>;
   extraActions?: React.ReactNode;
+  autoSelectCurrentOutlet?: boolean;
 }
 
 const CustomFilterSections = ({
@@ -37,6 +38,7 @@ const CustomFilterSections = ({
   setSelectedSupplier,
   gridRef,
   extraActions,
+  autoSelectCurrentOutlet,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -118,6 +120,7 @@ const CustomFilterSections = ({
               loading={outletsLoading}
               setSelectedOutlet={setSelectedOutlet}
               selectedOutlet={selectedOutlet}
+              autoSelectCurrentOutlet={autoSelectCurrentOutlet}
             />
           </div>
         )}

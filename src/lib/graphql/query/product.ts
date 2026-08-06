@@ -112,6 +112,7 @@ export const SEARCH_INVENTORY_ITEMS_QUERY = gql`
       itemaveragecost
       itemalertwarning
       itemwarningmessage
+      itemquantityinhand
       itemstatus
       itemtagpricecode
       itemtagprice

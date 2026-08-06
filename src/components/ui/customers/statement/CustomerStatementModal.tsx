@@ -20,6 +20,8 @@ import api from "@/lib/axios";
 import StatementPrintContent, { StatementType, InvoiceBalanceDue, StatementCustomer } from "./StatementPrintContent";
 import SendSMSModal from "./SendSMSModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
+import OutletsFilter from "../../grid/OutletsFilter";
+import useOutlets from "@/hooks/useOutlets";
 
 interface Props {
   customer: CustomersListType;
@@ -84,6 +86,10 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const [smsOpen, setSmsOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
+  // Global by default — every section (invoices, ledger, payments, aging) pulls
+  // across all outlets unless the user narrows to one here.
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
+  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -108,14 +114,17 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
         variables: {
           storeid: parsedStoreId,
           customerid: customerIdNum,
-          outletid: parsedOutletId,
-          warehouseid: 0,
+          // Global by default: omit outlet/warehouse entirely so invoices from every
+          // outlet come back; narrowed only when selectedOutlet is explicitly set.
+          outletid: selectedOutlet ?? null,
+          warehouseid: null,
           isCredit: false,
         },
       });
       fetchAging({
         variables: {
           outletid: parsedOutletId,
+          filterOutletId: selectedOutlet,
           page: 1,
           perpage: 1,
           filters: [{ key: "customerid", value: { filterType: "number", type: "equals", filter: customerIdNum } }],
@@ -126,6 +135,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
       fetchLedger({
         variables: {
           outletid: parsedOutletId,
+          filterOutletId: selectedOutlet,
           customerid: customerIdNum,
           fromdate: from ? from.format("YYYY-MM-DD") : null,
           todate: to ? to.format("YYYY-MM-DD") : null,
@@ -140,6 +150,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
       fetchPayments({
         variables: {
           outletid: parsedOutletId,
+          filterOutletId: selectedOutlet,
           page: 1,
           perpage: 10000,
           filters: [{ key: "customerid", value: { filterType: "number", type: "equals", filter: customerIdNum } }],
@@ -152,7 +163,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   useEffect(() => {
     load(type, fromDate, toDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, fromDate, toDate]);
+  }, [type, fromDate, toDate, selectedOutlet]);
 
   const handlePreset = (p: Preset) => {
     setPreset(p);
@@ -272,6 +283,21 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
             overflowY: "auto",
           }}>
             <div style={{ padding: "16px 16px 0" }}>
+              {/* Outlet — global (all outlets) by default, optionally narrow to one */}
+              <div style={{ marginBottom: 18 }}>
+                <ControlLabel>Outlet (optional)</ControlLabel>
+                <OutletsFilter
+                  fetchOutletsList={fetchOutletsList}
+                  outlets={outlets}
+                  loading={outletsLoading}
+                  setSelectedOutlet={setSelectedOutlet}
+                  selectedOutlet={selectedOutlet}
+                />
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                  {selectedOutlet ? "Showing this outlet only" : "Showing all outlets"}
+                </div>
+              </div>
+
               {/* Statement Type */}
               <div style={{ marginBottom: 18 }}>
                 <ControlLabel>Statement Type</ControlLabel>
@@ -416,6 +442,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
                   showSummaryCard={showSummaryCard}
                   storeName={storeName}
                   agingData={agingData}
+                  primaryOutletId={selectedOutlet ?? parsedOutletId}
                 />
               </div>
             </div>

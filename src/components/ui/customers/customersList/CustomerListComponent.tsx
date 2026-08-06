@@ -41,6 +41,7 @@ import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ReportSummaryCards from "../../reports/shared/ReportSummaryCards";
 import api from "@/lib/axios";
 import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import useOutlets from "@/hooks/useOutlets";
 
 const NO_FILTER: never[] = [];
 
@@ -72,17 +73,30 @@ const CustomerListComponent = () => {
   const [segmentPill, setSegmentPill] = useState<SegmentPill>("all");
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
-  // Stats query — respects outlet + segment pill selection
+  // "All Outlets" toggle — bypasses the per-user outlet access floor. Defaults off
+  // (today's behavior: assigned outlet(s) only). Only rendered when the store
+  // actually has 2+ outlets, so we fetch the store-wide count (includeAll: true,
+  // not gated by this user's own assignments) purely to decide whether to show it.
+  const [showAllOutlets, setShowAllOutlets] = useState<boolean>(false);
+  const { fetchOutletsList: fetchAllOutletsList, outlets: allOutlets } = useOutlets();
+  useEffect(() => {
+    if (parsedStoreId) fetchAllOutletsList([parsedStoreId], true);
+  }, [parsedStoreId, fetchAllOutletsList]);
+  const hasMultipleOutlets = allOutlets.length > 1;
+
+  // Stats query — respects outlet + segment pill selection. The specific-outlet
+  // dropdown is ignored while "All Outlets" is on, otherwise it would silently
+  // keep narrowing to whichever outlet the dropdown defaulted to.
   const statsFilters = useMemo(() => {
     const f: { key: string; value: object }[] = [];
-    if (selectedOutlet) f.push({ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutlet } });
+    if (!showAllOutlets && selectedOutlet) f.push({ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutlet } });
     if (segmentPill === "with_balance") f.push({ key: "balancedue", value: { filterType: "number", type: "greaterThan", filter: 0 } });
     else if (segmentPill === "no_balance") f.push({ key: "balancedue", value: { filterType: "number", type: "equals", filter: 0 } });
     return f;
-  }, [selectedOutlet, segmentPill]);
+  }, [selectedOutlet, segmentPill, showAllOutlets]);
 
   const { data: statsData, loading: statsLoading } = useQuery(GET_CUSTOMER_LIST_QUERY, {
-    variables: { storeid: parsedStoreId, page: 1, perpage: 2000, filters: statsFilters, sortModel: NO_FILTER, rowGroupCols: NO_FILTER, groupKeys: NO_FILTER },
+    variables: { storeid: parsedStoreId, page: 1, perpage: 2000, filters: statsFilters, sortModel: NO_FILTER, rowGroupCols: NO_FILTER, groupKeys: NO_FILTER, showAllOutlets },
     fetchPolicy: "cache-and-network",
   });
 
@@ -112,9 +126,11 @@ const CustomerListComponent = () => {
   const selectedOutletRef = useRef(selectedOutlet);
   const segmentPillRef = useRef(segmentPill);
   const debouncedSearchRef = useRef(debouncedSearch);
+  const showAllOutletsRef = useRef(showAllOutlets);
   useEffect(() => { selectedOutletRef.current = selectedOutlet; }, [selectedOutlet]);
   useEffect(() => { segmentPillRef.current = segmentPill; }, [segmentPill]);
   useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => { showAllOutletsRef.current = showAllOutlets; }, [showAllOutlets]);
 
   const handleOnGridReady = (params: GridReadyEvent<CustomersListType>) => {
     setGridReady(true);
@@ -126,7 +142,9 @@ const CustomerListComponent = () => {
     const pill = segmentPillRef.current;
     const filtersMain = filterVariables(params, debouncedSearchRef.current, "fullname, custcompanyname");
 
-    const outletExtra = outlet
+    // The specific-outlet dropdown is ignored while "All Outlets" is on — otherwise
+    // it would silently keep narrowing to whichever outlet it defaulted to.
+    const outletExtra = outlet && !showAllOutletsRef.current
       ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: outlet } }]
       : [];
     const pillExtra =
@@ -142,6 +160,7 @@ const CustomerListComponent = () => {
           storeid: parsedStoreId,
           ...filtersMain,
           filters: [...filtersMain.filters, ...outletExtra, ...pillExtra],
+          showAllOutlets: showAllOutletsRef.current,
         },
       });
       if (data.getCustomerList) {
@@ -188,7 +207,7 @@ const CustomerListComponent = () => {
     if (debouncedSearch) gridRef.current?.api?.setFilterModel(null);
     gridRef.current?.api?.refreshServerSide({ purge: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOutlet, segmentPill, debouncedSearch]);
+  }, [selectedOutlet, segmentPill, debouncedSearch, showAllOutlets]);
 
   const columnDefs = useMemo<ColDef[]>(
     () => [
@@ -306,23 +325,57 @@ const CustomerListComponent = () => {
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
             extraActions={
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                title="Refresh balances from latest invoices & payments"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  padding: "5px 10px", fontSize: 12, fontWeight: 600,
-                  borderRadius: 6, border: "1px solid #dee2e6",
-                  background: "#fff", color: "#64748b",
-                  cursor: refreshing ? "not-allowed" : "pointer",
-                  whiteSpace: "nowrap", transition: "0.15s",
-                }}
-              >
-                <i className={`fas fa-sync-alt${refreshing ? " fa-spin" : ""}`} style={{ fontSize: 11 }} />
-                {refreshing ? "Refreshing..." : "Refresh"}
-              </button>
+              <>
+                {hasMultipleOutlets && (
+                  <div
+                    className="form-check form-switch d-flex align-items-center gap-1 mb-0"
+                    style={{ paddingLeft: 0 }}
+                  >
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      id="showAllOutletsToggle"
+                      checked={showAllOutlets}
+                      onChange={(e) => {
+                        setShowAllOutlets(e.target.checked);
+                        if (e.target.checked) {
+                          // Clear the specific-outlet dropdown so it doesn't sit on a
+                          // stale selection while "All Outlets" is showing everything.
+                          setSelectedOutlet(undefined);
+                        } else {
+                          // Switching back off — restore the dropdown to the current outlet.
+                          setSelectedOutlet(parsedOutletId || undefined);
+                        }
+                      }}
+                      style={{ cursor: "pointer", marginLeft: 0 }}
+                    />
+                    <label
+                      className="form-check-label"
+                      htmlFor="showAllOutletsToggle"
+                      style={{ cursor: "pointer", fontSize: 12, color: "#64748b", userSelect: "none", whiteSpace: "nowrap" }}
+                    >
+                      All Outlets
+                    </label>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  title="Refresh balances from latest invoices & payments"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                    borderRadius: 6, border: "1px solid #dee2e6",
+                    background: "#fff", color: "#64748b",
+                    cursor: refreshing ? "not-allowed" : "pointer",
+                    whiteSpace: "nowrap", transition: "0.15s",
+                  }}
+                >
+                  <i className={`fas fa-sync-alt${refreshing ? " fa-spin" : ""}`} style={{ fontSize: 11 }} />
+                  {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
+              </>
             }
           />
           <div className="d-flex gap-1 flex-wrap mb-2">

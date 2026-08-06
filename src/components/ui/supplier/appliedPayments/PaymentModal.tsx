@@ -89,7 +89,7 @@ const PaymentModal = ({
               <NewPaymentForm storeId={parsedStoreId} outletId={parsedOutletId} closePaymentModal={() => setPaymentModal("")} />
             )}
             {isVoid && (
-              <VoidPaymentForm storeId={parsedStoreId} closePaymentModal={() => setPaymentModal("")} />
+              <VoidPaymentForm storeId={parsedStoreId} outletId={parsedOutletId} closePaymentModal={() => setPaymentModal("")} />
             )}
             {isCredit && (
               <CreditAdjustmentForm storeId={parsedStoreId} outletId={parsedOutletId} closePaymentModal={() => setPaymentModal("")} />

@@ -172,6 +172,7 @@ export type SupplierPayment = {
   bankname: string;
   warehousename: string;
   warehouseid: number;
+  outletid: number;
   voided: string;
   username: string;
   lastmodifieddate: string;

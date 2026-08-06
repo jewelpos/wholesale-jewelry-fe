@@ -34,8 +34,9 @@ const SupplierInvoiceForm = ({
   readOnly?: boolean;
 }) => {
   const dispatch = useDispatch();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const { data: invoiceData, loading: invoiceLoading } = useQuery(
     GET_SUPPLIER_INVOICE_QUERY,
     {
@@ -112,6 +113,9 @@ const SupplierInvoiceForm = ({
       editPayload = {
         ...editPayload,
         supplierinvoiceid: supplierinvoiceid,
+        // Lets the backend verify this edit is happening from the invoice's own
+        // outlet (or bypassed for the store owner).
+        outletid: parsedOutletId,
       };
     }
     const payload = {

@@ -65,6 +65,11 @@ type SalesOrderItemForm = {
   goldprice_used?: number;
   premium_used?: number;
   labour_used?: number;
+
+  // Only set for rows added via carriage/rapid-entry auto-add — informational only,
+  // lets the rows table flag a likely backorder for those rows too.
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 type ToolItem = {
@@ -85,6 +90,11 @@ type ToolItem = {
   labour_used?: number;
   _itemdiscount?: number;
   _itemcategoryid?: number | null;
+
+  // On-hand qty when this item was selected — informational only for a Sales Order
+  // (a SO is allowed to exceed it; this just lets staff flag a backorder up front).
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 type SalesOrderFormType = {
@@ -476,6 +486,18 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       : Number(selected.itemsellprice || 0);
     const currentItems: SalesOrderItemForm[] = getValues("items") || [];
     const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    const availableqty = toNum(selected.itemquantityinhand);
+    const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
+    const warnIfBackorder = (newQty: number) => {
+      if (trackinventory !== 0 && Math.abs(newQty) > availableqty) {
+        dispatch(
+          showNotification({
+            message: `${selected.itemcode || "Item"}: backorder — only ${availableqty} in stock (added ${Math.abs(newQty)})`,
+            type: NOTIFICATION_TYPES.WARNING,
+          })
+        );
+      }
+    };
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
       const newQty = Number(existing.itemquantity || 0) + 1;
@@ -492,13 +514,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
           warehouseid: getValues('warehouseid'),
         });
         const prevDisc = toNum(existing.discountpercent);
-        update(dupIndex, { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid });
+        update(dupIndex, { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid, availableqty, trackinventory });
         if (resolved.discountpercent !== prevDisc && resolved.discountsource) {
           dispatch(showNotification({ message: `Discount updated: ${resolved.label}`, type: NOTIFICATION_TYPES.SUCCESS }));
         }
       } else {
-        update(dupIndex, { ...existing, itemquantity: newQty });
+        update(dupIndex, { ...existing, itemquantity: newQty, availableqty, trackinventory });
       }
+      warnIfBackorder(newQty);
     } else {
       const bulkTiers = await getBulkTiers(itemid);
       const resolved = resolveDiscount({
@@ -529,7 +552,10 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         goldprice_used: isWt ? goldRate : undefined,
         premium_used: isWt ? premium : undefined,
         labour_used: isWt ? labour : undefined,
+        availableqty,
+        trackinventory,
       });
+      warnIfBackorder(1);
     }
     resetToolItem();
     setProductClearKey((k) => k + 1);
@@ -598,6 +624,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       goldprice_used: toolItem.goldprice_used,
       premium_used: toolItem.premium_used,
       labour_used: toolItem.labour_used,
+      availableqty: toolItem.availableqty,
+      trackinventory: toolItem.trackinventory,
     };
 
     if (editingIndex != null) {
@@ -623,6 +651,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itemquantity: toNum(item.itemquantity),
       unitprice: toNum(item.unitprice),
       discountpercent: toNum(item.discountpercent),
+      availableqty: item.availableqty,
+      trackinventory: item.trackinventory,
     });
   };
 
@@ -1098,7 +1128,16 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                         <td>{index + 1}</td>
                         <td className="text-nowrap">{item.itemcode || ""}</td>
-                        <td>{item.itemdescription || ""}</td>
+                        <td>
+                          {item.itemdescription || ""}
+                          {item.trackinventory !== 0 &&
+                            item.availableqty !== undefined &&
+                            Math.abs(toNum(item.itemquantity)) > toNum(item.availableqty) && (
+                              <div className="text-warning" style={{ fontSize: 11 }}>
+                                Backorder: only {toNum(item.availableqty)} in stock
+                              </div>
+                            )}
+                        </td>
                         <td className="text-center">{toNum(item.itemtaxable) === 1 ? "Y" : "N"}</td>
                         <td className="text-center">
                           <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: (item.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (item.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
@@ -1213,6 +1252,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         labour_used: isWtItem ? labour : undefined,
                         _itemdiscount: toNum(selected.itemdiscount),
                         _itemcategoryid: selected.itemcategoryid ?? null,
+                        availableqty: toNum(selected.itemquantityinhand),
+                        trackinventory: selected.trackinventory != null ? toNum(selected.trackinventory) : 1,
                       }));
                     }}
                     onNotFound={() =>
@@ -1253,25 +1294,37 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       </span>
                     )}
                   </label>
-                  <input
-                    type="number"
-                    className="form-control px-1 text-end"
-                    min={1}
-                    step="0.001"
-                    value={toolItem.itemquantity}
-                    onChange={(e) => {
-                      const qty = toNum(e.target.value);
-                      setToolItem((p) => {
-                        if ((p.itemunit ?? "").trim().toLowerCase() === "wt") {
-                          const rateField = getRateField(p.itemmetal, metalTypeList);
-                          const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
-                          const newUnitPrice = calcWtUnitPrice(p.itemmetal, currentRates as any, p.itempremium ?? 0, p.broakerage ?? 0, metalTypeList);
-                          return { ...p, itemquantity: qty, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: p.itempremium, labour_used: p.broakerage };
-                        }
-                        return { ...p, itemquantity: qty };
-                      });
-                    }}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="number"
+                      className="form-control px-1 text-end"
+                      min={1}
+                      step="0.001"
+                      value={toolItem.itemquantity}
+                      onChange={(e) => {
+                        const qty = toNum(e.target.value);
+                        setToolItem((p) => {
+                          if ((p.itemunit ?? "").trim().toLowerCase() === "wt") {
+                            const rateField = getRateField(p.itemmetal, metalTypeList);
+                            const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+                            const newUnitPrice = calcWtUnitPrice(p.itemmetal, currentRates as any, p.itempremium ?? 0, p.broakerage ?? 0, metalTypeList);
+                            return { ...p, itemquantity: qty, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: p.itempremium, labour_used: p.broakerage };
+                          }
+                          return { ...p, itemquantity: qty };
+                        });
+                      }}
+                    />
+                    {toolItem.itemid != null &&
+                      toolItem.trackinventory !== 0 &&
+                      Math.abs(toolItem.itemquantity || 0) > (toolItem.availableqty ?? 0) && (
+                        <div
+                          className="text-warning text-nowrap"
+                          style={{ fontSize: 11, position: "absolute", top: "100%", left: 0, marginTop: 4 }}
+                        >
+                          Backorder: only {toolItem.availableqty ?? 0} in stock
+                        </div>
+                      )}
+                  </div>
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">

@@ -19,6 +19,8 @@ import dayjs, { Dayjs } from "dayjs";
 import { useParams } from "next/navigation";
 import ReportMiniChart from "@/components/ui/reports/shared/ReportMiniChart";
 import "ag-grid-enterprise";
+import OutletsFilter from "../../grid/OutletsFilter";
+import useOutlets from "@/hooks/useOutlets";
 
 const OB_CODE = "__OB__";
 
@@ -59,6 +61,9 @@ const SupplierLedgerActitvityComponent = () => {
   const [supplierid, setSupplierid] = useState<number | null>(null);
   const [fromdate, setFromdate] = useState<Dayjs | null>(null);
   const [todate, setTodate] = useState<Dayjs | null>(null);
+  // Global by default (a supplier's ledger spans outlets) — pure optional narrow-down.
+  const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
+  const { fetchOutletsList, loading: outletsLoading, outlets } = useOutlets();
 
   const handleOnGridReady = (params: GridReadyEvent<SupplierLedgerListType>) => {
     params?.api?.autoSizeAllColumns?.();
@@ -94,6 +99,7 @@ const SupplierLedgerActitvityComponent = () => {
         const { data } = await getSupplierLedgerList({
           variables: {
             outletid: parsedOutletId,
+            filterOutletId: selectedOutlet,
             page: 1,
             perpage: 10000,
             filters,
@@ -155,13 +161,13 @@ const SupplierLedgerActitvityComponent = () => {
         dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
       }
     },
-    [getSupplierLedgerList, parsedOutletId, dispatch]
+    [getSupplierLedgerList, parsedOutletId, selectedOutlet, dispatch]
   );
 
   useEffect(() => {
     fetchLedger(supplierid, fromdate, todate);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supplierid, fromdate, todate]);
+  }, [supplierid, fromdate, todate, selectedOutlet]);
 
   const closingBalance: number =
     rowData.length > 0 ? Number(rowData[rowData.length - 1].running_balance ?? 0) : openingBalance;
@@ -184,7 +190,7 @@ const SupplierLedgerActitvityComponent = () => {
         <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {/* Filter bar */}
           <div className="row mb-3 g-2 align-items-end">
-            <div className="col-lg-4 col-md-6">
+            <div className="col-lg-3 col-md-6">
               <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600 }}>
                 Supplier <span className="text-danger">*</span>
               </label>
@@ -192,6 +198,19 @@ const SupplierLedgerActitvityComponent = () => {
                 storeId={parsedStoreId}
                 value={supplierid}
                 onChangeAdditional={(val: number) => setSupplierid(val ?? null)}
+              />
+            </div>
+            <div className="col-lg-2 col-md-6">
+              <label className="form-label mb-1" style={{ fontSize: 12, fontWeight: 600 }}>
+                Outlet (optional)
+              </label>
+              <OutletsFilter
+                fetchOutletsList={fetchOutletsList}
+                outlets={outlets}
+                loading={outletsLoading}
+                setSelectedOutlet={setSelectedOutlet}
+                selectedOutlet={selectedOutlet}
+                autoSelectCurrentOutlet={false}
               />
             </div>
             <div className="col-lg-3 col-md-6">

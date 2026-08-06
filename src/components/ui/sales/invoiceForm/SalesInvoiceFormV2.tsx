@@ -74,6 +74,12 @@ type SalesInvoiceItemForm = {
   goldprice_used?: number;
   premium_used?: number;
   labour_used?: number;
+
+  // Only set for rows added via carriage/rapid-entry auto-add (autoAddItem), which
+  // bypasses the manual qty-entry hint below — lets the rows table show the same
+  // "not enough in stock" warning for those rows too.
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 const extractMemoNumber = (raw: unknown): number | undefined => {
@@ -196,6 +202,12 @@ type ToolItem = {
   goldprice_used?: number;
   premium_used?: number;
   labour_used?: number;
+
+  // On-hand qty at the invoice's warehouse when this item was selected, and whether
+  // it's tracked at all — used only to show an early "may not have enough stock"
+  // hint next to the qty field. The backend's own check at save time is authoritative.
+  availableqty?: number;
+  trackinventory?: number;
 };
 
 const toNum = (v: unknown) => {
@@ -945,14 +957,32 @@ const SalesInvoiceFormV2 = ({
     const discountPct = Math.min(100, Math.max(0, Number(watch("discountpercent") || 0)));
     const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
     const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    const availableqty = toNum(selected.itemquantityinhand);
+    const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
+    const tracked = mode !== "CREDIT_INVOICE" && trackinventory !== 0;
+
+    const warnIfShort = (newQty: number) => {
+      if (tracked && Math.abs(newQty) > availableqty) {
+        dispatch(
+          showNotification({
+            message: `${selected.itemcode || "Item"}: only ${availableqty} in stock (added ${Math.abs(newQty)})`,
+            type: NOTIFICATION_TYPES.ERROR,
+          })
+        );
+      }
+    };
 
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
       const existingQty = Number(existing.itemquantity || 0);
+      const newQty = mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1;
       update(dupIndex, {
         ...existing,
-        itemquantity: mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1,
+        itemquantity: newQty,
+        availableqty,
+        trackinventory,
       });
+      warnIfShort(newQty);
     } else {
       const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
       const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
@@ -978,7 +1008,10 @@ const SalesInvoiceFormV2 = ({
         goldprice_used: isWt ? goldRate : undefined,
         premium_used: isWt ? premium : undefined,
         labour_used: isWt ? labour : undefined,
+        availableqty,
+        trackinventory,
       });
+      warnIfShort(initQty);
     }
     resetToolItem();
     setProductClearKey((k) => k + 1);
@@ -1059,6 +1092,8 @@ const SalesInvoiceFormV2 = ({
       goldprice_used: toolItem.goldprice_used,
       premium_used: toolItem.premium_used,
       labour_used: toolItem.labour_used,
+      availableqty: toolItem.availableqty,
+      trackinventory: toolItem.trackinventory,
     };
 
     if (editingIndex == null) {
@@ -1840,7 +1875,17 @@ const SalesInvoiceFormV2 = ({
                       <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                         <td>{index + 1}</td>
                         <td className="text-nowrap">{item?.itemcode || ""}</td>
-                        <td>{item?.itemdescription || ""}</td>
+                        <td>
+                          {item?.itemdescription || ""}
+                          {mode !== "CREDIT_INVOICE" &&
+                            (item as any)?.trackinventory !== 0 &&
+                            (item as any)?.availableqty !== undefined &&
+                            Math.abs(toNum(item?.itemquantity)) > toNum((item as any)?.availableqty) && (
+                              <div className="text-danger" style={{ fontSize: 11 }}>
+                                Only {toNum((item as any)?.availableqty)} in stock
+                              </div>
+                            )}
+                        </td>
                         <td className="text-center">{toNum(item?.itemtaxable) === 1 ? "Y" : "N"}</td>
                         {allowPcsEntry && <td className="text-end">{toNum(item?.itempcs) || 0}</td>}
                         <td className="text-end text-nowrap">
@@ -1876,6 +1921,8 @@ const SalesInvoiceFormV2 = ({
                                 goldprice_used: (item as any)?.goldprice_used,
                                 premium_used: (item as any)?.premium_used,
                                 labour_used: (item as any)?.labour_used,
+                                availableqty: (item as any)?.availableqty,
+                                trackinventory: (item as any)?.trackinventory,
                               });
                             }}
                           >
@@ -1951,6 +1998,8 @@ const SalesInvoiceFormV2 = ({
                         goldprice_used: isWt ? goldRate : undefined,
                         premium_used: isWt ? premium : undefined,
                         labour_used: isWt ? labour : undefined,
+                        availableqty: toNum(selected.itemquantityinhand),
+                        trackinventory: selected.trackinventory != null ? toNum(selected.trackinventory) : 1,
                       }));
                     }}
                     onNotFound={() => dispatch(showNotification({ message: "Item not found", type: NOTIFICATION_TYPES.ERROR }))}
@@ -1981,24 +2030,37 @@ const SalesInvoiceFormV2 = ({
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
                   <label className="form-label small text-muted mb-1">Qty <span className="text-danger">*</span></label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    className="form-control text-end"
-                    value={toolItem.itemquantity}
-                    onChange={(e) => {
-                      const abs = Math.abs(Number(e.target.value || 0));
-                      const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
-                      setToolItem((prev) => {
-                        if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
-                          const goldRate = currentRates ? ((getRateField(prev.itemmetal) ? (currentRates[getRateField(prev.itemmetal)!] ?? 0) : 0)) : 0;
-                          const newUnitPrice = calcWtUnitPrice(abs, prev.itemmetal, currentRates, prev.itempremium ?? 0, prev.broakerage ?? 0);
-                          return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
-                        }
-                        return { ...prev, itemquantity: normalized };
-                      });
-                    }}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="number"
+                      step="0.001"
+                      className="form-control text-end"
+                      value={toolItem.itemquantity}
+                      onChange={(e) => {
+                        const abs = Math.abs(Number(e.target.value || 0));
+                        const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
+                        setToolItem((prev) => {
+                          if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
+                            const goldRate = currentRates ? ((getRateField(prev.itemmetal) ? (currentRates[getRateField(prev.itemmetal)!] ?? 0) : 0)) : 0;
+                            const newUnitPrice = calcWtUnitPrice(abs, prev.itemmetal, currentRates, prev.itempremium ?? 0, prev.broakerage ?? 0);
+                            return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
+                          }
+                          return { ...prev, itemquantity: normalized };
+                        });
+                      }}
+                    />
+                    {toolItem.itemid != null &&
+                      mode !== "CREDIT_INVOICE" &&
+                      toolItem.trackinventory !== 0 &&
+                      Math.abs(toolItem.itemquantity || 0) > (toolItem.availableqty ?? 0) && (
+                        <div
+                          className="text-danger text-nowrap"
+                          style={{ fontSize: 11, position: "absolute", top: "100%", left: 0, marginTop: 4 }}
+                        >
+                          Only {toolItem.availableqty ?? 0} in stock
+                        </div>
+                      )}
+                  </div>
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">

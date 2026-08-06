@@ -9,7 +9,7 @@ import {
   ColDef,
   ICellRendererParams,
 } from "ag-grid-community";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -29,8 +29,12 @@ import ActionFooter from "../../ActionFooter";
 
 const CategoryComponent = () => {
   const router = useRouter();
+  const { outletId: outletIdParam } = useParams();
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const [getItemCategoryList] = useLazyQuery(GET_ITEM_CATEGORY_LIST_QUERY);
   const dispatch = useAppDispatch();
+  // Categories are global to the store — selectedOutlet/selectedWarehouse are an
+  // optional narrow-down filter only, not required to load the list.
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const [selectedWarehouse, setSelectedWarehouse] = useState<
     number | undefined
@@ -92,7 +96,9 @@ const CategoryComponent = () => {
         const result = await handleTryCatch(async () => {
           const { data } = await getItemCategoryList({
             variables: {
-              outletid: selectedOutlet,
+              // outletid routes to the right tenant DB; it's always the current route's
+              // outlet, independent of the optional selectedOutlet narrow-down filter.
+              outletid: parsedOutletId,
               ...filters,
             },
           });
@@ -122,6 +128,7 @@ const CategoryComponent = () => {
       },
     }),
     [
+      parsedOutletId,
       selectedOutlet,
       selectedWarehouse,
       dispatch,
@@ -131,16 +138,13 @@ const CategoryComponent = () => {
   );
 
   useEffect(() => {
-    if ((selectedOutlet || debouncedSearch) && gridReady) {
+    if (gridReady) {
       gridRef.current!.api!.setGridOption("serverSideDatasource", datasource);
     }
   }, [
     gridRef,
     datasource,
-    selectedOutlet,
-    selectedWarehouse,
     gridReady,
-    debouncedSearch,
   ]);
 
   // Modal handlers
@@ -216,6 +220,7 @@ const CategoryComponent = () => {
             setSelectedOutlet={setSelectedOutlet}
             selectedWarehouse={selectedWarehouse}
             setSelectedWarehouse={setSelectedWarehouse}
+            autoSelectCurrentOutlet={false}
           />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid

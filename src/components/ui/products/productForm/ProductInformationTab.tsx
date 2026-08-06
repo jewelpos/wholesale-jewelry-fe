@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Control,
   Controller,
@@ -10,9 +10,10 @@ import {
   UseFormTrigger,
   useWatch,
 } from "react-hook-form";
-import { useQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
+import { CHECK_ITEM_CODE_EXISTS_QUERY } from "@/lib/graphql/query/products";
 import { ProductFormType } from "@/types/product";
 import SelectSupplier from "@/components/forms/SelectSupplier";
 import SelectItemCategory from "@/components/forms/SelectItemCategory";
@@ -20,6 +21,7 @@ import SelectSubCategory from "@/components/forms/SelectSubCategory";
 import SelectMetalType from "@/components/forms/SelectMetalType";
 import ProductImageUpload from "@/components/ui/products/ProductImageUpload";
 import useWarehouse from "@/hooks/useWarehouse";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useParams } from "next/navigation";
 import {
   ChevronRight,
@@ -133,6 +135,35 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   const itempremium       = useWatch({ control, name: "itempremium" });
   const broakerage        = useWatch({ control, name: "broakerage" });
   const itemunit          = useWatch({ control, name: "itemunit" });
+  const itemcode          = useWatch({ control, name: "itemcode" });
+
+  // Warn as soon as a duplicate itemcode is typed, before the user fills out the rest
+  // of the form — the backend still rejects it at submit time regardless, this is just
+  // an early heads-up. Only relevant when creating a new item (itemcode is disabled/
+  // immutable while editing).
+  const debouncedItemCode = useDebounce(itemcode, 500);
+  const [duplicateItemCode, setDuplicateItemCode] = useState<string | null>(null);
+  const [checkItemCodeExists, { loading: checkingItemCode }] = useLazyQuery(
+    CHECK_ITEM_CODE_EXISTS_QUERY,
+    { fetchPolicy: "network-only" }
+  );
+
+  useEffect(() => {
+    const trimmed = (debouncedItemCode || "").trim();
+    if (isEdit || !trimmed || !storeId) {
+      setDuplicateItemCode(null);
+      return;
+    }
+    let cancelled = false;
+    checkItemCodeExists({ variables: { itemcode: trimmed, storeid: storeId } }).then((res) => {
+      if (!cancelled && res.data?.checkItemCodeExists) setDuplicateItemCode(trimmed);
+      else if (!cancelled) setDuplicateItemCode(null);
+    });
+    return () => { cancelled = true; };
+  }, [debouncedItemCode, isEdit, storeId, checkItemCodeExists]);
+
+  const isDuplicateItemCode =
+    !isEdit && !!duplicateItemCode && duplicateItemCode === (itemcode || "").trim();
 
   const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
     variables: { storeid: storeId },
@@ -223,11 +254,17 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                   <Label required>Item Code</Label>
                   <input
                     type="text"
-                    className={`form-control form-control-sm ${errors.itemcode ? "is-invalid" : ""}`}
+                    className={`form-control form-control-sm ${errors.itemcode || isDuplicateItemCode ? "is-invalid" : ""}`}
                     {...register("itemcode", { required: "Item code is required" })}
                     disabled={isEdit}
                   />
                   {errors.itemcode && <div className="invalid-feedback">{errors.itemcode.message}</div>}
+                  {!errors.itemcode && isDuplicateItemCode && (
+                    <div className="invalid-feedback d-block">This item code already exists</div>
+                  )}
+                  {!errors.itemcode && !isDuplicateItemCode && checkingItemCode && (
+                    <div className="text-muted mt-1" style={{ fontSize: 11 }}>Checking...</div>
+                  )}
                 </FieldWrap>
               </div>
               <div className="col-lg-3 col-md-6">

@@ -14,6 +14,7 @@ export const GET_ACTIVE_USER = gql`
           username
           role
           roleid
+          issysgenmasteraccount
           otpverified
           emailverified
           isenabled

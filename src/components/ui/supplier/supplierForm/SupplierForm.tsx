@@ -27,8 +27,9 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   const { supplierId } = useParams();
   const dispatch = useDispatch();
   const router = useRouter();
-  const { storeId: storeIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
+  const parsedOutletId = parseInt(outletIdParam as string, 10);
   const parsedSupplierId = parseInt(supplierId as string, 10);
 
   const { data: supplierData, loading: supplierLoading } = useQuery(
@@ -110,7 +111,9 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
     setLoading(true);
     let editPayload = {};
     if (supplierId) {
-      editPayload = { supplierid: supplierId ? Number(sid) : null };
+      // Lets the backend verify this edit is happening from the supplier's own
+      // home outlet (or bypassed for the store owner).
+      editPayload = { supplierid: supplierId ? Number(sid) : null, outletid: parsedOutletId };
     }
     const payload = {
       ...formData,

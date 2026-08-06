@@ -176,6 +176,7 @@ const SupplierPaymentsComponent = () => {
         <VoidPaymentModal
           setShowVoidModal={handleCloseVoidModal}
           storeId={parsedStoreId}
+          outletId={parsedOutletId}
           supplierid={voidSupplierId}
           paymentid={voidPaymentId}
         />
