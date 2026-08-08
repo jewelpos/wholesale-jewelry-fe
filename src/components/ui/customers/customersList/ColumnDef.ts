@@ -44,6 +44,12 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     filter: "agNumberColumnFilter",
   },
   {
+    headerName: "Credit apply",
+    field: "creditapplied",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+  },
+  {
     headerName: "Open credit",
     field: "opencredit",
     cellRenderer: currencyFormattedCellRenderer,

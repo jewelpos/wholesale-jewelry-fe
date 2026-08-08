@@ -295,6 +295,7 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
         balancedue
         totalsale
         amountpaid
+        creditapplied
         opencredit
         mobile
         custregistrationdate
