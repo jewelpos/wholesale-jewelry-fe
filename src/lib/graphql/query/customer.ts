@@ -390,6 +390,7 @@ export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
     $outletid: Int
     $warehouseid: Int
     $isCredit: Boolean
+    $excludeMemo: Boolean
   ) {
     getCustomerBalanceDueInvoices(
       storeid: $storeid
@@ -397,6 +398,7 @@ export const GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY = gql`
       outletid: $outletid
       warehouseid: $warehouseid
       isCredit: $isCredit
+      excludeMemo: $excludeMemo
     ) {
       invoicenumber
       customerid

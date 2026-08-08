@@ -162,6 +162,8 @@ const OpenItemsTable = ({
   onToggle,
   onAmountChange,
   onSelectAll,
+  readOnly = false,
+  readOnlyMessage = "Informational only — not payable until converted to invoice",
 }: {
   docs: ARDoc[];
   title: string;
@@ -169,6 +171,8 @@ const OpenItemsTable = ({
   onToggle: (invoicenumber: number, balancedue: number) => void;
   onAmountChange: (invoicenumber: number, amount: number) => void;
   onSelectAll: (select: boolean) => void;
+  readOnly?: boolean;
+  readOnlyMessage?: string;
 }) => {
   if (!docs.length) return null;
 
@@ -188,27 +192,33 @@ const OpenItemsTable = ({
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b" }}>
           {title}
         </span>
-        <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#1d4ed8", fontWeight: 600, userSelect: "none" }}>
-          <input
-            type="checkbox"
-            checked={allSelected}
-            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-            onChange={(e) => onSelectAll(e.target.checked)}
-            style={{ cursor: "pointer", width: 14, height: 14, accentColor: "#1d4ed8" }}
-          />
-          Select All
-        </label>
+        {readOnly ? (
+          <span style={{ fontSize: 10, color: "#94a3b8", fontStyle: "italic" }}>
+            {readOnlyMessage}
+          </span>
+        ) : (
+          <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#1d4ed8", fontWeight: 600, userSelect: "none" }}>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+              onChange={(e) => onSelectAll(e.target.checked)}
+              style={{ cursor: "pointer", width: 14, height: 14, accentColor: "#1d4ed8" }}
+            />
+            Select All
+          </label>
+        )}
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
         <thead>
           <tr style={{ background: "#f1f5f9" }}>
-            <th style={thStyle}></th>
+            {!readOnly && <th style={thStyle}></th>}
             <th style={thStyle}>Age</th>
             <th style={thStyle}>#</th>
             <th style={thStyle}>Date</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Total</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Balance</th>
-            <th style={{ ...thStyle, textAlign: "right", width: 80 }}>Apply</th>
+            {!readOnly && <th style={{ ...thStyle, textAlign: "right", width: 80 }}>Apply</th>}
           </tr>
         </thead>
         <tbody>
@@ -224,14 +234,16 @@ const OpenItemsTable = ({
                   borderBottom: "1px solid #f1f5f9",
                 }}
               >
-                <td style={tdStyle}>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => onToggle(doc.invoicenumber, Math.abs(doc.balancedue))}
-                    style={{ cursor: "pointer" }}
-                  />
-                </td>
+                {!readOnly && (
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => onToggle(doc.invoicenumber, Math.abs(doc.balancedue))}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </td>
+                )}
                 <td style={tdStyle}>
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                     <AgeDot days={days} />
@@ -244,33 +256,35 @@ const OpenItemsTable = ({
                 <td style={tdStyle}>{dayjs(doc.saledate).format("MMM D, YY")}</td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>{fmt(Math.abs(doc.totalamount))}</td>
                 <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(Math.abs(doc.balancedue))}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>
-                  {isChecked ? (
-                    <input
-                      type="number"
-                      min={0}
-                      max={Math.abs(doc.balancedue)}
-                      step="0.01"
-                      value={applyAmt}
-                      onChange={(e) =>
-                        onAmountChange(
-                          doc.invoicenumber,
-                          Math.min(Number(e.target.value), Math.abs(doc.balancedue))
-                        )
-                      }
-                      style={{
-                        width: 72,
-                        textAlign: "right",
-                        fontSize: 11,
-                        border: "1px solid #cbd5e1",
-                        borderRadius: 4,
-                        padding: "2px 4px",
-                      }}
-                    />
-                  ) : (
-                    <span style={{ color: "#94a3b8" }}>—</span>
-                  )}
-                </td>
+                {!readOnly && (
+                  <td style={{ ...tdStyle, textAlign: "right" }}>
+                    {isChecked ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={Math.abs(doc.balancedue)}
+                        step="0.01"
+                        value={applyAmt}
+                        onChange={(e) =>
+                          onAmountChange(
+                            doc.invoicenumber,
+                            Math.min(Number(e.target.value), Math.abs(doc.balancedue))
+                          )
+                        }
+                        style={{
+                          width: 72,
+                          textAlign: "right",
+                          fontSize: 11,
+                          border: "1px solid #cbd5e1",
+                          borderRadius: 4,
+                          padding: "2px 4px",
+                        }}
+                      />
+                    ) : (
+                      <span style={{ color: "#94a3b8" }}>—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -506,6 +520,27 @@ const ReceivePaymentModal = ({
     setRefNo("");
     setCustomercheckdetailid(null);
   }, []);
+
+  // Open Memos is only selectable while applying a Memo Credit — a memo credit's
+  // target is whatever's checked here (see handleSave), so it needs to be pickable
+  // for that flow only. Otherwise memo stays informational-only (not directly payable).
+  const memoSelectionEnabled = selectedMemoCredits.size > 0;
+  // While a Memo Credit is checked, Open Invoices locks so it can't be mistaken for
+  // (or accidentally used as) the credit's target — mutual exclusivity, not just a
+  // backend-side guard, so the UI never shows both as pickable at once.
+  const invoiceSelectionEnabled = !memoSelectionEnabled;
+
+  useEffect(() => {
+    if (!memoSelectionEnabled && selectedMemos.size > 0) {
+      setSelectedMemos(new Map());
+    }
+  }, [memoSelectionEnabled]);
+
+  useEffect(() => {
+    if (!invoiceSelectionEnabled && selectedInvoices.size > 0) {
+      setSelectedInvoices(new Map());
+    }
+  }, [invoiceSelectionEnabled]);
 
   // ── Toggle helpers ────────────────────────────────────────────────────
   const toggleItem = (
@@ -879,6 +914,8 @@ const ReceivePaymentModal = ({
                   <OpenItemsTable
                     docs={openInvoices}
                     title="Open Invoices"
+                    readOnly={!invoiceSelectionEnabled}
+                    readOnlyMessage="Locked while applying a Memo Credit — uncheck it to select an invoice"
                     selected={selectedInvoices}
                     onToggle={(no, bal) =>
                       toggleItem(selectedInvoices, setSelectedInvoices, no, bal)
@@ -897,6 +934,8 @@ const ReceivePaymentModal = ({
                   <OpenItemsTable
                     docs={openMemos}
                     title="Open Memos"
+                    readOnly={!memoSelectionEnabled}
+                    readOnlyMessage="Check a Memo Credit above to apply a credit against a memo"
                     selected={selectedMemos}
                     onToggle={(no, bal) =>
                       toggleItem(selectedMemos, setSelectedMemos, no, bal)

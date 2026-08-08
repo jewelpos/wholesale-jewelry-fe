@@ -666,6 +666,15 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       dispatch(showNotification({ message: "Add at least one item", type: NOTIFICATION_TYPES.ERROR }));
       return;
     }
+    if (Math.abs(totals.orderTotal) <= 0) {
+      dispatch(
+        showNotification({
+          message: "Sales order total is $0 — enter a unit price for at least one item before saving",
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+      return;
+    }
 
     const hasWtItems = (values.items || []).some((it) => it.itemunit === "Wt");
 
@@ -1150,7 +1159,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         <td className="text-end">{toNum(item.itemquantity)}</td>
                         {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
                         {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
-                        <td className="text-end">{formatMoney(item.unitprice)}</td>
+                        <td className="text-end">
+                          <span className={toNum(item.unitprice) === 0 ? "text-danger fw-bold" : ""}>{formatMoney(item.unitprice)}</span>
+                          {toNum(item.unitprice) === 0 && (
+                            <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                          )}
+                        </td>
                         <td className="text-end">
                           <div>{toNum(item.discountpercent).toFixed(1)}%</div>
                           {item.discountsource && item.discountsource !== 'item' && (
@@ -1331,12 +1345,15 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
-                    className="form-control px-1 text-end"
+                    className={`form-control px-1 text-end${toolItem.itemid != null && !toolItem.unitprice ? " border-danger" : ""}`}
                     min={0}
                     step="0.001"
                     value={toolItem.unitprice}
                     onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
                   />
+                  {toolItem.itemid != null && !toolItem.unitprice && (
+                    <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                  )}
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">

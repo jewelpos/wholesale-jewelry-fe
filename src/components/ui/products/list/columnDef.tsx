@@ -62,10 +62,10 @@ export function makeProductColumnDefs(
     },
     { headerName: "Location",           field: "itemlocation",       filter: "agTextColumnFilter",   hide: true },
     { headerName: "Qty In Hand",        field: "itemquantityinhand", filter: "agNumberColumnFilter", hide: false },
-    { headerName: "Memo Qty",           field: "memoqty",            filter: "agNumberColumnFilter", hide: false },
     { headerName: "SO Quantity",        field: "soquantity",         filter: "agNumberColumnFilter", hide: false },
     { headerName: "Available Qty",      field: "availableqty",       filter: "agNumberColumnFilter", hide: false },
     { headerName: "Overall Qty",        field: "overall_qty",        filter: "agNumberColumnFilter", hide: false },
+    { headerName: "Memo Qty",           field: "memoqty",            filter: "agNumberColumnFilter", hide: false },
     {
       headerName: "Status", field: "itemstatus", hide: true,
       filter: "agSetColumnFilter",

@@ -33,6 +33,7 @@ const useCustomerBalanceDue = () => {
               warehouseid: warehouseId,
               customerid: customerId,
               isCredit,
+              excludeMemo: true,
             },
           });
           if (data?.getCustomerBalanceDueInvoices) {

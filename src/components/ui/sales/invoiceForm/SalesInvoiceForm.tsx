@@ -1532,6 +1532,16 @@ const SalesInvoiceForm = ({
       dispatch(showNotification({ message: "Select a memo to credit against", type: NOTIFICATION_TYPES.ERROR }));
       return;
     }
+    if (Math.abs(totals.invoiceTotal) <= 0) {
+      const docLabel = documentType === "MEMO" ? "Memo" : mode === "CREDIT_INVOICE" ? "Credit invoice" : "Invoice";
+      dispatch(
+        showNotification({
+          message: `${docLabel} total is $0 — enter a unit price for at least one item before saving`,
+          type: NOTIFICATION_TYPES.ERROR,
+        })
+      );
+      return;
+    }
 
     const reps = (formData.salesreps ?? []).filter(r => r.userid);
     if (reps.length > 0) {
@@ -2618,7 +2628,12 @@ const SalesInvoiceForm = ({
                         {isMemoView && <td className="text-end">{toNum(item?.memoqtyinvoice) || 0}</td>}
                         {isMemoView && <td className="text-end">{toNum(item?.memoqtyreturn) || 0}</td>}
                         {isMemoView && <td className="text-end">{toNum(item?.memoqtyremain) || 0}</td>}
-                        <td className="text-end">{formatMoney(line.unit)}</td>
+                        <td className="text-end">
+                          <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>
+                          {line.unit === 0 && (
+                            <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                          )}
+                        </td>
                         <td className="text-end">
                           <div>{line.disc}</div>
                           {item?.discountsource && item.discountsource !== 'item' && (
@@ -2827,10 +2842,13 @@ const SalesInvoiceForm = ({
                     type="number"
                     step="0.001"
                     min={0}
-                    className="form-control text-end"
+                    className={`form-control text-end${toolItem.itemid != null && !toolItem.unitprice ? " border-danger" : ""}`}
                     value={toolItem.unitprice}
                     onChange={(e) => setToolItem((prev) => ({ ...prev, unitprice: Math.round(Math.max(0, Number(e.target.value || 0)) * 1000) / 1000 }))}
                   />
+                  {toolItem.itemid != null && !toolItem.unitprice && (
+                    <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                  )}
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
