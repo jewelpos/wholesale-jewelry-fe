@@ -171,28 +171,20 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       [persistColumnState]
     );
 
-    // Clicking a column header to sort never updated savedColStateRef, so the
-    // "restore after columnDefs/defaultColDef change" effect below kept reapplying
-    // the pre-sort state on the next re-render (columnDefs is rebuilt on most
-    // renders across list pages), snapping sort back to default immediately.
-    const handleSortChanged = useCallback(
-      (e: any) => {
-        if (!isRestoringRef.current) {
-          savedColStateRef.current = e.api.getColumnState();
-        }
-        (props as any).onSortChanged?.(e);
-      },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      []
-    );
-
     // After columnDefs or defaultColDef changes, restore saved user column visibility.
     // AG Grid re-applies defaults on prop changes which can reset user-set hide state.
     useEffect(() => {
       if (!savedColStateRef.current) return;
       const api = internalRef.current?.api;
       if (!api) return;
-      const saved = savedColStateRef.current;
+      // Strip sort/sortIndex before reapplying — this effect's job is order/visibility/
+      // width persistence, not sort. Including sort here caused an infinite loop: any
+      // click-to-sort triggers a re-render (SSRM row refetch → parent state update),
+      // which reruns this effect, which reapplies sort via the API, which SSRM treats
+      // as a fresh sort → another refetch → another re-render → ad infinitum, seen as
+      // the grid flashing/loading forever. Leaving sort out means this effect can never
+      // fight with (or retrigger from) the grid's own live sort state.
+      const saved = savedColStateRef.current.map(({ sort, sortIndex, ...rest }) => rest);
       const raf = requestAnimationFrame(() => {
         isRestoringRef.current = true;
         // applyOrder: true — a columnDefs/defaultColDef re-render (e.g. from the debounced
@@ -266,7 +258,6 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           onColumnVisible={handleColumnVisible}
           onColumnMoved={handleColumnMoved}
           onColumnResized={handleColumnResized}
-          onSortChanged={handleSortChanged}
           {...props}
         />
       </div>
