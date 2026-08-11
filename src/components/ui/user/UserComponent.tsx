@@ -185,6 +185,7 @@ const UserComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            onRefresh={loadUsers}
           />
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGridClient gridKey="user-list"

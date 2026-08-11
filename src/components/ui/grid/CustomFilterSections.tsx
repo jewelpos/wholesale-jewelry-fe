@@ -27,6 +27,10 @@ interface Props {
   gridRef?: React.RefObject<AgGridReact | null>;
   extraActions?: React.ReactNode;
   autoSelectCurrentOutlet?: boolean;
+  // Called instead of the default refresh when the grid isn't server-side-row-model
+  // backed (e.g. POSGridClient pages, where data comes from a rowData prop rather
+  // than a datasource the grid can re-request itself).
+  onRefresh?: () => void;
 }
 
 const CustomFilterSections = ({
@@ -43,6 +47,7 @@ const CustomFilterSections = ({
   gridRef,
   extraActions,
   autoSelectCurrentOutlet,
+  onRefresh,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -79,6 +84,14 @@ const CustomFilterSections = ({
     setShowFilters(show);
   };
 
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+      return;
+    }
+    gridRef?.current?.api?.refreshServerSide({ purge: true });
+  };
+
   return (
     <div className="container-fluid my-3">
       <div className="row g-2 align-items-center">
@@ -112,6 +125,26 @@ const CustomFilterSections = ({
                 <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
               </svg>
               Filters
+            </button>
+          )}
+          {(gridRef || onRefresh) && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              title="Refresh"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                borderRadius: 6, border: "1px solid #dee2e6",
+                background: "#fff", color: "#64748b",
+                cursor: "pointer", whiteSpace: "nowrap", transition: "0.15s",
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <polyline points="21 3 21 9 15 9" />
+              </svg>
+              Refresh
             </button>
           )}
           {extraActions}
