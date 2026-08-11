@@ -96,7 +96,7 @@ const ProductsListComponent = () => {
           params.success({ rowData: [], rowCount: 0 });
           return;
         }
-        let filtersMain = filterVariables(params, search, "itemcode, itemdescription");
+        let filtersMain = filterVariables(params, search, "itemcode, itemdescription, itembarcodeid, categoryname");
         filtersMain = {
           ...filtersMain,
           filters: [
