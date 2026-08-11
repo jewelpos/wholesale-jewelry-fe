@@ -16,7 +16,7 @@ import { selectStyles } from "@/lib/styles/selectStyles";
 import { GET_CUSTOMER_QUERY, GET_CUSTOMERS_WITH_BALANCE_QUERY, GET_CUSTOMER_CHEQUE_LIST_QUERY } from "@/lib/graphql/query/customer";
 import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY, GET_CUSTOMER_INVOICE_AGING_QUERY } from "@/lib/graphql/query/customer";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION, CHANGE_ON_HAND_CHECK_STATUS_MUTATION } from "@/lib/graphql/mutations/customer";
-import { AgingBucketBadge, InvoiceAgingRow } from "@/components/ui/customers/AgingBucketBadge";
+import { AgingBucketBadge, CurrentlyDueLine, InvoiceAgingRow } from "@/components/ui/customers/AgingBucketBadge";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -314,9 +314,12 @@ const OpenItemsTable = ({
                   <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                     <td colSpan={colSpan} style={{ padding: "6px 10px 8px 28px", background: "#f8fafc" }}>
                       {aging ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#475569" }}>
-                          <AgingBucketBadge bucket={aging.agingbucket} />
-                          <span>{aging.daysoverdue} days since sale</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#475569" }}>
+                            <AgingBucketBadge bucket={aging.agingbucket} />
+                            <span>{aging.daysoverdue} days since sale</span>
+                          </div>
+                          <CurrentlyDueLine row={aging} />
                         </div>
                       ) : (
                         <span style={{ fontSize: 11, color: "#94a3b8" }}>Loading aging detail…</span>

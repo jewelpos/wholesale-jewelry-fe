@@ -464,6 +464,10 @@ export const GET_CUSTOMER_INVOICE_AGING_QUERY = gql`
       balancedue
       daysoverdue
       agingbucket
+      termsname
+      installmentsdue
+      totalinstallments
+      currentamountdue
     }
   }
 `;

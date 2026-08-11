@@ -10,6 +10,10 @@ export type InvoiceAgingRow = {
   balancedue: number;
   daysoverdue: number;
   agingbucket: string;
+  termsname: string | null;
+  installmentsdue: number;
+  totalinstallments: number;
+  currentamountdue: number;
 };
 
 // Same bucket boundaries as vw_customer_balance_aging_report (0-30/31-60/61-90/91-120/120+),
@@ -47,6 +51,31 @@ export const AgingBucketBadge = ({ bucket }: { bucket: string }) => {
     >
       {bucket} days
     </span>
+  );
+};
+
+const fmtMoney = (n: number) => `$${Math.abs(n).toFixed(2)}`;
+
+// "Currently due" = the portion of balancedue that's actually payable today per the
+// invoice's terms installment schedule (termsduedays/termsinterval on paymentterms),
+// not the full remaining balance — see getCustomerInvoiceAging on the backend.
+export const CurrentlyDueLine = ({ row }: { row: InvoiceAgingRow }) => {
+  const isFullyDue = row.currentamountdue >= row.balancedue - 0.005;
+  const isNotYetDue = row.installmentsdue <= 0;
+  return (
+    <div style={{ fontSize: 12 }}>
+      <span style={{ color: "#64748b" }}>Currently due: </span>
+      <span style={{ fontWeight: 700, color: row.currentamountdue > 0 ? "#dc2626" : "#16a34a" }}>
+        {fmtMoney(row.currentamountdue)}
+      </span>
+      {!isFullyDue && (
+        <span style={{ color: "#94a3b8", marginLeft: 6 }}>
+          {isNotYetDue
+            ? `(not yet due — ${row.termsname ?? "terms"}, of ${fmtMoney(row.balancedue)})`
+            : `(of ${fmtMoney(row.balancedue)} — ${row.termsname ?? "terms"}, installment ${row.installmentsdue} of ${row.totalinstallments})`}
+        </span>
+      )}
+    </div>
   );
 };
 

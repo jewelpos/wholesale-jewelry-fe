@@ -114,25 +114,39 @@ const InvoiceAgingDrawer = ({ storeid, customerid, companyname, onClose }: Props
                       <th style={thStyle}>Sale Date</th>
                       <th style={thStyle}>Aging</th>
                       <th style={{ ...thStyle, textAlign: "right" }}>Balance</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Due Now</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.invoicenumber} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={tdStyle}>
-                          <span style={{ fontWeight: 600, color: "#1e40af" }}>#{r.invoicenumber}</span>
-                        </td>
-                        <td style={tdStyle}>{SALEMODE_DOC_LABEL[r.salemodeid ?? 0] ?? "—"}</td>
-                        <td style={tdStyle}>{r.saledate ? dayjs(r.saledate).format("MMM D, YYYY") : "—"}</td>
-                        <td style={tdStyle}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <AgingBucketBadge bucket={r.agingbucket} />
-                            <span style={{ color: "#94a3b8", fontSize: 11 }}>{r.daysoverdue}d</span>
-                          </div>
-                        </td>
-                        <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(r.balancedue)}</td>
-                      </tr>
-                    ))}
+                    {rows.map((r) => {
+                      const isFullyDue = r.currentamountdue >= r.balancedue - 0.005;
+                      return (
+                        <tr key={r.invoicenumber} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={tdStyle}>
+                            <span style={{ fontWeight: 600, color: "#1e40af" }}>#{r.invoicenumber}</span>
+                          </td>
+                          <td style={tdStyle}>{SALEMODE_DOC_LABEL[r.salemodeid ?? 0] ?? "—"}</td>
+                          <td style={tdStyle}>{r.saledate ? dayjs(r.saledate).format("MMM D, YYYY") : "—"}</td>
+                          <td style={tdStyle}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <AgingBucketBadge bucket={r.agingbucket} />
+                              <span style={{ color: "#94a3b8", fontSize: 11 }}>{r.daysoverdue}d</span>
+                            </div>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(r.balancedue)}</td>
+                          <td
+                            style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: r.currentamountdue > 0 ? "#dc2626" : "#16a34a" }}
+                            title={
+                              isFullyDue
+                                ? undefined
+                                : `${r.termsname ?? "terms"} — installment ${r.installmentsdue} of ${r.totalinstallments}`
+                            }
+                          >
+                            {fmt(r.currentamountdue)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
