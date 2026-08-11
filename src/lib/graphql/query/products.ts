@@ -236,6 +236,9 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
       manufacturer
       itemreorderqtypnt
       itemreorderqty
+      itemlength
+      itemsize
+      itemcolor
       itemcategoryid
       subcategoryid
       itemstatus

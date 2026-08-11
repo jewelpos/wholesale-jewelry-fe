@@ -180,7 +180,10 @@ export type ProductFormType = {
   manufacturer?: string;//Manufacturer
   itemreorderqtypnt?: number;//Item Reorder Point
   itemreorderqty?: number;//Item Order Quantity
-  
+  itemlength?: string;//Length
+  itemsize?: string;//Width
+  itemcolor?: string;//Color
+
   // Information Tab - Product Settings Section
   itemcategoryid: number;//Department
   subcategoryid: number;//Product Line

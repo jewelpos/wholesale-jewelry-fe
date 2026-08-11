@@ -658,6 +658,21 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
 
         <div className="row g-2 mb-3">
           <div className="col-lg-3 col-md-6">
+            <Label>Length</Label>
+            <input type="text" className="form-control form-control-sm" {...register("itemlength")} />
+          </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Width</Label>
+            <input type="text" className="form-control form-control-sm" {...register("itemsize")} />
+          </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Color</Label>
+            <input type="text" className="form-control form-control-sm" {...register("itemcolor")} />
+          </div>
+        </div>
+
+        <div className="row g-2 mb-3">
+          <div className="col-lg-3 col-md-6">
             <Label>Reorder Point</Label>
             <input
               type="number"
