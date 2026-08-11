@@ -24,7 +24,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import AppliedPaymentHeader from "./AppliedPaymentHeader";
 import PaymentModal from "./PaymentModal";
-import CustomerAppliedPaymentComponent from "./CustomerAppliedPaymentComponent";
+import AppliedPaymentDetailDrawer from "./AppliedPaymentDetailDrawer";
 import CustomerPaymentActions from "./CustomerPaymentActions";
 import { paymentModalTypes } from "@/lib/config/constants";
 import SelectCustomer from "@/components/forms/SelectCustomer";
@@ -107,6 +107,7 @@ const AppliedPaymentsComponent = () => {
   const [voidRow, setVoidRow] = useState<CustomerPaymentListType | null>(null);
   const [modePill, setModePill] = useState<ModePill>("all");
   const [datePill, setDatePill] = useState<DatePill>("week");
+  const [selectedPayment, setSelectedPayment] = useState<CustomerPaymentListType | null>(null);
 
   useEffect(() => {
     if (parsedOutletId) setSelectedOutlet(parsedOutletId);
@@ -437,14 +438,20 @@ const AppliedPaymentsComponent = () => {
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
-              masterDetail
-              detailCellRenderer={CustomerAppliedPaymentComponent}
-              detailRowAutoHeight
-              getRowStyle={(params) =>
-                params.data?.voidpayment
-                  ? { background: "#fef2f2", color: "#9ca3af" }
-                  : undefined
-              }
+              onRowClicked={(e) => {
+                const target = e.event?.target as HTMLElement | null;
+                if (target?.closest(".action-table-data")) return;
+                if (e.data) setSelectedPayment(e.data as CustomerPaymentListType);
+              }}
+              getRowStyle={(params) => {
+                const isSelected = params.data?.transactionno === selectedPayment?.transactionno;
+                const isVoid = !!params.data?.voidpayment;
+                return {
+                  cursor: "pointer",
+                  ...(isSelected ? { background: "#eff6ff" } : {}),
+                  ...(isVoid ? { background: "#fef2f2", color: "#9ca3af" } : {}),
+                };
+              }}
             />
           </div>
         </div>
@@ -518,6 +525,11 @@ const AppliedPaymentsComponent = () => {
           onClose={() => setShowPrint(false)}
         />
       )}
+
+      <AppliedPaymentDetailDrawer
+        payment={selectedPayment}
+        onClose={() => setSelectedPayment(null)}
+      />
     </div>
   );
 };
