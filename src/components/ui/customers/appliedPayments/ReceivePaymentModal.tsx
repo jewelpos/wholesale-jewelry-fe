@@ -692,6 +692,19 @@ const ReceivePaymentModal = ({
           ...[...selectedInvoices.keys()].map(String),
           ...[...selectedMemos.keys()].map(String),
         ];
+        // When no credit is being applied in this same transaction, each row's Apply
+        // amount is the full (and only) intended split — send it explicitly instead of
+        // just a total, which the backend used to dump entirely onto the first invoice
+        // in the list regardless of what was typed per row. With credits also in play,
+        // there's no single row-level cash/credit split to send, so fall back to letting
+        // the backend auto-apply the total (unchanged from before).
+        const hasCreditsApplied = invCreditsTotal > 0 || memoCreditsTotal > 0;
+        const invoiceAllocations = hasCreditsApplied
+          ? undefined
+          : [
+              ...[...selectedInvoices.entries()].map(([no, amt]) => ({ invoicenumber: String(no), amount: amt })),
+              ...[...selectedMemos.entries()].map(([no, amt]) => ({ invoicenumber: String(no), amount: amt })),
+            ].filter((a) => a.amount > 0);
         await createPayment({
           variables: {
             input: {
@@ -704,6 +717,7 @@ const ReceivePaymentModal = ({
               amount: cashAmount,
               checkcardno: refNo || undefined,
               invoicenumbers: allSelectedNos,
+              invoiceAllocations,
               reference: reference || undefined,
             },
           },
