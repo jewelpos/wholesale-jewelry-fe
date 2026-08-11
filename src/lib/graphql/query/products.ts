@@ -332,8 +332,8 @@ export const GET_DISTINCT_PRODUCT_LIST_VALUES = gql`
 `;
 
 export const GET_PRODUCT_LIST_SUMMARY_QUERY = gql`
-  query GetProductListSummary($outletid: Int!) {
-    getProductListSummary(outletid: $outletid) {
+  query GetProductListSummary($outletid: Int!, $filters: [FilterKeyValuePair]) {
+    getProductListSummary(outletid: $outletid, filters: $filters) {
       total_products
       out_of_stock
       low_stock

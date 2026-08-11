@@ -19,11 +19,11 @@ const Skeleton = () => (
   <div style={{ height: 28, width: "60%", background: "var(--border-subtle)", borderRadius: 6, animation: "pulse 1.5s ease-in-out infinite" }} />
 );
 
-type Props = { outletid: number };
+type Props = { outletid: number; filters?: any[] };
 
-const ProductListSummaryCards = ({ outletid }: Props) => {
+const ProductListSummaryCards = ({ outletid, filters }: Props) => {
   const { data, loading } = useQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
-    variables: { outletid },
+    variables: { outletid, filters: filters ?? [] },
     skip: !outletid || outletid <= 0,
   });
 

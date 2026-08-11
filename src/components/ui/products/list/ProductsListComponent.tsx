@@ -45,6 +45,9 @@ const ProductsListComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  // Mirrors exactly the filters the grid's last fetch used (search, column filters, pills,
+  // outlet/warehouse) so the summary cards total up to what the grid is currently showing.
+  const [activeGridFilters, setActiveGridFilters] = useState<any[]>([]);
   const debouncedSearch = useDebounce(search, 500);
   const { currentMenu } = useMenu();
   const apolloClient = useApolloClient();
@@ -126,6 +129,8 @@ const ProductsListComponent = () => {
           extraFilters.push({ key: "__quickfilter__", value: { filterType: "text", type: "equals", filter: qfKeys.join(",") } });
         if (extraFilters.length > 0)
           filtersMain = { ...filtersMain, filters: [...filtersMain.filters, ...extraFilters] };
+
+        setActiveGridFilters(filtersMain.filters);
 
         const result = await handleTryCatch(async () => {
           const { data } = await getProductList({ variables: { outletid: outlet, ...filtersMain } });
@@ -224,7 +229,7 @@ const ProductsListComponent = () => {
       <ProductsListHeader />
       {isAdmin && !!selectedOutlet && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
-          <ProductListSummaryCards outletid={selectedOutlet} />
+          <ProductListSummaryCards outletid={selectedOutlet} filters={activeGridFilters} />
         </SummaryPanelWrapper>
       )}
       <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
