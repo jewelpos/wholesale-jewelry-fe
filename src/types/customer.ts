@@ -258,6 +258,7 @@ export type CheckOnHandType={
   checkno: string;
   checkamount: string;
   checkpostingdate: string;
+  chkinvoiceno?: string;
   customercheckdetailid?: number | string;
 }
 

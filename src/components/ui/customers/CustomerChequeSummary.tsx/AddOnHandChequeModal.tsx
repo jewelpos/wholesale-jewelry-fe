@@ -31,6 +31,7 @@ const blankEntry = (warehouseId: string | number = ""): CheckOnHandType => ({
   checkno: "",
   checkamount: "",
   checkpostingdate: "",
+  chkinvoiceno: "",
   customercheckdetailid: "",
 });
 
@@ -113,6 +114,7 @@ const AddOnHandChequeModal = ({
       warehouseid: Number(entry.warehouseid),
       checkpostingdate: new Date(entry.checkpostingdate).toISOString(),
       checkno: entry.checkno,
+      chkinvoiceno: entry.chkinvoiceno || null,
     };
     if (entry.customercheckdetailid) {
       updateEntry = {
@@ -233,11 +235,12 @@ const AddOnHandChequeModal = ({
             <table className="table table-borderless mb-0" style={{ minWidth: 860 }}>
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, width: "27%" }}>Customer</th>
-                  <th style={{ ...thStyle, width: "18%" }}>Outlet</th>
-                  <th style={{ ...thStyle, width: "14%" }}>Check No</th>
-                  <th style={{ ...thStyle, width: "12%" }}>Amount</th>
-                  <th style={{ ...thStyle, width: "14%" }}>Check Date</th>
+                  <th style={{ ...thStyle, width: "22%" }}>Customer</th>
+                  <th style={{ ...thStyle, width: "15%" }}>Outlet</th>
+                  <th style={{ ...thStyle, width: "12%" }}>Check No</th>
+                  <th style={{ ...thStyle, width: "10%" }}>Amount</th>
+                  <th style={{ ...thStyle, width: "12%" }}>Check Date</th>
+                  <th style={{ ...thStyle, width: "14%" }}>Invoice #</th>
                   <th style={{ ...thStyle, width: "15%", textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
@@ -363,6 +366,17 @@ const AddOnHandChequeModal = ({
                             {rowErrors.checkpostingdate.message}
                           </div>
                         )}
+                      </td>
+
+                      {/* Invoice # */}
+                      <td style={tdStyle}>
+                        <input
+                          disabled={!isEditable}
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="Optional"
+                          {...register(`entries.${index}.chkinvoiceno`)}
+                        />
                       </td>
 
                       {/* Actions */}
