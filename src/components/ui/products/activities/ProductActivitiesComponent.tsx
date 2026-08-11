@@ -355,7 +355,7 @@ const ProductActivitiesComponent = () => {
           )}
           <div className="card-body p-2">
             <div className="ag-theme-quartz custom-theme">
-              <POSGrid
+              <POSGrid gridKey="product-activities"
                 ref={gridRef}
                 columnDefs={columnDefs}
                 onGridReady={handleOnGridReady}

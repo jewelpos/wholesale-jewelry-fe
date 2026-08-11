@@ -141,7 +141,7 @@ const CampaignProductPicker = ({ outletid, storeid, selectedItems, onChange }: P
         <span className="text-muted small ms-auto">{selectedItems.length} selected</span>
       </div>
       <div style={{ height: 320, width: "100%" }}>
-        <POSGridClient
+        <POSGridClient gridKey="campaign-product-picker"
           fillHeight
           rowData={rows}
           columnDefs={columnDefs}

@@ -153,7 +153,7 @@ const PaymentModeComponent = () => {
 
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <POSGridClient
+          <POSGridClient gridKey="payment-mode-list"
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}

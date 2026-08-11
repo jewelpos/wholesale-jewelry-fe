@@ -166,7 +166,7 @@ const SupplierMonthlyPurchaseComponent = () => {
             color="#0ea5e9"
           />
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-supplier-monthly-purchase"
               ref={gridRef}
               columnDefs={supplierMonthlyPurchaseColumnDefs}
               fillHeight

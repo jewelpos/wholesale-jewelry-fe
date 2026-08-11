@@ -223,7 +223,7 @@ const CategoryComponent = () => {
             autoSelectCurrentOutlet={false}
           />
           <div className="ag-theme-quartz custom-theme">
-            <POSGrid
+            <POSGrid gridKey="product-category-list"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

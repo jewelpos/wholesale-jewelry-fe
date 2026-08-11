@@ -248,6 +248,7 @@ const ProductsListComponent = () => {
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid
               ref={gridRef}
+              gridKey="product-list"
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight

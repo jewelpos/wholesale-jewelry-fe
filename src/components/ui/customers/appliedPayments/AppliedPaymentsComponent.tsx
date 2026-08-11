@@ -432,7 +432,7 @@ const AppliedPaymentsComponent = () => {
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="customer-applied-payments"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

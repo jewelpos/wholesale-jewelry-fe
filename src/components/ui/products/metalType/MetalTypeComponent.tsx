@@ -155,7 +155,7 @@ const MetalTypeComponent = () => {
 
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <POSGridClient
+          <POSGridClient gridKey="metal-type-list"
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}

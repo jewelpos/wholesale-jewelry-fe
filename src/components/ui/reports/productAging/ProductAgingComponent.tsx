@@ -132,7 +132,7 @@ const ProductAgingComponent = () => {
         <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
           <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, minHeight: 0 }}>
-              <POSGrid
+              <POSGrid gridKey="report-product-aging"
                 ref={gridRef}
                 columnDefs={productAgingColumnDefs}
                 onGridReady={handleOnGridReady}

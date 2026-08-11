@@ -104,7 +104,7 @@ const PhysicalCountListComponent = () => {
 
       <div style={{ flex: 1, minHeight: 0 }}>
         {gridReady && null}
-        <POSGrid
+        <POSGrid gridKey="physical-count-list"
           ref={gridRef}
           columnDefs={colDefs}
           onGridReady={handleGridReady}

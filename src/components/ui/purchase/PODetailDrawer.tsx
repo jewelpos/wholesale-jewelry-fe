@@ -268,7 +268,7 @@ const PODetailDrawer = ({ po, storeid, onClose }: Props) => {
 
             {/* ── items grid ─────────────────────────── */}
             <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "4px 8px 8px" }}>
-              <POSGrid
+              <POSGrid gridKey="po-detail-drawer"
                 ref={gridRef}
                 columnDefs={purchaseOrderItemsColumnDefs}
                 onGridReady={handleOnGridReady}

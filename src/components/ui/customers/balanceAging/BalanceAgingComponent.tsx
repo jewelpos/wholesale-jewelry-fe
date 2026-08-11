@@ -217,7 +217,7 @@ const BalanceAgingComponent = () => {
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="customer-balance-aging"
               ref={gridRef}
               columnDefs={balanceAgingColumnDefs}
               onGridReady={handleOnGridReady}

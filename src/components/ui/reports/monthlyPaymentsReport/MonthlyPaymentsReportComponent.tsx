@@ -151,7 +151,7 @@ const MonthlyPaymentsReportComponent = () => {
             setSearch={setSearch}
           />
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-monthly-payments"
               ref={gridRef}
               columnDefs={monthlyPaymentsReportColumnDefs}
               fillHeight

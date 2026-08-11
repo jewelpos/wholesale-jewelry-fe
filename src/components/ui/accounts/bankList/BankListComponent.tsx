@@ -77,7 +77,7 @@ const BankListComponent = () => {
   return (
     <div className="card-body p-2">
       <div className="ag-theme-quartz custom-theme">
-        <POSGrid
+        <POSGrid gridKey="bank-list"
           ref={gridRef}
           columnDefs={bankListColumnDefs}
           onGridReady={handleOnGridReady}

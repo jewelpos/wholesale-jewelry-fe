@@ -393,7 +393,7 @@ const InventoryTransferListComponent = () => {
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="inventory-transfer-list"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

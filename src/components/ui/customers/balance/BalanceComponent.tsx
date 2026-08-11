@@ -213,7 +213,7 @@ const BalanceComponent = () => {
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="customer-balance"
               ref={gridRef}
               columnDefs={balanceReportColumnDefs}
               onGridReady={handleOnGridReady}

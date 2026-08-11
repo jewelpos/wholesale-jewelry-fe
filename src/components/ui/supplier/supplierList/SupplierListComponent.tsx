@@ -221,7 +221,7 @@ const SupplierListComponent = () => {
               }
             />
             <div style={{ flex: 1, minHeight: 0 }}>
-              <POSGrid
+              <POSGrid gridKey="supplier-list"
                 ref={gridRef}
                 columnDefs={columnDefs}
                 onGridReady={handleOnGridReady}

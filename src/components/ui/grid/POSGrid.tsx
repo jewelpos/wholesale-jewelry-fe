@@ -1,9 +1,13 @@
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import React, { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
+import { useParams } from "next/navigation";
+import { useLazyQuery, useMutation } from "@apollo/client";
 import CustomLoadingOverlay from "./CustomLoadingOverlay";
 import CustomNoRowsOverlay from "./CustomNoRowsOverlay";
 import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 import { useFloatingFilter } from "./FloatingFilterContext";
+import { GET_GRID_COLUMN_STATE_QUERY } from "@/lib/graphql/query/gridPreferences";
+import { SAVE_GRID_COLUMN_STATE_MUTATION } from "@/lib/graphql/mutations/gridPreferences";
 
 interface POSGridProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +26,9 @@ interface POSGridProps extends AgGridReactProps {
   heightOffset?: number;
   /** When true, grid height is 100% (use inside a flex-fill container). Overrides heightOffset. */
   fillHeight?: boolean;
+  /** Unique id for this grid (e.g. "product-list"). When set, column order/visibility/width
+   * is saved per-user and restored automatically. Omit to opt out of persistence. */
+  gridKey?: string;
 }
 
 const POSGrid = forwardRef<AgGridReact, POSGridProps>(
@@ -35,12 +42,15 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       domLayout = "normal",
       heightOffset = 300,
       fillHeight = false,
+      gridKey,
       ...props
     },
     forwardedRef
   ) => {
     const { autoSizeStrategy } = useAutoSizeAggrid();
     const { showFilters } = useFloatingFilter();
+    const { storeId: storeIdParam } = useParams();
+    const parsedStoreId = parseInt(storeIdParam as string, 10);
 
     const effectiveDefaultColDef = useMemo(() => ({
       sortable: true,
@@ -70,17 +80,86 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       [forwardedRef]
     );
 
+    // Persisted per-user column layout (order/visibility/width) — only active when a
+    // gridKey is supplied by the caller. Saves are debounced so a drag or resize doesn't
+    // fire a request per pixel; loading happens once, right after the grid is ready.
+    const [fetchGridColumnState] = useLazyQuery(GET_GRID_COLUMN_STATE_QUERY, { fetchPolicy: "network-only" });
+    const [saveGridColumnState] = useMutation(SAVE_GRID_COLUMN_STATE_MUTATION);
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const persistColumnState = useCallback(() => {
+      if (!gridKey || !parsedStoreId || isRestoringRef.current) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        const api = internalRef.current?.api;
+        if (!api) return;
+        const state = api.getColumnState();
+        saveGridColumnState({
+          variables: { storeid: parsedStoreId, gridkey: gridKey, columnstate: JSON.stringify(state) },
+        }).catch(() => {
+          // Non-critical — column layout just won't persist this time
+        });
+      }, 800);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gridKey, parsedStoreId]);
+
+    // Load the saved layout once the grid is ready
+    const loadedGridKeyRef = useRef<string | null>(null);
+    const handleGridReady = useCallback(
+      (params: any) => {
+        onGridReady?.(params);
+        if (!gridKey || !parsedStoreId || loadedGridKeyRef.current === gridKey) return;
+        loadedGridKeyRef.current = gridKey;
+        fetchGridColumnState({ variables: { storeid: parsedStoreId, gridkey: gridKey } })
+          .then(({ data }) => {
+            const raw = data?.getGridColumnState;
+            if (!raw) return;
+            const state = JSON.parse(raw);
+            const api = internalRef.current?.api ?? params.api;
+            if (!api) return;
+            isRestoringRef.current = true;
+            api.applyColumnState({ state, applyOrder: true });
+            savedColStateRef.current = state;
+            setTimeout(() => { isRestoringRef.current = false; }, 0);
+          })
+          .catch(() => {
+            // Non-critical — grid just falls back to the default layout
+          });
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [gridKey, parsedStoreId, onGridReady]
+    );
+
     // Save column state whenever the user toggles column visibility
     const handleColumnVisible = useCallback(
       (e: any) => {
         if (!isRestoringRef.current) {
           savedColStateRef.current = e.api.getColumnState();
+          persistColumnState();
         }
         // Forward to any parent-supplied handler
         (props as any).onColumnVisible?.(e);
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      []
+      [persistColumnState]
+    );
+
+    // Save column state once a drag-to-reorder or drag-to-resize finishes
+    const handleColumnMoved = useCallback(
+      (e: any) => {
+        if (e.finished && !isRestoringRef.current) persistColumnState();
+        (props as any).onColumnMoved?.(e);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [persistColumnState]
+    );
+    const handleColumnResized = useCallback(
+      (e: any) => {
+        if (e.finished && !isRestoringRef.current) persistColumnState();
+        (props as any).onColumnResized?.(e);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [persistColumnState]
     );
 
     // After columnDefs or defaultColDef changes, restore saved user column visibility.
@@ -124,7 +203,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           domLayout={domLayout}
           rowModelType="serverSide"
           pagination={true}
-          onGridReady={onGridReady}
+          onGridReady={handleGridReady}
           autoSizeStrategy={autoSizeStrategy}
           paginationPageSize={20}
           loadingOverlayComponent={CustomLoadingOverlay}
@@ -158,6 +237,8 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
           onColumnVisible={handleColumnVisible}
+          onColumnMoved={handleColumnMoved}
+          onColumnResized={handleColumnResized}
           {...props}
         />
       </div>

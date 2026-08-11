@@ -167,7 +167,7 @@ const ItemSoldByCategoryComponent = () => {
             color="#0ea5e9"
           />
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-item-sold-by-category"
               ref={gridRef}
               columnDefs={itemSoldByCategoryColumnDefs}
               fillHeight

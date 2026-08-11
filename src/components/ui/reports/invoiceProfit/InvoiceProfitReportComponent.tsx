@@ -166,7 +166,7 @@ const InvoiceProfitReportComponent = () => {
             color="#10b981"
           />
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-invoice-profit"
               ref={gridRef}
               columnDefs={invoiceProfitColumnDefs}
               fillHeight

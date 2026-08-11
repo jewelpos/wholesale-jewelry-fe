@@ -311,7 +311,7 @@ const SupplierLedgerActitvityComponent = () => {
                 Select a supplier to view ledger activity
               </div>
             ) : (
-              <POSGridClient
+              <POSGridClient gridKey="supplier-ledger-activity"
                 ref={gridRef}
                 columnDefs={supplierLedgerColumnDefs}
                 onGridReady={handleOnGridReady}

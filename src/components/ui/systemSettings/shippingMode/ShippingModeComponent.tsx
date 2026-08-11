@@ -125,7 +125,7 @@ const ShippingModeComponent = () => {
 
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <POSGridClient
+          <POSGridClient gridKey="shipping-mode-list"
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}

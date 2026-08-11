@@ -85,7 +85,7 @@ const SupplierAppliedPaymentComponent = ({ data }: Props) => {
     <div className="card table-list-card bg-gray-200">
       <div className="card-body p-2">
         <div className="ag-theme-quartz custom-theme">
-          <POSGrid
+          <POSGrid gridKey="supplier-applied-payments"
             ref={gridRef}
             columnDefs={appliedPaymentsColumnDefs}
             onGridReady={handleOnGridReady}

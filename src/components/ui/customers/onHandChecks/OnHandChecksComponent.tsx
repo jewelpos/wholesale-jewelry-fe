@@ -135,7 +135,7 @@ const OnHandChecksComponent = ({ data }: Props) => {
   return (
     <div className="card table-list-card">
       <div className="card-body p-2">
-        <POSGrid
+        <POSGrid gridKey="customer-onhand-checks"
           ref={gridRef}
           columnDefs={columnDefs}
           onGridReady={handleOnGridReady}

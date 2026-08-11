@@ -86,7 +86,7 @@ const PurchaseOrderItemsComponent = ({ data }: Props) => {
     <div className="card table-list-card bg-gray-200">
       <div className="card-body p-2">
         <div className="ag-theme-quartz custom-theme">
-          <POSGrid
+          <POSGrid gridKey="purchase-order-items"
             ref={gridRef}
             columnDefs={purchaseOrderItemsColumnDefs}
             onGridReady={handleOnGridReady}

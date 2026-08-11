@@ -118,7 +118,7 @@ const CampaignCustomerPicker = ({ storeid, selectedCustomerIds, onChange }: Prop
         <span className="text-muted small ms-auto">{selectedCustomerIds.length} selected</span>
       </div>
       <div style={{ height: 320, width: "100%" }}>
-        <POSGridClient
+        <POSGridClient gridKey="campaign-customer-picker"
           fillHeight
           rowData={rows}
           columnDefs={columnDefs}

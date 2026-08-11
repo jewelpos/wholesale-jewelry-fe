@@ -188,7 +188,7 @@ const EmployeeSalesReportComponent = () => {
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-employee-sales"
               ref={gridRef}
               columnDefs={employeeSalesColumnDefs}
               fillHeight

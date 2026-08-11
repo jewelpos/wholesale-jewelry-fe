@@ -385,7 +385,7 @@ const LedgerActivityComponent = () => {
             </div>
           ) : (
             <div style={{ flex: 1, minHeight: 0 }}>
-              <POSGridClient
+              <POSGridClient gridKey="customer-ledger-activity"
                 ref={gridRef}
                 columnDefs={ledgerActivityColumnDefs}
                 onGridReady={handleOnGridReady}

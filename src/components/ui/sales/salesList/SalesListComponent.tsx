@@ -396,7 +396,7 @@ const SalesListComponent = () => {
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="sales-list"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

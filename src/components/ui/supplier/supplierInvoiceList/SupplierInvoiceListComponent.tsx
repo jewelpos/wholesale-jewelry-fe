@@ -142,7 +142,7 @@ const SupplierInvoiceListComponent = () => {
         <div className="card-body p-2">
           <CustomFilterSections search={search} setSearch={setSearch} />
           <div className="ag-theme-quartz custom-theme">
-            <POSGrid
+            <POSGrid gridKey="supplier-invoice-list"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

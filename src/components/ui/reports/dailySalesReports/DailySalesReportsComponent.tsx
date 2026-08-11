@@ -172,7 +172,7 @@ const DailySalesReportsComponent = () => {
             color="#6366f1"
           />
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="report-daily-sales"
               ref={gridRef}
               columnDefs={dailySalesReportsColumnDefs}
               fillHeight

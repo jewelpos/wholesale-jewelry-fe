@@ -261,7 +261,7 @@ const InventoryAdjustmentsComponent = () => {
             <InventoryAdjustmentChartView data={chartData} loading={chartLoading} />
           ) : (
             <div className="ag-theme-quartz custom-theme">
-              <POSGrid
+              <POSGrid gridKey="inventory-adjustments"
                 ref={gridRef}
                 columnDefs={inventoryAdjustmentColumnDefs}
                 onGridReady={handleOnGridReady}

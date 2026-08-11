@@ -374,7 +374,7 @@ const MemoListComponent = () => {
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGrid
+            <POSGrid gridKey="memo-list"
               ref={gridRef}
               columnDefs={memoColumnDefs}
               onGridReady={handleGridReady}

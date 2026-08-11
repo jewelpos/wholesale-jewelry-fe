@@ -282,7 +282,7 @@ const CustomerChequeSummaryComponent = () => {
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <POSGridClient
+            <POSGridClient gridKey="customer-cheque-summary"
               ref={gridRef}
               columnDefs={customerChequeSummaryColumnDefs}
               onGridReady={handleOnGridReady}

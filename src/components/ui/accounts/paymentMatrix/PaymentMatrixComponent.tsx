@@ -366,7 +366,7 @@ const PaymentMatrixComponent = () => {
               flexDirection: "column",
             }}
           >
-            <POSGrid
+            <POSGrid gridKey="payment-matrix"
               key={gridKey}
               ref={gridRef}
               columnDefs={columnDefs as (ColDef | ColGroupDef)[]}

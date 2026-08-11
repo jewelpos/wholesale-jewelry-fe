@@ -655,7 +655,7 @@ const SalesMatrixComponent = () => {
               flexDirection: "column",
             }}
           >
-            <POSGrid
+            <POSGrid gridKey="sales-matrix"
               key={gridKey}
               ref={gridRef}
               columnDefs={columnDefs as (ColDef | ColGroupDef)[]}

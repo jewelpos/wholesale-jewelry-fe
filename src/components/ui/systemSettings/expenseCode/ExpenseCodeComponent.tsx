@@ -132,7 +132,7 @@ const ExpenseCodeComponent = () => {
 
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <POSGridClient
+          <POSGridClient gridKey="expense-code-list"
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}

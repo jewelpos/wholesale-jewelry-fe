@@ -415,7 +415,7 @@ const VarianceReport = ({ readOnly = false }: Props) => {
 
       {/* Variance Grid */}
       <div style={{ height: "calc(100vh - 460px)", minHeight: 300 }}>
-        <POSGrid
+        <POSGrid gridKey="physical-count-variance"
           ref={gridRef}
           columnDefs={colDefs}
           rowData={filteredItems}

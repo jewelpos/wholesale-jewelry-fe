@@ -441,7 +441,7 @@ const InventoryMatrixComponent = () => {
             }}
           >
             <GridErrorBoundary>
-              <POSGrid
+              <POSGrid gridKey="inventory-matrix"
                 key={gridKey}
                 ref={gridRef}
                 columnDefs={columnDefs}

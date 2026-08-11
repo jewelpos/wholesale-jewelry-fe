@@ -175,7 +175,7 @@ const WarehouseListComponent = () => {
 
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <POSGridClient
+          <POSGridClient gridKey="warehouse-list"
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}

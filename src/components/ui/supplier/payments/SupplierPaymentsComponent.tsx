@@ -152,7 +152,7 @@ const SupplierPaymentsComponent = () => {
             setSelectedSupplier={setSelectedSupplier}
           />
           <div className="ag-theme-quartz custom-theme">
-            <POSGrid
+            <POSGrid gridKey="supplier-payments"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}

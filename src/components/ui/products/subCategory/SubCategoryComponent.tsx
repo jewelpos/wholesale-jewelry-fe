@@ -229,7 +229,7 @@ const SubCategoryComponent = () => {
             autoSelectCurrentOutlet={false}
           />
           <div className="ag-theme-quartz custom-theme">
-            <POSGrid
+            <POSGrid gridKey="product-subcategory-list"
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
