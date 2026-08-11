@@ -144,10 +144,16 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       [persistColumnState]
     );
 
-    // Save column state once a drag-to-reorder or drag-to-resize finishes
+    // Save column state once a drag-to-reorder or drag-to-resize finishes. Must also
+    // update savedColStateRef (not just persist to the backend) — otherwise the
+    // "restore after columnDefs/defaultColDef change" effect below keeps reapplying
+    // the stale pre-move order on the next re-render, snapping the column right back.
     const handleColumnMoved = useCallback(
       (e: any) => {
-        if (e.finished && !isRestoringRef.current) persistColumnState();
+        if (e.finished && !isRestoringRef.current) {
+          savedColStateRef.current = e.api.getColumnState();
+          persistColumnState();
+        }
         (props as any).onColumnMoved?.(e);
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,7 +161,10 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     );
     const handleColumnResized = useCallback(
       (e: any) => {
-        if (e.finished && !isRestoringRef.current) persistColumnState();
+        if (e.finished && !isRestoringRef.current) {
+          savedColStateRef.current = e.api.getColumnState();
+          persistColumnState();
+        }
         (props as any).onColumnResized?.(e);
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +180,10 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       const saved = savedColStateRef.current;
       const raf = requestAnimationFrame(() => {
         isRestoringRef.current = true;
-        api.applyColumnState({ state: saved, applyOrder: false });
+        // applyOrder: true — a columnDefs/defaultColDef re-render (e.g. from the debounced
+        // save mutation settling) otherwise resets AG Grid's column order back to the
+        // columnDefs array order, which looked like a reorder "snapping back" immediately.
+        api.applyColumnState({ state: saved, applyOrder: true });
         // Clear flag after AG Grid finishes processing
         setTimeout(() => { isRestoringRef.current = false; }, 0);
       });
