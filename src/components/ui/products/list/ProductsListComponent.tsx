@@ -233,6 +233,7 @@ const ProductsListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search item code, description, barcode, or category"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
             selectedWarehouse={selectedWarehouse}

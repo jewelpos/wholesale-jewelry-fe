@@ -12,6 +12,7 @@ import { useFloatingFilter } from "./FloatingFilterContext";
 interface Props {
   search?: string;
   setSearch?: React.Dispatch<React.SetStateAction<string>>;
+  searchPlaceholder?: string;
   selectedOutlet?: number | undefined;
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedWarehouse?: number | undefined;
@@ -30,6 +31,7 @@ interface Props {
 const CustomFilterSections = ({
   search,
   setSearch,
+  searchPlaceholder = "Search",
   selectedOutlet,
   setSelectedOutlet,
   selectedWarehouse,
@@ -83,7 +85,7 @@ const CustomFilterSections = ({
             <input
               type="text"
               className="form-control"
-              placeholder="Search"
+              placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch?.(e.target.value)}
             />
