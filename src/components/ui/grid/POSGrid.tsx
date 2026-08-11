@@ -171,6 +171,21 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       [persistColumnState]
     );
 
+    // Clicking a column header to sort never updated savedColStateRef, so the
+    // "restore after columnDefs/defaultColDef change" effect below kept reapplying
+    // the pre-sort state on the next re-render (columnDefs is rebuilt on most
+    // renders across list pages), snapping sort back to default immediately.
+    const handleSortChanged = useCallback(
+      (e: any) => {
+        if (!isRestoringRef.current) {
+          savedColStateRef.current = e.api.getColumnState();
+        }
+        (props as any).onSortChanged?.(e);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      []
+    );
+
     // After columnDefs or defaultColDef changes, restore saved user column visibility.
     // AG Grid re-applies defaults on prop changes which can reset user-set hide state.
     useEffect(() => {
@@ -251,6 +266,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           onColumnVisible={handleColumnVisible}
           onColumnMoved={handleColumnMoved}
           onColumnResized={handleColumnResized}
+          onSortChanged={handleSortChanged}
           {...props}
         />
       </div>
