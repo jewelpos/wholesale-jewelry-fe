@@ -11,7 +11,8 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_INVOICE_AGING_REPORT_QUERY } from "@/lib/graphql/query/customer";
 import { CustomerBalanceAgingType } from "@/types/customer";
 import "ag-grid-enterprise";
-import { balanceAgingColumnDefs } from "./ColumnDef";
+import { getBalanceAgingColumnDefs } from "./ColumnDef";
+import InvoiceAgingDrawer from "./InvoiceAgingDrawer";
 import POSGrid from "../../grid/POSGrid";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -43,8 +44,10 @@ const BUCKET_FILTER_FIELD: Record<string, string> = {
 };
 
 const BalanceAgingComponent = () => {
-  const { outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const [viewingCustomer, setViewingCustomer] = useState<{ customerid: number; companyname: string } | null>(null);
 
   const [getInvoiceAgingReport] = useLazyQuery(GET_INVOICE_AGING_REPORT_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
@@ -99,6 +102,11 @@ const BalanceAgingComponent = () => {
     { label: "61-90 Days", value: agingStats.d61, format: "currency" },
     { label: "91+ Days", value: agingStats.d91, format: "currency" },
   ];
+
+  const columnDefs = useMemo(
+    () => getBalanceAgingColumnDefs((customerid, companyname) => setViewingCustomer({ customerid, companyname })),
+    []
+  );
 
   const selectedOutletRef = useRef(selectedOutlet);
   const bucketPillRef = useRef(bucketPill);
@@ -219,13 +227,20 @@ const BalanceAgingComponent = () => {
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid gridKey="customer-balance-aging"
               ref={gridRef}
-              columnDefs={balanceAgingColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
                           />
           </div>
         </div>
       </div>
+
+      <InvoiceAgingDrawer
+        storeid={parsedStoreId}
+        customerid={viewingCustomer?.customerid ?? null}
+        companyname={viewingCustomer?.companyname ?? ""}
+        onClose={() => setViewingCustomer(null)}
+      />
     </div>
   );
 };

@@ -454,7 +454,19 @@ export const GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY = gql`
   }
 `;
 
-
+export const GET_CUSTOMER_INVOICE_AGING_QUERY = gql`
+  query GetCustomerInvoiceAging($storeid: Int!, $customerid: Int!) {
+    getCustomerInvoiceAging(storeid: $storeid, customerid: $customerid) {
+      invoicenumber
+      salemodeid
+      saledate
+      netamount
+      balancedue
+      daysoverdue
+      agingbucket
+    }
+  }
+`;
 
 export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
   query GetCustomerChequeSummaryList(

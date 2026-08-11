@@ -1,13 +1,37 @@
+import React from "react";
 import { CustomerBalanceAgingType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
-export const balanceAgingColumnDefs: ColDef<CustomerBalanceAgingType>[] = [
+export const getBalanceAgingColumnDefs = (
+  onViewInvoices: (customerid: number, companyname: string) => void
+): ColDef<CustomerBalanceAgingType>[] => [
   {
     headerName: "Customer",
     colId: "customerid, companyname",
-    cellRenderer: (params: ICellRendererParams<CustomerBalanceAgingType>) =>
-      params.data ? `${params.data.customerid} - ${params.data.companyname}` : "",
+    cellRenderer: (params: ICellRendererParams<CustomerBalanceAgingType>) => {
+      if (!params.data) return "";
+      const { customerid, companyname } = params.data;
+      return (
+        <button
+          type="button"
+          onClick={() => onViewInvoices(Number(customerid), companyname ?? "")}
+          title="View invoice-level aging"
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "#1e40af",
+            fontWeight: 600,
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+          }}
+        >
+          {customerid} - {companyname}
+        </button>
+      );
+    },
     filter: "agTextColumnFilter",
     minWidth: 220,
   },

@@ -14,8 +14,9 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import SelectPaymentMode from "@/components/forms/SelectPaymentMode";
 import { selectStyles } from "@/lib/styles/selectStyles";
 import { GET_CUSTOMER_QUERY, GET_CUSTOMERS_WITH_BALANCE_QUERY, GET_CUSTOMER_CHEQUE_LIST_QUERY } from "@/lib/graphql/query/customer";
-import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY } from "@/lib/graphql/query/customer";
+import { GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY, GET_CUSTOMER_INVOICE_AGING_QUERY } from "@/lib/graphql/query/customer";
 import { CREATE_CUSTOMER_PAYMENT_MUTATION, CREATE_CUSTOMER_CREDIT_APPLY_MUTATION, CHANGE_ON_HAND_CHECK_STATUS_MUTATION } from "@/lib/graphql/mutations/customer";
+import { AgingBucketBadge, InvoiceAgingRow } from "@/components/ui/customers/AgingBucketBadge";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ const OpenItemsTable = ({
   onSelectAll,
   readOnly = false,
   readOnlyMessage = "Informational only — not payable until converted to invoice",
+  agingByInvoice,
 }: {
   docs: ARDoc[];
   title: string;
@@ -173,7 +175,10 @@ const OpenItemsTable = ({
   onSelectAll: (select: boolean) => void;
   readOnly?: boolean;
   readOnlyMessage?: string;
+  agingByInvoice: Map<number, InvoiceAgingRow>;
 }) => {
+  const [expandedInvoice, setExpandedInvoice] = useState<number | null>(null);
+
   if (!docs.length) return null;
 
   const allSelected = docs.length > 0 && docs.every((d) => selected.has(d.invoicenumber));
@@ -226,66 +231,100 @@ const OpenItemsTable = ({
             const days = ageDays(doc.saledate);
             const isChecked = selected.has(doc.invoicenumber);
             const applyAmt = selected.get(doc.invoicenumber) ?? 0;
+            const isExpanded = expandedInvoice === doc.invoicenumber;
+            const aging = agingByInvoice.get(doc.invoicenumber);
+            const colSpan = (readOnly ? 0 : 1) + 5 + (readOnly ? 0 : 1);
             return (
-              <tr
-                key={doc.invoicenumber}
-                style={{
-                  background: isChecked ? "#eff6ff" : "transparent",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                {!readOnly && (
-                  <td style={tdStyle}>
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => onToggle(doc.invoicenumber, Math.abs(doc.balancedue))}
-                      style={{ cursor: "pointer" }}
-                    />
-                  </td>
-                )}
-                <td style={tdStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                    <AgeDot days={days} />
-                    <AgeBadge days={days} />
-                  </div>
-                </td>
-                <td style={tdStyle}>
-                  <span style={{ fontWeight: 600, color: "#1e40af" }}>#{doc.invoicenumber}</span>
-                </td>
-                <td style={tdStyle}>{dayjs(doc.saledate).format("MMM D, YY")}</td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>{fmt(Math.abs(doc.totalamount))}</td>
-                <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(Math.abs(doc.balancedue))}</td>
-                {!readOnly && (
-                  <td style={{ ...tdStyle, textAlign: "right" }}>
-                    {isChecked ? (
+              <React.Fragment key={doc.invoicenumber}>
+                <tr
+                  style={{
+                    background: isChecked ? "#eff6ff" : "transparent",
+                    borderBottom: isExpanded ? "none" : "1px solid #f1f5f9",
+                  }}
+                >
+                  {!readOnly && (
+                    <td style={tdStyle}>
                       <input
-                        type="number"
-                        min={0}
-                        max={Math.abs(doc.balancedue)}
-                        step="0.01"
-                        value={applyAmt}
-                        onChange={(e) =>
-                          onAmountChange(
-                            doc.invoicenumber,
-                            Math.min(Number(e.target.value), Math.abs(doc.balancedue))
-                          )
-                        }
-                        style={{
-                          width: 72,
-                          textAlign: "right",
-                          fontSize: 11,
-                          border: "1px solid #cbd5e1",
-                          borderRadius: 4,
-                          padding: "2px 4px",
-                        }}
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => onToggle(doc.invoicenumber, Math.abs(doc.balancedue))}
+                        style={{ cursor: "pointer" }}
                       />
-                    ) : (
-                      <span style={{ color: "#94a3b8" }}>—</span>
-                    )}
+                    </td>
+                  )}
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <AgeDot days={days} />
+                      <AgeBadge days={days} />
+                    </div>
                   </td>
+                  <td style={tdStyle}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedInvoice(isExpanded ? null : doc.invoicenumber)}
+                      title="Click to view aging detail"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        color: "#1e40af",
+                        textDecoration: "underline",
+                        textDecorationStyle: "dotted",
+                      }}
+                    >
+                      #{doc.invoicenumber}
+                    </button>
+                  </td>
+                  <td style={tdStyle}>{dayjs(doc.saledate).format("MMM D, YY")}</td>
+                  <td style={{ ...tdStyle, textAlign: "right" }}>{fmt(Math.abs(doc.totalamount))}</td>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(Math.abs(doc.balancedue))}</td>
+                  {!readOnly && (
+                    <td style={{ ...tdStyle, textAlign: "right" }}>
+                      {isChecked ? (
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.abs(doc.balancedue)}
+                          step="0.01"
+                          value={applyAmt}
+                          onChange={(e) =>
+                            onAmountChange(
+                              doc.invoicenumber,
+                              Math.min(Number(e.target.value), Math.abs(doc.balancedue))
+                            )
+                          }
+                          style={{
+                            width: 72,
+                            textAlign: "right",
+                            fontSize: 11,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 4,
+                            padding: "2px 4px",
+                          }}
+                        />
+                      ) : (
+                        <span style={{ color: "#94a3b8" }}>—</span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+                {isExpanded && (
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td colSpan={colSpan} style={{ padding: "6px 10px 8px 28px", background: "#f8fafc" }}>
+                      {aging ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#475569" }}>
+                          <AgingBucketBadge bucket={aging.agingbucket} />
+                          <span>{aging.daysoverdue} days since sale</span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#94a3b8" }}>Loading aging detail…</span>
+                      )}
+                    </td>
+                  </tr>
                 )}
-              </tr>
+              </React.Fragment>
             );
           })}
         </tbody>
@@ -448,6 +487,7 @@ const ReceivePaymentModal = ({
   const [fetchCreditSummary, { data: creditData, loading: creditLoading }] = useLazyQuery(
     GET_CUSTOMER_CREDIT_APPLY_SUMMARY_QUERY
   );
+  const [fetchInvoiceAging, { data: agingData }] = useLazyQuery(GET_CUSTOMER_INVOICE_AGING_QUERY);
 
   useEffect(() => {
     if (!customerId || !warehouseId) return;
@@ -463,7 +503,15 @@ const ReceivePaymentModal = ({
     fetchCreditSummary({
       variables: { storeid: storeId, outletid: outletId, customerid: customerId },
     });
-  }, [customerId, warehouseId, storeId, outletId, fetchBalanceDue, fetchCreditSummary]);
+    fetchInvoiceAging({
+      variables: { storeid: storeId, customerid: customerId },
+    });
+  }, [customerId, warehouseId, storeId, outletId, fetchBalanceDue, fetchCreditSummary, fetchInvoiceAging]);
+
+  const agingByInvoice = useMemo(() => {
+    const rows = (agingData?.getCustomerInvoiceAging ?? []) as InvoiceAgingRow[];
+    return new Map(rows.map((r) => [r.invoicenumber, r]));
+  }, [agingData]);
 
   // ── Derived AR data ───────────────────────────────────────────────────
   const allBalanceDue: ARDoc[] = useMemo(
@@ -930,6 +978,7 @@ const ReceivePaymentModal = ({
                     title="Open Invoices"
                     readOnly={!invoiceSelectionEnabled}
                     readOnlyMessage="Locked while applying a Memo Credit — uncheck it to select an invoice"
+                    agingByInvoice={agingByInvoice}
                     selected={selectedInvoices}
                     onToggle={(no, bal) =>
                       toggleItem(selectedInvoices, setSelectedInvoices, no, bal)
@@ -950,6 +999,7 @@ const ReceivePaymentModal = ({
                     title="Open Memos"
                     readOnly={!memoSelectionEnabled}
                     readOnlyMessage="Check a Memo Credit above to apply a credit against a memo"
+                    agingByInvoice={agingByInvoice}
                     selected={selectedMemos}
                     onToggle={(no, bal) =>
                       toggleItem(selectedMemos, setSelectedMemos, no, bal)
