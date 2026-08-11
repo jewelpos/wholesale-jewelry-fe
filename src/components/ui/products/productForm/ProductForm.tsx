@@ -239,28 +239,41 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     if (productImages?.length > 0) form.append("itemimagepath", productImages[0]);
 
     const result = await handleTryCatch(async () => {
-      const response = itemcode && productData
+      const isEditingExisting = !!(itemcode && productData);
+      const response = isEditingExisting
         ? await api.put(`/store/product/edit`, form)
         : await api.post(`/store/product/add`, form);
       const { data } = response;
       if (data) {
-        if (productData?.itemid && bulkTiersDirty) {
-          await saveBulkDiscounts({
-            variables: {
-              storeid: parsedStoreId,
-              itemid: String(productData.itemid),
-              tiers: bulkTiers.map(t => ({
-                bulkdiscountid: t.bulkdiscountid ?? null,
-                minquantity: Number(t.minquantity) || 0,
-                maxquantity: Number(t.maxquantity) || 0,
-                discountamount: Number(t.discountamount) || 0,
-                discounttype: t.discounttype,
-                warehouseid: t.warehouseid ?? null,
-                startdate: t.startdate || null,
-                enddate: t.enddate || null,
-              })),
-            },
-          });
+        // Edit: tiers attach to the existing itemid. Create: the product doesn't have
+        // an itemid until this save just returned one — use that instead.
+        const targetItemId = isEditingExisting ? productData.itemid : data.data?.itemid;
+        if (targetItemId && bulkTiersDirty) {
+          try {
+            await saveBulkDiscounts({
+              variables: {
+                storeid: parsedStoreId,
+                itemid: String(targetItemId),
+                tiers: bulkTiers.map(t => ({
+                  bulkdiscountid: t.bulkdiscountid ?? null,
+                  minquantity: Number(t.minquantity) || 0,
+                  maxquantity: Number(t.maxquantity) || 0,
+                  discountamount: Number(t.discountamount) || 0,
+                  discounttype: t.discounttype,
+                  warehouseid: t.warehouseid ?? null,
+                  startdate: t.startdate || null,
+                  enddate: t.enddate || null,
+                })),
+              },
+            });
+          } catch {
+            // Product itself is already saved — don't block navigation over this,
+            // just flag it so the user knows to go back in and retry.
+            dispatch(showNotification({
+              message: "Product saved, but bulk pricing tiers failed to save — edit the product to retry.",
+              type: NOTIFICATION_TYPES.WARNING,
+            }));
+          }
         }
         dispatch(showNotification({ message: data.message, type: NOTIFICATION_TYPES.SUCCESS }));
         router.back();
@@ -360,7 +373,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
           setValue={setValue}
           disableField={disableField}
         />
-        {isEdit && (
+        {!disableField && (
           <ProductBulkPricingCard
             tiers={bulkTiers}
             onChange={(t) => { setBulkTiers(t); setBulkTiersDirty(true); }}
