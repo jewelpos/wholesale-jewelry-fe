@@ -13,6 +13,7 @@ interface Props {
   search?: string;
   setSearch?: React.Dispatch<React.SetStateAction<string>>;
   searchPlaceholder?: string;
+  searchWidth?: number;
   selectedOutlet?: number | undefined;
   setSelectedOutlet?: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedWarehouse?: number | undefined;
@@ -32,6 +33,7 @@ const CustomFilterSections = ({
   search,
   setSearch,
   searchPlaceholder = "Search",
+  searchWidth = 280,
   selectedOutlet,
   setSelectedOutlet,
   selectedWarehouse,
@@ -81,7 +83,7 @@ const CustomFilterSections = ({
     <div className="container-fluid my-3">
       <div className="row g-2 align-items-center">
         <div className="col-12 col-md-auto d-flex align-items-center gap-2">
-          <div className="input-group" style={{ width: 280 }}>
+          <div className="input-group" style={{ width: searchWidth }}>
             <input
               type="text"
               className="form-control"
