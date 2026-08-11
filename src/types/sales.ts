@@ -28,6 +28,7 @@ export type SalesInvoiceListType = {
   statusname: string;
   custcrediapplied: number | null;
   creditamountapplied: number | null;
+  checkreceived: number | null;
 };
 
 export type SalesInvoiceListResponseType = {

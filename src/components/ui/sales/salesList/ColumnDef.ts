@@ -39,6 +39,7 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
   { headerName: "Tax",           field: "salestax",         filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer, hide: true },
   { headerName: "Shipping",      field: "shipping",         filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer, hide: true },
   { headerName: "Terms",         field: "termsname",        filter: "agTextColumnFilter",   hide: true },
+  { headerName: "Check Received", field: "checkreceived",   filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer, hide: true },
   { headerName: "Warehouse",     field: "warehousename",    filter: "agTextColumnFilter",   hide: true },
   { headerName: "Modified",      field: "lastmodifieddate", filter: "agDateColumnFilter",   cellRenderer: dateRenderer, hide: true },
   {

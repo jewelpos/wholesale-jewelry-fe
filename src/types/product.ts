@@ -89,6 +89,11 @@ export type ProductListType = {
   hasbulkdiscount?: number;
   haspromotion?: number;
   hastransactions?: boolean;
+  itemreorderqtypnt?: number;
+  itemreorderqty?: number;
+  itemlength?: string;
+  itemsize?: string;
+  itemcolor?: string;
 };
 
 export type ProductListTypeResponseType = {

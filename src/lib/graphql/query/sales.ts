@@ -36,6 +36,7 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         netamount
         amountreceived
         balancedue
+        checkreceived
         termsname
         warehousename
         warehouseid

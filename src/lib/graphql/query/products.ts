@@ -409,6 +409,11 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         hasbulkdiscount
         haspromotion
         hastransactions
+        itemreorderqtypnt
+        itemreorderqty
+        itemlength
+        itemsize
+        itemcolor
       }
     }
   }
