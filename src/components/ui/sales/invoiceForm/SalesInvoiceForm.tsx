@@ -1560,6 +1560,7 @@ const SalesInvoiceForm = ({
         itemid: it.itemid ? Number(it.itemid) : undefined,
         itemcode: it.itemcode,
         itemdescription: it.itemdescription,
+        itemunit: it.itemunit,
         itempcs: toNum(it.itempcs),
         itemquantity: qty,
         unitprice: unit,
@@ -1572,6 +1573,12 @@ const SalesInvoiceForm = ({
         warehouseid: warehouseId,
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
+        // Computed correctly on the form item at add-time (see the Wt-item add/edit
+        // handlers below) but was never carried into the submission payload — silently
+        // dropping these on every Wt-item invoice/memo.
+        goldprice_used: it.goldprice_used ?? undefined,
+        premium_used: it.premium_used ?? undefined,
+        labour_used: it.labour_used ?? undefined,
         // Links this line back to the specific memo item it was split from, so the
         // backend invoices exactly the (possibly partial/edited) qty here rather than
         // falling back to the memo's full remaining quantity when no items are provided.
