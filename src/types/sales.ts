@@ -27,6 +27,7 @@ export type SalesInvoiceListType = {
   lastmodifieddate: string;
   statusname: string;
   custcrediapplied: number | null;
+  creditamountapplied: number | null;
 };
 
 export type SalesInvoiceListResponseType = {

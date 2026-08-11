@@ -49,6 +49,7 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         lastmodifieddate
         statusname
         custcrediapplied
+        creditamountapplied
       }
     }
   }

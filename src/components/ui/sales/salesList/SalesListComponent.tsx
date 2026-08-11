@@ -165,10 +165,11 @@ const SalesListComponent = () => {
               acc.shipping += Number(r.shipping || 0);
               acc.netamount += Number(r.netamount || 0);
               acc.amountreceived += Number(r.amountreceived || 0);
+              acc.creditamountapplied += Number(r.creditamountapplied || 0);
               acc.balancedue += Number(r.balancedue || 0);
               return acc;
             },
-            { numberofitems: 0, totalamount: 0, discountamount: 0, subtotal: 0, salestax: 0, shipping: 0, netamount: 0, amountreceived: 0, balancedue: 0 }
+            { numberofitems: 0, totalamount: 0, discountamount: 0, subtotal: 0, salestax: 0, shipping: 0, netamount: 0, amountreceived: 0, creditamountapplied: 0, balancedue: 0 }
           );
           gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
             invoicenumber: "Page Total" as unknown as number, ...totals,
