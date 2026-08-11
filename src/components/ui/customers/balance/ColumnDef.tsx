@@ -1,14 +1,38 @@
+import React from "react";
 import { CustomerBalanceReportType } from "@/types/customer";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
-export const balanceReportColumnDefs: ColDef<CustomerBalanceReportType>[] = [
+export const getBalanceReportColumnDefs = (
+  onViewInvoices: (customerid: number, companyname: string) => void
+): ColDef<CustomerBalanceReportType>[] => [
   {
     headerName: "Customer",
     colId: "customerid, companyname",
-    cellRenderer: (params: ICellRendererParams<CustomerBalanceReportType>) =>
-      params.data ? `${params.data.customerid} - ${params.data.companyname}` : "",
+    cellRenderer: (params: ICellRendererParams<CustomerBalanceReportType>) => {
+      if (!params.data) return "";
+      const { customerid, companyname } = params.data;
+      return (
+        <button
+          type="button"
+          onClick={() => onViewInvoices(Number(customerid), companyname ?? "")}
+          title="View invoices with balance due"
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "#1e40af",
+            fontWeight: 600,
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+          }}
+        >
+          {customerid} - {companyname}
+        </button>
+      );
+    },
     filter: "agTextColumnFilter",
     minWidth: 220,
   },
@@ -24,13 +48,19 @@ export const balanceReportColumnDefs: ColDef<CustomerBalanceReportType>[] = [
     filter: "agNumberColumnFilter",
   },
   {
-    headerName: "Received",
+    headerName: "Credit Applied",
+    field: "credit_applied",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Amount Paid",
     field: "amount_received",
     cellRenderer: currencyFormattedCellRenderer,
     filter: "agNumberColumnFilter",
   },
   {
-    headerName: "Total Due",
+    headerName: "Balance Due",
     field: "total_due",
     sort: "desc",
     cellRenderer: currencyFormattedCellRenderer,

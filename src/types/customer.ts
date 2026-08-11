@@ -99,6 +99,7 @@ export type CustomerBalanceReportType = {
   last_sale_date: string;
   total_sale: number;
   amount_received: number;
+  credit_applied: number;
   total_due: number;
   warehouseid: number;
   outletid: number;

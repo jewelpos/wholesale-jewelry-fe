@@ -7,6 +7,8 @@ export type InvoiceAgingRow = {
   salemodeid: number | null;
   saledate: string | null;
   netamount: number;
+  amountreceived: number;
+  creditamountapplied: number;
   balancedue: number;
   daysoverdue: number;
   agingbucket: string;

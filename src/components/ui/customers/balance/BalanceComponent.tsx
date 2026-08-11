@@ -15,7 +15,8 @@ import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import POSGrid from "../../grid/POSGrid";
 import { filterVariables } from "@/lib/utils/gridFilters";
-import { balanceReportColumnDefs } from "./ColumnDef";
+import { getBalanceReportColumnDefs } from "./ColumnDef";
+import CustomerBalanceInvoiceDrawer from "./CustomerBalanceInvoiceDrawer";
 import BalanceHeader from "./BalanceHeader";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
@@ -34,8 +35,10 @@ const BALANCE_PILLS: { key: BalancePill; label: string }[] = [
 ];
 
 const BalanceComponent = () => {
-  const { outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
+  const [viewingCustomer, setViewingCustomer] = useState<{ customerid: number; companyname: string } | null>(null);
 
   const [getCustomerBalanceReport] = useLazyQuery(GET_CUSTOMER_BALANCE_REPORT_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
@@ -89,6 +92,11 @@ const BalanceComponent = () => {
     { label: "Total Sales", value: balanceStats.totalSales, format: "currency" },
     { label: "Avg Balance (owed)", value: balanceStats.avgBalance, format: "currency" },
   ];
+
+  const columnDefs = useMemo(
+    () => getBalanceReportColumnDefs((customerid, companyname) => setViewingCustomer({ customerid, companyname })),
+    []
+  );
 
   // Refs so getRows always reads the latest values without needing datasource recreation
   const selectedOutletRef = useRef(selectedOutlet);
@@ -215,13 +223,20 @@ const BalanceComponent = () => {
           <div style={{ flex: 1, minHeight: 0 }}>
             <POSGrid gridKey="customer-balance"
               ref={gridRef}
-              columnDefs={balanceReportColumnDefs}
+              columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
               fillHeight
                           />
           </div>
         </div>
       </div>
+
+      <CustomerBalanceInvoiceDrawer
+        storeid={parsedStoreId}
+        customerid={viewingCustomer?.customerid ?? null}
+        companyname={viewingCustomer?.companyname ?? ""}
+        onClose={() => setViewingCustomer(null)}
+      />
     </div>
   );
 };

@@ -172,6 +172,7 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
         last_sale_date
         total_sale
         amount_received
+        credit_applied
         total_due
         warehouseid
         outletid
@@ -461,6 +462,8 @@ export const GET_CUSTOMER_INVOICE_AGING_QUERY = gql`
       salemodeid
       saledate
       netamount
+      amountreceived
+      creditamountapplied
       balancedue
       daysoverdue
       agingbucket
