@@ -20,6 +20,7 @@ import { CustomerCheckAppliedAmount } from "@/types/customer";
 
 type VoidCustomerPaymentFormType = {
   postingdate: dayjs.Dayjs;
+  comments: string;
 };
 
 const fmt = (n: number | null | undefined) =>
@@ -61,9 +62,10 @@ const VoidCustomerPaymentForm = ({
   const {
     handleSubmit,
     control,
+    register,
     formState: { errors, isValid },
   } = useForm<VoidCustomerPaymentFormType>({
-    defaultValues: { postingdate: dayjs() },
+    defaultValues: { postingdate: dayjs(), comments: "" },
     mode: "all",
   });
 
@@ -99,6 +101,7 @@ const VoidCustomerPaymentForm = ({
             storeid: storeId,
             customerpaymentid,
             postingdate: formData.postingdate.format("YYYY-MM-DD"),
+            comments: formData.comments,
           },
         },
       });
@@ -234,6 +237,24 @@ const VoidCustomerPaymentForm = ({
             />
             {errors.postingdate && (
               <div className="invalid-feedback d-block">{errors.postingdate.message}</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Void reason */}
+      <div className="row mb-3">
+        <div className="col-12">
+          <div className="input-blocks">
+            <LabelLoader label="Reason for Void" loading={false} required />
+            <textarea
+              className="form-control"
+              rows={2}
+              placeholder="Explain why this payment is being voided"
+              {...register("comments", { required: "Reason for void is required" })}
+            />
+            {errors.comments && (
+              <div className="invalid-feedback d-block">{errors.comments.message}</div>
             )}
           </div>
         </div>

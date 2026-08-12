@@ -130,6 +130,7 @@ export type CustomerPaymentListType = {
   voidpayment: boolean;
   customerpaymentid: number;
   lastmodifieddate: Date;
+  comments: string | null;
 };
 
 export type CustomerPaymentListResponseType = {

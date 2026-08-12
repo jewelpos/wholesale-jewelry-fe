@@ -221,6 +221,7 @@ export const GET_CUSTOMER_PAYMENT_LIST_QUERY = gql`
         outletid
         dateofentry
         voidpayment
+        comments
         customerpaymentid
         lastmodifieddate
       }

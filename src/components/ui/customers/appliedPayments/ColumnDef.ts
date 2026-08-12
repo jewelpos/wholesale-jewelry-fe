@@ -67,4 +67,10 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
     cellRenderer: (params: any) => dayjs(params.value).format("MM/DD/YYYY"),
     filter: "agDateColumnFilter",
   },
+  {
+    headerName: "Comments",
+    field: "comments",
+    filter: "agTextColumnFilter",
+    hide: true,
+  },
 ];
