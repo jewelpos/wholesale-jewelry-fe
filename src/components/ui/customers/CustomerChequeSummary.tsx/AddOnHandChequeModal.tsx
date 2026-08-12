@@ -14,6 +14,7 @@ import { CheckOnHandType } from "@/types/customer";
 import { useMutation } from "@apollo/client";
 import { useParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
 import { Save, Trash2, Pencil, PlusCircle } from "lucide-react";
@@ -213,7 +214,7 @@ const AddOnHandChequeModal = ({
     borderBottom: "1px solid #f1f3f5",
   };
 
-  return (
+  return createPortal(
     <div
       className="modal fade show"
       style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
@@ -450,7 +451,8 @@ const AddOnHandChequeModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
