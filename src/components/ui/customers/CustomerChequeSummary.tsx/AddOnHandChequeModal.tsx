@@ -38,13 +38,18 @@ const blankEntry = (warehouseId: string | number = ""): CheckOnHandType => ({
 const AddOnHandChequeModal = ({
   setShowPrintModal,
   triggerFetchSummary,
+  editEntry,
 }: {
   setShowPrintModal: (value: boolean) => void;
   triggerFetchSummary: () => Promise<void>;
+  /** When set, the modal opens pre-populated with this single check, already in
+   * edit mode, and hides the "Add Row" footer — used by the child grid's Edit action. */
+  editEntry?: CheckOnHandType;
 }) => {
   const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
   const parsedOutletId = parseInt(outletId as string, 10);
+  const isSingleEditMode = !!editEntry;
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
@@ -65,13 +70,13 @@ const AddOnHandChequeModal = ({
     getValues,
     setError,
   } = useForm<FormValues>({
-    defaultValues: { entries: [blankEntry()] },
+    defaultValues: { entries: [editEntry ?? blankEntry()] },
     mode: "all",
   });
   const { fields, append, remove } = useFieldArray({ control, name: "entries" });
 
   useEffect(() => {
-    if (!defaultWarehouse?.warehouseid) return;
+    if (!defaultWarehouse?.warehouseid || isSingleEditMode) return;
     fields.forEach((_, i) => {
       if (!getValues(`entries.${i}.customercheckdetailid`)) {
         setValue(`entries.${i}.warehouseid`, String(defaultWarehouse.warehouseid));
@@ -84,7 +89,7 @@ const AddOnHandChequeModal = ({
   const [updateCheckOnHand] = useMutation(UPDATE_CHECK_ON_HAND_MUTATION);
   const [deleteCheckOnHand] = useMutation(DELETE_CHECK_ON_HAND_MUTATION);
   const dispatch = useAppDispatch();
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editIndex, setEditIndex] = useState<number | null>(isSingleEditMode ? 0 : null);
 
   const handleSave = async (index: number) => {
     const isValid = await trigger(`entries.${index}`);
@@ -218,7 +223,7 @@ const AddOnHandChequeModal = ({
           {/* Header */}
           <div className="modal-header py-3" style={{ borderBottom: "1px solid #e9ecef" }}>
             <h5 className="modal-title fw-semibold" style={{ fontSize: 15 }}>
-              Add New Check
+              {isSingleEditMode ? "Edit Check" : "Add New Check"}
             </h5>
             <button
               type="button"
@@ -428,19 +433,21 @@ const AddOnHandChequeModal = ({
           </div>
 
           {/* Footer */}
-          <div
-            className="modal-footer justify-content-start py-2"
-            style={{ borderTop: "1px solid #e9ecef" }}
-          >
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-              onClick={() => append(blankEntry(defaultWarehouse?.warehouseid ?? ""))}
+          {!isSingleEditMode && (
+            <div
+              className="modal-footer justify-content-start py-2"
+              style={{ borderTop: "1px solid #e9ecef" }}
             >
-              <PlusCircle size={14} />
-              Add Row
-            </button>
-          </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                onClick={() => append(blankEntry(defaultWarehouse?.warehouseid ?? ""))}
+              >
+                <PlusCircle size={14} />
+                Add Row
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

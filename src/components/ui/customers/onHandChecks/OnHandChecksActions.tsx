@@ -7,15 +7,16 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { CHECK_STATUS, NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { XSquare, PauseCircle, PlayCircle } from "react-feather";
+import { Edit, XSquare, PauseCircle, PlayCircle } from "react-feather";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface OnHandChecksActionsProps {
   data: CustomerChequeListType;
   retryFetchData: () => void;
+  onEdit: () => void;
 }
 
-const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps) => {
+const OnHandChecksActions = ({ data, retryFetchData, onEdit }: OnHandChecksActionsProps) => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
@@ -48,41 +49,68 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
   const isOnHold = currentStatus === CHECK_STATUS.CHECK_ON_HOLD;
   const holdTargetStatus = isOnHold ? CHECK_STATUS.ON_HAND_CHECK : CHECK_STATUS.CHECK_ON_HOLD;
   const holdLabel = isOnHold ? "Unhold" : "Hold";
+  const editDisabledReason = isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined;
 
   const items: RowActionItem[] = [
     {
-      key: 'void', label: 'Delete (Void)', icon: <XSquare size={14} />,
-      onClick: () => handleChangeStatus(CHECK_STATUS.VOID_CHECK), dangerous: true,
-      disabled: isOtherOutlet, disabledReason: isOtherOutlet ? otherOutletReason : undefined,
+      key: 'edit', label: 'Edit', icon: <Edit size={14} />,
+      onClick: onEdit,
+      disabled: isVoided || isOtherOutlet, disabledReason: editDisabledReason,
     },
     {
       key: 'hold', label: holdLabel, icon: isOnHold ? <PlayCircle size={14} /> : <PauseCircle size={14} />,
       onClick: () => handleChangeStatus(holdTargetStatus),
       disabled: isVoided || isOtherOutlet,
-      disabledReason: isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined,
+      disabledReason: editDisabledReason,
+    },
+    {
+      key: 'void', label: 'Delete (Void)', icon: <XSquare size={14} />,
+      onClick: () => handleChangeStatus(CHECK_STATUS.VOID_CHECK), dangerous: true,
+      disabled: isOtherOutlet, disabledReason: isOtherOutlet ? otherOutletReason : undefined,
     },
   ];
 
   return (
     <RowActionsWrapper items={items}>
-      <button
-        className="btn btn-sm btn-warning btn-wave waves-effect waves-light"
-        onClick={() => handleChangeStatus(CHECK_STATUS.VOID_CHECK)}
-        disabled={isOtherOutlet}
-        title={isOtherOutlet ? otherOutletReason : undefined}
-      >
-        <i className="feather-x align-middle me-2 d-inline-block" />
-        Delete
-      </button>
-      <button
-        className={`btn btn-sm ${isOnHold ? "btn-success" : "btn-danger"} btn-wave waves-effect waves-light mx-2`}
-        onClick={() => handleChangeStatus(holdTargetStatus)}
-        disabled={isVoided || isOtherOutlet}
-        title={isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined}
-      >
-        <i className={`${isOnHold ? "feather-play-circle" : "feather-stop-circle"} align-middle me-2 d-inline-block`} />
-        {holdLabel}
-      </button>
+      {isVoided || isOtherOutlet ? (
+        <span className="p-1" title={editDisabledReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
+          <Edit size={14} style={{ opacity: 0.35 }} />
+        </span>
+      ) : (
+        <button type="button" className="p-1 btn btn-link" style={{ lineHeight: 1 }} onClick={onEdit} title="Edit">
+          <Edit size={14} />
+        </button>
+      )}
+      {isVoided || isOtherOutlet ? (
+        <span className="p-1" title={editDisabledReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
+          {isOnHold ? <PlayCircle size={14} style={{ opacity: 0.35 }} /> : <PauseCircle size={14} style={{ opacity: 0.35 }} />}
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="p-1 btn btn-link"
+          style={{ lineHeight: 1, color: isOnHold ? "#198754" : "#dc3545" }}
+          onClick={() => handleChangeStatus(holdTargetStatus)}
+          title={holdLabel}
+        >
+          {isOnHold ? <PlayCircle size={14} /> : <PauseCircle size={14} />}
+        </button>
+      )}
+      {isOtherOutlet ? (
+        <span className="p-1" title={otherOutletReason} style={{ cursor: "not-allowed", display: "inline-flex", alignItems: "center" }}>
+          <XSquare size={14} style={{ opacity: 0.35 }} />
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="confirm-text p-1 btn btn-link"
+          style={{ lineHeight: 1, color: "#dc3545" }}
+          onClick={() => handleChangeStatus(CHECK_STATUS.VOID_CHECK)}
+          title="Delete (Void)"
+        >
+          <XSquare size={14} />
+        </button>
+      )}
     </RowActionsWrapper>
   );
 };

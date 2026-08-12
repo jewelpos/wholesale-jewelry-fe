@@ -27,12 +27,15 @@ import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "../../grid/POSGrid";
 import { useParams } from "next/navigation";
 import OnHandChecksActions from "./OnHandChecksActions";
+import AddOnHandChequeModal from "../CustomerChequeSummary.tsx/AddOnHandChequeModal";
+import { CheckOnHandType } from "@/types/customer";
 
 interface Props {
   data: CustomerChequeListType;
 }
 
 const OnHandChecksComponent = ({ data }: Props) => {
+  const [editingCheck, setEditingCheck] = useState<CheckOnHandType | null>(null);
   const [getCustomerChequeList] = useLazyQuery(GET_CUSTOMER_CHEQUE_LIST_QUERY);
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -115,6 +118,17 @@ const OnHandChecksComponent = ({ data }: Props) => {
             <OnHandChecksActions
               data={params.data}
               retryFetchData={retryFetchData}
+              onEdit={() =>
+                setEditingCheck({
+                  customercheckdetailid: params.data!.customercheckdetailid,
+                  customerid: String(params.data!.customerid),
+                  warehouseid: String(params.data!.warehouseid),
+                  checkno: params.data!.checkno,
+                  checkamount: String(params.data!.checkamount),
+                  checkpostingdate: params.data!.checkpostingdate,
+                  chkinvoiceno: params.data!.chkinvoiceno ?? "",
+                })
+              }
             />
           ) : null,
         width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 120,
@@ -142,6 +156,13 @@ const OnHandChecksComponent = ({ data }: Props) => {
           domLayout="autoHeight"
         />
       </div>
+      {editingCheck && (
+        <AddOnHandChequeModal
+          editEntry={editingCheck}
+          setShowPrintModal={() => setEditingCheck(null)}
+          triggerFetchSummary={async () => { retryFetchData(); }}
+        />
+      )}
     </div>
   );
 };
