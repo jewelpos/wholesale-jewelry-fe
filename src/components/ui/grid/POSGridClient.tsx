@@ -139,7 +139,10 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
     return (
       <div
         className="ag-theme-quartz custom-theme"
-        style={{ height: fillHeight ? "100%" : `calc(100vh - ${height})`, width: "100%" }}
+        style={{
+          height: fillHeight ? "100%" : domLayout === "autoHeight" ? "auto" : `calc(100vh - ${height})`,
+          width: "100%",
+        }}
       >
         <AgGridReact
           ref={combinedRef}
