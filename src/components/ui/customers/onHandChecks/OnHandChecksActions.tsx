@@ -7,7 +7,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { CHECK_STATUS, NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { XSquare, PauseCircle } from "react-feather";
+import { XSquare, PauseCircle, PlayCircle } from "react-feather";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
 interface OnHandChecksActionsProps {
@@ -45,6 +45,9 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
   };
 
   const isVoided = currentStatus === CHECK_STATUS.VOID_CHECK;
+  const isOnHold = currentStatus === CHECK_STATUS.CHECK_ON_HOLD;
+  const holdTargetStatus = isOnHold ? CHECK_STATUS.ON_HAND_CHECK : CHECK_STATUS.CHECK_ON_HOLD;
+  const holdLabel = isOnHold ? "Unhold" : "Hold";
 
   const items: RowActionItem[] = [
     {
@@ -53,8 +56,8 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
       disabled: isOtherOutlet, disabledReason: isOtherOutlet ? otherOutletReason : undefined,
     },
     {
-      key: 'hold', label: 'Hold', icon: <PauseCircle size={14} />,
-      onClick: () => handleChangeStatus(CHECK_STATUS.CHECK_ON_HOLD),
+      key: 'hold', label: holdLabel, icon: isOnHold ? <PlayCircle size={14} /> : <PauseCircle size={14} />,
+      onClick: () => handleChangeStatus(holdTargetStatus),
       disabled: isVoided || isOtherOutlet,
       disabledReason: isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined,
     },
@@ -72,13 +75,13 @@ const OnHandChecksActions = ({ data, retryFetchData }: OnHandChecksActionsProps)
         Delete
       </button>
       <button
-        className="btn btn-sm btn-danger btn-wave waves-effect waves-light mx-2"
-        onClick={() => handleChangeStatus(CHECK_STATUS.CHECK_ON_HOLD)}
+        className={`btn btn-sm ${isOnHold ? "btn-success" : "btn-danger"} btn-wave waves-effect waves-light mx-2`}
+        onClick={() => handleChangeStatus(holdTargetStatus)}
         disabled={isVoided || isOtherOutlet}
         title={isOtherOutlet ? otherOutletReason : isVoided ? "Already voided" : undefined}
       >
-        <i className="feather-stop-circle align-middle me-2 d-inline-block" />
-        Hold
+        <i className={`${isOnHold ? "feather-play-circle" : "feather-stop-circle"} align-middle me-2 d-inline-block`} />
+        {holdLabel}
       </button>
     </RowActionsWrapper>
   );

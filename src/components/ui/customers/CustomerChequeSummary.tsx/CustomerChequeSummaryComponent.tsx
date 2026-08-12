@@ -230,6 +230,26 @@ const CustomerChequeSummaryComponent = () => {
                     Filters
                   </label>
                 </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    fetchChequeSummary(parsedStoreId, selectedCustomer, selectedYear, selectedWarehouse)
+                  }
+                  title="Refresh"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "5px 10px", fontSize: 12, fontWeight: 600,
+                    borderRadius: 6, border: "1px solid #dee2e6",
+                    background: "#fff", color: "#64748b",
+                    cursor: "pointer", whiteSpace: "nowrap", transition: "0.15s",
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                    <polyline points="21 3 21 9 15 9" />
+                  </svg>
+                  Refresh
+                </button>
               </div>
               <div className="d-flex align-items-center gap-2">
                 <div style={{ minWidth: 200 }}>
