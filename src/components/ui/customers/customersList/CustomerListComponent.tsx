@@ -40,7 +40,9 @@ import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ReportSummaryCards from "../../reports/shared/ReportSummaryCards";
 import api from "@/lib/axios";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 import useOutlets from "@/hooks/useOutlets";
 
 const NO_FILTER: never[] = [];
@@ -294,6 +296,80 @@ const CustomerListComponent = () => {
     if (parsedOutletId) setSelectedOutlet(parsedOutletId);
   }, [parsedOutletId]);
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    if (stripAll) {
+      return { filters: [], sortModel: [] as { colId: string; sort: "asc" | "desc" }[] };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    const base = filterVariables({ request: fakeRequest }, debouncedSearchRef.current, "fullname, custcompanyname");
+    const outlet = selectedOutletRef.current;
+    const pill = segmentPillRef.current;
+    const outletExtra = outlet && !showAllOutletsRef.current
+      ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: outlet } }]
+      : [];
+    const pillExtra =
+      pill === "with_balance"
+        ? [{ key: "balancedue", value: { filterType: "number", type: "greaterThan", filter: 0 } }]
+        : pill === "no_balance"
+        ? [{ key: "balancedue", value: { filterType: "number", type: "equals", filter: 0 } }]
+        : [];
+    return { filters: [...base.filters, ...outletExtra, ...pillExtra], sortModel };
+  }, []);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getCustomerList({
+            variables: {
+              storeid: parsedStoreId,
+              filters,
+              sortModel,
+              rowGroupCols: [],
+              groupKeys: [],
+              showAllOutlets: stripAll || showAllOutletsRef.current,
+              page,
+              perpage,
+            },
+          });
+          return { data: data?.getCustomerList?.data ?? [], total: data?.getCustomerList?.total ?? 0 };
+        },
+        {
+          fileName: "customers",
+          sheetName: "Customers",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getCustomerList, parsedStoreId, dispatch]);
+
+  const handleExport = useCallback(() => {
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || segmentPill !== "all";
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, segmentPill, runExport]);
+
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("customer-list");
 
   return (
@@ -301,7 +377,7 @@ const CustomerListComponent = () => {
       <CustomerListHeader
         selectedCustomerId={selectedCustomerId}
         setShowPrintModal={setShowPrintModal}
-        onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "customers", sheetName: "Customers" })}
+        onExport={handleExport}
       />
       {isAdmin && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Customer Summary">
@@ -430,6 +506,16 @@ const CustomerListComponent = () => {
             loading={customerLoading}
           />
         </PrintModal>
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </div>
   );

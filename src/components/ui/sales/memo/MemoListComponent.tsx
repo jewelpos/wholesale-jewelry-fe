@@ -32,7 +32,9 @@ import StatusFilterChips from "@/components/ui/grid/StatusFilterChips";
 import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 import { GET_MEMO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import api from "@/lib/axios";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "@/components/ui/grid/ExportProgressOverlay";
+import ExportScopeModal from "@/components/ui/grid/ExportScopeModal";
 import DocumentEmailModal from "../DocumentEmailModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
@@ -236,9 +238,73 @@ const MemoListComponent = () => {
     setSelectedMemoNumbers(memoNumbers);
   }, []);
 
-  const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "memos", sheetName: "Memos" });
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    if (stripAll) {
+      return { filters: [] as { key: string; value: object }[], sortModel: [] as { colId: string; sort: "asc" | "desc" }[] };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = filterVariables({ request: fakeRequest }, debouncedSearchRef.current, "memonumber, customerid, companyname").filters;
+    const sf = statusFilterRef.current;
+    if (sf) {
+      filters = [...filters, { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } }];
+    }
+    const dateRange = getDateRange(datePresetRef.current);
+    if (dateRange) {
+      filters = [...filters, { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } }];
+    }
+    return { filters, sortModel };
   }, []);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getMemoList({
+            variables: {
+              storeid: parsedStoreId,
+              outletid: selectedOutletRef.current,
+              warehouseid: stripAll ? undefined : selectedWarehouseRef.current,
+              filters, sortModel, rowGroupCols: [], groupKeys: [],
+              page, perpage,
+            },
+          });
+          return { data: data?.getMemoList?.data ?? [], total: data?.getMemoList?.total ?? 0 };
+        },
+        {
+          fileName: "memos",
+          sheetName: "Memos",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getMemoList, parsedStoreId, dispatch]);
+
+  const handleExport = useCallback(() => {
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || !!statusFilter || !!selectedWarehouse || datePreset !== "all";
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, statusFilter, selectedWarehouse, datePreset, runExport]);
 
   const handleEmailMemo = useCallback(() => {
     if (selectedMemoNumbers.length > 0) setEmailModalOpen(true);
@@ -402,6 +468,16 @@ const MemoListComponent = () => {
           filename={pdfPreview.filename}
           onClose={() => setPdfPreview(null)}
         />
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </div>
   );

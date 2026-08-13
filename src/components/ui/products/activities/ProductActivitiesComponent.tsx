@@ -20,7 +20,9 @@ import { useParams } from "next/navigation";
 import { GET_PRODUCT_ACTIVITY_LIST_QUERY, GET_PRODUCT_ACTIVITY_CHART_QUERY, GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
 import productActivityColumnDefs from "./ColumnDef";
 import ProductActivitiesHeader from "./ProductActivitiesHeader";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 import StockLevelChart from "./StockLevelChart";
 import ActivityTimeline from "./ActivityTimeline";
 import ActivitySummaryChart from "./ActivitySummaryChart";
@@ -216,9 +218,72 @@ const ProductActivitiesComponent = () => {
     }
   }, [datasource, gridReady, parsedStoreId]);
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const baseFilters: { key: string; value: object }[] = [
+      { key: "outletid", value: { filterType: "text", type: "equals", filter: selectedOutlet } },
+    ];
+    if (selectedWarehouse !== -1) {
+      baseFilters.push({ key: "warehouseid", value: { filterType: "text", type: "equals", filter: selectedWarehouse } });
+    }
+    if (stripAll) {
+      return { filters: baseFilters, sortModel: [] as typeof sortModel };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = [...baseFilters, ...filterVariables({ request: fakeRequest }).filters];
+    if (selectedItemId) {
+      filters = [...filters, { key: "itemid", value: { filterType: "text", type: "equals", filter: selectedItemId } }];
+    }
+    if (dateFrom || dateTo) {
+      filters = [...filters, { key: "transation_date", value: { filterType: "date", type: "inRange", dateFrom: dateFrom || undefined, dateTo: dateTo || undefined } }];
+    }
+    return { filters, sortModel };
+  }, [selectedOutlet, selectedWarehouse, selectedItemId, dateFrom, dateTo]);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getProductActivitiesList({
+            variables: { storeid: parsedStoreId, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getProductActivityList?.data ?? [], total: data?.getProductActivityList?.total ?? 0 };
+        },
+        {
+          fileName: "product-activities",
+          sheetName: "Product Activities",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getProductActivitiesList, parsedStoreId, dispatch]);
+
   const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "product-activities", sheetName: "Product Activities" });
-  }, []);
+    if (!selectedOutlet || selectedWarehouse === -1) return;
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = filterModelActive || !!selectedItemId || !!dateFrom || !!dateTo;
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [selectedOutlet, selectedWarehouse, selectedItemId, dateFrom, dateTo, runExport]);
 
   const showCharts = !!selectedItemId;
   const showGrid = !showCharts || detailView === "grid";
@@ -365,6 +430,16 @@ const ProductActivitiesComponent = () => {
           </div>
         </div>
       </div>
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
+      )}
     </>
   );
 };

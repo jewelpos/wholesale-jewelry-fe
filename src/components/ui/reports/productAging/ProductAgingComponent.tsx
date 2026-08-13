@@ -19,7 +19,9 @@ import ProductAgingHeader from "./ProductAgingHeader";
 import ProductAgingChartView from "./ProductAgingChartView";
 import { GET_PRODUCT_AGING_LIST_QUERY } from "@/lib/graphql/query/products";
 import { useParams } from "next/navigation";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "@/components/ui/grid/ExportProgressOverlay";
+import ExportScopeModal from "@/components/ui/grid/ExportScopeModal";
 import ReportSliderFilter from "@/components/ui/reports/shared/ReportSliderFilter";
 
 const AGE_MARKS = { 0: "All", 30: "30d", 60: "60d", 90: "90d", 180: "180d", 365: "1yr" };
@@ -90,9 +92,68 @@ const ProductAgingComponent = () => {
     }
   }, [datasource, selectedOutlet, selectedWarehouse, gridReady, debouncedSearch]);
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    if (stripAll) {
+      return { filters: [] as { key: string; value: object }[], sortModel: [] as typeof sortModel };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = filterVariables({ request: fakeRequest }, debouncedSearch, "itemcode, itemdescription, supplier, warehousename").filters;
+    if (minAgeDays > 0) {
+      filters = [...filters, { key: "age_days", value: { filterType: "number", type: "greaterThanOrEqual", filter: String(minAgeDays) } }];
+    }
+    return { filters, sortModel };
+  }, [debouncedSearch, minAgeDays]);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getProductAgingList({
+            variables: {
+              storeid: parsedStoreId,
+              outletid: selectedOutlet,
+              warehouseid: selectedWarehouse,
+              filters, sortModel, rowGroupCols: [], groupKeys: [],
+              page, perpage,
+            },
+          });
+          return { data: data?.getProductAgingList?.data ?? [], total: data?.getProductAgingList?.total ?? 0 };
+        },
+        {
+          fileName: "product-aging",
+          sheetName: "Product Aging",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getProductAgingList, parsedStoreId, selectedOutlet, selectedWarehouse, dispatch]);
+
   const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "product-aging", sheetName: "Product Aging" });
-  }, []);
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || minAgeDays > 0;
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, minAgeDays, runExport]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
@@ -141,6 +202,16 @@ const ProductAgingComponent = () => {
             </div>
           </div>
         </div>
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </div>
   );

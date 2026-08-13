@@ -27,7 +27,9 @@ import { GET_SO_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
 import { useParams, useRouter } from "next/navigation";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
@@ -207,9 +209,71 @@ const SalesOrderListComponent = () => {
     setShowEmailModal(true);
   }, [parsedStoreId, selectedSalesOrderNumbers]);
 
-  const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "sales-orders", sheetName: "Sales Orders" });
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    if (stripAll) {
+      return { filters: [] as { key: string; value: object }[], sortModel: [] as { colId: string; sort: "asc" | "desc" }[] };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = filterVariables(
+      { request: fakeRequest },
+      debouncedSearchRef.current,
+      "salesorderno, customerid, custcompanyname, warehousename, statusname"
+    ).filters;
+    const sf = statusFilterRef.current;
+    if (sf) {
+      filters = [...filters, { key: "statusname", value: { filterType: "text", type: "contains", filter: sf } }];
+    }
+    const dateRange = getDateRange(datePresetRef.current);
+    if (dateRange) {
+      filters = [...filters, { key: "orderdate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } }];
+    }
+    return { filters, sortModel };
   }, []);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getSalesOrderList({
+            variables: { outletid: selectedOutletRef.current, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getSalesOrderList?.data ?? [], total: data?.getSalesOrderList?.total ?? 0 };
+        },
+        {
+          fileName: "sales-orders",
+          sheetName: "Sales Orders",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getSalesOrderList, dispatch]);
+
+  const handleExport = useCallback(() => {
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || !!statusFilter || datePreset !== "all";
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, statusFilter, datePreset, runExport]);
 
   const handleCreateInvoiceFromOrder = useCallback(() => {
     const salesorderno = selectedSalesOrders[0]?.salesorderno;
@@ -336,6 +400,16 @@ const SalesOrderListComponent = () => {
           filename={pdfPreview.filename}
           onClose={() => setPdfPreview(null)}
         />
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </div>
   );

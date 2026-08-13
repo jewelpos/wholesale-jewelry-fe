@@ -34,6 +34,9 @@ import ProductListSummaryCards from "./ProductListSummaryCards";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
 import ProductFilterPills from "./ProductFilterPills";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
@@ -224,9 +227,69 @@ const ProductsListComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("product-list");
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const outletFilter = [
+      { key: "outletid", value: { filterType: "text", type: "equals", filter: selectedOutletRef.current } },
+    ];
+    if (stripAll) {
+      return { filters: outletFilter, sortModel: [] as typeof sortModel };
+    }
+    return { filters: activeGridFilters, sortModel };
+  }, [activeGridFilters]);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const outlet = selectedOutletRef.current;
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getProductList({
+            variables: { outletid: outlet, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getProductListNew?.data ?? [], total: data?.getProductListNew?.total ?? 0 };
+        },
+        {
+          fileName: "products",
+          sheetName: "Products",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getProductList, dispatch]);
+
+  const handleExport = useCallback(() => {
+    if (!selectedOutletRef.current) return;
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered =
+      !!debouncedSearch ||
+      filterModelActive ||
+      activeFilters.size > 0 ||
+      (selectedWarehouse !== -1 && selectedWarehouse !== undefined);
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, activeFilters, selectedWarehouse, runExport]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
-      <ProductsListHeader />
+      <ProductsListHeader onExport={handleExport} />
       {isAdmin && !!selectedOutlet && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
           <ProductListSummaryCards outletid={selectedOutlet} filters={activeGridFilters} />
@@ -262,6 +325,16 @@ const ProductsListComponent = () => {
           </div>
         </div>
       </div>
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
+      )}
     </div>
   );
 };

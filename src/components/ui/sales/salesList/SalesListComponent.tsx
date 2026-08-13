@@ -38,7 +38,9 @@ import DailyStatusCards from "../../grid/DailyStatusCards";
 import StatusFilterChips from "../../grid/StatusFilterChips";
 import StatusPillRenderer from "../../grid/StatusPillRenderer";
 import { GET_INVOICE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/sales";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
@@ -305,9 +307,82 @@ const SalesListComponent = () => {
     if (selectedInvoiceNumbers.length > 0) setEmailModalOpen(true);
   }, [selectedInvoiceNumbers]);
 
-  const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "invoices", sheetName: "Invoices" });
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    if (stripAll) {
+      return { filters: [], sortModel: [] as { colId: string; sort: "asc" | "desc" }[] };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = filterVariables({ request: fakeRequest }, debouncedSearchRef.current, "invoicenumber, customerid, companyname").filters;
+    const sf = statusFilterRef.current;
+    if (sf === "paid") {
+      filters = [
+        ...filters,
+        { key: "balancedue", value: { filterType: "number", type: "lessThanOrEqual", filter: 0 } },
+        { key: "statusname", value: { filterType: "text", type: "notContains", filter: "void" } },
+      ];
+    } else if (sf === "open") {
+      filters = [
+        ...filters,
+        { key: "balancedue", value: { filterType: "number", type: "greaterThan", filter: 0 } },
+        { key: "statusname", value: { filterType: "text", type: "notContains", filter: "void" } },
+      ];
+    } else if (sf === "void") {
+      filters = [...filters, { key: "statusname", value: { filterType: "text", type: "contains", filter: "void" } }];
+    }
+    const dateRange = getDateRange(datePresetRef.current);
+    if (dateRange) {
+      filters = [
+        ...filters,
+        { key: "saledate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } },
+      ];
+    }
+    return { filters, sortModel };
   }, []);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getInvoiceList({
+            variables: { outletid: selectedOutletRef.current, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getInvoiceList?.data ?? [], total: data?.getInvoiceList?.total ?? 0 };
+        },
+        {
+          fileName: "invoices",
+          sheetName: "Invoices",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getInvoiceList, dispatch]);
+
+  const handleExport = useCallback(() => {
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || statusFilter !== null || datePreset !== "all";
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, statusFilter, datePreset, runExport]);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("invoice-list");
 
@@ -426,6 +501,16 @@ const SalesListComponent = () => {
           filename={pdfPreview.filename}
           onClose={() => setPdfPreview(null)}
         />
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </div>
   );

@@ -29,7 +29,9 @@ import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import api from "@/lib/axios";
 import PurchaseOrderActions from "./PurchaseOrderActions";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../grid/ExportProgressOverlay";
+import ExportScopeModal from "../grid/ExportScopeModal";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../grid/SummaryPanelWrapper";
 
@@ -223,6 +225,73 @@ const PurchaseOrderListComponent = () => {
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("purchase-list");
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportGridFilters = useCallback((stripAll: boolean) => {
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    if (stripAll) {
+      return { filters: [] as { key: string; value: object }[], sortModel: [] as typeof sortModel };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    let filters = filterVariables({ request: fakeRequest }, debouncedSearch, "ponumber, suppliername").filters;
+    if (statusFilter) {
+      filters = [...filters, { key: "status", value: { filterType: "text", type: "equals", filter: statusFilter } }];
+    }
+    const dateRange = getDateRange(datePreset);
+    if (dateRange) {
+      filters = [...filters, { key: "podate", value: { filterType: "date", type: "inRange", dateFrom: dateRange.startdate, dateTo: dateRange.enddate } }];
+    }
+    return { filters, sortModel };
+  }, [debouncedSearch, statusFilter, datePreset]);
+
+  const runGridExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportGridFilters(stripAll);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let variables: any = { storeid: parsedStoreId };
+    if (!stripAll) {
+      if (selectedSupplier !== -1) variables = { ...variables, supplierid: selectedSupplier };
+      if (selectedOutlet) variables = { ...variables, outletid: selectedOutlet };
+    }
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getPurchaseOrdersList({
+            variables: { ...variables, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getSupplierPurchaseOrderList?.data ?? [], total: data?.getSupplierPurchaseOrderList?.total ?? 0 };
+        },
+        {
+          fileName: "purchase-orders",
+          sheetName: "Purchase Orders",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportGridFilters, getPurchaseOrdersList, parsedStoreId, selectedSupplier, selectedOutlet, dispatch]);
+
+  const handleGridExport = useCallback(() => {
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || !!statusFilter || datePreset !== "all";
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runGridExport(true);
+    }
+  }, [debouncedSearch, statusFilter, datePreset, runGridExport]);
+
   const handleExport = async (poNumbers: number[], type: string) => {
     setLoading(true);
     const updatedPayload = {
@@ -292,7 +361,7 @@ const PurchaseOrderListComponent = () => {
         <PurchaseOrderListHeader
           selectedPOs={selectedPOs}
           handleExport={handleExport}
-          onExport={() => exportGridToExcel(gridRef.current?.api, { fileName: "purchase-orders", sheetName: "Purchase Orders" })}
+          onExport={handleGridExport}
           onEmail={() => setShowEmailModal(true)}
         />
         {isAdmin && (
@@ -413,6 +482,16 @@ const PurchaseOrderListComponent = () => {
           filename={pdfPreview.filename}
           onClose={() => setPdfPreview(null)}
         />
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runGridExport(false)}
+          onExportAll={() => runGridExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </>
   );

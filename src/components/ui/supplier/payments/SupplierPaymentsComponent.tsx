@@ -27,7 +27,9 @@ import SupplierAppliedPaymentComponent from "../appliedPayments/SupplierAppliedP
 import SupplierPaymentActions from "./SupplierPaymentActions";
 import VoidPaymentModal from "../appliedPayments/VoidPaymentModal";
 import PaySupplierModal, { PAY_SUPPLIER } from "./PaySupplierModal";
-import { exportGridToExcel } from "@/lib/utils/exportGrid";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
+import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
+import ExportScopeModal from "../../grid/ExportScopeModal";
 
 const SupplierPaymentsComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
@@ -130,9 +132,64 @@ const SupplierPaymentsComponent = () => {
     }
   }, [gridRef, datasource, gridReady, debouncedSearch]);
 
+  const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
+
+  const buildExportFilters = useCallback((stripAll: boolean) => {
+    const sortModel = (gridRef.current?.api?.getColumnState() ?? [])
+      .filter((c) => c.sort)
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .map((c) => ({ colId: c.colId, sort: c.sort as "asc" | "desc" }));
+    if (stripAll) {
+      return { filters: [] as { key: string; value: object }[], sortModel: [] as typeof sortModel };
+    }
+    const filterModel = gridRef.current?.api?.getFilterModel() ?? {};
+    const fakeRequest = { startRow: 0, endRow: 1, filterModel, sortModel, groupKeys: [], rowGroupCols: [] };
+    const filters = filterVariables({ request: fakeRequest }, debouncedSearch, "companyname, reference").filters;
+    return { filters, sortModel };
+  }, [debouncedSearch]);
+
+  const runExport = useCallback(async (stripAll: boolean) => {
+    setExportScopeModalOpen(false);
+    setExportProgress({ fetched: 0, total: 0 });
+    const { filters, sortModel } = buildExportFilters(stripAll);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let variables: any = { storeid: parsedStoreId };
+    if (!stripAll && selectedSupplier !== -1) {
+      variables = { ...variables, supplierid: selectedSupplier };
+    }
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getAPPaymentsList({
+            variables: { ...variables, filters, sortModel, rowGroupCols: [], groupKeys: [], page, perpage },
+          });
+          return { data: data?.getAPPaymentsList?.data ?? [], total: data?.getAPPaymentsList?.total ?? 0 };
+        },
+        {
+          fileName: "supplier-payments",
+          sheetName: "Supplier Payments",
+          onProgress: (fetched, total) => setExportProgress({ fetched, total }),
+        }
+      );
+      return true;
+    });
+    setExportProgress(null);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [buildExportFilters, getAPPaymentsList, parsedStoreId, selectedSupplier, dispatch]);
+
   const handleExport = useCallback(() => {
-    exportGridToExcel(gridRef.current?.api, { fileName: "supplier-payments", sheetName: "Supplier Payments" });
-  }, []);
+    const filterModelActive = Object.keys(gridRef.current?.api?.getFilterModel() ?? {}).length > 0;
+    const isFiltered = !!debouncedSearch || filterModelActive || selectedSupplier !== -1;
+    if (isFiltered) {
+      setExportScopeModalOpen(true);
+    } else {
+      runExport(true);
+    }
+  }, [debouncedSearch, selectedSupplier, runExport]);
 
   const handlePayModalClose = () => {
     setPaymentModal("");
@@ -180,6 +237,16 @@ const SupplierPaymentsComponent = () => {
           supplierid={voidSupplierId}
           paymentid={voidPaymentId}
         />
+      )}
+      {exportScopeModalOpen && (
+        <ExportScopeModal
+          onClose={() => setExportScopeModalOpen(false)}
+          onExportFiltered={() => runExport(false)}
+          onExportAll={() => runExport(true)}
+        />
+      )}
+      {exportProgress && (
+        <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
       )}
     </>
   );
