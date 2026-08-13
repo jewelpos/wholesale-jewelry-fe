@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAppSelector } from "@/lib/store/hook";
 import { MenuChild, Menus } from "@/types/permissions";
 
-function findRoutePermission(
+export function findRoutePermission(
   currentPath: string,
   routes: Menus | MenuChild[],
   parentUrl: string
@@ -52,6 +52,15 @@ function normalizePathForPermission(pathname: string): string {
 // The store prefix makes DB-matching impossible here, so we match by suffix.
 // Every authenticated user can access these regardless of role.
 const NON_OUTLET_SUFFIXES = ["/home", "/store/create"];
+
+// Shared by anything that picks an auto-redirect target (e.g. the role-based
+// dashboard landing page) so it can check permission BEFORE navigating there —
+// otherwise an unpermitted target sends the user into PermissionGuard's /404
+// bounce, which drops storeId/outletId from the URL and re-triggers the same
+// landing-page redirect, forming an infinite loop.
+export function hasMenuPermission(menus: Menus | MenuChild[] | undefined, path: string): boolean {
+  return findRoutePermission(path, menus ?? [], "");
+}
 
 export function usePermissionCheck() {
   const router = useRouter();

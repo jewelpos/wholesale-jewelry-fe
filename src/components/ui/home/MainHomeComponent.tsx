@@ -11,6 +11,7 @@ import SetupRow from "./SetupRow";
 import { catalogByStoreType, defaultCatalog } from "@/lib/utils/homeCatalogConfig";
 import { CatalogTile } from "@/types/home";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
+import { hasMenuPermission } from "@/hooks/usePermissionsCheck";
 
 const dashboardByRole: Record<number, string> = {
   1: "dashboard/admin",
@@ -33,11 +34,20 @@ const MainHomeComponent = () => {
   const { basePath } = useDefaultRoute();
   const storeName = store?.storename ?? "";
 
-  // Cashiers and managers should never land on the setup page
+  // Cashiers and managers should never land on the setup page — but only redirect
+  // them to their role's dashboard if they're actually permitted to see it. Some
+  // stores intentionally don't grant Cashier the Dashboard menu; redirecting there
+  // anyway sent them into PermissionGuard's /404 bounce, which strips storeId/
+  // outletId from the URL and re-triggers this same redirect — an infinite loop.
   useEffect(() => {
     if (!user) return;
     const target = dashboardByRole[user.roleid];
-    if (target && user.roleid !== 1 && user.issysgenmasteraccount !== 1) {
+    if (
+      target &&
+      user.roleid !== 1 &&
+      user.issysgenmasteraccount !== 1 &&
+      hasMenuPermission(user.permissions?.menus, `/${target}`)
+    ) {
       router.replace(`${basePath}/${target}`);
     }
   }, [user, router, basePath]);

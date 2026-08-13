@@ -9,6 +9,7 @@ import FullPageLoader from "../ui/FullPageLoader";
 import useAuth from "@/hooks/useAuth";
 import useStores from "@/hooks/useStores";
 import useUserData from "@/hooks/useUserData";
+import { hasMenuPermission } from "@/hooks/usePermissionsCheck";
 import { setCurrencyCode } from "@/lib/utils/currencyFormat";
 import "ag-grid-enterprise";
 import { LicenseManager } from "ag-grid-enterprise";
@@ -52,7 +53,12 @@ const InitialDataLoader = ({
       };
       const getLandingPage = (setup: boolean | undefined) => {
         if (!setup) return "home";
-        return dashboardByRole[roleid] ?? "dashboard/admin";
+        const target = dashboardByRole[roleid] ?? "dashboard/admin";
+        // Fall back to "home" if this role isn't actually granted the target
+        // dashboard menu — sending them there anyway would bounce through
+        // PermissionGuard's /404, which strips storeId/outletId and re-triggers
+        // this same redirect, forming an infinite loop.
+        return hasMenuPermission(user?.permissions?.menus, `/${target}`) ? target : "home";
       };
       if (defaultStore) {
         const prefix = defaultStore.routeprefix ?? "jw";
