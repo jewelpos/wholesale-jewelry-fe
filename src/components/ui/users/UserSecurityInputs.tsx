@@ -33,6 +33,7 @@ const UserSecurityInputs = ({ register, errors, password }: Props) => {
                     <input
                       type={showPassword ? "text" : "password"}
                       className={`${errors.password ? "is-invalid" : ""} form-control`}
+                      autoComplete="new-password"
                       {...register("password", passwordValidation)}
                     />
                     <button
@@ -58,6 +59,7 @@ const UserSecurityInputs = ({ register, errors, password }: Props) => {
                     <input
                       type={showConfirm ? "text" : "password"}
                       className={`${errors.confirmpassword ? "is-invalid" : ""} form-control`}
+                      autoComplete="new-password"
                       {...register("confirmpassword", {
                         required: "Confirm password is required",
                         validate: (value) =>
