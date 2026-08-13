@@ -34,23 +34,30 @@ const MainHomeComponent = () => {
   const { basePath } = useDefaultRoute();
   const storeName = store?.storename ?? "";
 
+  const isOwnerOrAdmin = !user || (user.roleid === 1 || user.issysgenmasteraccount === 1);
+  const roleTarget = user ? dashboardByRole[user.roleid] : undefined;
+  const roleDashboardPermitted =
+    !!roleTarget && hasMenuPermission(user?.permissions?.menus, `/${roleTarget}`);
+
   // Cashiers and managers should never land on the setup page — but only redirect
   // them to their role's dashboard if they're actually permitted to see it. Some
   // stores intentionally don't grant Cashier the Dashboard menu; redirecting there
   // anyway sent them into PermissionGuard's /404 bounce, which strips storeId/
   // outletId from the URL and re-triggers this same redirect — an infinite loop.
   useEffect(() => {
-    if (!user) return;
-    const target = dashboardByRole[user.roleid];
-    if (
-      target &&
-      user.roleid !== 1 &&
-      user.issysgenmasteraccount !== 1 &&
-      hasMenuPermission(user.permissions?.menus, `/${target}`)
-    ) {
-      router.replace(`${basePath}/${target}`);
+    if (!user || isOwnerOrAdmin) return;
+    if (roleTarget && roleDashboardPermitted) {
+      router.replace(`${basePath}/${roleTarget}`);
     }
-  }, [user, router, basePath]);
+  }, [user, router, basePath, isOwnerOrAdmin, roleTarget, roleDashboardPermitted]);
+
+  // Non-owner role with no permitted dashboard to land on: the setup checklist below
+  // is owner-only content (store setup, not something a Cashier/Manager should see),
+  // so render nothing here rather than showing it as a fallback. The sidebar/header
+  // still load normally (from InitialDataLoader) — the user just navigates from there.
+  if (!isOwnerOrAdmin && !roleDashboardPermitted) {
+    return <div className="content" />;
+  }
 
   const getDone = (tile: CatalogTile) =>
     tile.setupFlag ? !!(store as unknown as Record<string, unknown>)?.[tile.setupFlag] : false;
