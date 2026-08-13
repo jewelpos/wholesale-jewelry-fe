@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useMutation } from "@apollo/client";
 import { CANCEL_INVOICE_MUTATION } from "@/lib/graphql/mutations/sales";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
@@ -9,7 +10,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesInvoiceListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, MessageCircle, Printer, Mail, Trash2, ChevronDown } from "react-feather";
+import { Edit, Eye, MessageCircle, Printer, Mail, Trash2, ChevronDown, Package } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
@@ -46,7 +47,17 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showEmail, setShowEmail] = useState(false);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const [templateMenuPos, setTemplateMenuPos] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLButtonElement>(null);
+
+  const toggleTemplateMenu = () => {
+    if (!showTemplateMenu && chevronRef.current) {
+      const r = chevronRef.current.getBoundingClientRect();
+      setTemplateMenuPos({ top: r.bottom + window.scrollY + 2, left: r.left + window.scrollX });
+    }
+    setShowTemplateMenu((v) => !v);
+  };
 
   const defaultTemplate = (storeData?.defaultprintlayout || 'compact') as PrintTemplate;
 
@@ -117,13 +128,18 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   };
 
   const isCreditInvoiceNotApplied = Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
-  const isReturnedWithCredit = data.statusname === "Returned" && Number(data.custcrediapplied) === 1;
+  const hasPaymentReceived = Number(data.amountreceived) > 0;
+  const hasCreditApplied = Number(data.custcrediapplied) === 1 || Number(data.creditamountapplied) > 0;
   const canEdit =
-    isCreditInvoiceNotApplied ||
-    (data.statusname === "Ready" && Number(data.amountreceived) === 0 && !isReturnedWithCredit);
+    !hasPaymentReceived &&
+    !hasCreditApplied &&
+    (isCreditInvoiceNotApplied || data.statusname === "Ready");
   const canCancel =
     !isCreditInvoiceNotApplied &&
+    Number(data.balancedue) !== 0 &&
     Number(data.amountreceived) === 0 &&
+    Number(data.creditamountapplied) === 0 &&
+    !data.custcrediapplied &&
     data.statusname !== "Shipped" &&
     data.statusname !== "Picked up" &&
     data.statusname !== "Cancelled";
@@ -131,21 +147,23 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
 
   let editReason = "";
   if (!canEdit) {
-    if (Number(data.amountreceived) > 0) editReason = "Cannot edit: payment already received";
+    if (hasPaymentReceived) editReason = "Cannot edit: payment already received";
+    else if (hasCreditApplied) editReason = "Cannot edit: credit already applied";
     else if (data.statusname === "Cancelled") editReason = "Cannot edit: invoice is cancelled";
     else if (data.statusname === "Shipped") editReason = "Cannot edit: invoice has been shipped";
     else if (data.statusname === "Picked up") editReason = "Cannot edit: invoice has been picked up";
-    else if (Number(data.custcrediapplied) === 1) editReason = "Cannot edit: credit already applied";
     else editReason = "Cannot edit in current status";
   }
 
   let cancelReason = "";
   if (!canCancel) {
     if (isCreditInvoiceNotApplied) cancelReason = "Cannot cancel: this is an unapplied credit invoice";
-    else if (Number(data.amountreceived) > 0) cancelReason = "Cannot cancel: payment already received";
+    else if (data.statusname === "Cancelled") cancelReason = "Invoice is already cancelled";
+    else if (hasPaymentReceived) cancelReason = "Cannot cancel: payment already received";
+    else if (hasCreditApplied) cancelReason = "Cannot cancel: credit has been applied";
+    else if (Number(data.balancedue) === 0) cancelReason = "Cannot cancel: balance is zero";
     else if (data.statusname === "Shipped") cancelReason = "Cannot cancel: invoice has been shipped";
     else if (data.statusname === "Picked up") cancelReason = "Cannot cancel: invoice has been picked up";
-    else if (data.statusname === "Cancelled") cancelReason = "Invoice is already cancelled";
     else cancelReason = "Cannot cancel in current status";
   }
 
@@ -158,6 +176,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
       ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/sales/${data.invoicenumber}/edit` }
       : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
     { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: () => handlePrint(defaultTemplate), disabled: printing },
+    { key: 'packing-slip', label: 'Packing Slip', icon: <Package size={14} />, onClick: () => handlePrint('packing_slip'), disabled: printing },
     { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
     ...(canSendSMS ? [{ key: 'sms', label: 'Share SMS', icon: <MessageCircle size={14} />, onClick: handleSendSMS, disabled: smsSending }] : []),
     canCancel
@@ -187,17 +206,17 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
             title={`Print Invoice (${TEMPLATE_LABELS[defaultTemplate]})`}>
             <Printer size={14} />
           </button>
-          <button type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, paddingLeft: 1 }}
-            onClick={() => setShowTemplateMenu(v => !v)} disabled={printing} title="Choose print layout">
+          <button ref={chevronRef} type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, paddingLeft: 1 }}
+            onClick={toggleTemplateMenu} disabled={printing} title="Choose print layout">
             <ChevronDown size={10} />
           </button>
-          {showTemplateMenu && (
-            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 148, padding: "4px 0" }}
+          {showTemplateMenu && typeof document !== "undefined" && ReactDOM.createPortal(
+            <div style={{ position: "absolute", top: templateMenuPos.top, left: templateMenuPos.left, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 148, padding: "4px 0" }}
               onMouseLeave={() => setShowTemplateMenu(false)}>
               {(Object.keys(TEMPLATE_LABELS) as PrintTemplate[]).map(t => (
                 <button key={t} type="button" className="dropdown-item"
                   style={{ fontSize: 12, padding: "4px 12px", background: t === defaultTemplate ? "#f0f4ff" : undefined, fontWeight: t === defaultTemplate ? 600 : undefined }}
-                  onClick={() => handlePrint(t)}>
+                  onClick={() => { setShowTemplateMenu(false); handlePrint(t); }}>
                   {TEMPLATE_LABELS[t]}{t === defaultTemplate ? " ★" : ""}
                 </button>
               ))}
@@ -207,9 +226,16 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
                 onClick={() => setShowTemplateMenu(false)}>
                 Change default…
               </Link>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
+
+        {/* Packing Slip */}
+        <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#fd7e14" }}
+          onClick={() => handlePrint('packing_slip')} disabled={printing} title="Print Packing Slip">
+          <Package size={14} />
+        </button>
 
         {/* Email */}
         <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#6f42c1" }}
