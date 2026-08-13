@@ -22,6 +22,9 @@ export interface ColumnMapping {
   orderunitcost: string;
   imageurl: string;
   orddiscount: string;
+  itemlength: string;
+  itemsize: string;
+  itemcolor: string;
   defaultUnit: string;
   categoryid?: number;
   subcategoryid?: number;
@@ -34,12 +37,15 @@ const EMPTY_MAPPING: ColumnMapping = {
   orderunitcost: '',
   imageurl: '',
   orddiscount: '',
+  itemlength: '',
+  itemsize: '',
+  itemcolor: '',
   defaultUnit: 'Pc',
 };
 
 const REQUIRED_FIELDS: StringColumnKey[] = ['itemcode', 'itemdescription', 'qtyordered', 'orderunitcost'];
 
-type StringColumnKey = 'itemcode' | 'itemdescription' | 'qtyordered' | 'orderunitcost' | 'imageurl' | 'orddiscount' | 'defaultUnit';
+type StringColumnKey = 'itemcode' | 'itemdescription' | 'qtyordered' | 'orderunitcost' | 'imageurl' | 'orddiscount' | 'itemlength' | 'itemsize' | 'itemcolor' | 'defaultUnit';
 
 interface FieldDef {
   key: StringColumnKey;
@@ -54,6 +60,9 @@ const FIELDS: FieldDef[] = [
   { key: 'orderunitcost', label: 'Unit Cost', required: true },
   { key: 'imageurl', label: 'Image URL', required: false },
   { key: 'orddiscount', label: 'Discount %', required: false },
+  { key: 'itemlength', label: 'Length', required: false },
+  { key: 'itemsize', label: 'Width', required: false },
+  { key: 'itemcolor', label: 'Color', required: false },
 ];
 
 interface Props {

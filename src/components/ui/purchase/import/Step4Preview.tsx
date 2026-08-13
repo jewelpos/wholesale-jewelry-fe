@@ -31,6 +31,9 @@ interface MappedRow {
   orderunitcost: number | null;
   orddiscount: number | null;
   imageurl: string;
+  itemlength: string;
+  itemsize: string;
+  itemcolor: string;
   hasHardError: boolean;
   missingDescOnly: boolean;
   itemid?: number;
@@ -153,6 +156,9 @@ export default function Step4Preview({
       const itemunit = mapping.defaultUnit || 'Pc';
       const orddiscount = mapping.orddiscount ? cleanNumeric(getCell(row, mapping.orddiscount)) : null;
       const imageurl = mapping.imageurl ? cleanCell(getCell(row, mapping.imageurl)) : '';
+      const itemlength = mapping.itemlength ? cleanCell(getCell(row, mapping.itemlength)) : '';
+      const itemsize = mapping.itemsize ? cleanCell(getCell(row, mapping.itemsize)) : '';
+      const itemcolor = mapping.itemcolor ? cleanCell(getCell(row, mapping.itemcolor)) : '';
 
       if (!itemcode && !itemdescription && qtyordered === null && orderunitcost === null) continue;
 
@@ -170,6 +176,9 @@ export default function Step4Preview({
         orderunitcost,
         orddiscount,
         imageurl,
+        itemlength,
+        itemsize,
+        itemcolor,
         hasHardError,
         missingDescOnly,
       });
@@ -309,6 +318,12 @@ export default function Step4Preview({
   async function handleImport(overrideRows?: MappedRow[]) {
     const finalRows = overrideRows ?? resolveFinal();
     const newRows = finalRows.filter((r) => r.isNew && r.itemcode);
+    // Existing items aren't otherwise touched by import — only sent through if this
+    // sheet actually mapped length/width/color, so the backend has something to update.
+    const existingRowsWithLwc = finalRows.filter(
+      (r) => !r.isNew && r.itemcode && (r.itemlength || r.itemsize || r.itemcolor),
+    );
+    const rowsToSend = [...newRows, ...existingRowsWithLwc];
 
     onImportStart?.();
     setImporting(true);
@@ -317,12 +332,12 @@ export default function Step4Preview({
 
     let createdMap: Record<string, number> = {};
 
-    if (newRows.length > 0) {
+    if (rowsToSend.length > 0) {
       try {
         const payload = {
           storeid: storeId,
           warehouseid: warehouseId,
-          items: newRows.map((r) => ({
+          items: rowsToSend.map((r) => ({
             itemcode: r.itemcode,
             itemdescription: r.itemdescription || r.itemcode,
             itemunit: r.itemunit,
@@ -330,6 +345,9 @@ export default function Step4Preview({
             itempurchaseprice: r.orderunitcost ?? 0,
             categoryid: r.categoryid ?? undefined,
             subcategoryid: r.subcategoryid ?? undefined,
+            itemlength: r.itemlength || undefined,
+            itemsize: r.itemsize || undefined,
+            itemcolor: r.itemcolor || undefined,
           })),
         };
 
