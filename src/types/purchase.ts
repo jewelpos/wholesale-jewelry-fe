@@ -200,6 +200,12 @@ export type PurchaseOrderItem = {
   adjustedby?: string;
 };
 
+export type PurchaseOrderItemsListType = PurchaseOrderItem & {
+  supplierid?: number;
+  warehouseid?: number;
+  outletid?: number;
+};
+
 export type PurchaseOrderItemResponseType = {
   total: number;
   data: PurchaseOrderItem[];

@@ -57,6 +57,55 @@ export const GET_SUPPLIER_PURCHASE_ORDER_LIST_QUERY = gql`
   }
 `;
 
+export const GET_PURCHASE_ORDER_ITEMS_LIST_QUERY = gql`
+  query GetPurchaseOrderItemsList(
+    $outletid: Int!
+    $supplierid: Int
+    $page: Int!
+    $perpage: Int!
+    $filters: [FilterKeyValuePair]
+    $sortModel: [SortModelInput]
+    $rowGroupCols: [RowGroupColInput]
+    $groupKeys: [String]
+  ) {
+    getPurchaseOrderItemsList(
+      outletid: $outletid
+      supplierid: $supplierid
+      page: $page
+      perpage: $perpage
+      filters: $filters
+      sortModel: $sortModel
+      rowGroupCols: $rowGroupCols
+      groupKeys: $groupKeys
+    ) {
+      total
+      data {
+        poitemid
+        ponumber
+        itemcode
+        itemdescription
+        qtyordered
+        itemqtyreceived
+        itemqtybackorder
+        orderunitcost
+        orddiscount
+        ordextendedprice
+        additionalcost
+        finalunitcost
+        lastmodifieddate
+        status
+        suppliername
+        warehouse
+        pobackorderadjusteddate
+        adjustedby
+        supplierid
+        warehouseid
+        outletid
+      }
+    }
+  }
+`;
+
 export const GET_SUPPLIER_PURCHASE_ORDER_LIST_BY_STATUS_QUERY = gql`
   query GetSupplierPurchaseOrderListByStatus(
     $storeid: Int!
