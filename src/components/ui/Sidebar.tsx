@@ -161,17 +161,17 @@ const Sidebar = ({ menus }: Props) => {
                       textAlign: "left",
                     }}
                   >
-                    <span style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>
                       {currentStoreName}
                     </span>
-                    <ChevronRight size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <ChevronRight size={11} style={{ color: "#64748b", flexShrink: 0 }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {currentOutletName}
                     </span>
                     <ChevronDown
                       size={13}
                       style={{
-                        color: "#64748b",
+                        color: "#475569",
                         flexShrink: 0,
                         transform: outletOpen ? "rotate(180deg)" : "rotate(0deg)",
                         transition: "transform 0.2s",
@@ -196,7 +196,7 @@ const Sidebar = ({ menus }: Props) => {
                               style={{
                                 padding: "6px 20px 4px",
                                 fontSize: 10,
-                                color: "#94a3b8",
+                                color: "#64748b",
                                 textTransform: "uppercase",
                                 letterSpacing: "0.07em",
                                 fontWeight: 700,
@@ -271,7 +271,10 @@ const Sidebar = ({ menus }: Props) => {
                               }`}
                             >
                               <MenuIcon size={18} strokeWidth={1.75} />
-                              <span className="custom-active-span">
+                              <span
+                                className="custom-active-span"
+                                style={!isActive ? { color: "#5f6e84" } : undefined}
+                              >
                                 {menu.menuname}
                               </span>
                               {menu.children && (

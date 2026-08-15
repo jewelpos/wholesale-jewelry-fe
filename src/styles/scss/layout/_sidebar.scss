@@ -62,11 +62,11 @@
           position: relative;
           color: $secondary;
           svg {
-            color: #637381;
+            color: $text-muted;
           }
           img {
             width: 18px;
-            color: #637381;
+            color: $text-muted;
           }
           &:hover {
             background: $primary-100;
@@ -107,7 +107,7 @@
           span {
             font-size: $font-size-15;
             font-weight: $font-weight-medium;
-            color: $gray-600;
+            color: $text-muted;
           }
         }
         &.active {
@@ -178,7 +178,7 @@
                 -ms-flex-align: center;
                 font-weight: $font-weight-medium;
                 font-size: $font-size-15;
-                color: #67748e;
+                color: $text-muted;
                 position: relative;
                 width: 100%;
                 @include margin-padding(null, 10px 10px 10px 18px);
@@ -678,7 +678,7 @@ body.mini-sidebar {
       -ms-flex-pack: center;
       font-weight: $font-weight-medium;
       font-size: $font-size-15;
-      color: #67748e;
+      color: $text-muted;
       position: relative;
       width: 100%;
       padding: 10px;
