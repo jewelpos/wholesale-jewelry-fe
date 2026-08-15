@@ -273,7 +273,10 @@ const Sidebar = ({ menus }: Props) => {
                               <MenuIcon size={18} strokeWidth={1.75} />
                               <span
                                 className="custom-active-span"
-                                style={!isActive ? { color: "#5f6e84" } : undefined}
+                                style={{
+                                  fontWeight: 600,
+                                  ...(!isActive ? { color: "#0f172a" } : {}),
+                                }}
                               >
                                 {menu.menuname}
                               </span>
@@ -307,7 +310,7 @@ const Sidebar = ({ menus }: Props) => {
                                     >
                                       <Link
                                         href={`${basePath}${menu.menuurl}${item.menuurl}`}
-                                        style={{ color: "#495057" }}
+                                        style={{ color: "#334155" }}
                                         className={`${
                                           isChildActive ? "active" : ""
                                         } ${
