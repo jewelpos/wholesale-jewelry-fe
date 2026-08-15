@@ -669,6 +669,15 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             <Label>Color</Label>
             <input type="text" className="form-control form-control-sm" {...register("itemcolor")} />
           </div>
+          <div className="col-lg-3 col-md-6">
+            <Label>Weight</Label>
+            <input
+              type="number"
+              step="0.01"
+              className="form-control form-control-sm"
+              {...register("itemweight", { valueAsNumber: true })}
+            />
+          </div>
         </div>
 
         <div className="row g-2 mb-3">

@@ -46,7 +46,7 @@ export type ItemDetails = {
   adjdate?: string;
   adjremarks?: string;
 
-  ringgoldweight?: number;
+  itemweight?: number;
   itemmetalpremiume?: number;
   itemtype?: string;
   itemsetpcs?: string;
