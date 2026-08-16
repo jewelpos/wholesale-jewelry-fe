@@ -25,6 +25,8 @@ import ProductInformationTab from "./ProductInformationTab";
 import ProductStoneDetailsTab from "./ProductStoneDetailsTab";
 import ProductBulkPricingCard from "./ProductBulkPricingCard";
 import PlaceHolder from "../../PlaceHolder";
+import useFieldVisibility from "@/hooks/useFieldVisibility";
+import { STONE_DETAILS_SECTION_KEY } from "@/lib/formFieldVisibility/types";
 
 const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const { itemcode } = useParams();
@@ -45,6 +47,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const [bulkTiersDirty, setBulkTiersDirty] = useState(false);
   const [getBulkDiscounts] = useLazyQuery(GET_PRODUCT_BULK_DISCOUNTS_QUERY);
   const [saveBulkDiscounts] = useMutation(SAVE_PRODUCT_BULK_DISCOUNTS_MUTATION);
+  const { hiddenFields } = useFieldVisibility("product", parsedStoreId);
 
   const {
     register,
@@ -364,15 +367,18 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
           isEdit={isEdit}
           barcodeId={productData?.itembarcodeid}
           marginAmount={marginAmount}
+          hiddenFields={hiddenFields}
         />
-        <ProductStoneDetailsTab
-          register={register}
-          errors={errors}
-          control={control}
-          trigger={trigger}
-          setValue={setValue}
-          disableField={disableField}
-        />
+        {!hiddenFields.has(STONE_DETAILS_SECTION_KEY) && (
+          <ProductStoneDetailsTab
+            register={register}
+            errors={errors}
+            control={control}
+            trigger={trigger}
+            setValue={setValue}
+            disableField={disableField}
+          />
+        )}
         {!disableField && (
           <ProductBulkPricingCard
             tiers={bulkTiers}

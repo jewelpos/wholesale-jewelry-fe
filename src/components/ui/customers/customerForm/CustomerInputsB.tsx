@@ -44,6 +44,7 @@ interface Props {
   // a historical field, never a manual choice, so it's locked for creation regardless
   // of the user's own outlet access. Editing an existing customer is unaffected.
   disableWarehouseField?: boolean;
+  hiddenFields?: Set<string>;
 }
 
 const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
@@ -70,7 +71,9 @@ const CustomerInputsB = ({
   marketingoptin,
   disableField,
   disableWarehouseField,
+  hiddenFields,
 }: Props) => {
+  const isHidden = (key: string) => hiddenFields?.has(key) ?? false;
   return (
     <>
       {/* Warehouse */}
@@ -132,92 +135,108 @@ const CustomerInputsB = ({
       </div>
 
       {/* Terms */}
-      <SectionLabel label="Terms" icon={FileText} />
-      <div className="row">
-        <div className="col-6 mb-3">
-          <label className="form-label">Payment Terms</label>
-          <Controller
-            name="termsid"
-            control={control}
-            render={({ field }) => (
-              <SelectPaymentTerms
-                className=""
-                trigger={trigger}
-                setValue={setValue}
-                storeId={storeId}
-                isDisabled={disableField}
-                {...field}
-              />
+      {(!isHidden("termsid") || !isHidden("custshippingmethod")) && (
+        <>
+          <SectionLabel label="Terms" icon={FileText} />
+          <div className="row">
+            {!isHidden("termsid") && (
+              <div className="col-6 mb-3">
+                <label className="form-label">Payment Terms</label>
+                <Controller
+                  name="termsid"
+                  control={control}
+                  render={({ field }) => (
+                    <SelectPaymentTerms
+                      className=""
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      isDisabled={disableField}
+                      {...field}
+                    />
+                  )}
+                />
+              </div>
             )}
-          />
-        </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Shipping Mode</label>
-          <Controller
-            name="custshippingmethod"
-            control={control}
-            render={({ field }) => (
-              <SelectShippingModes
-                className=""
-                trigger={trigger}
-                setValue={setValue}
-                storeId={storeId}
-                isDisabled={disableField}
-                {...field}
-              />
+            {!isHidden("custshippingmethod") && (
+              <div className="col-6 mb-3">
+                <label className="form-label">Shipping Mode</label>
+                <Controller
+                  name="custshippingmethod"
+                  control={control}
+                  render={({ field }) => (
+                    <SelectShippingModes
+                      className=""
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      isDisabled={disableField}
+                      {...field}
+                    />
+                  )}
+                />
+              </div>
             )}
-          />
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Sales Rep */}
-      <SectionLabel label="Sales Representative" icon={UserCheck} />
-      <div className="row">
-        <div className="col-12 mb-3">
-          <label className="form-label">Default Sales Rep</label>
-          <Controller
-            name="default_salesrep_userid"
-            control={control}
-            render={({ field }) => (
-              <SelectEmployee
-                storeId={storeId}
-                isDisabled={disableField}
-                trigger={trigger}
-                {...field}
+      {!isHidden("default_salesrep_userid") && (
+        <>
+          <SectionLabel label="Sales Representative" icon={UserCheck} />
+          <div className="row">
+            <div className="col-12 mb-3">
+              <label className="form-label">Default Sales Rep</label>
+              <Controller
+                name="default_salesrep_userid"
+                control={control}
+                render={({ field }) => (
+                  <SelectEmployee
+                    storeId={storeId}
+                    isDisabled={disableField}
+                    trigger={trigger}
+                    {...field}
+                  />
+                )}
               />
-            )}
-          />
-          <div style={{ fontSize: 11, color: "#6c757d", marginTop: 4 }}>
-            Auto-fills on new invoices for this customer
+              <div style={{ fontSize: 11, color: "#6c757d", marginTop: 4 }}>
+                Auto-fills on new invoices for this customer
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Financials */}
       <SectionLabel label="Financials" icon={CreditCard} />
       <div className="row">
-        <div className="col-6 mb-3">
-          <label className="form-label">Credit Limit</label>
-          <input
-            type="text"
-            className={`form-control${errors.custcreditlimit ? " is-invalid" : ""}`}
-            {...register("custcreditlimit")}
-          />
-          {errors.custcreditlimit && (
-            <div className="invalid-feedback">{errors.custcreditlimit.message}</div>
-          )}
-        </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Discount %</label>
-          <input
-            type="text"
-            className={`form-control${errors.custdiscount ? " is-invalid" : ""}`}
-            {...register("custdiscount")}
-          />
-          {errors.custdiscount && (
-            <div className="invalid-feedback">{errors.custdiscount.message}</div>
-          )}
-        </div>
+        {!isHidden("custcreditlimit") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Credit Limit</label>
+            <input
+              type="text"
+              className={`form-control${errors.custcreditlimit ? " is-invalid" : ""}`}
+              {...register("custcreditlimit")}
+            />
+            {errors.custcreditlimit && (
+              <div className="invalid-feedback">{errors.custcreditlimit.message}</div>
+            )}
+          </div>
+        )}
+        {!isHidden("custdiscount") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Discount %</label>
+            <input
+              type="text"
+              className={`form-control${errors.custdiscount ? " is-invalid" : ""}`}
+              {...register("custdiscount")}
+            />
+            {errors.custdiscount && (
+              <div className="invalid-feedback">{errors.custdiscount.message}</div>
+            )}
+          </div>
+        )}
         <div className="col-6 mb-3">
           <label className="form-label">Tax ID <span className="text-danger">*</span></label>
           <input
@@ -229,20 +248,24 @@ const CustomerInputsB = ({
             <div className="invalid-feedback">{errors.custtaxid.message}</div>
           )}
         </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Sales Tax %</label>
-          <input
-            type="text"
-            className={`form-control${errors.custsalestax ? " is-invalid" : ""}`}
-            {...register("custsalestax")}
-          />
-        </div>
+        {!isHidden("custsalestax") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Sales Tax %</label>
+            <input
+              type="text"
+              className={`form-control${errors.custsalestax ? " is-invalid" : ""}`}
+              {...register("custsalestax")}
+            />
+          </div>
+        )}
       </div>
 
       {/* Status */}
-      <SectionLabel label="Status" icon={Activity} />
-      <div className="row">
-        <div className="col-12 mb-3">
+      {!isHidden("status") && (
+        <>
+          <SectionLabel label="Status" icon={Activity} />
+          <div className="row">
+            <div className="col-12 mb-3">
           <div
             style={{
               background: status === 1 ? "#f0fdf4" : "#f8f9fa",
@@ -288,12 +311,17 @@ const CustomerInputsB = ({
               />
             </div>
           </div>
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Alerts */}
+      {(!isHidden("custalert") || !isHidden("custalertremarks")) && (
+      <>
       <SectionLabel label="Alerts" icon={Bell} />
       <div className="row">
+        {!isHidden("custalert") && (
         <div className="col-12 mb-3">
           <div
             style={{
@@ -341,6 +369,8 @@ const CustomerInputsB = ({
             </div>
           </div>
         </div>
+        )}
+        {!isHidden("custalertremarks") && (
         <div className="col-12 mb-3">
           <label className="form-label">Alert Message</label>
           <textarea
@@ -353,9 +383,14 @@ const CustomerInputsB = ({
             <div className="invalid-feedback">{errors.custalertremarks.message}</div>
           )}
         </div>
+        )}
       </div>
+      </>
+      )}
 
       {/* Marketing */}
+      {!isHidden("marketingoptin") && (
+        <>
       <SectionLabel label="Marketing" icon={Mail} />
       <div className="row">
         <div className="col-12 mb-3">
@@ -404,8 +439,12 @@ const CustomerInputsB = ({
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Notes */}
+      {!isHidden("custremarks") && (
+        <>
       <SectionLabel label="Notes" icon={StickyNote} />
       <div className="row">
         <div className="col-12 mb-3">
@@ -421,6 +460,8 @@ const CustomerInputsB = ({
           )}
         </div>
       </div>
+        </>
+      )}
     </>
   );
 };

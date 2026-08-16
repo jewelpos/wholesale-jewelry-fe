@@ -22,6 +22,7 @@ import SupplierInputsB from "./SupplierInputsB";
 import PlaceHolder from "../../PlaceHolder";
 import { Truck, Settings } from "lucide-react";
 import useWarehouse from "@/hooks/useWarehouse";
+import useFieldVisibility from "@/hooks/useFieldVisibility";
 
 const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   const { supplierId } = useParams();
@@ -84,6 +85,7 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
   const [loading, setLoading] = useState(false);
 
   const { fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  const { hiddenFields } = useFieldVisibility("supplier", parsedStoreId);
 
   useEffect(() => {
     if (parsedStoreId) fetchWarehouseByStoreId(parsedStoreId);
@@ -208,6 +210,7 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
                       trigger={trigger}
                       supplierId={supplierid}
                       disableField={disableField}
+                      hiddenFields={hiddenFields}
                     />
                   </div>
                 </div>
@@ -246,6 +249,7 @@ const SupplierForm = ({ disableField }: { disableField?: boolean }) => {
                       warehouseId={warehouseId}
                       status={status}
                       disableField={disableField}
+                      hiddenFields={hiddenFields}
                     />
                   </div>
                 </div>

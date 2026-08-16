@@ -33,6 +33,7 @@ interface Props {
   warehouseId: string;
   status: number;
   disableField?: boolean;
+  hiddenFields?: Set<string>;
 }
 
 const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
@@ -64,7 +65,9 @@ const SupplierInputsB = ({
   warehouseId,
   status,
   disableField,
+  hiddenFields,
 }: Props) => {
+  const isHidden = (key: string) => hiddenFields?.has(key) ?? false;
   return (
     <>
       {/* Warehouse */}
@@ -116,64 +119,78 @@ const SupplierInputsB = ({
       </div>
 
       {/* Terms */}
-      <SectionLabel label="Terms" icon={FileText} />
-      <div className="row">
-        <div className="col-6 mb-3">
-          <label className="form-label">Payment Terms</label>
-          <Controller
-            name="termsid"
-            control={control}
-            render={({ field }) => (
-              <SelectPaymentTerms
-                className=""
-                trigger={trigger}
-                setValue={setValue}
-                storeId={storeId}
-                isDisabled={disableField}
-                {...field}
-              />
+      {(!isHidden("termsid") || !isHidden("shippimgmethod")) && (
+        <>
+          <SectionLabel label="Terms" icon={FileText} />
+          <div className="row">
+            {!isHidden("termsid") && (
+              <div className="col-6 mb-3">
+                <label className="form-label">Payment Terms</label>
+                <Controller
+                  name="termsid"
+                  control={control}
+                  render={({ field }) => (
+                    <SelectPaymentTerms
+                      className=""
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      isDisabled={disableField}
+                      {...field}
+                    />
+                  )}
+                />
+              </div>
             )}
-          />
-        </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Shipping Mode</label>
-          <Controller
-            name="shippimgmethod"
-            control={control}
-            render={({ field }) => (
-              <SelectShippingModes
-                className=""
-                trigger={trigger}
-                setValue={setValue}
-                storeId={storeId}
-                isDisabled={disableField}
-                {...field}
-              />
+            {!isHidden("shippimgmethod") && (
+              <div className="col-6 mb-3">
+                <label className="form-label">Shipping Mode</label>
+                <Controller
+                  name="shippimgmethod"
+                  control={control}
+                  render={({ field }) => (
+                    <SelectShippingModes
+                      className=""
+                      trigger={trigger}
+                      setValue={setValue}
+                      storeId={storeId}
+                      isDisabled={disableField}
+                      {...field}
+                    />
+                  )}
+                />
+              </div>
             )}
-          />
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Account */}
-      <SectionLabel label="Account" icon={CreditCard} />
-      <div className="row">
-        <div className="col-12 mb-3">
-          <label className="form-label">Account No</label>
-          <input
-            type="text"
-            className={`form-control${errors.accountno ? " is-invalid" : ""}`}
-            {...register("accountno")}
-          />
-          {errors.accountno && (
-            <div className="invalid-feedback">{errors.accountno.message}</div>
-          )}
-        </div>
-      </div>
+      {!isHidden("accountno") && (
+        <>
+          <SectionLabel label="Account" icon={CreditCard} />
+          <div className="row">
+            <div className="col-12 mb-3">
+              <label className="form-label">Account No</label>
+              <input
+                type="text"
+                className={`form-control${errors.accountno ? " is-invalid" : ""}`}
+                {...register("accountno")}
+              />
+              {errors.accountno && (
+                <div className="invalid-feedback">{errors.accountno.message}</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Status */}
-      <SectionLabel label="Status" icon={Activity} />
-      <div className="row">
-        <div className="col-12 mb-3">
+      {!isHidden("supplierstatus") && (
+        <>
+          <SectionLabel label="Status" icon={Activity} />
+          <div className="row">
+            <div className="col-12 mb-3">
           <div
             style={{
               background: status === 1 ? "#f0fdf4" : "#f8f9fa",
@@ -225,25 +242,31 @@ const SupplierInputsB = ({
               />
             </div>
           </div>
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Notes */}
-      <SectionLabel label="Notes" icon={StickyNote} />
-      <div className="row">
-        <div className="col-12 mb-3">
-          <label className="form-label">Remarks</label>
-          <textarea
-            rows={3}
-            className={`form-control${errors.remarks ? " is-invalid" : ""}`}
-            placeholder="Internal notes about this supplier..."
-            {...register("remarks")}
-          />
-          {errors.remarks && (
-            <div className="invalid-feedback">{errors.remarks.message}</div>
-          )}
-        </div>
-      </div>
+      {!isHidden("remarks") && (
+        <>
+          <SectionLabel label="Notes" icon={StickyNote} />
+          <div className="row">
+            <div className="col-12 mb-3">
+              <label className="form-label">Remarks</label>
+              <textarea
+                rows={3}
+                className={`form-control${errors.remarks ? " is-invalid" : ""}`}
+                placeholder="Internal notes about this supplier..."
+                {...register("remarks")}
+              />
+              {errors.remarks && (
+                <div className="invalid-feedback">{errors.remarks.message}</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };

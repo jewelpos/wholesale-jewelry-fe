@@ -21,6 +21,7 @@ interface Props {
   trigger: UseFormTrigger<SupplierFormType>;
   supplierId: string | undefined;
   disableField?: boolean;
+  hiddenFields?: Set<string>;
 }
 
 const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
@@ -49,7 +50,9 @@ const SupplierInputsA = ({
   trigger,
   supplierId,
   disableField,
+  hiddenFields,
 }: Props) => {
+  const isHidden = (key: string) => hiddenFields?.has(key) ?? false;
   return (
     <>
       {/* Company */}
@@ -85,17 +88,19 @@ const SupplierInputsA = ({
       {/* Address */}
       <SectionLabel label="Address" icon={MapPin} />
       <div className="row">
-        <div className="col-12 mb-3">
-          <label className="form-label">Street Address</label>
-          <input
-            type="text"
-            className={`form-control${errors.address1 ? " is-invalid" : ""}`}
-            {...register("address1")}
-          />
-          {errors.address1 && (
-            <div className="invalid-feedback">{errors.address1.message}</div>
-          )}
-        </div>
+        {!isHidden("address1") && (
+          <div className="col-12 mb-3">
+            <label className="form-label">Street Address</label>
+            <input
+              type="text"
+              className={`form-control${errors.address1 ? " is-invalid" : ""}`}
+              {...register("address1")}
+            />
+            {errors.address1 && (
+              <div className="invalid-feedback">{errors.address1.message}</div>
+            )}
+          </div>
+        )}
         <div className="col-6 mb-3">
           <label className="form-label">City <span className="text-danger">*</span></label>
           <input
@@ -107,46 +112,52 @@ const SupplierInputsA = ({
             <div className="invalid-feedback">{errors.city.message}</div>
           )}
         </div>
-        <div className="col-3 mb-3">
-          <label className="form-label">State</label>
-          <input
-            type="text"
-            className={`form-control${errors.state ? " is-invalid" : ""}`}
-            {...register("state")}
-          />
-          {errors.state && (
-            <div className="invalid-feedback">{errors.state.message}</div>
-          )}
-        </div>
-        <div className="col-3 mb-3">
-          <label className="form-label">Zip</label>
-          <input
-            type="text"
-            className={`form-control${errors.zipcode ? " is-invalid" : ""}`}
-            {...register("zipcode")}
-          />
-          {errors.zipcode && (
-            <div className="invalid-feedback">{errors.zipcode.message}</div>
-          )}
-        </div>
-        <div className="col-12 mb-3">
-          <label className="form-label">Country</label>
-          <Controller
-            name="country"
-            control={control}
-            render={({ field }) => (
-              <SelectCountry
-                className={errors.country ? "is-invalid" : ""}
-                trigger={trigger}
-                disableField={disableField}
-                {...field}
-              />
+        {!isHidden("state") && (
+          <div className="col-3 mb-3">
+            <label className="form-label">State</label>
+            <input
+              type="text"
+              className={`form-control${errors.state ? " is-invalid" : ""}`}
+              {...register("state")}
+            />
+            {errors.state && (
+              <div className="invalid-feedback">{errors.state.message}</div>
             )}
-          />
-          {errors.country && (
-            <div className="invalid-feedback">{errors.country.message}</div>
-          )}
-        </div>
+          </div>
+        )}
+        {!isHidden("zipcode") && (
+          <div className="col-3 mb-3">
+            <label className="form-label">Zip</label>
+            <input
+              type="text"
+              className={`form-control${errors.zipcode ? " is-invalid" : ""}`}
+              {...register("zipcode")}
+            />
+            {errors.zipcode && (
+              <div className="invalid-feedback">{errors.zipcode.message}</div>
+            )}
+          </div>
+        )}
+        {!isHidden("country") && (
+          <div className="col-12 mb-3">
+            <label className="form-label">Country</label>
+            <Controller
+              name="country"
+              control={control}
+              render={({ field }) => (
+                <SelectCountry
+                  className={errors.country ? "is-invalid" : ""}
+                  trigger={trigger}
+                  disableField={disableField}
+                  {...field}
+                />
+              )}
+            />
+            {errors.country && (
+              <div className="invalid-feedback">{errors.country.message}</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Contact Person */}
@@ -179,17 +190,19 @@ const SupplierInputsA = ({
             <div className="invalid-feedback">{errors.phone1.message}</div>
           )}
         </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Cell Phone</label>
-          <input
-            type="text"
-            className={`form-control${errors.cellphone ? " is-invalid" : ""}`}
-            {...register("cellphone", phoneNumberValidationCustomized(""))}
-          />
-          {errors.cellphone && (
-            <div className="invalid-feedback">{errors.cellphone.message}</div>
-          )}
-        </div>
+        {!isHidden("cellphone") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Cell Phone</label>
+            <input
+              type="text"
+              className={`form-control${errors.cellphone ? " is-invalid" : ""}`}
+              {...register("cellphone", phoneNumberValidationCustomized(""))}
+            />
+            {errors.cellphone && (
+              <div className="invalid-feedback">{errors.cellphone.message}</div>
+            )}
+          </div>
+        )}
         <div className="col-6 mb-3">
           <label className="form-label">Email <span className="text-danger">*</span></label>
           <input
@@ -201,17 +214,19 @@ const SupplierInputsA = ({
             <div className="invalid-feedback">{errors.emailaddress.message}</div>
           )}
         </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Website</label>
-          <input
-            type="text"
-            className={`form-control${errors.webaddress ? " is-invalid" : ""}`}
-            {...register("webaddress")}
-          />
-          {errors.webaddress && (
-            <div className="invalid-feedback">{errors.webaddress.message}</div>
-          )}
-        </div>
+        {!isHidden("webaddress") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Website</label>
+            <input
+              type="text"
+              className={`form-control${errors.webaddress ? " is-invalid" : ""}`}
+              {...register("webaddress")}
+            />
+            {errors.webaddress && (
+              <div className="invalid-feedback">{errors.webaddress.message}</div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

@@ -19,6 +19,7 @@ import { useQuery } from "@apollo/client";
 import PlaceHolder from "../../PlaceHolder";
 import { UserRound, Settings } from "lucide-react";
 import useWarehouse from "@/hooks/useWarehouse";
+import useFieldVisibility from "@/hooks/useFieldVisibility";
 
 const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const { customerId } = useParams();
@@ -91,6 +92,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const [pendingDocFiles, setPendingDocFiles] = useState<File[]>([]);
 
   const { fetchWarehouseByStoreId, fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  const { hiddenFields } = useFieldVisibility("customer", parsedStoreId);
 
   useEffect(() => {
     // New customer: the home warehouse must always be the current outlet's own —
@@ -276,6 +278,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                       customerId={customerid}
                       companyName={watch("custcompanyname")}
                       disableField={disableField}
+                      hiddenFields={hiddenFields}
                     />
                   </div>
                 </div>
@@ -318,6 +321,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
                       marketingoptin={marketingoptin}
                       disableField={disableField}
                       disableWarehouseField={!customerId}
+                      hiddenFields={hiddenFields}
                     />
                   </div>
                 </div>

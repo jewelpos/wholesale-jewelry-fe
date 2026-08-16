@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@apollo/client";
 import ActionFooter from "@/components/ui/ActionFooter";
-import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, BadgeDollarSign, LucideIcon } from "lucide-react";
+import { ChevronRight, Gem, Truck, CreditCard, Tag, TrendingUp, Settings2, Receipt, Warehouse, BadgeDollarSign, SlidersHorizontal, LucideIcon } from "lucide-react";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
@@ -192,6 +192,16 @@ const SystemSettingsHub = () => {
       count: warehouseCount,
       countLabel: "active",
     },
+    // Form Field Visibility tile intentionally hidden — feature is built and working,
+    // deferred to next release. Route/backend/components all stay in place; this just
+    // removes the only in-app navigation entry point. Re-add this tile object to enable.
+    // {
+    //   title: "Form Field Visibility",
+    //   description: "Choose which optional fields appear on Customer, Supplier, and Product forms for everyone at this store.",
+    //   href: `${base}/form_fields`,
+    //   icon: SlidersHorizontal,
+    //   accent: "#64748b",
+    // },
   ];
 
   const productMasters: SettingTile[] = [

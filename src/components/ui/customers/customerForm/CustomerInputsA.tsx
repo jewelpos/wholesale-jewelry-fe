@@ -26,6 +26,7 @@ interface Props {
   customerId: string | undefined;
   companyName?: string;
   disableField?: boolean;
+  hiddenFields?: Set<string>;
 }
 
 const SectionLabel = ({ label, icon: Icon }: { label: string; icon: LucideIcon }) => (
@@ -48,7 +49,9 @@ const CustomerInputsA = ({
   customerId,
   companyName,
   disableField,
+  hiddenFields,
 }: Props) => {
+  const isHidden = (key: string) => hiddenFields?.has(key) ?? false;
   return (
     <>
       {/* Photo */}
@@ -183,10 +186,12 @@ const CustomerInputsA = ({
             <div className="invalid-feedback">{errors.custfname.message}</div>
           )}
         </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Last Name</label>
-          <input type="text" className="form-control" {...register("custlname")} />
-        </div>
+        {!isHidden("custlname") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Last Name</label>
+            <input type="text" className="form-control" {...register("custlname")} />
+          </div>
+        )}
       </div>
 
       {/* Contact Info */}
@@ -214,17 +219,19 @@ const CustomerInputsA = ({
             <div className="invalid-feedback">{errors.custcell.message}</div>
           )}
         </div>
-        <div className="col-6 mb-3">
-          <label className="form-label">Alternate Phone</label>
-          <input
-            type="text"
-            className={`form-control${errors.custphone2 ? " is-invalid" : ""}`}
-            {...register("custphone2", phoneNumberValidationCustomized(""))}
-          />
-          {errors.custphone2 && (
-            <div className="invalid-feedback">{errors.custphone2.message}</div>
-          )}
-        </div>
+        {!isHidden("custphone2") && (
+          <div className="col-6 mb-3">
+            <label className="form-label">Alternate Phone</label>
+            <input
+              type="text"
+              className={`form-control${errors.custphone2 ? " is-invalid" : ""}`}
+              {...register("custphone2", phoneNumberValidationCustomized(""))}
+            />
+            {errors.custphone2 && (
+              <div className="invalid-feedback">{errors.custphone2.message}</div>
+            )}
+          </div>
+        )}
         <div className="col-6 mb-3">
           <label className="form-label">Email <span className="text-danger">*</span></label>
           <input

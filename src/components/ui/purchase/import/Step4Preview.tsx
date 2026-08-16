@@ -34,6 +34,7 @@ interface MappedRow {
   itemlength: string;
   itemsize: string;
   itemcolor: string;
+  itemweight: string;
   hasHardError: boolean;
   missingDescOnly: boolean;
   itemid?: number;
@@ -159,6 +160,7 @@ export default function Step4Preview({
       const itemlength = mapping.itemlength ? cleanCell(getCell(row, mapping.itemlength)) : '';
       const itemsize = mapping.itemsize ? cleanCell(getCell(row, mapping.itemsize)) : '';
       const itemcolor = mapping.itemcolor ? cleanCell(getCell(row, mapping.itemcolor)) : '';
+      const itemweight = mapping.itemweight ? cleanCell(getCell(row, mapping.itemweight)) : '';
 
       if (!itemcode && !itemdescription && qtyordered === null && orderunitcost === null) continue;
 
@@ -179,6 +181,7 @@ export default function Step4Preview({
         itemlength,
         itemsize,
         itemcolor,
+        itemweight,
         hasHardError,
         missingDescOnly,
       });
@@ -319,9 +322,9 @@ export default function Step4Preview({
     const finalRows = overrideRows ?? resolveFinal();
     const newRows = finalRows.filter((r) => r.isNew && r.itemcode);
     // Existing items aren't otherwise touched by import — only sent through if this
-    // sheet actually mapped length/width/color, so the backend has something to update.
+    // sheet actually mapped length/width/color/weight, so the backend has something to update.
     const existingRowsWithLwc = finalRows.filter(
-      (r) => !r.isNew && r.itemcode && (r.itemlength || r.itemsize || r.itemcolor),
+      (r) => !r.isNew && r.itemcode && (r.itemlength || r.itemsize || r.itemcolor || r.itemweight),
     );
     const rowsToSend = [...newRows, ...existingRowsWithLwc];
 
@@ -348,6 +351,7 @@ export default function Step4Preview({
             itemlength: r.itemlength || undefined,
             itemsize: r.itemsize || undefined,
             itemcolor: r.itemcolor || undefined,
+            itemweight: r.itemweight || undefined,
           })),
         };
 

@@ -108,6 +108,7 @@ export interface ProductInformationTabProps {
   isEdit?: boolean;
   barcodeId?: string;
   marginAmount?: number;
+  hiddenFields?: Set<string>;
 }
 
 const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
@@ -123,7 +124,9 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   isEdit,
   barcodeId,
   marginAmount = 0,
+  hiddenFields,
 }) => {
+  const isHidden = (key: string) => hiddenFields?.has(key) ?? false;
   const { outletId } = useParams();
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   const warehouse = warehouses.find(w => w.issystem);
@@ -366,23 +369,25 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                   {errors.itemcategoryid && <div className="invalid-feedback d-block">{errors.itemcategoryid.message}</div>}
                 </FieldWrap>
               </div>
-              <div className="col-lg-6 col-md-6">
-                <FieldWrap>
-                  <Label>Product Line</Label>
-                  <Controller
-                    name="subcategoryid"
-                    control={control}
-                    render={({ field }) => (
-                      <SelectSubCategory
-                        trigger={trigger}
-                        storeId={storeId}
-                        disableField={disableField}
-                        {...field}
-                      />
-                    )}
-                  />
-                </FieldWrap>
-              </div>
+              {!isHidden("subcategoryid") && (
+                <div className="col-lg-6 col-md-6">
+                  <FieldWrap>
+                    <Label>Product Line</Label>
+                    <Controller
+                      name="subcategoryid"
+                      control={control}
+                      render={({ field }) => (
+                        <SelectSubCategory
+                          trigger={trigger}
+                          storeId={storeId}
+                          disableField={disableField}
+                          {...field}
+                        />
+                      )}
+                    />
+                  </FieldWrap>
+                </div>
+              )}
             </div>
 
             {/* Row 3: Supplier · Style # · UPC # */}
@@ -407,26 +412,30 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                   {errors.supplierid && <div className="invalid-feedback d-block">{errors.supplierid.message}</div>}
                 </FieldWrap>
               </div>
-              <div className="col-lg-4 col-md-6">
-                <FieldWrap>
-                  <Label>Supplier Style #</Label>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    {...register("supplieritemcode")}
-                  />
-                </FieldWrap>
-              </div>
-              <div className="col-lg-4 col-md-6">
-                <FieldWrap>
-                  <Label>Supplier UPC #</Label>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    {...register("supplierbarcodeid")}
-                  />
-                </FieldWrap>
-              </div>
+              {!isHidden("supplieritemcode") && (
+                <div className="col-lg-4 col-md-6">
+                  <FieldWrap>
+                    <Label>Supplier Style #</Label>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      {...register("supplieritemcode")}
+                    />
+                  </FieldWrap>
+                </div>
+              )}
+              {!isHidden("supplierbarcodeid") && (
+                <div className="col-lg-4 col-md-6">
+                  <FieldWrap>
+                    <Label>Supplier UPC #</Label>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      {...register("supplierbarcodeid")}
+                    />
+                  </FieldWrap>
+                </div>
+              )}
             </div>
 
           </div>
@@ -436,64 +445,74 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
       {/* ════════════════════════════════════════════════════
           CARD 2 — METAL & MAKING CHARGES
       ════════════════════════════════════════════════════ */}
-      <SectionCard icon={Layers} title="Metal & Making Charges" accent="violet">
-        <div className="row g-2">
-          <div className="col-lg-3 col-md-6">
-            <FieldWrap>
-              <Label>Metal Type</Label>
-              <Controller
-                name="itemmetal"
-                control={control}
-                render={({ field }) => (
-                  <SelectMetalType
-                    className={errors.itemmetal ? "is-invalid" : ""}
-                    trigger={trigger}
-                    storeId={storeId}
-                    disableField={disableField}
-                    {...field}
+      {(!isHidden("itemmetal") || !isHidden("itemmetalpercent") || !isHidden("itempremium") || !isHidden("broakerage")) && (
+        <SectionCard icon={Layers} title="Metal & Making Charges" accent="violet">
+          <div className="row g-2">
+            {!isHidden("itemmetal") && (
+              <div className="col-lg-3 col-md-6">
+                <FieldWrap>
+                  <Label>Metal Type</Label>
+                  <Controller
+                    name="itemmetal"
+                    control={control}
+                    render={({ field }) => (
+                      <SelectMetalType
+                        className={errors.itemmetal ? "is-invalid" : ""}
+                        trigger={trigger}
+                        storeId={storeId}
+                        disableField={disableField}
+                        {...field}
+                      />
+                    )}
                   />
-                )}
-              />
-            </FieldWrap>
-          </div>
-          <div className="col-lg-2 col-md-6">
-            <FieldWrap>
-              <Label>Metal %</Label>
-              <div className="input-group input-group-sm">
-                <input
-                  type="text"
-                  className="form-control"
-                  {...register("itemmetalpercent")}
-                />
-                <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
+                </FieldWrap>
               </div>
-            </FieldWrap>
-          </div>
-          <div className="col-lg-2 col-md-6">
-            <FieldWrap>
-              <Label>Item Premium</Label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                {...register("itempremium")}
-              />
-            </FieldWrap>
-          </div>
-          <div className="col-lg-2 col-md-6">
-            <FieldWrap>
-              <Label>Making Charges</Label>
-              <div className="input-group input-group-sm">
-                <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
-                <input
-                  type="text"
-                  className="form-control"
-                  {...register("broakerage")}
-                />
+            )}
+            {!isHidden("itemmetalpercent") && (
+              <div className="col-lg-2 col-md-6">
+                <FieldWrap>
+                  <Label>Metal %</Label>
+                  <div className="input-group input-group-sm">
+                    <input
+                      type="text"
+                      className="form-control"
+                      {...register("itemmetalpercent")}
+                    />
+                    <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
+                  </div>
+                </FieldWrap>
               </div>
-            </FieldWrap>
+            )}
+            {!isHidden("itempremium") && (
+              <div className="col-lg-2 col-md-6">
+                <FieldWrap>
+                  <Label>Item Premium</Label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    {...register("itempremium")}
+                  />
+                </FieldWrap>
+              </div>
+            )}
+            {!isHidden("broakerage") && (
+              <div className="col-lg-2 col-md-6">
+                <FieldWrap>
+                  <Label>Making Charges</Label>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      {...register("broakerage")}
+                    />
+                  </div>
+                </FieldWrap>
+              </div>
+            )}
           </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
 
       {/* ════════════════════════════════════════════════════
           CARD 3 — PRICING & MARGINS
@@ -520,47 +539,55 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             )}
           </div>
 
-          <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
-            <ChevronRight size={16} color="#94a3b8" />
-          </div>
+          {!isHidden("profitpercent") && (
+            <>
+              <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
+                <ChevronRight size={16} color="#94a3b8" />
+              </div>
 
-          {/* Profit % */}
-          <div style={{ flex: "1 1 120px", minWidth: 100 }}>
-            <Label>Profit %</Label>
-            <div className="input-group input-group-sm">
-              <input
-                type="number"
-                step="0.01"
-                className="form-control"
-                {...register("profitpercent", { valueAsNumber: true })}
-              />
-              <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
-            </div>
-          </div>
+              {/* Profit % */}
+              <div style={{ flex: "1 1 120px", minWidth: 100 }}>
+                <Label>Profit %</Label>
+                <div className="input-group input-group-sm">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-control"
+                    {...register("profitpercent", { valueAsNumber: true })}
+                  />
+                  <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>%</span>
+                </div>
+              </div>
+            </>
+          )}
 
-          <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
-            <ChevronRight size={16} color="#94a3b8" />
-          </div>
+          {!isHidden("itemsellprice") && (
+            <>
+              <div className="d-none d-md-flex align-items-center" style={{ paddingBottom: 6 }}>
+                <ChevronRight size={16} color="#94a3b8" />
+              </div>
 
-          {/* Sell Price (auto) */}
-          <div style={{ flex: "1 1 150px", minWidth: 130 }}>
-            <Label>
-              Sell Price{" "}
-              <span style={{ fontSize: 10, background: "#dcfce7", color: "#166534", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
-                AUTO
-              </span>
-            </Label>
-            <div className="input-group input-group-sm">
-              <span className="input-group-text" style={{ background: "#f0fdf4", fontSize: 13 }}>$</span>
-              <input
-                type="number"
-                step="0.01"
-                className="form-control"
-                style={{ background: "#f0fdf4" }}
-                {...register("itemsellprice", { valueAsNumber: true })}
-              />
-            </div>
-          </div>
+              {/* Sell Price (auto) */}
+              <div style={{ flex: "1 1 150px", minWidth: 130 }}>
+                <Label>
+                  Sell Price{" "}
+                  <span style={{ fontSize: 10, background: "#dcfce7", color: "#166534", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
+                    AUTO
+                  </span>
+                </Label>
+                <div className="input-group input-group-sm">
+                  <span className="input-group-text" style={{ background: "#f0fdf4", fontSize: 13 }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-control"
+                    style={{ background: "#f0fdf4" }}
+                    {...register("itemsellprice", { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Live margin badge */}
           {marginAmount > 0 && (
@@ -578,44 +605,50 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
 
         {/* Row 2: Tag Price · Price Code · Item Discount */}
         <div className="row g-2">
-          <div className="col-lg-3 col-md-6">
-            <Label>
-              Tag Price{" "}
-              <span style={{ fontSize: 10, background: "#dbeafe", color: "#1e40af", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
-                AUTO
-              </span>
-            </Label>
-            <div className="input-group input-group-sm">
-              <span className="input-group-text" style={{ background: "#f0f9ff", fontSize: 13 }}>$</span>
+          {!isHidden("itemtagprice") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>
+                Tag Price{" "}
+                <span style={{ fontSize: 10, background: "#dbeafe", color: "#1e40af", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginLeft: 4 }}>
+                  AUTO
+                </span>
+              </Label>
+              <div className="input-group input-group-sm">
+                <span className="input-group-text" style={{ background: "#f0f9ff", fontSize: 13 }}>$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="form-control"
+                  style={{ background: "#f0f9ff" }}
+                  {...register("itemtagprice", { valueAsNumber: true })}
+                />
+              </div>
+            </div>
+          )}
+          {!isHidden("itemtagpricecode") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Price Code</Label>
               <input
-                type="number"
-                step="0.01"
-                className="form-control"
-                style={{ background: "#f0f9ff" }}
-                {...register("itemtagprice", { valueAsNumber: true })}
+                type="text"
+                className="form-control form-control-sm"
+                {...register("itemtagpricecode")}
               />
             </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Price Code</Label>
-            <input
-              type="text"
-              className="form-control form-control-sm"
-              {...register("itemtagpricecode")}
-            />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Item Discount</Label>
-            <div className="input-group input-group-sm">
-              <span className="input-group-text" style={{ fontSize: 13 }}>$</span>
-              <input
-                type="number"
-                step="0.01"
-                className="form-control"
-                {...register("itemdiscount", { valueAsNumber: true })}
-              />
+          )}
+          {!isHidden("itemdiscount") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Item Discount</Label>
+              <div className="input-group input-group-sm">
+                <span className="input-group-text" style={{ fontSize: 13 }}>$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="form-control"
+                  {...register("itemdiscount", { valueAsNumber: true })}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </SectionCard>
 
@@ -642,61 +675,79 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               {warehouse?.warehousename || "—"}
             </div>
           </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Model #</Label>
-            <input type="text" className="form-control form-control-sm" {...register("modelno")} />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Manufacturer</Label>
-            <input type="text" className="form-control form-control-sm" {...register("manufacturer")} />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Item Location</Label>
-            <input type="text" className="form-control form-control-sm" {...register("itemlocation")} />
-          </div>
+          {!isHidden("modelno") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Model #</Label>
+              <input type="text" className="form-control form-control-sm" {...register("modelno")} />
+            </div>
+          )}
+          {!isHidden("manufacturer") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Manufacturer</Label>
+              <input type="text" className="form-control form-control-sm" {...register("manufacturer")} />
+            </div>
+          )}
+          {!isHidden("itemlocation") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Item Location</Label>
+              <input type="text" className="form-control form-control-sm" {...register("itemlocation")} />
+            </div>
+          )}
         </div>
 
         <div className="row g-2 mb-3">
-          <div className="col-lg-3 col-md-6">
-            <Label>Length</Label>
-            <input type="text" className="form-control form-control-sm" {...register("itemlength")} />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Width</Label>
-            <input type="text" className="form-control form-control-sm" {...register("itemsize")} />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Color</Label>
-            <input type="text" className="form-control form-control-sm" {...register("itemcolor")} />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Weight</Label>
-            <input
-              type="number"
-              step="0.01"
-              className="form-control form-control-sm"
-              {...register("itemweight", { valueAsNumber: true })}
-            />
-          </div>
+          {!isHidden("itemlength") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Length</Label>
+              <input type="text" className="form-control form-control-sm" {...register("itemlength")} />
+            </div>
+          )}
+          {!isHidden("itemsize") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Width</Label>
+              <input type="text" className="form-control form-control-sm" {...register("itemsize")} />
+            </div>
+          )}
+          {!isHidden("itemcolor") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Color</Label>
+              <input type="text" className="form-control form-control-sm" {...register("itemcolor")} />
+            </div>
+          )}
+          {!isHidden("itemweight") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Weight</Label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-control form-control-sm"
+                {...register("itemweight", { valueAsNumber: true })}
+              />
+            </div>
+          )}
         </div>
 
         <div className="row g-2 mb-3">
-          <div className="col-lg-3 col-md-6">
-            <Label>Reorder Point</Label>
-            <input
-              type="number"
-              className="form-control form-control-sm"
-              {...register("itemreorderqtypnt", { valueAsNumber: true })}
-            />
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <Label>Order Quantity</Label>
-            <input
-              type="number"
-              className="form-control form-control-sm"
-              {...register("itemreorderqty", { valueAsNumber: true })}
-            />
-          </div>
+          {!isHidden("itemreorderqtypnt") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Reorder Point</Label>
+              <input
+                type="number"
+                className="form-control form-control-sm"
+                {...register("itemreorderqtypnt", { valueAsNumber: true })}
+              />
+            </div>
+          )}
+          {!isHidden("itemreorderqty") && (
+            <div className="col-lg-3 col-md-6">
+              <Label>Order Quantity</Label>
+              <input
+                type="number"
+                className="form-control form-control-sm"
+                {...register("itemreorderqty", { valueAsNumber: true })}
+              />
+            </div>
+          )}
           <div className="col-lg-3 col-md-6">
             <Label required>Item Unit</Label>
             <Controller
@@ -757,7 +808,7 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
             { id: "itemtaxable",    field: "itemtaxable"    as const, label: "Item Taxable"    },
             { id: "trackinventory", field: "trackinventory" as const, label: "Track Inventory" },
             { id: "itemalert",      field: "itemalertwarning" as const, label: "Item Alert"    },
-          ].map(({ id, field, label }) => (
+          ].filter(({ field }) => !isHidden(field)).map(({ id, field, label }) => (
             <div className="col-lg-4 col-md-6" key={id}>
               <div
                 className="d-flex align-items-center gap-2 p-3 rounded"
@@ -804,30 +855,36 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
       {/* ════════════════════════════════════════════════════
           CARD 4 — NOTES & DESCRIPTION
       ════════════════════════════════════════════════════ */}
-      <SectionCard icon={FileText} title="Notes & Description" accent="violet">
-        <div className="row g-3">
-          <div className="col-lg-6 col-md-12">
-            <Label>Notes</Label>
-            <textarea
-              className="form-control"
-              rows={4}
-              style={{ fontSize: 13, resize: "vertical" }}
-              placeholder="Internal notes about this product..."
-              {...register("itemremarks")}
-            />
+      {(!isHidden("itemremarks") || !isHidden("detaileditemdescription")) && (
+        <SectionCard icon={FileText} title="Notes & Description" accent="violet">
+          <div className="row g-3">
+            {!isHidden("itemremarks") && (
+              <div className="col-lg-6 col-md-12">
+                <Label>Notes</Label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  style={{ fontSize: 13, resize: "vertical" }}
+                  placeholder="Internal notes about this product..."
+                  {...register("itemremarks")}
+                />
+              </div>
+            )}
+            {!isHidden("detaileditemdescription") && (
+              <div className="col-lg-6 col-md-12">
+                <Label>Detail Description</Label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  style={{ fontSize: 13, resize: "vertical" }}
+                  placeholder="Detailed product description for listings..."
+                  {...register("detaileditemdescription")}
+                />
+              </div>
+            )}
           </div>
-          <div className="col-lg-6 col-md-12">
-            <Label>Detail Description</Label>
-            <textarea
-              className="form-control"
-              rows={4}
-              style={{ fontSize: 13, resize: "vertical" }}
-              placeholder="Detailed product description for listings..."
-              {...register("detaileditemdescription")}
-            />
-          </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
     </div>
   );
 };
