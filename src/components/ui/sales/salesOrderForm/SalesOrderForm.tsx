@@ -187,13 +187,6 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const [emailModalSONumber, setEmailModalSONumber] = useState<number | null>(null);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
 
-  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
-    variables: { storeid: parsedStoreId, warehouiseid: 0 },
-    skip: !parsedStoreId,
-  });
-  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
-  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
-  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
 
   // ─── Discount resolution ────────────────────────────────────────────────
@@ -302,6 +295,16 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   });
 
   const { fields: itemFields, append, remove, update, replace } = useFieldArray({ control, name: "items" });
+
+  const watchedWarehouseIdForSettings = watch("warehouseid");
+  const productSettingsWarehouseId = Number(watchedWarehouseIdForSettings) || undefined;
+  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: productSettingsWarehouseId },
+    skip: !parsedStoreId || !productSettingsWarehouseId,
+  });
+  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
+  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
+  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {

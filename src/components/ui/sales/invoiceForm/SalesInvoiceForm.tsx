@@ -536,13 +536,6 @@ const SalesInvoiceForm = ({
   const [saveHoldMutation, { loading: savingHold }] = useMutation(SAVE_INVOICE_HOLD_MUTATION);
   const [deleteHoldMutation] = useMutation(DELETE_INVOICE_HOLD_MUTATION);
 
-  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
-    variables: { storeid: parsedStoreId, warehouiseid: 0 },
-    skip: !parsedStoreId,
-  });
-  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
-  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
-  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [barcodeScanValue, setBarcodeScanValue] = useState<string | undefined>(undefined);
@@ -729,6 +722,16 @@ const SalesInvoiceForm = ({
     control,
     name: "items",
   });
+
+  const watchedWarehouseIdForSettings = watch("warehouseid");
+  const productSettingsWarehouseId = Number(watchedWarehouseIdForSettings) || undefined;
+  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: productSettingsWarehouseId },
+    skip: !parsedStoreId || !productSettingsWarehouseId,
+  });
+  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
+  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
+  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
