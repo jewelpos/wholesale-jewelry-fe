@@ -285,6 +285,7 @@ const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => 
   const gross = qty * unit;
   const discountAmt = gross * (disc / 100);
   const net = gross - discountAmt;
+  const unitAfterDiscount = Math.round(unit * (1 - disc / 100) * 100) / 100;
 
   return {
     qty,
@@ -293,6 +294,7 @@ const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => 
     gross,
     discountAmt,
     net,
+    unitAfterDiscount,
   };
 };
 
@@ -1034,8 +1036,14 @@ const SalesInvoiceForm = ({
 
   const { data: warehouseSettingsData } = useQuery(GET_ALL_WAREHOUSE_SETTINGS_QUERY, {
     variables: { storeid: parsedStoreId },
-    skip: !parsedStoreId || !!invoiceId,
+    skip: !parsedStoreId,
   });
+
+  const showUnitPriceCol = useMemo(() => {
+    const allSettings: any[] = warehouseSettingsData?.getAllWarehouseSettings ?? [];
+    const wSetting = allSettings.find((s: any) => s.warehouseid === parsedWarehouseId);
+    return !!wSetting?.showunitpriceininvoice;
+  }, [warehouseSettingsData, parsedWarehouseId]);
 
   const customerId = watch("customerid");
   const shipSameAsBill = watch("shipSameAsBill");
@@ -1410,7 +1418,7 @@ const SalesInvoiceForm = ({
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
       dispatch(
         showNotification({
-          message: "Unit Price is required",
+          message: "Tag Price is required",
           type: NOTIFICATION_TYPES.ERROR,
         })
       );
@@ -1565,6 +1573,9 @@ const SalesInvoiceForm = ({
         itemquantity: qty,
         unitprice: unit,
         discountpercent: disc,
+        // Per-unit price after discount (quantity-independent) — e.g. $10 sell price
+        // at 30% discount = $7, regardless of how many units are on the line.
+        itemunitprice: Math.round(unit * (1 - disc / 100) * 100) / 100,
         extendedprice: net,
         itemactualsale: gross,
         itemtaxablesale: taxable === 1 ? net : 0,
@@ -1621,7 +1632,10 @@ const SalesInvoiceForm = ({
       customerid: formData.customerid ? Number(formData.customerid) : undefined,
       warehouseid: warehouseId,
 
-      saledate: formData.saledate?.toISOString?.(),
+      // Send the literal local date/time the user sees (no UTC conversion) so it's
+      // stored as-is regardless of which server timezone processes the request —
+      // avoids the invoice landing on the wrong calendar day for date-range filters.
+      saledate: formData.saledate?.format?.("YYYY-MM-DDTHH:mm:ss.SSS"),
 
       invoicestatusid: formData.invoicestatusid ? Number(formData.invoicestatusid) : undefined,
       termsid: formData.termsid != null ? Number(formData.termsid) : undefined,
@@ -1650,7 +1664,7 @@ const SalesInvoiceForm = ({
       invshiptophone: formData.invshiptophone,
 
       shippingtrackingno: formData.shippingtrackingno,
-      shippingdate: formData.shippingdate?.toISOString?.(),
+      shippingdate: formData.shippingdate?.format?.("YYYY-MM-DDTHH:mm:ss.SSS"),
       shipping: toNum(formData.shipping),
 
       totalamount: totals.grossTotal,
@@ -2589,8 +2603,9 @@ const SalesInvoiceForm = ({
                   {isMemoView && <th className="text-end text-nowrap">Inv Qty</th>}
                   {isMemoView && <th className="text-end text-nowrap">Ret Qty</th>}
                   {isMemoView && <th className="text-end text-nowrap">Rem Qty</th>}
-                  <th className="text-end text-nowrap">Unit Price</th>
+                  <th className="text-end text-nowrap">Tag Price</th>
                   <th className="text-end text-nowrap">Disc %</th>
+                  {showUnitPriceCol && <th className="text-end text-nowrap">Unit Price</th>}
                   <th className="text-end text-nowrap">Ext. Price</th>
                   {!readOnly && <th className="text-center text-nowrap">Action</th>}
                 </tr>
@@ -2598,7 +2613,7 @@ const SalesInvoiceForm = ({
               <tbody>
                 {itemFields.length === 0 ? (
                   <tr>
-                    <td colSpan={isMemoView ? (allowPcsEntry ? 16 : 12) : (allowPcsEntry ? 11 : 10)} className="text-center text-muted py-5 fst-italic">
+                    <td colSpan={(isMemoView ? (allowPcsEntry ? 16 : 12) : (allowPcsEntry ? 11 : 10)) + (showUnitPriceCol ? 1 : 0)} className="text-center text-muted py-5 fst-italic">
                       No items yet -- use the form below to add line items
                     </td>
                   </tr>
@@ -2649,6 +2664,7 @@ const SalesInvoiceForm = ({
                             </span>
                           )}
                         </td>
+                        {showUnitPriceCol && <td className="text-end">{formatMoney(line.unitAfterDiscount)}</td>}
                         <td className="text-end">{formatMoney(line.net)}</td>
                         {!readOnly && (
                           <td className="text-center">
@@ -2844,7 +2860,7 @@ const SalesInvoiceForm = ({
                 </div>
 
                 <div className="col-lg-1 col-md-3 col-sm-6">
-                  <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
+                  <label className="form-label small text-muted mb-1">Tag Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     step="0.001"

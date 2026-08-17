@@ -27,6 +27,7 @@ import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
+import { GET_ALL_WAREHOUSE_SETTINGS_QUERY } from "@/lib/graphql/query/warehouse";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
 import { GET_METAL_TYPE_LIST_QUERY } from "@/lib/graphql/query/metalType";
 import { GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
@@ -171,7 +172,8 @@ const computeLine = (item: SalesOrderItemForm) => {
   const gross = qty * unit;
   const discountAmt = gross * (disc / 100);
   const net = gross - discountAmt;
-  return { qty, unit, disc, gross, discountAmt, net };
+  const unitAfterDiscount = Math.round(unit * (1 - disc / 100) * 100) / 100;
+  return { qty, unit, disc, gross, discountAmt, net, unitAfterDiscount };
 };
 
 const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { salesorderno?: number; readOnly?: boolean }) => {
@@ -363,6 +365,23 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const customerId = watch("customerid");
   const shipSameAsBill = watch("shipSameAsBill");
+
+  const watchedWarehouseId = watch("warehouseid");
+  const parsedWarehouseId = useMemo(() => {
+    const n = typeof watchedWarehouseId === "number" ? watchedWarehouseId : Number(watchedWarehouseId);
+    return Number.isFinite(n) ? n : undefined;
+  }, [watchedWarehouseId]);
+
+  const { data: warehouseSettingsData } = useQuery(GET_ALL_WAREHOUSE_SETTINGS_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+
+  const showUnitPriceCol = useMemo(() => {
+    const allSettings: any[] = warehouseSettingsData?.getAllWarehouseSettings ?? [];
+    const wSetting = allSettings.find((s: any) => s.warehouseid === parsedWarehouseId);
+    return !!wSetting?.showunitpriceininvoice;
+  }, [warehouseSettingsData, parsedWarehouseId]);
 
   const { data: customerData } = useQuery(GET_CUSTOMER_QUERY, {
     variables: { storeid: parsedStoreId, customerid: Number(customerId) },
@@ -682,7 +701,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       storeid: parsedStoreId,
       customerid: Number(values.customerid),
       warehouseid: Number(values.warehouseid),
-      orderdate: values.orderdate?.toISOString(),
+      // Literal local date/time, no UTC conversion — see SalesInvoiceForm.tsx for why.
+      orderdate: values.orderdate?.format("YYYY-MM-DDTHH:mm:ss.SSS"),
       termsid: values.termsid ?? null,
       invshippingmethod: values.invshippingmethod ? String(values.invshippingmethod) : null,
       orderedby: values.orderedby || null,
@@ -724,6 +744,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         itemquantity: toNum(it.itemquantity),
         unitprice: toNum(it.unitprice),
         discountpercent: toNum(it.discountpercent),
+        // Per-unit price after discount (quantity-independent) — e.g. $10 sell price
+        // at 30% discount = $7, regardless of how many units are on the line.
+        itemunitprice: Math.round(toNum(it.unitprice) * (1 - toNum(it.discountpercent) / 100) * 100) / 100,
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
         goldprice_used: it.goldprice_used ?? undefined,
@@ -1116,8 +1139,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   <th className="text-end text-nowrap">Ord Qty</th>
                   {readOnly && <th className="text-end text-nowrap">Inv Qty</th>}
                   {readOnly && <th className="text-end text-nowrap">Bord Qty</th>}
-                  <th className="text-end text-nowrap">Unit Price</th>
+                  <th className="text-end text-nowrap">Tag Price</th>
                   <th className="text-end text-nowrap">Discount %</th>
+                  {showUnitPriceCol && <th className="text-end text-nowrap">Unit Price</th>}
                   <th className="text-end text-nowrap">Ext. Price</th>
                   <th className="text-center text-nowrap">Action</th>
                 </tr>
@@ -1125,7 +1149,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
               <tbody>
                 {itemFields.length === 0 ? (
                   <tr>
-                    <td colSpan={(readOnly ? 15 : 11) - (allowPcsEntry ? 0 : readOnly ? 3 : 1)} className="text-center text-muted py-5 fst-italic">
+                    <td colSpan={(readOnly ? 15 : 11) - (allowPcsEntry ? 0 : readOnly ? 3 : 1) + (showUnitPriceCol ? 1 : 0)} className="text-center text-muted py-5 fst-italic">
                       No items yet — use the form below to add line items
                     </td>
                   </tr>
@@ -1173,6 +1197,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                             </span>
                           )}
                         </td>
+                        {showUnitPriceCol && <td className="text-end">{formatMoney(line.unitAfterDiscount)}</td>}
                         <td className="text-end">{formatMoney(line.net)}</td>
                         <td className="text-center">
                           <button
@@ -1342,7 +1367,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                 </div>
 
                 <div className="col-lg-1 col-md-6 col-sm-12">
-                  <label className="form-label small text-muted mb-1">Unit Price <span className="text-danger">*</span></label>
+                  <label className="form-label small text-muted mb-1">Tag Price <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     className={`form-control px-1 text-end${toolItem.itemid != null && !toolItem.unitprice ? " border-danger" : ""}`}

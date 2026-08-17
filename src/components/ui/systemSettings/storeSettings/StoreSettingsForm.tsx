@@ -30,6 +30,7 @@ interface WarehouseSettingsRow {
   storepolicy: string | null;
   defaultsalestaxrate: number | null;
   enforce_stock_check: boolean;
+  showunitpriceininvoice: boolean;
 }
 
 type SettingsFormValues = Omit<WarehouseSettingsRow, "warehouseid" | "warehousename">;
@@ -52,6 +53,7 @@ const emptySettings = (): SettingsFormValues => ({
   storepolicy: "",
   defaultsalestaxrate: null,
   enforce_stock_check: false,
+  showunitpriceininvoice: false,
 });
 
 const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
@@ -123,6 +125,7 @@ const StoreSettingsForm = () => {
         storepolicy: row.storepolicy ?? "",
         defaultsalestaxrate: row.defaultsalestaxrate ?? null,
         enforce_stock_check: row.enforce_stock_check ?? false,
+        showunitpriceininvoice: row.showunitpriceininvoice ?? false,
       });
     } else {
       setForm(emptySettings());
@@ -161,6 +164,7 @@ const StoreSettingsForm = () => {
             storepolicy: form.storepolicy || null,
             defaultsalestaxrate: form.defaultsalestaxrate != null ? Number(form.defaultsalestaxrate) : null,
             enforce_stock_check: form.enforce_stock_check,
+            showunitpriceininvoice: form.showunitpriceininvoice,
           },
         },
       });
@@ -289,6 +293,7 @@ const StoreSettingsForm = () => {
                         { id: "allowpcsentry", label: "Allow Pcs Entry", value: !!form.allowpcsentry, onChange: (v: boolean) => set("allowpcsentry", v ? 1 : 0) },
                         { id: "allowcarriage", label: "Allow Carriage", value: !!form.allowcarriage, onChange: (v: boolean) => set("allowcarriage", v ? 1 : 0) },
                         { id: "enforce_stock_check", label: "Enforce Stock Check on Invoice", value: !!form.enforce_stock_check, onChange: (v: boolean) => set("enforce_stock_check", v) },
+                        { id: "showunitpriceininvoice", label: "Show Unit Price In Invoice", value: !!form.showunitpriceininvoice, onChange: (v: boolean) => set("showunitpriceininvoice", v) },
                       ].map(({ id, label, value, onChange }) => (
                         <div key={id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div

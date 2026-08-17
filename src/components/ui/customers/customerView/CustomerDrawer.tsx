@@ -11,6 +11,7 @@ import {
   GET_CUSTOMER_LIST_QUERY,
 } from "@/lib/graphql/query/customer";
 import { GET_PAYMENT_TERMS_QUERY } from "@/lib/graphql/query/payment";
+import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { CustomerType, CustomersListType } from "@/types/customer";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import CustomerStatementModal from "@/components/ui/customers/statement/CustomerStatementModal";
@@ -218,6 +219,11 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
     skip: !storeId,
   });
 
+  const { data: shippingData } = useQuery(GET_SHIPPING_MODES_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
+
   const customer: CustomerType | undefined = profileData?.getCustomer;
   const listCustomer: CustomersListType | undefined =
     listData?.getCustomerList?.data?.[0];
@@ -229,6 +235,14 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
     );
     return term?.termsname ?? null;
   }, [termsData, customer]);
+
+  const shippingName = useMemo(() => {
+    if (!customer?.custshippingmethod || !shippingData?.getShippingModes) return null;
+    const mode = shippingData.getShippingModes.find(
+      (s: any) => String(s.shippingid) === String(customer.custshippingmethod)
+    );
+    return mode?.shippingname ?? null;
+  }, [shippingData, customer]);
 
   const fullName = [customer?.custfname, customer?.custlname]
     .filter(Boolean)
@@ -645,7 +659,7 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
                 />
               )}
               <DetailRow label="Payment Terms" value={termsName} />
-              <DetailRow label="Shipping" value={customer.custshippingmethod} />
+              <DetailRow label="Shipping" value={shippingName} />
               <DetailRow label="Bill To" value={customer.custbillto} />
               <DetailRow label="Ship To" value={customer.custshipto} />
               <DetailRow label="Tax ID" value={customer.custtaxid} />
