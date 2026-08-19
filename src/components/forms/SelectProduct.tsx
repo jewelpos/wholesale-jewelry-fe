@@ -72,7 +72,10 @@ const SelectProduct = ({
   );
 
   const applyExactMatch = useCallback(
-    (options: ProductOption[], query: string) => {
+    // Awaits onChangeAdditional so callers (searchImmediate, and in turn the scan
+    // queue below) can rely on the full add/merge chain having actually landed in
+    // form state before starting the next scan — see queue comment below for why.
+    async (options: ProductOption[], query: string) => {
       const numericInput = Number(query.trim());
       if (!Number.isFinite(numericInput) || numericInput <= 0) return false;
       const exactMatch = options.find(
@@ -84,7 +87,7 @@ const SelectProduct = ({
       setSelectedOption(exactMatch);
       if (onChange) onChange(exactMatch.value);
       if (onChangeItemCode && exactMatch.data) onChangeItemCode(exactMatch.data.itemcode);
-      if (onChangeAdditional) onChangeAdditional(exactMatch.data);
+      if (onChangeAdditional) await onChangeAdditional(exactMatch.data);
       if (trigger) trigger(field.name);
       return true;
     },
@@ -108,13 +111,27 @@ const SelectProduct = ({
         if (onNotFound) onNotFound();
         return;
       }
-      applyExactMatch(options, query);
+      await applyExactMatch(options, query);
     },
     [searchInventoryItems, storeId, getWarehouseFilter, applyExactMatch, onNotFound]
   );
 
-  // Keep ref current so the scanValue effect below never uses a stale closure
+  // Keep ref current so the scan queue/effect below never uses a stale closure
   useEffect(() => { searchImmediateRef.current = searchImmediate; }, [searchImmediate]);
+
+  // A "store and release" scanner fires many Enter keystrokes within milliseconds —
+  // far faster than a single scan's search + add/merge chain can complete. Without
+  // serializing them, two scans of the same item can both read the item list before
+  // either has actually added its row, so both append instead of one merging into
+  // the other. Chaining each scan onto this queue forces them to run one at a time,
+  // in order, so the duplicate-detection each scan relies on always sees an
+  // up-to-date item list.
+  const scanQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const enqueueScan = useCallback((query: string) => {
+    scanQueueRef.current = scanQueueRef.current
+      .then(() => searchImmediateRef.current(query))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!scanValue) {
@@ -123,8 +140,8 @@ const SelectProduct = ({
     }
     if (scanValue === prevScanValueRef.current) return;
     prevScanValueRef.current = scanValue;
-    searchImmediateRef.current(scanValue);
-  }, [scanValue]);
+    enqueueScan(scanValue);
+  }, [scanValue, enqueueScan]);
 
   const loadOptions = useCallback(
     (inputValue: string): Promise<ProductOption[]> => {
@@ -148,7 +165,7 @@ const SelectProduct = ({
             return;
           }
 
-          const matched = applyExactMatch(options, inputValue);
+          const matched = await applyExactMatch(options, inputValue);
           if (matched) {
             resolve([]); // prevent dropdown from opening on exact match
             return;
@@ -184,11 +201,12 @@ const SelectProduct = ({
           e.preventDefault();
           e.stopPropagation();
           const query = inputText.trim();
-          // Barcode scan: numeric input — clear immediately and search in background
+          // Barcode scan: numeric input — clear immediately and queue the search so
+          // rapid-fire scans (a "store and release" scanner) process one at a time.
           if (/^\d+$/.test(query) && query.length >= 2) {
             setInputText("");
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
-            searchImmediate(query);
+            enqueueScan(query);
           }
         }
       }}

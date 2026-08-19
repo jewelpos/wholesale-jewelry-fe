@@ -161,6 +161,8 @@ const InvoiceLayoutSelector: React.FC = () => {
     const stored = storeData?.defaultprintlayout as Template | undefined;
     return (stored && stored !== "packing_slip" ? stored : "compact") as DefaultTemplate;
   });
+  const [sumByCategory, setSumByCategory] = useState<boolean>(!!storeData?.sumbycategory);
+  const [sumByMetalType, setSumByMetalType] = useState<boolean>(!!storeData?.sumbymetaltype);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState<Template | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -187,7 +189,12 @@ const InvoiceLayoutSelector: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.post(`/store/invoice/save-default-layout`, { storeid: parsedStoreId, layout: selected });
+      await api.post(`/store/invoice/save-default-layout`, {
+        storeid: parsedStoreId,
+        layout: selected,
+        sumbycategory: sumByCategory,
+        sumbymetaltype: sumByMetalType,
+      });
       await refetchCurrentStore();
       dispatch(showNotification({ message: "Default layout saved", type: NOTIFICATION_TYPES.SUCCESS }));
       router.back();
@@ -266,6 +273,31 @@ const InvoiceLayoutSelector: React.FC = () => {
             </div>
           );
         })}
+      </div>
+
+      <div style={{ border: "1px solid #e0e3ec", borderRadius: 8, padding: 16, marginBottom: 80 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Totals Footer</div>
+        <p style={{ color: "#888", fontSize: 12, marginTop: -4, marginBottom: 12 }}>
+          Applies to Invoice, Memo, and Sales Order printouts (not Packing Slip).
+        </p>
+        <div className="d-flex flex-column gap-2">
+          <label className="d-flex align-items-center gap-2" style={{ fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={sumByCategory}
+              onChange={(e) => setSumByCategory(e.target.checked)}
+            />
+            Show totals by category
+          </label>
+          <label className="d-flex align-items-center gap-2" style={{ fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={sumByMetalType}
+              onChange={(e) => setSumByMetalType(e.target.checked)}
+            />
+            Show totals by metal type (replaces the flat weight total for Wt items)
+          </label>
+        </div>
       </div>
 
       {/* Sticky footer */}

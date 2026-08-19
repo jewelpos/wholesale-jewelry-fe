@@ -861,6 +861,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     style={{ width: 160 }}
                     value={field.value}
                     onChange={(date) => field.onChange(date)}
+                    disabledDate={(current) => !!current && current > dayjs().endOf("day")}
                     format="MM/DD/YYYY"
                     allowClear={false}
                   />
@@ -1266,8 +1267,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       }
                       const isWtItem = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
                       if (allowCarriage && !isWtItem) {
-                        autoAddItem(selected);
-                        return;
+                        return autoAddItem(selected);
                       }
                       const premium = Number(selected.itempremium || 0);
                       const labour = Number(selected.broakerage || 0);

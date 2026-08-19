@@ -168,6 +168,11 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
   const isDuplicateItemCode =
     !isEdit && !!duplicateItemCode && duplicateItemCode === (itemcode || "").trim();
 
+  const itemCodeField = register("itemcode", {
+    required: "Item code is required",
+    pattern: { value: /^\S+$/, message: "Item code cannot contain spaces" },
+  });
+
   const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
     variables: { storeid: storeId },
     skip: !storeId,
@@ -258,7 +263,11 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
                   <input
                     type="text"
                     className={`form-control form-control-sm ${errors.itemcode || isDuplicateItemCode ? "is-invalid" : ""}`}
-                    {...register("itemcode", { required: "Item code is required" })}
+                    {...itemCodeField}
+                    onChange={(e) => {
+                      e.target.value = e.target.value.replace(/\s/g, "");
+                      itemCodeField.onChange(e);
+                    }}
                     disabled={isEdit}
                   />
                   {errors.itemcode && <div className="invalid-feedback">{errors.itemcode.message}</div>}

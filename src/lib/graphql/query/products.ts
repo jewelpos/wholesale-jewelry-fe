@@ -414,6 +414,8 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         itemlength
         itemsize
         itemcolor
+        itemweight
+        itemmetal
       }
     }
   }

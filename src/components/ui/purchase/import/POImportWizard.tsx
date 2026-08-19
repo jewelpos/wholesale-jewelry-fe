@@ -13,6 +13,7 @@ interface Props {
   storeId: number;
   userId: number;
   warehouseId?: number;
+  supplierId?: number;
   onClose: () => void;
   onDone: (items: ImportedPOItem[], fileName: string) => void;
 }
@@ -24,7 +25,7 @@ const STEP_LABELS = ['Upload', 'Preview', 'Map Columns', 'Import'];
 // Two-phase overlay messages
 type ProcessingPhase = 'creating' | 'adding' | null;
 
-export default function POImportWizard({ storeId, userId, warehouseId, onClose, onDone }: Props) {
+export default function POImportWizard({ storeId, userId, warehouseId, supplierId, onClose, onDone }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [sheet, setSheet] = useState<RawSheet | null>(null);
   const [fileName, setFileName] = useState('');
@@ -146,6 +147,7 @@ export default function POImportWizard({ storeId, userId, warehouseId, onClose, 
               storeId={storeId}
               userId={userId}
               warehouseId={warehouseId}
+              supplierId={supplierId}
               fileName={fileName}
               sheet={sheet}
               startRow={startRow}

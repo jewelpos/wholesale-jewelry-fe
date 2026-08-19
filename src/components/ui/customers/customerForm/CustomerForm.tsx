@@ -212,7 +212,10 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
 
   useEffect(() => {
     if (customerData?.getCustomer) {
-      const customer = customerData.getCustomer;
+      // balancedue is a read-only computed field (for the credit-limit check on the
+      // invoice form) — it isn't a real column, so it must never round-trip back
+      // through the edit form into the update payload.
+      const { balancedue, ...customer } = customerData.getCustomer;
       reset({
         ...customer,
         storeid: parsedStoreId,

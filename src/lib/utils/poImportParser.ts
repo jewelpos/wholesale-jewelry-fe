@@ -23,11 +23,18 @@ export function columnLetter(index: number): string {
   return result;
 }
 
-// Strip control characters (tab, ESC, other hidden chars), then trim spaces
+// Normalize control characters (tab, CR/LF, other hidden chars) to a single space
+// rather than deleting them outright — a bare delete can silently glue two words
+// together (e.g. a cell pasted from another sheet with an embedded line break:
+// "14K Gold\nRing" would become "14K GoldRing" instead of "14K Gold Ring"). Then
+// collapse any resulting run of whitespace down to one space and trim.
 export function cleanCell(raw: unknown): string {
   if (raw === null || raw === undefined) return '';
   // eslint-disable-next-line no-control-regex
-  return String(raw).replace(/[\t\r\n\x00-\x1F\x7F]/g, '').trim();
+  return String(raw)
+    .replace(/[\t\r\n\x00-\x1F\x7F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Parse a number from a string that may have $, €, commas, or European decimals

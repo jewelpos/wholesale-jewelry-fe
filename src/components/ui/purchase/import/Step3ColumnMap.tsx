@@ -14,6 +14,7 @@ import {
   GET_ITEM_CATEGORIES_QUERY,
   GET_ITEM_SUBCATEGORIES_QUERY,
 } from '@/lib/graphql/query/products';
+import { GET_METAL_TYPE_LIST_QUERY } from '@/lib/graphql/query/metalType';
 
 export interface ColumnMapping {
   itemcode: string;
@@ -29,6 +30,7 @@ export interface ColumnMapping {
   defaultUnit: string;
   categoryid?: number;
   subcategoryid?: number;
+  itemmetal?: string;
 }
 
 const EMPTY_MAPPING: ColumnMapping = {
@@ -83,6 +85,7 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
+  const [metalName, setMetalName] = useState<string>('');
 
   const headerRow = sheet.rows[startRow - 1] ?? [];
   const dataRows = sheet.rows.slice(startRow); // rows after header
@@ -107,6 +110,13 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
   });
   const subcategories: { subcategoryid: number; subcategoryname: string }[] =
     subcategoriesData?.getItemSubcategories ?? [];
+
+  const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
+    variables: { storeid: storeId },
+    fetchPolicy: 'cache-first',
+  });
+  const metalTypes: { metaltypeid: number; metalname: string }[] =
+    metalTypeData?.getMetalTypeList ?? [];
 
   const [saveMutation, { loading: savingTemplate }] = useMutation(SAVE_IMPORT_MAPPING_TEMPLATE);
   const [deleteMutation, { loading: deletingTemplate }] = useMutation(DELETE_IMPORT_MAPPING_TEMPLATE);
@@ -315,6 +325,20 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
               </select>
             </div>
           )}
+          <div className="d-flex align-items-center gap-2">
+            <span className="small text-muted">Metal:</span>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 180 }}
+              value={metalName}
+              onChange={(e) => setMetalName(e.target.value)}
+            >
+              <option value="">— None —</option>
+              {metalTypes.map((m) => (
+                <option key={m.metaltypeid} value={m.metalname}>{m.metalname}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -330,6 +354,7 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
             ...mapping,
             categoryid: categoryId ?? undefined,
             subcategoryid: subcategoryId ?? undefined,
+            itemmetal: metalName || undefined,
           })}
         >
           Next → Preview

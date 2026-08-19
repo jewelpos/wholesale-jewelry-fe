@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Camera, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
+import { AlertTriangle, Bookmark, Camera, Check, Edit2, List, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -1252,6 +1252,23 @@ const SalesInvoiceForm = ({
     };
   }, [mode, watchedAmountReceived, watchedDiscountPercent, watchedSalesTaxRate, watchedItems, watchedShipping]);
 
+  // Informational only — this never blocks saving, it just surfaces the exposure
+  // to whoever is creating the invoice so they can make a judgment call.
+  const creditLimitInfo = useMemo(() => {
+    const customer = customerData?.getCustomer;
+    const creditLimit = Number(customer?.custcreditlimit ?? 0);
+    if (!customer || creditLimit <= 0) return null;
+    const existingBalance = Number(customer?.balancedue ?? 0);
+    const projectedBalance = existingBalance + totals.balanceDue;
+    if (projectedBalance <= creditLimit) return null;
+    return {
+      creditLimit,
+      existingBalance,
+      projectedBalance,
+      overBy: projectedBalance - creditLimit,
+    };
+  }, [customerData, totals.balanceDue]);
+
   const { handleCancel } = useUnsavedChanges({
     isDirty,
     onCancel: () => {
@@ -1430,6 +1447,54 @@ const SalesInvoiceForm = ({
 
     const discountPctRaw = Number(toolItem.discountpercent || 0);
     const discountPct = Math.min(100, Math.max(0, discountPctRaw));
+
+    // Same item already on the invoice (e.g. scanned twice) — merge into that
+    // row instead of creating a duplicate line. Only applies when adding a new
+    // line (not while editing an existing row in place).
+    if (editingIndex == null) {
+      const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
+      const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === Number(toolItem.itemid));
+      if (dupIndex >= 0) {
+        const existing = currentItems[dupIndex];
+        const existingQty = Number(existing.itemquantity || 0);
+        const combinedQty = existingQty + normalizedQty;
+        const combinedPcs = toNum(existing.itempcs) + toNum(toolItem.itempcs);
+        if (!existing.discountsource || existing.discountsource !== 'manual') {
+          const bulkTiers = await getBulkTiers(Number(toolItem.itemid));
+          const resolved = resolveDiscount({
+            itemDiscount: toolItem._itemdiscount ?? 0,
+            unitprice: unitPrice,
+            qty: Math.abs(combinedQty),
+            bulkTiers,
+            activePromotions,
+            itemid: Number(toolItem.itemid),
+            categoryid: toolItem._itemcategoryid ?? null,
+            warehouseid: getValues('warehouseid'),
+          });
+          update(dupIndex, {
+            ...existing,
+            itemquantity: combinedQty,
+            itempcs: combinedPcs,
+            discountpercent: resolved.discountpercent,
+            discountsource: resolved.discountsource,
+            discountpromotionid: resolved.discountpromotionid,
+            availableqty: toolItem.availableqty,
+            trackinventory: toolItem.trackinventory,
+          });
+        } else {
+          update(dupIndex, {
+            ...existing,
+            itemquantity: combinedQty,
+            itempcs: combinedPcs,
+            availableqty: toolItem.availableqty,
+            trackinventory: toolItem.trackinventory,
+          });
+        }
+        resetToolItem();
+        setProductClearKey((k) => k + 1);
+        return;
+      }
+    }
 
     // Resolve discount for new items; for edits detect manual override
     let resolvedSource: string | null = null;
@@ -2172,6 +2237,7 @@ const SalesInvoiceForm = ({
                   <DatePicker
                     value={field.value || null}
                     onChange={(date) => field.onChange(date ?? dayjs())}
+                    disabledDate={(current) => !!current && current > dayjs().endOf("day")}
                     className="filterdatepicker"
                     style={{ width: 160 }}
                     format="MM/DD/YYYY"
@@ -2743,7 +2809,7 @@ const SalesInvoiceForm = ({
                         return;
                       }
                       const isWtItem = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
-                      if (allowCarriage && !isWtItem) { autoAddItem(selected); return; }
+                      if (allowCarriage && !isWtItem) { return autoAddItem(selected); }
                       const initQty = isWtItem ? 0 : (mode === "CREDIT_INVOICE" ? -1 : 1);
                       const premium = Number((selected as any).itempremium || 0);
                       const labour = Number((selected as any).broakerage || 0);
@@ -2921,6 +2987,24 @@ const SalesInvoiceForm = ({
           )}
         </div>
       </div>
+
+      {creditLimitInfo && (
+        <div
+          className="d-flex align-items-start gap-2 mb-3"
+          style={{ background: "#fff8e6", border: "1px solid #f0c14b", borderRadius: 8, padding: "12px 16px" }}
+        >
+          <AlertTriangle size={18} color="#92400e" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: "#92400e" }}>
+            <div className="fw-bold mb-1">Exceeding Credit Limit</div>
+            <div>
+              This invoice will bring the customer&apos;s balance to <strong>{formatMoney(creditLimitInfo.projectedBalance)}</strong>,
+              which is <strong>{formatMoney(creditLimitInfo.overBy)}</strong> over their credit limit of{" "}
+              <strong>{formatMoney(creditLimitInfo.creditLimit)}</strong> (current outstanding balance:{" "}
+              {formatMoney(creditLimitInfo.existingBalance)}). This is informational only — saving is not blocked.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NOTES + TOTALS */}
       <div className="row g-3 mb-3">

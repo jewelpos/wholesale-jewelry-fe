@@ -192,16 +192,13 @@ const SystemSettingsHub = () => {
       count: warehouseCount,
       countLabel: "active",
     },
-    // Form Field Visibility tile intentionally hidden — feature is built and working,
-    // deferred to next release. Route/backend/components all stay in place; this just
-    // removes the only in-app navigation entry point. Re-add this tile object to enable.
-    // {
-    //   title: "Form Field Visibility",
-    //   description: "Choose which optional fields appear on Customer, Supplier, and Product forms for everyone at this store.",
-    //   href: `${base}/form_fields`,
-    //   icon: SlidersHorizontal,
-    //   accent: "#64748b",
-    // },
+    {
+      title: "Form Field Visibility",
+      description: "Choose which optional fields appear on Customer, Supplier, and Product forms for everyone at this store.",
+      href: `${base}/form_fields`,
+      icon: SlidersHorizontal,
+      accent: "#64748b",
+    },
   ];
 
   const productMasters: SettingTile[] = [

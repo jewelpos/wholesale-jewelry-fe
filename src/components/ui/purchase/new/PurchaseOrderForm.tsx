@@ -1087,6 +1087,7 @@ const PurchaseOrderForm = ({
                   <DatePicker
                     value={selectedDate || null}
                     onChange={handleDateChange}
+                    disabledDate={(current) => !!current && current > dayjs().endOf("day")}
                     className="filterdatepicker"
                     format="MM/DD/YYYY"
                     placeholder="Choose Date"
@@ -2061,6 +2062,7 @@ const PurchaseOrderForm = ({
           storeId={parsedStoreId}
           userId={0}
           warehouseId={parsedWarehouseId}
+          supplierId={Number(watch("supplierid")) || undefined}
           onClose={() => setShowImportWizard(false)}
           onDone={(importedItems, importedFileName) => {
             importedItems.forEach((item) =>

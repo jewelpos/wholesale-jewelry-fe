@@ -35,6 +35,8 @@ export type Store = {
   hassetupreceipt: boolean;
   hassetuplayout: boolean;
   defaultprintlayout?: string;
+  sumbycategory?: boolean;
+  sumbymetaltype?: boolean;
   currencycode?: string;
   routeprefix?: string;
   outlets?: {

@@ -6,6 +6,7 @@ import { cleanCell, cleanNumeric, DEFAULT_UNITS, RawSheet } from '@/lib/utils/po
 import { ColumnMapping } from './Step3ColumnMap';
 import { GET_INVENTORY_ITEMS_BY_ITEMCODES } from '@/lib/graphql/query/poImport';
 import { GET_ITEM_CATEGORIES_QUERY, GET_ITEM_SUBCATEGORIES_QUERY } from '@/lib/graphql/query/products';
+import { GET_METAL_TYPE_LIST_QUERY } from '@/lib/graphql/query/metalType';
 
 export interface ImportedPOItem {
   itemid?: number;
@@ -27,6 +28,7 @@ interface MappedRow {
   itemunit: string;
   categoryid: number | null;
   subcategoryid: number | null;
+  itemmetal: string | null;
   qtyordered: number | null;
   orderunitcost: number | null;
   orddiscount: number | null;
@@ -45,12 +47,14 @@ interface RowOverride {
   itemunit?: string;
   categoryid?: number | null;
   subcategoryid?: number | null;
+  itemmetal?: string | null;
 }
 
 interface Props {
   storeId: number;
   userId: number;
   warehouseId?: number;
+  supplierId?: number;
   fileName: string;
   sheet: RawSheet;
   startRow: number;
@@ -82,6 +86,7 @@ export default function Step4Preview({
   storeId,
   userId,
   warehouseId,
+  supplierId,
   fileName,
   sheet,
   startRow,
@@ -108,6 +113,7 @@ export default function Step4Preview({
   const [bulkUnit, setBulkUnit] = useState(mapping.defaultUnit || 'Pc');
   const [bulkCategoryId, setBulkCategoryId] = useState<number | null>(mapping.categoryid ?? null);
   const [bulkSubcategoryId, setBulkSubcategoryId] = useState<number | null>(mapping.subcategoryid ?? null);
+  const [bulkMetalName, setBulkMetalName] = useState<string | null>(mapping.itemmetal ?? null);
 
   // Subcategory cache keyed by categoryid
   const [subCatCache, setSubCatCache] = useState<Record<number, SubcategoryItem[]>>({});
@@ -122,6 +128,12 @@ export default function Step4Preview({
     fetchPolicy: 'cache-first',
   });
   const categories: CategoryItem[] = categoriesData?.getItemCategories ?? [];
+
+  const { data: metalTypeData } = useQuery(GET_METAL_TYPE_LIST_QUERY, {
+    variables: { storeid: storeId },
+    fetchPolicy: 'cache-first',
+  });
+  const metalTypes: { metaltypeid: number; metalname: string }[] = metalTypeData?.getMetalTypeList ?? [];
 
   const [fetchSubcats] = useLazyQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
     fetchPolicy: 'cache-first',
@@ -150,7 +162,9 @@ export default function Step4Preview({
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
-      const itemcode = cleanCell(getCell(row, mapping.itemcode));
+      // Item codes never contain whitespace — strip it here (not just cleanCell's
+      // trim) so the preview shows the same code that will actually get saved.
+      const itemcode = cleanCell(getCell(row, mapping.itemcode)).replace(/\s+/g, '');
       const itemdescription = cleanCell(getCell(row, mapping.itemdescription));
       const qtyordered = cleanNumeric(getCell(row, mapping.qtyordered));
       const orderunitcost = cleanNumeric(getCell(row, mapping.orderunitcost));
@@ -174,6 +188,7 @@ export default function Step4Preview({
         itemunit,
         categoryid: mapping.categoryid ?? null,
         subcategoryid: mapping.subcategoryid ?? null,
+        itemmetal: mapping.itemmetal ?? null,
         qtyordered,
         orderunitcost,
         orddiscount,
@@ -266,6 +281,7 @@ export default function Step4Preview({
       itemunit: bulkUnit,
       categoryid: bulkCategoryId,
       subcategoryid: bulkSubcategoryId,
+      itemmetal: bulkMetalName,
     };
     setRowOverrides((prev) => {
       const next = { ...prev };
@@ -340,6 +356,7 @@ export default function Step4Preview({
         const payload = {
           storeid: storeId,
           warehouseid: warehouseId,
+          supplierid: supplierId || undefined,
           items: rowsToSend.map((r) => ({
             itemcode: r.itemcode,
             itemdescription: r.itemdescription || r.itemcode,
@@ -348,6 +365,7 @@ export default function Step4Preview({
             itempurchaseprice: r.orderunitcost ?? 0,
             categoryid: r.categoryid ?? undefined,
             subcategoryid: r.subcategoryid ?? undefined,
+            itemmetal: r.itemmetal ?? undefined,
             itemlength: r.itemlength || undefined,
             itemsize: r.itemsize || undefined,
             itemcolor: r.itemcolor || undefined,
@@ -495,6 +513,17 @@ export default function Step4Preview({
             ))}
           </select>
         )}
+        <select
+          className="form-select form-select-sm"
+          style={{ width: 160 }}
+          value={bulkMetalName ?? ''}
+          onChange={(e) => setBulkMetalName(e.target.value || null)}
+        >
+          <option value="">— Metal —</option>
+          {metalTypes.map((m) => (
+            <option key={m.metaltypeid} value={m.metalname}>{m.metalname}</option>
+          ))}
+        </select>
         <button
           type="button"
           className="btn btn-sm btn-primary"
@@ -628,6 +657,11 @@ export default function Step4Preview({
               <th style={{ minWidth: 80 }}>Unit</th>
               <th style={{ minWidth: 150 }}>Category</th>
               <th style={{ minWidth: 150 }}>Sub-Category</th>
+              <th style={{ minWidth: 130 }}>Metal</th>
+              <th style={{ minWidth: 80 }}>Length</th>
+              <th style={{ minWidth: 80 }}>Width</th>
+              <th style={{ minWidth: 80 }}>Color</th>
+              <th className="text-end" style={{ minWidth: 80 }}>Weight</th>
               <th className="text-end">Qty</th>
               <th className="text-end">Unit Cost</th>
               <th className="text-end">Disc %</th>
@@ -723,6 +757,25 @@ export default function Step4Preview({
                     )}
                   </td>
 
+                  {/* Metal per row */}
+                  <td>
+                    <select
+                      className="form-select form-select-sm py-0"
+                      style={{ fontSize: 11, minWidth: 110 }}
+                      value={r.itemmetal ?? ''}
+                      onChange={(e) => updateRowOverride(r.rowNum, { itemmetal: e.target.value || null })}
+                    >
+                      <option value="">— None —</option>
+                      {metalTypes.map((m) => (
+                        <option key={m.metaltypeid} value={m.metalname}>{m.metalname}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  <td>{r.itemlength || <span className="text-muted">—</span>}</td>
+                  <td>{r.itemsize || <span className="text-muted">—</span>}</td>
+                  <td>{r.itemcolor || <span className="text-muted">—</span>}</td>
+                  <td className="text-end">{r.itemweight || <span className="text-muted">—</span>}</td>
                   <td className="text-end">{r.qtyordered ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orderunitcost ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orddiscount ?? 0}</td>
