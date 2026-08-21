@@ -239,9 +239,7 @@ const CashDrawerComponent = () => {
             </div>
           </div>
         )}
-        <ActionFooter handleCancel={() => router.back()}>
-          <></>
-        </ActionFooter>
+        <ActionFooter handleCancel={() => router.back()} />
     </>
   );
 };

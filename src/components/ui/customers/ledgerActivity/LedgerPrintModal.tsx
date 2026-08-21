@@ -22,7 +22,7 @@ const fmt = (n: number | null | undefined) =>
   (n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const fmtDate = (val: string | null | undefined) =>
-  val ? dayjs(Number(val)).format("MM/DD/YYYY") : "";
+  val ? dayjs(val).format("MM/DD/YYYY") : "";
 
 const LedgerPrintModal = ({
   customerid,

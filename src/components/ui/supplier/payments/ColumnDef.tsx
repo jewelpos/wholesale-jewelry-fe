@@ -27,7 +27,7 @@ export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
     headerName: "Posting Date",
     field: "postingdate",
     cellRenderer: (params: ICellRendererParams) =>
-      dayjs(Number(params.value)).format(TIME_FORMAT),
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
   {
@@ -80,7 +80,7 @@ export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
     headerName: "Last Modified",
     field: "lastmodifieddate",
     cellRenderer: (params: ICellRendererParams) =>
-      dayjs(Number(params.value)).format(TIME_FORMAT),
+      dayjs(params.value).format(TIME_FORMAT),
     filter: "agDateColumnFilter",
   },
 ];

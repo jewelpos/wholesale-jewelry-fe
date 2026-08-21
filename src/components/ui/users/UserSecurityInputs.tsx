@@ -44,12 +44,12 @@ const UserSecurityInputs = ({ register, errors, password }: Props) => {
                     >
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
-                    {errors.password && (
-                      <div className="invalid-feedback">
-                        {errors.password.message}
-                      </div>
-                    )}
                   </div>
+                  {errors.password && (
+                    <div className="invalid-feedback d-block">
+                      {errors.password.message}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="col-md-6">
@@ -74,12 +74,12 @@ const UserSecurityInputs = ({ register, errors, password }: Props) => {
                     >
                       {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
-                    {errors.confirmpassword && (
-                      <div className="invalid-feedback">
-                        {errors.confirmpassword.message}
-                      </div>
-                    )}
                   </div>
+                  {errors.confirmpassword && (
+                    <div className="invalid-feedback d-block">
+                      {errors.confirmpassword.message}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

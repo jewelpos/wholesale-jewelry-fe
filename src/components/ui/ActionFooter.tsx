@@ -24,6 +24,10 @@ const ActionFooter = ({
 }>) => {
   const styledChildren = React.Children.map(children, (child) => {
     if (!React.isValidElement<{ style?: React.CSSProperties; className?: string }>(child)) return child;
+    // A Fragment is a valid element but can only take `key`/`children` — cloning it with
+    // style/className (as below) throws the "Invalid prop supplied to React.Fragment"
+    // warning. Pass it through untouched rather than trying to style it.
+    if (child.type === React.Fragment) return child;
     const existingClass = (child.props as { className?: string }).className ?? "btn btn-primary";
     return React.cloneElement(child, {
       style: { ...BTN_STYLE, ...child.props.style },

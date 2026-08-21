@@ -69,7 +69,7 @@ const ActivityTimeline = ({ data }: Props) => {
               const key = resolveKey(item.transaction_type, item.activity_category);
               const cfg = TYPE_CONFIG[key];
               const isPositive = (item.quantity ?? 0) > 0;
-              const date = dayjs(Number(item.transation_date)).format("MMM DD, YYYY");
+              const date = dayjs(item.transation_date).format("MMM DD, YYYY");
 
               return (
                 <div key={i} style={{ position: "relative", marginBottom: 10 }}>

@@ -41,7 +41,7 @@ import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 const dateRenderer = (params: ICellRendererParams) =>
   params.node.rowPinned === "bottom" || params.value == null
     ? ""
-    : dayjs(Number(params.value)).format(TIME_FORMAT);
+    : dayjs(params.value).format(TIME_FORMAT);
 
 type DatePreset = "all" | "today" | "week" | "month" | "quarter" | "year";
 const DATE_PRESET_LABELS: Record<DatePreset, string> = {

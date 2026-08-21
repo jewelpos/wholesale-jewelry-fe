@@ -110,7 +110,7 @@ const UserComponent = () => {
       minWidth: 150,
       valueFormatter: (params) => {
         if (!params.value) return "—";
-        const d = new Date(Number(params.value));
+        const d = new Date(params.value);
         if (isNaN(d.getTime())) return "—";
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -151,7 +151,7 @@ const UserComponent = () => {
       minWidth: 130,
       valueFormatter: (params) => {
         if (!params.value) return "—";
-        const d = new Date(Number(params.value));
+        const d = new Date(params.value);
         if (isNaN(d.getTime())) return "—";
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');

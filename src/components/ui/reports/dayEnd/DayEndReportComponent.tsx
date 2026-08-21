@@ -194,9 +194,7 @@ const DayEndReportComponent = () => {
             )}
           </div>
         </div>
-      <ActionFooter handleCancel={() => router.back()}>
-        <></>
-      </ActionFooter>
+      <ActionFooter handleCancel={() => router.back()} />
     </>
   );
 };

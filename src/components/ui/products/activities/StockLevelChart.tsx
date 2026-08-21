@@ -68,7 +68,7 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
     );
   }
 
-  const labels = data.map((d) => dayjs(Number(d.transation_date)).format("MMM DD"));
+  const labels = data.map((d) => dayjs(d.transation_date).format("MMM DD"));
   const pointColors = data.map((d) => resolveColor(d.transaction_type, d.activity_category));
 
   const chartData = {
@@ -102,7 +102,7 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
         callbacks: {
           title: (items) => {
             const d = data[items[0].dataIndex];
-            return `${dayjs(Number(d.transation_date)).format("MMM DD, YYYY")}  ·  ${d.reference ?? ""}`;
+            return `${dayjs(d.transation_date).format("MMM DD, YYYY")}  ·  ${d.reference ?? ""}`;
           },
           label: (ctx) => {
             const d = data[ctx.dataIndex];

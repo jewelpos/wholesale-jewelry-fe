@@ -119,6 +119,11 @@ export const GET_USER_QUERY = gql`
       outletname
       storename
       isdefaultoutlet
+      outlets {
+        outletid
+        outletname
+        isdefaultoutlet
+      }
   }
 }
 `;

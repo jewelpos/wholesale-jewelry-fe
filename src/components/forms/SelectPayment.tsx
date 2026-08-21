@@ -21,7 +21,7 @@ const CustomOption = (props: any) => {
           <b>Mode: </b>
           {data.paymode} <br />
           <b>Posting Date: </b>
-          {dayjs(Number(data.postingdate)).format(TIME_FORMAT)} <br />
+          {dayjs(data.postingdate).format(TIME_FORMAT)} <br />
           <b>Amount: </b>${data.amountpaid}
         </div>
       </components.Option>

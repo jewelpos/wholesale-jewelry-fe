@@ -20,7 +20,7 @@ export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
 };
 
 const dateRenderer = (params: ICellRendererParams) =>
-  params.value ? dayjs(Number(params.value)).format(TIME_FORMAT) : "";
+  params.value ? dayjs(params.value).format(TIME_FORMAT) : "";
 
 const makeSetValues = (
   outletIdRef: React.RefObject<number | undefined>,

@@ -7,7 +7,7 @@ import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 const dateRenderer = (params: ICellRendererParams) =>
   params.node.rowPinned === "bottom" || params.value == null
     ? ""
-    : dayjs(Number(params.value)).format(TIME_FORMAT);
+    : dayjs(params.value).format(TIME_FORMAT);
 
 export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
   {

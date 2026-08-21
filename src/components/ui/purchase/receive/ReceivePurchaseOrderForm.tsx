@@ -30,7 +30,7 @@ const fmt = (n: number | string | undefined | null, decimals = 2) =>
 
 const fmtDate = (v?: unknown) => {
   if (!v) return "";
-  const d = dayjs(Number(v));
+  const d = dayjs(v as string);
   return d.isValid() ? d.format("MM/DD/YYYY") : "";
 };
 

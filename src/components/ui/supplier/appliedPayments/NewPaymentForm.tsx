@@ -320,7 +320,7 @@ const NewPaymentForm = ({
                   return (
                     <tr key={item.veninvoiceno} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td className="py-2 px-3" style={{ border: "none", fontWeight: 500 }}>{item.veninvoiceno}</td>
-                      <td className="py-2 px-3" style={{ border: "none", color: "#64748b" }}>{dayjs(Number(item.veninvoicedate)).format(TIME_FORMAT)}</td>
+                      <td className="py-2 px-3" style={{ border: "none", color: "#64748b" }}>{dayjs(item.veninvoicedate).format(TIME_FORMAT)}</td>
                       <td className="py-2 px-3 text-end" style={{ border: "none" }}>{fmt(Number(item.veninvoicetotal))}</td>
                       <td className="py-2 px-3 text-end" style={{ border: "none", color: "#64748b" }}>{fmt(Number(item.veninvamtpaid))}</td>
                       <td className="py-2 px-3 text-end" style={{ border: "none", color: "#ef4444", fontWeight: 500 }}>{fmt(Number(item.veninvamtbalance))}</td>

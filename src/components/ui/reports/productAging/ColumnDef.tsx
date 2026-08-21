@@ -30,7 +30,7 @@ const BucketBadge = (params: ICellRendererParams) => {
 };
 
 const formatDate = (params: ICellRendererParams) =>
-  params.value ? dayjs(Number(params.value)).format("MM/DD/YYYY") : "";
+  params.value ? dayjs(params.value).format("MM/DD/YYYY") : "";
 
 export const productAgingColumnDefs: ColDef<ItemAgingSummary>[] = [
   { headerName: "Item ID",    field: "itemid",           filter: "agNumberColumnFilter", hide: true },

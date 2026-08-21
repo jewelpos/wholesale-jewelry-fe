@@ -210,7 +210,7 @@ const VoidPaymentForm = ({
                 {appliedAmounts.map((item) => (
                   <tr key={item.appliedamountid} style={{ borderBottom: "1px solid #fef2f2" }}>
                     <td className="py-2 px-3" style={{ border: "none", fontWeight: 500 }}>{item.invoicenumber}</td>
-                    <td className="py-2 px-3" style={{ border: "none", color: "#64748b" }}>{dayjs(Number(item.applieddate)).format(TIME_FORMAT)}</td>
+                    <td className="py-2 px-3" style={{ border: "none", color: "#64748b" }}>{dayjs(item.applieddate).format(TIME_FORMAT)}</td>
                     <td className="py-2 px-3 text-end" style={{ border: "none", fontWeight: 600, color: "#dc2626" }}>{fmt(item.appliedamount)}</td>
                     <td className="py-2 px-3" style={{ border: "none" }}>
                       <span style={{ background: "#f1f5f9", borderRadius: 4, padding: "2px 8px", fontSize: 11, color: "#64748b" }}>

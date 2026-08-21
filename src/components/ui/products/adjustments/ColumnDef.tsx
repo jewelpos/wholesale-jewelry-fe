@@ -15,7 +15,7 @@ export const inventoryAdjustmentColumnDefs: ColDef<InventoryAdjustment>[] = [
     headerName: "Adjusted Date",
     field: "adjusted_date",
     cellRenderer: (params: ICellRendererParams) =>
-      params.value ? dayjs(Number(params.value)).format("MM/DD/YYYY") : "",
+      params.value ? dayjs(params.value).format("MM/DD/YYYY") : "",
     filter: "agDateColumnFilter",
   },
   {

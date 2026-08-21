@@ -874,7 +874,7 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
                       <DetailRow label="Cost"   value={stats?.totalsoldcost   != null ? fmt(stats.totalsoldcost)   : "—"} />
                       <DetailRow label="Profit" value={stats?.totalsoldprofit != null ? fmt(stats.totalsoldprofit) : "—"} />
                     </>}
-                    <DetailRow label="Last Sale" value={stats?.lastsaledate ? new Date(Number(stats.lastsaledate)).toLocaleDateString() : "—"} />
+                    <DetailRow label="Last Sale" value={stats?.lastsaledate ? new Date(stats.lastsaledate).toLocaleDateString() : "—"} />
                   </div>
                   <div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#b0bec5", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>Purchases</div>
@@ -882,7 +882,7 @@ const ProductDrawer: React.FC<ProductDrawerProps> = ({
                     {isAtLeastManager &&
                       <DetailRow label="Avg Cost"    value={stats?.avgpurchasecost != null ? fmt(stats.avgpurchasecost)   : "—"} />
                     }
-                    <DetailRow label="Last Received" value={stats?.lastpurchasedate ? new Date(Number(stats.lastpurchasedate)).toLocaleDateString() : "—"} />
+                    <DetailRow label="Last Received" value={stats?.lastpurchasedate ? new Date(stats.lastpurchasedate).toLocaleDateString() : "—"} />
                   </div>
                 </>
               )}

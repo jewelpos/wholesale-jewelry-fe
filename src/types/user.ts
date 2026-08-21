@@ -68,4 +68,6 @@ export type UsersListType = {
   otpverified: number;
   emailverified: number;
   deletedat: string | null;
+  // Only populated by getUserByIdUnderStore (edit-user fetch), not the list query.
+  outlets?: { outletid: number; outletname: string; isdefaultoutlet: boolean }[];
 };

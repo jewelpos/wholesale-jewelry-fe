@@ -55,6 +55,15 @@ const AddUserForm = () => {
     setValue,
     watch,
   } = useForm<AddUserFormType>({
+    // Password/confirm-password use autoComplete="new-password" so Chrome/Edge don't
+    // intercept typing — but that same hint is what makes those browsers pop up their
+    // "Suggest a strong password" overlay whenever the field receives focus. RHF's
+    // default shouldFocusError programmatically focuses the first invalid field after
+    // a failed submit, and a programmatic (not user-click) focus on a new-password
+    // field is exactly when that overlay tends to appear on top of both fields,
+    // blocking clicks/typing — reading as if they'd been disabled. Letting the user
+    // click into the field themselves avoids triggering it.
+    shouldFocusError: false,
     defaultValues: {
       confirmpassword: "",
       password: "",
@@ -201,19 +210,26 @@ const AddUserForm = () => {
   useEffect(() => {
     if (userData?.getUserByIdUnderStore) {
       const { __typename, ...user } = userData.getUserByIdUnderStore;
+      // Load ALL of this user's outlet assignments, not just the one belonging to
+      // the specific list row that was clicked — the list shows one row per
+      // outlet, so editing via any single one of them must still see (and
+      // resubmit) the user's complete outlet set. Saving with a partial list
+      // here silently deletes the outlets that didn't get loaded.
+      const allOutlets = user.outlets?.length
+        ? user.outlets
+        : [{ outletid: user.outletid, outletname: user.outletname, isdefaultoutlet: user.isdefaultoutlet }];
+      const defaultOutlet = allOutlets.find((o: { isdefaultoutlet: boolean }) => o.isdefaultoutlet);
       reset({
         emailaddress: user.emailaddress,
         userfullname: user.userfullname,
         userphone: user.userphone,
-        outlets: [
-          {
-            value: user.outletid,
-            label: user.outletname,
-          },
-        ],
+        outlets: allOutlets.map((o: { outletid: number; outletname: string }) => ({
+          value: o.outletid,
+          label: o.outletname,
+        })),
         roleid: user.roleid,
         storeid: parsedStoreId,
-        defaultoutletid: user.isdefaultoutlet ? user.outletid : 0,
+        defaultoutletid: defaultOutlet?.outletid ?? 0,
       });
       // The saved permissions tree is already correctly grouped by storemenu
       // hierarchy (each child's parentid matches its wrapper's menuid) — map it
