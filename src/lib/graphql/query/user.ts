@@ -27,8 +27,8 @@ export const GET_ACTIVE_USER = gql`
 `;
 
 export const GET_USERS_LIST_QUERY = gql`
-  query GetUserListUnderStore($storeid: Int!) {
-    getUserListUnderStore(storeid: $storeid) {
+  query GetUserListUnderStore($storeid: Int!, $outletid: Int) {
+    getUserListUnderStore(storeid: $storeid, outletid: $outletid) {
       id
       userid
       userfullname

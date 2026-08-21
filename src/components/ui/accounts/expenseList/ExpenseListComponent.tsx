@@ -3,14 +3,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
-import { Plus } from "react-feather";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import "ag-grid-enterprise";
-import { GET_EXPENSE_LIST_QUERY, GET_EXPENSE_DAILY_SUMMARY_QUERY } from "@/lib/graphql/query/accounts";
-import { DELETE_EXPENSE_MUTATION } from "@/lib/graphql/mutations/expenses";
+import {
+  GET_EXPENSE_LIST_QUERY,
+  GET_EXPENSE_DAILY_SUMMARY_QUERY,
+  GET_EXPENSE_STATUS_LIST_QUERY,
+} from "@/lib/graphql/query/accounts";
+import { UPDATE_EXPENSE_MUTATION } from "@/lib/graphql/mutations/expenses";
 import { AccountsExpenseListType } from "@/types/accounts";
 import { getExpenseListColumnDefs } from "./ColumnDef";
 import { GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-enterprise";
@@ -19,6 +22,9 @@ import POSGrid from "../../grid/POSGrid";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import { useParams } from "next/navigation";
 import ExpenseModal from "./ExpenseModal";
+import ExpenseReportModal from "./ExpenseReportModal";
+import ExpenseViewModal from "./ExpenseViewModal";
+import ExpenseListHeader from "./ExpenseListHeader";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
 import SummaryPanelWrapper from "../../grid/SummaryPanelWrapper";
@@ -30,14 +36,21 @@ const ExpenseListComponent = () => {
   const storeId = parseInt(storeIdParam as string, 10);
 
   const [getExpenseList] = useLazyQuery(GET_EXPENSE_LIST_QUERY, { fetchPolicy: "network-only" });
-  const [deleteExpense] = useMutation(DELETE_EXPENSE_MUTATION);
+  const [updateExpense] = useMutation(UPDATE_EXPENSE_MUTATION);
+  const { data: expenseStatusData } = useQuery(GET_EXPENSE_STATUS_LIST_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId,
+  });
+  const expenseStatuses = expenseStatusData?.getExpenseStatusList ?? [];
   const dispatch = useAppDispatch();
 
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>();
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [editData, setEditData] = useState<AccountsExpenseListType | null>(null);
+  const [viewData, setViewData] = useState<AccountsExpenseListType | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
 
@@ -55,37 +68,65 @@ const ExpenseListComponent = () => {
     gridRef.current?.api?.refreshServerSide({ purge: true });
   }, []);
 
-  const handleEdit = useCallback((data: AccountsExpenseListType) => {
-    setEditData(data);
-    setIsModalOpen(true);
+  const handleView = useCallback((data: AccountsExpenseListType) => {
+    setViewData(data);
   }, []);
 
-  const handleDelete = useCallback(async (data: AccountsExpenseListType) => {
+  const handleEdit = useCallback((data: AccountsExpenseListType) => {
+    if ((data.approvalstatus || "").toLowerCase() !== "pending") {
+      dispatch(showNotification({ message: "Only pending expenses can be edited", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+    setEditData(data);
+    setIsModalOpen(true);
+  }, [dispatch]);
+
+  const setExpenseStatus = useCallback(async (data: AccountsExpenseListType, statusName: string, confirmTitle: string, confirmText: string) => {
+    const status = expenseStatuses.find(
+      (s: { expensestatusid: number; statusname: string }) => s.statusname.toLowerCase() === statusName.toLowerCase()
+    );
+    if (!status) {
+      dispatch(showNotification({ message: `"${statusName}" status not found`, type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+
     const result = await showConfirmationDialog({
-      title: "Delete Expense?",
-      text: `"${data.expensedetail}" will be permanently removed.`,
-      confirmButtonText: "Yes, delete",
+      title: confirmTitle,
+      text: confirmText,
+      confirmButtonText: `Yes, ${statusName.toLowerCase()}`,
       cancelButtonText: "Cancel",
       icon: "warning",
     });
     if (!result.isConfirmed) return;
 
-    const deleteResult = await handleTryCatch(async () => {
-      await deleteExpense({
-        variables: { expenseid: data.expenseid, storeid: storeId },
+    const updateResult = await handleTryCatch(async () => {
+      await updateExpense({
+        variables: { input: { expenseid: data.expenseid, storeid: storeId, expensestatusid: status.expensestatusid } },
       });
-      dispatch(showNotification({ message: "Expense deleted", type: NOTIFICATION_TYPES.SUCCESS }));
+      dispatch(showNotification({ message: `Expense ${statusName.toLowerCase()}`, type: NOTIFICATION_TYPES.SUCCESS }));
       refreshGrid();
       return true;
     });
-    if (deleteResult.error) {
-      dispatch(showNotification({ message: deleteResult.error, type: NOTIFICATION_TYPES.ERROR }));
+    if (updateResult.error) {
+      dispatch(showNotification({ message: updateResult.error, type: NOTIFICATION_TYPES.ERROR }));
     }
-  }, [deleteExpense, storeId, dispatch, refreshGrid]);
+  }, [expenseStatuses, updateExpense, storeId, dispatch, refreshGrid]);
+
+  const handleApprove = useCallback((data: AccountsExpenseListType) => {
+    setExpenseStatus(data, "Approved", "Approve Expense?", `"${data.expensedetail}" will be marked as approved.`);
+  }, [setExpenseStatus]);
+
+  const handleReject = useCallback((data: AccountsExpenseListType) => {
+    setExpenseStatus(data, "Rejected", "Reject Expense?", `"${data.expensedetail}" will be marked as rejected.`);
+  }, [setExpenseStatus]);
+
+  const handlePaid = useCallback((data: AccountsExpenseListType) => {
+    setExpenseStatus(data, "Paid", "Mark Expense as Paid?", `"${data.expensedetail}" will be marked as paid.`);
+  }, [setExpenseStatus]);
 
   const columnDefs = useMemo(
-    () => getExpenseListColumnDefs(handleEdit, handleDelete),
-    [handleEdit, handleDelete]
+    () => getExpenseListColumnDefs(handleView, handleEdit, handleApprove, handleReject, handlePaid),
+    [handleView, handleEdit, handleApprove, handleReject, handlePaid]
   );
 
   const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
@@ -143,25 +184,12 @@ const ExpenseListComponent = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
-      <div className="page-header">
-        <div className="add-item d-flex flex-column">
-          <div className="page-title">
-            <h4>Expense List</h4>
-            <h6>Manage your business expenses</h6>
-          </div>
-        </div>
-        <div className="page-btn">
-          <button
-            type="button"
-            className="btn btn-added btn-primary"
-            onClick={() => { setEditData(null); setIsModalOpen(true); }}
-            disabled={!selectedOutlet}
-          >
-            <Plus size={14} className="me-1" />
-            Add Expense
-          </button>
-        </div>
-      </div>
+      <ExpenseListHeader
+        onAdd={() => { setEditData(null); setIsModalOpen(true); }}
+        addDisabled={!selectedOutlet}
+        onPrint={() => setIsReportOpen(true)}
+        printDisabled={!selectedOutlet}
+      />
 
       {isAdmin && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Expense Daily Summary">
@@ -205,6 +233,20 @@ const ExpenseListComponent = () => {
         editData={editData}
         outletId={selectedOutlet ?? 0}
       />
+
+      {isReportOpen && selectedOutlet && (
+        <ExpenseReportModal
+          outletId={selectedOutlet}
+          onClose={() => setIsReportOpen(false)}
+        />
+      )}
+
+      {viewData && (
+        <ExpenseViewModal
+          data={viewData}
+          onClose={() => setViewData(null)}
+        />
+      )}
     </div>
   );
 };

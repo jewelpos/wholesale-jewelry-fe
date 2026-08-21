@@ -51,4 +51,10 @@
     padding: 3px 6px;
     font-size: 9pt;
   }
+
+  /* AG Grid row-selection checkboxes aren't meaningful in a printed snapshot */
+  .ag-selection-checkbox,
+  .ag-header-select-all {
+    display: none !important;
+  }
 }

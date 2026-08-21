@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { useLazyQuery, useMutation } from "@apollo/client";
-import { ColDef, GridReadyEvent, IServerSideGetRowsParams } from "ag-grid-community";
+import { ColDef, GridReadyEvent, IServerSideGetRowsParams, ICellRendererParams } from "ag-grid-community";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -264,7 +264,7 @@ const InventoryTransferListComponent = () => {
       filter: false,
       width: 180,
       pinned: "right",
-      cellRenderer: (params: { data?: InventoryTransfer }) => {
+      cellRenderer: (params: ICellRendererParams<InventoryTransfer>) => {
         const row = params.data;
         if (!row) return null;
         const id = Number(row.inventoryitemtransferid);
@@ -284,10 +284,17 @@ const InventoryTransferListComponent = () => {
                 type="button"
                 className="btn btn-sm btn-success"
                 disabled={disabled || isRequestingOutlet}
-                title={isRequestingOutlet ? "Only the supplying outlet can approve this request" : undefined}
-                onClick={() => handleChangeStatus(id, 2)}
+                title={
+                  isRequestingOutlet
+                    ? "Only the supplying outlet can approve this request"
+                    : "Review requested quantities and confirm below"
+                }
+                // Approving may need to happen for less than what was requested (source
+                // doesn't have it, or doesn't want to send all of it) — so this expands
+                // the row to the editable Approve Qty panel instead of approving blind.
+                onClick={() => params.node.setExpanded(true)}
               >
-                Approve
+                Review &amp; Approve
               </button>
               <button
                 type="button"
@@ -400,6 +407,7 @@ const InventoryTransferListComponent = () => {
               fillHeight
               masterDetail
               detailCellRenderer={InventoryTransferItemsComponent}
+              detailCellRendererParams={{ onApproved: refreshGrid }}
               detailRowAutoHeight
             />
           </div>

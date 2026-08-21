@@ -8,11 +8,21 @@ import { Plus, X, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
-import { GET_EMPLOYEE_COMMISSION_RATES_QUERY } from "@/lib/graphql/query/reports";
+import { GET_EMPLOYEE_COMMISSION_RATES_QUERY, GET_COMMISSION_TRIGGER_QUERY } from "@/lib/graphql/query/reports";
 import {
   UPSERT_EMPLOYEE_COMMISSION_RATE_MUTATION,
   UPDATE_COMMISSION_TRIGGER_MUTATION,
 } from "@/lib/graphql/mutations/commission";
+import useWarehouse from "@/hooks/useWarehouse";
+
+// Local calendar date (not UTC) — the backend's effective_from/effective_to dating
+// must line up with the user's own "today", not the DB server's timezone, otherwise
+// a rate saved near end-of-day in a US timezone can get an effective date that's
+// still "tomorrow" from the report's point of view and silently show 0% commission.
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 interface CommissionTier {
   id?: number;
@@ -138,6 +148,27 @@ const CommissionRatesComponent = () => {
   const [upsertRate] = useMutation(UPSERT_EMPLOYEE_COMMISSION_RATE_MUTATION);
   const [updateTrigger] = useMutation(UPDATE_COMMISSION_TRIGGER_MUTATION);
 
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  useEffect(() => {
+    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+  }, [parsedOutletId, fetchWarehouseByOutletId]);
+  const currentWarehouse = warehouses.find((w) => w.issystem) ?? warehouses[0];
+
+  const { data: triggerData } = useQuery(GET_COMMISSION_TRIGGER_QUERY, {
+    variables: { storeid: parsedStoreId, warehouseid: currentWarehouse?.warehouseid },
+    skip: !parsedStoreId || !currentWarehouse?.warehouseid,
+  });
+
+  // Sync the loaded saved value in — but never once the user has started editing,
+  // so an in-flight refetch/re-render can't clobber an unsaved change.
+  useEffect(() => {
+    if (triggerDirty) return;
+    const saved = triggerData?.getCommissionTrigger;
+    if (saved === "invoice" || saved === "payment") {
+      setCommissionTrigger(saved);
+    }
+  }, [triggerData, triggerDirty]);
+
   const employees: EmployeeRate[] = useMemo(
     () => data?.getEmployeeCommissionRates ?? [],
     [data]
@@ -252,6 +283,7 @@ const CommissionRatesComponent = () => {
               threshold_to: t.threshold_to,
               commission_rate: t.commission_rate,
             })),
+            effective_from: localToday(),
           },
         });
         dispatch(
@@ -277,10 +309,20 @@ const CommissionRatesComponent = () => {
   );
 
   const handleSaveTrigger = useCallback(async () => {
+    if (!currentWarehouse?.warehouseid) {
+      dispatch(showNotification({ message: "No warehouse found for this outlet", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
     setTriggerSaving(true);
     const result = await handleTryCatch(async () => {
       await updateTrigger({
-        variables: { input: { storeid: parsedStoreId, commission_trigger: commissionTrigger } },
+        variables: {
+          input: {
+            storeid: parsedStoreId,
+            warehouseid: currentWarehouse.warehouseid,
+            commission_trigger: commissionTrigger,
+          },
+        },
       });
       dispatch(
         showNotification({ message: "Commission trigger updated.", type: NOTIFICATION_TYPES.SUCCESS })
@@ -292,7 +334,7 @@ const CommissionRatesComponent = () => {
     if (result.error) {
       dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
     }
-  }, [updateTrigger, parsedStoreId, commissionTrigger, dispatch]);
+  }, [updateTrigger, parsedStoreId, commissionTrigger, currentWarehouse, dispatch]);
 
   return (
     <>

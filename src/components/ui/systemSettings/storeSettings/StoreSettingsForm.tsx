@@ -290,7 +290,9 @@ const StoreSettingsForm = () => {
                     </div>
                     <div className="col-12 d-flex gap-4 align-items-center pb-1 flex-wrap" style={{ marginTop: 4 }}>
                       {[
-                        { id: "allowpcsentry", label: "Allow Pcs Entry", value: !!form.allowpcsentry, onChange: (v: boolean) => set("allowpcsentry", v ? 1 : 0) },
+                        // Allow Pcs Entry toggle hidden from Store Settings per request —
+                        // the allowpcsentry field/form-state/save-payload wiring is left
+                        // in place untouched, this only removes it from the visible UI.
                         { id: "allowcarriage", label: "Allow Carriage", value: !!form.allowcarriage, onChange: (v: boolean) => set("allowcarriage", v ? 1 : 0) },
                         { id: "enforce_stock_check", label: "Enforce Stock Check on Invoice", value: !!form.enforce_stock_check, onChange: (v: boolean) => set("enforce_stock_check", v) },
                         { id: "showunitpriceininvoice", label: "Show Unit Price In Invoice", value: !!form.showunitpriceininvoice, onChange: (v: boolean) => set("showunitpriceininvoice", v) },

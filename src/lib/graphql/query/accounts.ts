@@ -37,6 +37,7 @@ export const GET_EXPENSE_LIST_QUERY = gql`
         modifiedby
         lastmodifieddate
         approvalstatus
+        approvedby
         approvedbyid
         approveddate
       }
@@ -73,6 +74,29 @@ export const GET_PAYMENT_EXPENSE_MODES_QUERY = gql`
       paymentmodeid
       paymode
       paymodedescription
+    }
+  }
+`;
+
+export const GET_EXPENSE_STATUS_LIST_QUERY = gql`
+  query GetExpenseStatusList($storeid: Int!) {
+    getExpenseStatusList(storeid: $storeid) {
+      expensestatusid
+      statusname
+    }
+  }
+`;
+
+export const GET_EXPENSE_SUMMARY_BY_CODE_QUERY = gql`
+  query GetExpenseSummaryByCode($storeid: Int!, $outletid: Int!, $startdate: String, $enddate: String) {
+    getExpenseSummaryByCode(storeid: $storeid, outletid: $outletid, startdate: $startdate, enddate: $enddate) {
+      expensecodeid
+      accountdescription
+      transactioncount
+      amountpaid
+      amountapproved
+      amountrejected
+      amountpending
     }
   }
 `;

@@ -392,15 +392,22 @@ const PaySupplierModal = ({ storeId, outletId, closeModal }: PaySupplierModalPro
   const [createCreditApply] = useMutation(CREATE_SUPPLIER_CREDIT_APPLY_MUTATION);
   const [createPayment] = useMutation(CREATE_SUPPLIER_NEW_PAYMENT_MUTATION);
 
+  const paymentModeMissing = cashAmount > 0 && paymentModeid <= 0;
+
   const canSave =
     supplierId > 0 &&
     selectedInvoices.size > 0 &&
     (creditsTotal > 0 || cashAmount > 0) &&
+    !paymentModeMissing &&
     remaining >= 0 &&
     (!isWriteOff || reference.trim().length > 0) &&
     !saving;
 
   const handleSave = async () => {
+    if (paymentModeMissing) {
+      dispatch(showNotification({ message: "Please select a payment mode before saving.", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
     if (!canSave) return;
     setSaving(true);
 
@@ -603,7 +610,9 @@ const PaySupplierModal = ({ storeId, outletId, closeModal }: PaySupplierModalPro
                 <SectionLabel>Payment Details</SectionLabel>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div>
-                    <label style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 3 }}>Payment Mode</label>
+                    <label style={{ fontSize: 11, color: paymentModeMissing ? "#dc2626" : "#475569", display: "block", marginBottom: 3, fontWeight: paymentModeMissing ? 600 : 400 }}>
+                      Payment Mode<span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>
+                    </label>
                     <SelectPaymentMode
                       storeId={storeId}
                       value={paymentModeid}
@@ -611,6 +620,9 @@ const PaySupplierModal = ({ storeId, outletId, closeModal }: PaySupplierModalPro
                       trigger={() => {}}
                       onChange={(v: number) => setPaymentModeid(v)}
                     />
+                    {paymentModeMissing && (
+                      <div style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>Required before saving</div>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 3 }}>Posting Date</label>

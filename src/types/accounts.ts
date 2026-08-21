@@ -15,6 +15,7 @@ export type AccountsExpenseListType = {
   modifiedby: string;
   lastmodifieddate: string;
   approvalstatus: string;
+  approvedby: string;
   approvedbyid: number;
   approveddate: string;
 };

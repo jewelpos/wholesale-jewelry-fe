@@ -13,6 +13,7 @@ const SelectEmployee = ({
   className,
   trigger,
   storeId,
+  outletId,
   isDisabled,
   placeholder = "Select employee",
   ...field
@@ -22,7 +23,7 @@ any) => {
   const [input, setInput] = useState("");
 
   const { data, loading } = useQuery(GET_USERS_LIST_QUERY, {
-    variables: { storeid: storeId },
+    variables: { storeid: storeId, outletid: outletId || undefined },
     skip: !storeId,
   });
 

@@ -194,6 +194,7 @@ const CustomerInputsB = ({
                 render={({ field }) => (
                   <SelectEmployee
                     storeId={storeId}
+                    outletId={outletId}
                     isDisabled={disableField}
                     trigger={trigger}
                     {...field}

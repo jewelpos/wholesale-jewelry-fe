@@ -17,8 +17,10 @@ import {
 import {
   GET_EXPENSE_CODE_QUERY,
   GET_PAYMENT_EXPENSE_MODES_QUERY,
+  GET_EXPENSE_STATUS_LIST_QUERY,
 } from "@/lib/graphql/query/accounts";
 import { AccountsExpenseListType } from "@/types/accounts";
+import useWarehouse from "@/hooks/useWarehouse";
 
 interface FormValues {
   expensecodeid: number;
@@ -28,6 +30,7 @@ interface FormValues {
   expensemode: string;
   expensenotes: string;
   expensechknumber: string;
+  expensestatusid: number;
 }
 
 interface Props {
@@ -55,11 +58,30 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
     skip: !storeId || !isOpen,
   });
 
+  const { data: expenseStatusData } = useQuery(GET_EXPENSE_STATUS_LIST_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId || !isOpen,
+  });
+
   const [createExpense] = useMutation(CREATE_NEW_EXPENSE_MUTATION);
   const [updateExpense] = useMutation(UPDATE_EXPENSE_MUTATION);
 
+  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
+  useEffect(() => {
+    if (isOpen && outletId) fetchWarehouseByOutletId(outletId);
+  }, [isOpen, outletId, fetchWarehouseByOutletId]);
+  const currentWarehouse = warehouses.find((w) => w.issystem) ?? warehouses[0];
+
+  const expenseStatuses = expenseStatusData?.getExpenseStatusList ?? [];
+
   useEffect(() => {
     if (isOpen) {
+      // Both Add and Edit always start (and stay) Pending — edit is only reachable
+      // for Pending expenses in the first place, and new expenses always start Pending.
+      const matchedStatus = expenseStatuses.find(
+        (s: { expensestatusid: number; statusname: string }) => s.statusname.toLowerCase() === "pending"
+      );
+
       reset({
         expensecodeid: editData?.expensecodeid ?? undefined,
         expensedetail: editData?.expensedetail ?? "",
@@ -70,13 +92,22 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
         expensemode: editData?.expensemode ?? "",
         expensenotes: editData?.expensenotes ?? "",
         expensechknumber: editData?.expensechknumber ?? "",
+        expensestatusid: matchedStatus?.expensestatusid ?? undefined,
       });
     }
-  }, [isOpen, editData, reset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editData, reset, expenseStatuses.length]);
 
   const onSubmit = async (values: FormValues) => {
+    if (!editData && !currentWarehouse?.warehouseid) {
+      dispatch(showNotification({ message: "No warehouse found for this outlet", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
     const result = await handleTryCatch(async () => {
       if (editData) {
+        // Status is not editable here — omitted entirely so the backend leaves it untouched
+        // (a disabled <select> submits no value via react-hook-form, so relying on
+        // values.expensestatusid here would otherwise null it out).
         await updateExpense({
           variables: {
             input: {
@@ -95,11 +126,16 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
         });
         dispatch(showNotification({ message: "Expense updated", type: NOTIFICATION_TYPES.SUCCESS }));
       } else {
+        // New expenses always start Pending — resolved explicitly rather than trusting
+        // the disabled status <select>'s submitted value.
+        const pendingStatusId = expenseStatuses.find(
+          (s: { expensestatusid: number; statusname: string }) => s.statusname.toLowerCase() === "pending"
+        )?.expensestatusid;
         await createExpense({
           variables: {
             input: {
               storeid: storeId,
-              warehouseid: outletId,
+              warehouseid: currentWarehouse?.warehouseid,
               expensecodeid: Number(values.expensecodeid),
               expensedetail: values.expensedetail,
               expensedate: values.expensedate,
@@ -107,6 +143,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
               expensemode: values.expensemode,
               expensenotes: values.expensenotes || null,
               expensechknumber: values.expensechknumber || null,
+              expensestatusid: pendingStatusId,
             },
           },
         });
@@ -224,6 +261,22 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Props)
                   {errors.expensemode && (
                     <div className="invalid-feedback">{errors.expensemode.message}</div>
                   )}
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    disabled
+                    {...register("expensestatusid", { valueAsNumber: true })}
+                  >
+                    {expenseStatuses.map((es: { expensestatusid: number; statusname: string }) => (
+                      <option key={es.expensestatusid} value={es.expensestatusid}>
+                        {es.statusname}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="form-text">New expenses start as Pending. Use Approve/Reject/Paid from the list to change status.</div>
                 </div>
 
                 <div className="col-md-6">

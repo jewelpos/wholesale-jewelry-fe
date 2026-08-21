@@ -18,32 +18,46 @@ export const GET_EMPLOYEE_COMMISSION_RATES_QUERY = gql`
   }
 `;
 
+export const GET_COMMISSION_TRIGGER_QUERY = gql`
+  query GetCommissionTrigger($storeid: Int!, $warehouseid: Int!) {
+    getCommissionTrigger(storeid: $storeid, warehouseid: $warehouseid)
+  }
+`;
+
 export const GET_EMPLOYEE_COMMISSION_REPORT_QUERY = gql`
   query GetEmployeeCommissionReport(
     $storeid: Int!
     $fromdate: String!
     $todate: String!
     $userid: Int
+    $outletid: Int
   ) {
     getEmployeeCommissionReport(
       storeid: $storeid
       fromdate: $fromdate
       todate: $todate
       userid: $userid
+      outletid: $outletid
     ) {
       lines {
         userid
         username
+        customername
+        invoicenumber
+        saledate
         commission_basis
         applied_rate
-        invoice_count
         total_net_sales
+        amount_paid
         total_cost
         gross_profit
         commission_amount
         true_profit_after_commission
         already_paid
         balance_due
+        invoice_paid
+        invoice_balance_due
+        invoice_total_balance_due
       }
       summary_net_sales
       summary_gross_profit
@@ -54,9 +68,59 @@ export const GET_EMPLOYEE_COMMISSION_REPORT_QUERY = gql`
   }
 `;
 
+export const GET_EMPLOYEE_COMMISSION_ESTIMATE_REPORT_QUERY = gql`
+  query GetEmployeeCommissionEstimateReport(
+    $storeid: Int!
+    $fromdate: String!
+    $todate: String!
+    $userid: Int
+    $outletid: Int
+  ) {
+    getEmployeeCommissionEstimateReport(
+      storeid: $storeid
+      fromdate: $fromdate
+      todate: $todate
+      userid: $userid
+      outletid: $outletid
+    ) {
+      lines {
+        userid
+        username
+        customername
+        invoicenumber
+        saledate
+        commission_basis
+        applied_rate
+        net_sales
+        expected_commission
+        realized_net_sales
+        realized_commission
+        pending_net_sales
+        pending_commission
+      }
+      summary_expected_net_sales
+      summary_expected_commission
+      summary_realized_commission
+      summary_pending_commission
+    }
+  }
+`;
+
 export const GET_COMMISSION_PAYOUT_HISTORY_QUERY = gql`
-  query GetCommissionPayoutHistory($storeid: Int!, $userid: Int) {
-    getCommissionPayoutHistory(storeid: $storeid, userid: $userid) {
+  query GetCommissionPayoutHistory(
+    $storeid: Int!
+    $userid: Int
+    $fromdate: String
+    $todate: String
+    $outletid: Int
+  ) {
+    getCommissionPayoutHistory(
+      storeid: $storeid
+      userid: $userid
+      fromdate: $fromdate
+      todate: $todate
+      outletid: $outletid
+    ) {
       id
       userid
       username
@@ -64,8 +128,34 @@ export const GET_COMMISSION_PAYOUT_HISTORY_QUERY = gql`
       period_end
       commission_amount
       notes
+      invoicenumber
       paid_at
       paid_by_username
+    }
+  }
+`;
+
+export const GET_COMMISSION_MONTHLY_SUMMARY_QUERY = gql`
+  query GetCommissionMonthlySummary(
+    $storeid: Int!
+    $fromdate: String!
+    $todate: String!
+    $userid: Int
+    $outletid: Int
+  ) {
+    getCommissionMonthlySummary(
+      storeid: $storeid
+      fromdate: $fromdate
+      todate: $todate
+      userid: $userid
+      outletid: $outletid
+    ) {
+      month
+      userid
+      username
+      outletid
+      outletname
+      total_paid
     }
   }
 `;

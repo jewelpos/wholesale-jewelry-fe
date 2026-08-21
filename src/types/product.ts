@@ -301,11 +301,17 @@ export type InventoryReceiveInput = {
   items: InventoryTransferItemInput[];
 };
 
+export type ApproveTransferItemInput = {
+  inventoryitemtransferdetailid: number;
+  approvedqty: number;
+};
+
 export type UpdateInventoryTransferStatusInput = {
   storeid: number;
   inventoryitemtransferid: number;
   transferstatusid: number;
   remarks?: string;
+  items?: ApproveTransferItemInput[];
 };
 
 export type ReceiveInventoryTransferItemInput = {
@@ -427,6 +433,7 @@ export interface InventoryItemTransferDetail {
   itemdescription?: string;
 
   transferquantity?: number;
+  quantityrequest?: number;
   transferdate?: string; // DateTime
   username?: string;
 

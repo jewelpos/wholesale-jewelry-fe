@@ -6,12 +6,14 @@ export const UPSERT_EMPLOYEE_COMMISSION_RATE_MUTATION = gql`
     $userid: Int!
     $commission_basis: String!
     $tiers: [CommissionTierInput!]!
+    $effective_from: String
   ) {
     upsertEmployeeCommissionRate(
       storeid: $storeid
       userid: $userid
       commission_basis: $commission_basis
       tiers: $tiers
+      effective_from: $effective_from
     )
   }
 `;

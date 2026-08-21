@@ -240,6 +240,8 @@ const toNum = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+
 const KARAT_RATE_FIELD: Record<string, string> = {
   "10Kt": "gold10kt_gram",
   "14Kt": "gold14kt_gram",
@@ -1119,7 +1121,7 @@ const SalesInvoiceForm = ({
       if (Number.isFinite(parsed) && parsed > 0) setValue("invshippingmethod", parsed);
     }
     if (c.default_salesrep_userid && isNewDoc) {
-      setValue("salesreps", [{ userid: c.default_salesrep_userid, split_percent: 0 }]);
+      setValue("salesreps", [{ userid: c.default_salesrep_userid, split_percent: 100 }]);
     }
 
     // Auto-populate tax rate on new docs only: customer rate takes priority over warehouse default
@@ -1203,12 +1205,12 @@ const SalesInvoiceForm = ({
     const discountPercent = toNum(watchedDiscountPercent);
 
     const lines = items.map((it) => computeLine(it, mode));
-    const grossTotal = lines.reduce((acc, l) => acc + l.gross, 0);
+    const grossTotal = round2(lines.reduce((acc, l) => acc + l.gross, 0));
     const lineDiscountTotal = lines.reduce((acc, l) => acc + l.discountAmt, 0);
     const afterLineDiscount = grossTotal - lineDiscountTotal;
     const invoiceDiscountAmt = afterLineDiscount * (discountPercent / 100);
-    const discountAmount = lineDiscountTotal + invoiceDiscountAmt;
-    const subtotal = grossTotal - discountAmount;
+    const discountAmount = round2(lineDiscountTotal + invoiceDiscountAmt);
+    const subtotal = round2(grossTotal - discountAmount);
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
 
@@ -1226,10 +1228,10 @@ const SalesInvoiceForm = ({
     const shipping = toNum(watchedShipping);
     const taxRate = toNum(watchedSalesTaxRate);
     const salesTax = Math.round(taxableSale * (taxRate / 100) * 100) / 100;
-    const invoiceTotal = subtotal + salesTax + shipping;
+    const invoiceTotal = round2(subtotal + salesTax + shipping);
 
     const amountPaid = toNum(watchedAmountReceived);
-    const balanceDue = invoiceTotal - amountPaid;
+    const balanceDue = round2(invoiceTotal - amountPaid);
     const nonTaxableSale = items.reduce((acc, it) => {
       if (toNum(it.itemtaxable) === 1) return acc;
       return acc + computeLine(it, mode).net;
@@ -2537,6 +2539,7 @@ const SalesInvoiceForm = ({
                           <div style={{ width: 200 }}>
                             <SelectEmployee
                               storeId={parsedStoreId}
+                              outletId={parsedOutletId}
                               value={rep.userid || null}
                               isDisabled
                               onChange={() => {}}
@@ -2557,6 +2560,7 @@ const SalesInvoiceForm = ({
                         <div style={{ width: 200 }}>
                           <SelectEmployee
                             storeId={parsedStoreId}
+                            outletId={parsedOutletId}
                             value={rep.userid || null}
                             trigger={trigger}
                             name={`salesreps.${idx}.userid`}
@@ -2600,7 +2604,7 @@ const SalesInvoiceForm = ({
                         onClick={() => {
                           const current = getValues("salesreps") ?? [];
                           if (current.length === 0) {
-                            setValue("salesreps", [{ userid: 0, split_percent: 0 }]);
+                            setValue("salesreps", [{ userid: 0, split_percent: 100 }]);
                           } else {
                             setValue("salesreps", [{ ...current[0], split_percent: 50 }, { userid: 0, split_percent: 50 }]);
                           }

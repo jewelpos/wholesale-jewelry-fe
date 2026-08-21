@@ -381,7 +381,9 @@ const NewPaymentForm = ({
             <Controller
               name="paymentmodeid"
               control={control}
-              rules={{ required: "Payment Mode is required" }}
+              rules={{
+                validate: (v: number) => Number(v) > 0 || "Payment Mode is required",
+              }}
               render={({ field }) => (
                 <SelectPaymentMode
                   className={`${errors.paymentmodeid && "is-invalid"} `}
