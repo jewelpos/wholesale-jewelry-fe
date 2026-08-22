@@ -7,6 +7,15 @@ const OPENING_BALANCE_CODE = "__OB__";
 
 export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
   {
+    headerName: "Ledger ID",
+    field: "ledgerid",
+    cellRenderer: (params: ICellRendererParams) =>
+      params.data?.ledgercode === OPENING_BALANCE_CODE ? "" : (params.value ?? ""),
+    filter: "agNumberColumnFilter",
+    minWidth: 100,
+    hide: true,
+  },
+  {
     headerName: "Date",
     field: "ledgerdate",
     cellRenderer: (params: ICellRendererParams) =>
