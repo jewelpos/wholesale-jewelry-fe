@@ -107,6 +107,15 @@ export const GET_PRODUCT_AGING_LIST_QUERY = gql`
   }
 `;
 
+export const GET_INVENTORY_WAREHOUSE_PIVOT_QUERY = gql`
+  query GetInventoryWarehousePivot($storeid: Int!) {
+    getInventoryWarehousePivot(storeid: $storeid) {
+      columns
+      rows
+    }
+  }
+`;
+
 // New simplified queries for categories and subcategories
 export const GET_ITEM_CATEGORIES_QUERY = gql`
   query GetItemCategories($storeid: Int!) {
