@@ -162,7 +162,7 @@ const InventoryWarehousePivotComponent = () => {
       <ReportHeader />
       {isAdmin && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Report Summary">
-          <ReportSummaryCards cards={summaryCards} loading={!loaded} />
+          <ReportSummaryCards cards={summaryCards} loading={!loaded} singleRow />
         </SummaryPanelWrapper>
       )}
       {loaded && (
