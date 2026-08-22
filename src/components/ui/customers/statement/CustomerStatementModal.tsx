@@ -126,7 +126,11 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           outletid: parsedOutletId,
           filterOutletId: selectedOutlet,
           page: 1,
-          perpage: 1,
+          // The aging view groups by (customer, outlet) — a customer with invoices
+          // across multiple outlets returns one row per outlet. perpage:1 only made
+          // sense when narrowed to a single outlet; fetch enough rows to cover every
+          // outlet the customer has activity in, then sum them client-side below.
+          perpage: 100,
           filters: [{ key: "customerid", value: { filterType: "number", type: "equals", filter: customerIdNum } }],
           sortModel: [],
         },
@@ -188,7 +192,21 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const ledgerRows: CustomerLedgerReportType[] = ledgerData?.getCustomerLedgerReport?.data ?? [];
   const openingBalance: number = ledgerData?.getCustomerLedgerReport?.openingBalance ?? 0;
   const payments: CustomerPaymentListType[] = paymentsData?.getCustomerPaymentList?.data ?? [];
-  const agingData: CustomerBalanceAgingType | null = agingQueryData?.getInvoiceAgingReport?.data?.[0] ?? null;
+  // One row per outlet the customer has activity in — sum them into a single
+  // combined breakdown rather than showing just the first outlet's numbers.
+  const agingRows: CustomerBalanceAgingType[] = agingQueryData?.getInvoiceAgingReport?.data ?? [];
+  const agingData: CustomerBalanceAgingType | null = agingRows.length
+    ? agingRows.reduce((sum, row) => ({
+        ...sum,
+        total_sale: sum.total_sale + (row.total_sale ?? 0),
+        due_0_30: sum.due_0_30 + (row.due_0_30 ?? 0),
+        due_31_60: sum.due_31_60 + (row.due_31_60 ?? 0),
+        due_61_90: sum.due_61_90 + (row.due_61_90 ?? 0),
+        due_91_120: sum.due_91_120 + (row.due_91_120 ?? 0),
+        due_120_plus: sum.due_120_plus + (row.due_120_plus ?? 0),
+        total_due: sum.total_due + (row.total_due ?? 0),
+      }), { ...agingRows[0], total_sale: 0, due_0_30: 0, due_31_60: 0, due_61_90: 0, due_91_120: 0, due_120_plus: 0, total_due: 0 })
+    : null;
 
   const isLoading = loadingOpen || loadingLedger || loadingPayments;
 
