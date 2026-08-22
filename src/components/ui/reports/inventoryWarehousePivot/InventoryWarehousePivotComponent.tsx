@@ -13,8 +13,12 @@ import { useParams } from "next/navigation";
 import POSGrid from "@/components/ui/grid/POSGrid";
 import ReportLayout from "@/components/ui/reports/shared/ReportLayout";
 import ReportHeader from "@/components/ui/reports/shared/ReportHeader";
+import ReportSummaryCards, { SummaryCardDef } from "@/components/ui/reports/shared/ReportSummaryCards";
+import ReportMiniChart from "@/components/ui/reports/shared/ReportMiniChart";
 import { GET_INVENTORY_WAREHOUSE_PIVOT_QUERY } from "@/lib/graphql/query/products";
 import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
+import { useSummaryPanel } from "@/hooks/useSummaryPanel";
+import SummaryPanelWrapper from "@/components/ui/grid/SummaryPanelWrapper";
 
 // These are the fixed fields the function always returns alongside one column
 // per warehouse — everything else in `columns` is a warehouse name and gets a
@@ -32,6 +36,9 @@ const InventoryWarehousePivotComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState(false);
   const [columns, setColumns] = useState<string[]>([]);
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("inventory-warehouse-pivot");
 
   const handleOnGridReady = (params: GridReadyEvent) => {
     setGridReady(true);
@@ -46,10 +53,12 @@ const InventoryWarehousePivotComponent = () => {
         const result = await handleTryCatch(async () => {
           const { data } = await getInventoryWarehousePivot({ variables: { storeid: parsedStoreId } });
           if (data?.getInventoryWarehousePivot) {
-            const { columns: cols, rows } = data.getInventoryWarehousePivot;
+            const { columns: cols, rows: fetchedRows } = data.getInventoryWarehousePivot;
             setColumns(cols ?? []);
-            params.success({ rowData: rows ?? [], rowCount: (rows ?? []).length });
-            if (!rows?.length) {
+            setRows(fetchedRows ?? []);
+            setLoaded(true);
+            params.success({ rowData: fetchedRows ?? [], rowCount: (fetchedRows ?? []).length });
+            if (!fetchedRows?.length) {
               gridRef.current?.api?.showNoRowsOverlay();
             } else {
               gridRef.current?.api?.hideOverlay();
@@ -111,9 +120,51 @@ const InventoryWarehousePivotComponent = () => {
     ];
   }, [columns]);
 
+  const warehouseCount = Math.max(columns.length - FIXED_COLUMNS.size, 0);
+
+  const summaryCards: SummaryCardDef[] = useMemo(() => {
+    const totalQty = rows.reduce((s, r) => s + Number(r.total_onhandquantity ?? 0), 0);
+    const totalValue = rows.reduce((s, r) => s + Number(r.totalcostvalue ?? 0), 0);
+    const categoryCount = new Set(rows.map((r) => r.categoryname)).size;
+    return [
+      { label: "Total On-Hand Qty", value: totalQty, format: "number", accent: "#0ea5e9" },
+      { label: "Total Inventory Value", value: totalValue, format: "currency", accent: "#10b981" },
+      { label: "Categories", value: categoryCount, format: "number", accent: "#8b5cf6" },
+      { label: "Warehouses", value: warehouseCount, format: "number", accent: "#f59e0b" },
+    ];
+  }, [rows, warehouseCount]);
+
+  // One bar per category — sums totalcostvalue across that category's metal/unit
+  // breakdown rows, since the grid shows one row per (category, metal, unit).
+  const { chartLabels, chartValues } = useMemo(() => {
+    const byCategory = new Map<string, number>();
+    rows.forEach((r) => {
+      const cat = String(r.categoryname ?? "Uncategorized");
+      byCategory.set(cat, (byCategory.get(cat) ?? 0) + Number(r.totalcostvalue ?? 0));
+    });
+    const sorted = Array.from(byCategory.entries()).sort((a, b) => b[1] - a[1]);
+    return { chartLabels: sorted.map(([label]) => label), chartValues: sorted.map(([, value]) => value) };
+  }, [rows]);
+
   return (
     <ReportLayout>
       <ReportHeader />
+      {isAdmin && (
+        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Report Summary">
+          <ReportSummaryCards cards={summaryCards} loading={!loaded} />
+        </SummaryPanelWrapper>
+      )}
+      {loaded && (
+        <ReportMiniChart
+          labels={chartLabels}
+          values={chartValues}
+          title="Inventory Value by Category"
+          subtitle="Total on-hand cost value per category, across all warehouses"
+          format="currency"
+          color="#10b981"
+          type="bar"
+        />
+      )}
       <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
         <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, minHeight: 0 }}>
