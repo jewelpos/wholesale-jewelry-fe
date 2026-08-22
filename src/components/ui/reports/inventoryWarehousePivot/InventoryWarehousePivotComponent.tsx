@@ -123,11 +123,22 @@ const InventoryWarehousePivotComponent = () => {
   const warehouseCount = Math.max(columns.length - FIXED_COLUMNS.size, 0);
 
   const summaryCards: SummaryCardDef[] = useMemo(() => {
-    const totalQty = rows.reduce((s, r) => s + Number(r.total_onhandquantity ?? 0), 0);
+    // Pc and Wt items are tracked in fundamentally different units (piece count
+    // vs. grams) — summing them together into one "total qty" is meaningless, so
+    // split by itemunit instead, same convention used on the invoice/SO forms
+    // ((itemunit ?? "").toLowerCase() === "wt").
+    let pcQty = 0;
+    let wtQty = 0;
+    rows.forEach((r) => {
+      const qty = Number(r.total_onhandquantity ?? 0);
+      if ((String(r.itemunit ?? "")).toLowerCase() === "wt") wtQty += qty;
+      else pcQty += qty;
+    });
     const totalValue = rows.reduce((s, r) => s + Number(r.totalcostvalue ?? 0), 0);
     const categoryCount = new Set(rows.map((r) => r.categoryname)).size;
     return [
-      { label: "Total On-Hand Qty", value: totalQty, format: "number", accent: "#0ea5e9" },
+      { label: "Total Qty (Pc)", value: pcQty, format: "number", accent: "#0ea5e9" },
+      { label: "Total Qty (Wt)", value: wtQty, format: "number", accent: "#0ea5e9", subtext: "grams" },
       { label: "Total Inventory Value", value: totalValue, format: "currency", accent: "#10b981" },
       { label: "Categories", value: categoryCount, format: "number", accent: "#8b5cf6" },
       { label: "Warehouses", value: warehouseCount, format: "number", accent: "#f59e0b" },
