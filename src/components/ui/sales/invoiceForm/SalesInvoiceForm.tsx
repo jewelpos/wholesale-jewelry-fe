@@ -1314,6 +1314,10 @@ const SalesInvoiceForm = ({
       }
     };
 
+    // Fallback when item/bulk/promo resolve to nothing — the global "Discount %"
+    // box's current value, same as the staged add-item tool's behavior.
+    const boxDiscountPct = Math.min(100, Math.max(0, Number(getValues("discountpercent") || 0)));
+
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
       const existingQty = Number(existing.itemquantity || 0);
@@ -1332,9 +1336,10 @@ const SalesInvoiceForm = ({
           warehouseid: getValues('warehouseid'),
         });
         const prevDisc = toNum(existing.discountpercent);
-        const updated = { ...existing, itemquantity: newQty, discountpercent: resolved.discountpercent, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid, availableqty, trackinventory };
+        const nextDisc = resolved.discountsource ? resolved.discountpercent : boxDiscountPct;
+        const updated = { ...existing, itemquantity: newQty, discountpercent: nextDisc, discountsource: resolved.discountsource, discountpromotionid: resolved.discountpromotionid, availableqty, trackinventory };
         update(dupIndex, updated);
-        if (resolved.discountpercent !== prevDisc && resolved.discountsource) {
+        if (nextDisc !== prevDisc && resolved.discountsource) {
           dispatch(showNotification({ message: `Discount updated: ${resolved.label}`, type: NOTIFICATION_TYPES.SUCCESS }));
         }
       } else {
@@ -1363,7 +1368,7 @@ const SalesInvoiceForm = ({
         itempcs: 0,
         itemquantity: initQty,
         unitprice,
-        discountpercent: resolved.discountpercent,
+        discountpercent: resolved.discountsource ? resolved.discountpercent : boxDiscountPct,
         discountsource: resolved.discountsource,
         discountpromotionid: resolved.discountpromotionid,
         availableqty,
@@ -2533,7 +2538,7 @@ const SalesInvoiceForm = ({
                 <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Pricing</div>
                 <div className="row g-2">
                   <div className="col-6">
-                    <label className="form-label small text-muted mb-1">Discount %</label>
+                    <label className="form-label small text-muted mb-1">Line Item Discount %</label>
                     <input
                       type="number"
                       step="0.01"
@@ -2545,7 +2550,14 @@ const SalesInvoiceForm = ({
                         setValue("discountpercent", clamped, { shouldDirty: true });
                         const currentItems = getValues("items");
                         if (currentItems?.length) {
-                          replace(currentItems.map((it) => ({ ...it, discountpercent: clamped })));
+                          // Only applies to lines without their own bulk/promo discount —
+                          // those were earned on their own merits and shouldn't be silently
+                          // overwritten by a flat entry here.
+                          replace(currentItems.map((it: any) =>
+                            it.discountsource === 'bulk' || it.discountsource === 'promotion'
+                              ? it
+                              : { ...it, discountpercent: clamped }
+                          ));
                         }
                       }}
                     />

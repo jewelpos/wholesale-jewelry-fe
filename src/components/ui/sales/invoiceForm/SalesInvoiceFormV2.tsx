@@ -1811,7 +1811,7 @@ const SalesInvoiceFormV2 = ({
                 <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.65rem", letterSpacing: "0.06em" }}>Pricing</div>
                 <div className="row g-2">
                   <div className="col-6">
-                    <label className="form-label small text-muted mb-1">Discount %</label>
+                    <label className="form-label small text-muted mb-1">Line Item Discount %</label>
                     <input
                       type="number"
                       step="0.01"
