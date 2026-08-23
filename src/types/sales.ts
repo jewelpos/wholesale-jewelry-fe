@@ -8,6 +8,8 @@ export type SalesInvoiceListType = {
   numberofitems: number;
   totalamount: number;
   discountamount: number;
+  orderdiscountpercent: number;
+  orderdiscountamount: number;
   subtotal: number;
   salestax: number;
   shipping: number;
@@ -43,6 +45,9 @@ export type SalesOrderListType = {
   orderdate: string;
   numberofitems: number;
   netamount: number;
+  discountamount: number;
+  orderdiscountpercent: number;
+  orderdiscountamount: number;
   termsname: string;
   invshippingmethod: string;
   shippingname: string;

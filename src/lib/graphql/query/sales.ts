@@ -30,6 +30,8 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         numberofitems
         totalamount
         discountamount
+        orderdiscountpercent
+        orderdiscountamount
         subtotal
         salestax
         shipping
@@ -134,6 +136,8 @@ export const GET_SALES_ORDER_QUERY = gql`
       termsid
       invshippingmethod
       discountpercent
+      orderdiscountpercent
+      orderdiscountamount
       salestaxrate
       shipping
       netamount
@@ -185,6 +189,8 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
       termsid
       invshippingmethod
       discountpercent
+      orderdiscountpercent
+      orderdiscountamount
       salestaxrate
       shipping
       amountreceived
@@ -320,6 +326,9 @@ export const GET_SALES_ORDER_LIST_QUERY = gql`
         orderdate
         numberofitems
         netamount
+        discountamount
+        orderdiscountpercent
+        orderdiscountamount
         termsname
         invshippingmethod
         shippingname

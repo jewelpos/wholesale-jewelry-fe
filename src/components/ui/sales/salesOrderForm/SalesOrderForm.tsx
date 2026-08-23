@@ -108,6 +108,8 @@ type SalesOrderFormType = {
   invshippingmethod?: number;
   orderedby?: string;
   discountpercent?: number;
+  orderdiscountpercent?: number;
+  orderdiscountamount?: number;
   salestaxrate?: number;
   shipping?: number;
   remarks?: string;
@@ -273,6 +275,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: undefined,
       orderedby: "",
       discountpercent: 0,
+      orderdiscountpercent: 0,
+      orderdiscountamount: 0,
       salestaxrate: 0,
       shipping: 0,
       remarks: "",
@@ -331,6 +335,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: so.invshippingmethod ? Number(so.invshippingmethod) : undefined,
       orderedby: so.orderedby ?? "",
       discountpercent: so.discountpercent ?? 0,
+      orderdiscountpercent: toNum(so.orderdiscountpercent),
+      orderdiscountamount: toNum(so.orderdiscountamount),
       salestaxrate: toNum(so.salestaxrate),
       shipping: so.shipping ?? 0,
       remarks: so.remarks ?? "",
@@ -447,6 +453,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const watchedItems = useWatch({ control, name: "items" });
   const watchedDiscountPercent = useWatch({ control, name: "discountpercent" });
+  const watchedOrderDiscountAmount = useWatch({ control, name: "orderdiscountamount" });
   const watchedShipping = useWatch({ control, name: "shipping" });
 
   const invoiceDiscountPrefill = useMemo(() => {
@@ -474,16 +481,19 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     // compounded ~19%).
     const discountAmount = lines.reduce((acc, l) => acc + l.discountAmt, 0);
     const subtotal = grossTotal - discountAmount;
+    // Order Discount is a separate, order-level deduction — applied once here, after
+    // line-item discounts, never blended into any line's own price/discount.
+    const orderDiscountAmount = Math.min(subtotal, Math.max(0, toNum(watchedOrderDiscountAmount)));
     const shipping = toNum(watchedShipping);
-    const orderTotal = subtotal + shipping;
+    const orderTotal = subtotal - orderDiscountAmount + shipping;
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
     const unitQtyTotals: Record<string, number> = {};
     for (const it of items) {
       const unit = (it.itemunit ?? "Pc").trim() || "Pc";
       unitQtyTotals[unit] = (unitQtyTotals[unit] ?? 0) + Math.abs(toNum(it.itemquantity));
     }
-    return { totalItems: items.length, totalPcs, unitQtyTotals, grossTotal, discountAmount, subtotal, shipping, orderTotal };
-  }, [watchedDiscountPercent, watchedItems, watchedShipping]);
+    return { totalItems: items.length, totalPcs, unitQtyTotals, grossTotal, discountAmount, subtotal, orderDiscountAmount, shipping, orderTotal };
+  }, [watchedDiscountPercent, watchedOrderDiscountAmount, watchedItems, watchedShipping]);
 
   const { handleCancel } = useUnsavedChanges({
     isDirty,
@@ -745,6 +755,8 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       invshippingmethod: values.invshippingmethod ? String(values.invshippingmethod) : null,
       orderedby: values.orderedby || null,
       discountpercent: toNum(values.discountpercent),
+      orderdiscountpercent: toNum(values.orderdiscountpercent),
+      orderdiscountamount: toNum(values.orderdiscountamount),
       salestaxrate: toNum(values.salestaxrate),
       shipping: toNum(values.shipping),
       remarks: values.remarks || null,
@@ -1519,13 +1531,50 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   </tr>
                   {totals.discountAmount > 0 && (
                     <tr>
-                      <td className="ps-0 text-muted">Discount</td>
+                      <td className="ps-0 text-muted">Item Discount</td>
                       <td className="pe-0 text-end text-danger">-{formatMoney(totals.discountAmount)}</td>
                     </tr>
                   )}
                   <tr className="border-top">
                     <td className="ps-0 text-muted">Subtotal</td>
                     <td className="pe-0 text-end">{formatMoney(totals.subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td className="ps-0 text-muted">Order Discount</td>
+                    <td className="pe-0 text-end">
+                      <div className="d-flex gap-1 justify-content-end align-items-center">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          max={100}
+                          className="form-control form-control-sm text-end d-inline-block"
+                          style={{ width: 60 }}
+                          value={watch("orderdiscountpercent") ?? 0}
+                          onChange={(e) => {
+                            const pct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+                            setValue("orderdiscountpercent", pct, { shouldDirty: true });
+                            const amt = Math.round(totals.subtotal * (pct / 100) * 100) / 100;
+                            setValue("orderdiscountamount", amt, { shouldDirty: true });
+                          }}
+                        />
+                        <span className="text-muted">%</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          className="form-control form-control-sm text-end d-inline-block"
+                          style={{ width: 100 }}
+                          value={watch("orderdiscountamount") ?? 0}
+                          onChange={(e) => {
+                            const amt = Math.max(0, Number(e.target.value || 0));
+                            setValue("orderdiscountamount", amt, { shouldDirty: true });
+                            const pct = totals.subtotal > 0 ? Math.round((amt / totals.subtotal) * 100 * 100) / 100 : 0;
+                            setValue("orderdiscountpercent", Math.min(100, pct), { shouldDirty: true });
+                          }}
+                        />
+                      </div>
+                    </td>
                   </tr>
                   <tr>
                     <td className="ps-0 text-muted">Shipping</td>

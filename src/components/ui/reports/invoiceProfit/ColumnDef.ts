@@ -141,6 +141,12 @@ export const invoiceProfitItemsColumnDefs: ColDef<InvoiceItem>[] = [
     cellRenderer: currencyFormattedCellRenderer,
   }, // (V)
   {
+    headerName: "Allocated Order Discount",
+    field: "orderdiscount",
+    filter: "agNumberColumnFilter",
+    cellRenderer: currencyFormattedCellRenderer,
+  },
+  {
     headerName: "Item Cost",
     field: "itemcost",
     filter: "agNumberColumnFilter",

@@ -839,6 +839,7 @@ export const GET_INVOICE_PROFIT_ITEM_DETAIL_LIST_QUERY = gql`
         totalcost
         profit
         profit_percent
+        orderdiscount
         itemid
         warehouseid
       }

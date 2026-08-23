@@ -27,6 +27,20 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     filter: "agNumberColumnFilter",
   },
   {
+    headerName: "Item Discount",
+    field: "discountamount",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
+    headerName: "Order Discount",
+    field: "orderdiscountamount",
+    cellRenderer: currencyFormattedCellRenderer,
+    filter: "agNumberColumnFilter",
+    hide: true,
+  },
+  {
     headerName: "Shipping method",
     field: "shippingname",
     filter: "agTextColumnFilter",

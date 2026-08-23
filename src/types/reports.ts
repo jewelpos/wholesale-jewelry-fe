@@ -182,6 +182,7 @@ export type InvoiceItem = {
   totalcost: number;
   profit: number;
   profit_percent: number;
+  orderdiscount: number;
   itemid: string;
   warehouseid: number;
 };

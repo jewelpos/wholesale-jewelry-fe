@@ -174,6 +174,8 @@ type SalesInvoiceFormType = {
   invoicestatusid?: number;
 
   discountpercent?: number;
+  orderdiscountpercent?: number;
+  orderdiscountamount?: number;
   salestaxrate?: number;
   invoicereference?: string;
   orderedby?: string;
@@ -693,6 +695,8 @@ const SalesInvoiceForm = ({
       invshippingmethod: undefined,
       invoicestatusid: undefined,
       discountpercent: 0,
+      orderdiscountpercent: 0,
+      orderdiscountamount: 0,
       salestaxrate: 0,
       invoicereference: "",
       orderedby: "",
@@ -935,6 +939,8 @@ const SalesInvoiceForm = ({
       termsid: doc.termsid ?? undefined,
       invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
       discountpercent: toNum(doc.discountpercent),
+      orderdiscountpercent: toNum(doc.orderdiscountpercent),
+      orderdiscountamount: toNum(doc.orderdiscountamount),
       salestaxrate: toNum(doc.salestaxrate),
       invoicereference: doc.invoicereference ?? "",
       orderedby: "",
@@ -1180,6 +1186,7 @@ const SalesInvoiceForm = ({
 
   const watchedItems = useWatch({ control, name: "items" });
   const watchedDiscountPercent = useWatch({ control, name: "discountpercent" });
+  const watchedOrderDiscountAmount = useWatch({ control, name: "orderdiscountamount" });
   const watchedSalesTaxRate = useWatch({ control, name: "salestaxrate" });
   const watchedShipping = useWatch({ control, name: "shipping" });
   const watchedAmountReceived = useWatch({ control, name: "amountreceived" });
@@ -1212,6 +1219,9 @@ const SalesInvoiceForm = ({
     // compounded ~19%).
     const discountAmount = round2(lines.reduce((acc, l) => acc + l.discountAmt, 0));
     const subtotal = round2(grossTotal - discountAmount);
+    // Order Discount is a separate, order-level deduction — applied once here, after
+    // line-item discounts, never blended into any line's own price/discount.
+    const orderDiscountAmount = round2(Math.min(subtotal, Math.max(0, toNum(watchedOrderDiscountAmount))));
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
 
@@ -1229,7 +1239,7 @@ const SalesInvoiceForm = ({
     const shipping = toNum(watchedShipping);
     const taxRate = toNum(watchedSalesTaxRate);
     const salesTax = Math.round(taxableSale * (taxRate / 100) * 100) / 100;
-    const invoiceTotal = round2(subtotal + salesTax + shipping);
+    const invoiceTotal = round2(subtotal - orderDiscountAmount + salesTax + shipping);
 
     const amountPaid = toNum(watchedAmountReceived);
     const balanceDue = round2(invoiceTotal - amountPaid);
@@ -1245,6 +1255,7 @@ const SalesInvoiceForm = ({
       grossTotal,
       discountAmount,
       subtotal,
+      orderDiscountAmount,
       salesTax,
       shipping,
       invoiceTotal,
@@ -1253,7 +1264,7 @@ const SalesInvoiceForm = ({
       taxableSale,
       nonTaxableSale,
     };
-  }, [mode, watchedAmountReceived, watchedDiscountPercent, watchedSalesTaxRate, watchedItems, watchedShipping]);
+  }, [mode, watchedAmountReceived, watchedDiscountPercent, watchedOrderDiscountAmount, watchedSalesTaxRate, watchedItems, watchedShipping]);
 
   // Informational only — this never blocks saving, it just surfaces the exposure
   // to whoever is creating the invoice so they can make a judgment call.
@@ -1754,6 +1765,8 @@ const SalesInvoiceForm = ({
           : undefined,
 
       discountpercent: toNum(formData.discountpercent),
+      orderdiscountpercent: toNum(formData.orderdiscountpercent),
+      orderdiscountamount: toNum(formData.orderdiscountamount),
 
       invoicereference: formData.invoicereference,
       remarks: resolvedRemarks,
@@ -3117,13 +3130,50 @@ const SalesInvoiceForm = ({
                   </tr>
                   {totals.discountAmount > 0 && (
                     <tr>
-                      <td className="ps-0 text-muted">Discount</td>
+                      <td className="ps-0 text-muted">Item Discount</td>
                       <td className="pe-0 text-end text-danger">-{formatMoney(totals.discountAmount)}</td>
                     </tr>
                   )}
                   <tr className="border-top">
                     <td className="ps-0 text-muted">Subtotal</td>
                     <td className="pe-0 text-end">{formatMoney(totals.subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td className="ps-0 text-muted">Order Discount</td>
+                    <td className="pe-0 text-end">
+                      <div className="d-flex gap-1 justify-content-end align-items-center">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          max={100}
+                          className="form-control form-control-sm text-end d-inline-block"
+                          style={{ width: 60 }}
+                          value={watch("orderdiscountpercent") ?? 0}
+                          onChange={(e) => {
+                            const pct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+                            setValue("orderdiscountpercent", pct, { shouldDirty: true });
+                            const amt = Math.round(totals.subtotal * (pct / 100) * 100) / 100;
+                            setValue("orderdiscountamount", amt, { shouldDirty: true });
+                          }}
+                        />
+                        <span className="text-muted">%</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          className="form-control form-control-sm text-end d-inline-block"
+                          style={{ width: 100 }}
+                          value={watch("orderdiscountamount") ?? 0}
+                          onChange={(e) => {
+                            const amt = Math.max(0, Number(e.target.value || 0));
+                            setValue("orderdiscountamount", amt, { shouldDirty: true });
+                            const pct = totals.subtotal > 0 ? Math.round((amt / totals.subtotal) * 100 * 100) / 100 : 0;
+                            setValue("orderdiscountpercent", Math.min(100, pct), { shouldDirty: true });
+                          }}
+                        />
+                      </div>
+                    </td>
                   </tr>
                   {toNum(watchedSalesTaxRate) > 0 && (
                     <tr>
