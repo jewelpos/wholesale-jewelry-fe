@@ -31,6 +31,7 @@ interface WarehouseSettingsRow {
   defaultsalestaxrate: number | null;
   enforce_stock_check: boolean;
   showunitpriceininvoice: boolean;
+  showinvoicepayment: boolean;
 }
 
 type SettingsFormValues = Omit<WarehouseSettingsRow, "warehouseid" | "warehousename">;
@@ -54,6 +55,7 @@ const emptySettings = (): SettingsFormValues => ({
   defaultsalestaxrate: null,
   enforce_stock_check: false,
   showunitpriceininvoice: false,
+  showinvoicepayment: false,
 });
 
 const PRICE_CODE_FIELDS: { key: keyof SettingsFormValues; label: string }[] = [
@@ -126,6 +128,7 @@ const StoreSettingsForm = () => {
         defaultsalestaxrate: row.defaultsalestaxrate ?? null,
         enforce_stock_check: row.enforce_stock_check ?? false,
         showunitpriceininvoice: row.showunitpriceininvoice ?? false,
+        showinvoicepayment: row.showinvoicepayment ?? false,
       });
     } else {
       setForm(emptySettings());
@@ -165,6 +168,7 @@ const StoreSettingsForm = () => {
             defaultsalestaxrate: form.defaultsalestaxrate != null ? Number(form.defaultsalestaxrate) : null,
             enforce_stock_check: form.enforce_stock_check,
             showunitpriceininvoice: form.showunitpriceininvoice,
+            showinvoicepayment: form.showinvoicepayment,
           },
         },
       });
@@ -296,6 +300,7 @@ const StoreSettingsForm = () => {
                         { id: "allowcarriage", label: "Allow Carriage", value: !!form.allowcarriage, onChange: (v: boolean) => set("allowcarriage", v ? 1 : 0) },
                         { id: "enforce_stock_check", label: "Enforce Stock Check on Invoice", value: !!form.enforce_stock_check, onChange: (v: boolean) => set("enforce_stock_check", v) },
                         { id: "showunitpriceininvoice", label: "Show Unit Price In Invoice", value: !!form.showunitpriceininvoice, onChange: (v: boolean) => set("showunitpriceininvoice", v) },
+                        { id: "showinvoicepayment", label: "Show Payment Dialog After Invoice Save", value: !!form.showinvoicepayment, onChange: (v: boolean) => set("showinvoicepayment", v) },
                       ].map(({ id, label, value, onChange }) => (
                         <div key={id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div

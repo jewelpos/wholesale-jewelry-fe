@@ -9,6 +9,7 @@ export const GET_PRODUCT_SETTINGS_INFO_QUERY = gql`
       tagpricekey
       allowpcsentry
       allowcarriage
+      showinvoicepayment
     }
   }
 `;

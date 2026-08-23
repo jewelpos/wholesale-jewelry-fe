@@ -738,6 +738,7 @@ const SalesInvoiceForm = ({
   const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
   const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
+  const showInvoicePayment = !!productSettings?.showinvoicepayment;
 
   const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
   useEffect(() => {
@@ -1942,8 +1943,9 @@ const SalesInvoiceForm = ({
             : "Memo"
           : "Invoice";
 
-      // For new invoices only: show the payment collection modal before the print popup
-      const isNewStandardInvoice = documentType === "INVOICE" && !isEdit && !memonumber && mode !== "CREDIT_INVOICE";
+      // For new invoices only: show the payment collection modal before the print popup —
+      // gated on the warehouse's "Show Invoice Payment" setting (settings.showinvoicepayment).
+      const isNewStandardInvoice = documentType === "INVOICE" && !isEdit && !memonumber && mode !== "CREDIT_INVOICE" && showInvoicePayment;
       if (isNewStandardInvoice) {
         const capturedDocNumber = documentNumber ?? null;
         const capturedNetAmount = payload.netamount as number;

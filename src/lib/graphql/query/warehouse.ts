@@ -47,6 +47,7 @@ const WAREHOUSE_SETTINGS_FIELDS = `
   defaultsalestaxrate
   enforce_stock_check
   showunitpriceininvoice
+  showinvoicepayment
 `;
 
 export const GET_ALL_WAREHOUSE_SETTINGS_QUERY = gql`
