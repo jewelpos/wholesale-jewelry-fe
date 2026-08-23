@@ -465,13 +465,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const totals = useMemo(() => {
     const items = watchedItems || [];
-    const discountPercent = toNum(watchedDiscountPercent);
     const lines = items.map((it) => computeLine(it));
     const grossTotal = lines.reduce((acc, l) => acc + l.gross, 0);
-    const lineDiscountTotal = lines.reduce((acc, l) => acc + l.discountAmt, 0);
-    const afterLineDiscount = grossTotal - lineDiscountTotal;
-    const invoiceDiscountAmt = afterLineDiscount * (discountPercent / 100);
-    const discountAmount = lineDiscountTotal + invoiceDiscountAmt;
+    // The global "Discount %" box (see its onChange handler) already stamps this
+    // same percent onto every line item's discountpercent, so each line's own
+    // discountAmt already reflects it in full. Do not also apply discountPercent
+    // here on top of the line total — that double-applies it (e.g. 10% became a
+    // compounded ~19%).
+    const discountAmount = lines.reduce((acc, l) => acc + l.discountAmt, 0);
     const subtotal = grossTotal - discountAmount;
     const shipping = toNum(watchedShipping);
     const orderTotal = subtotal + shipping;
@@ -602,6 +603,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     const discountPct = Math.min(100, Math.max(0, toNum(toolItem.discountpercent)));
     let resolvedSource: string | null = null;
     let resolvedPromotionId: number | null = null;
+    let resolvedDiscountPct = discountPct;
 
     if (editingIndex == null) {
       const bulkTiers = toolItem.itemid ? await getBulkTiers(toolItem.itemid) : [];
@@ -617,14 +619,42 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       });
       resolvedSource = resolved.discountsource;
       resolvedPromotionId = resolved.discountpromotionid;
+      // resolveDiscount's result was being discarded here — a qty typed into
+      // the tool that qualified for a bulk tier never actually reached the
+      // line. Only fall back to the raw box value when nothing resolved.
+      if (resolvedSource) {
+        resolvedDiscountPct = resolved.discountpercent;
+      }
     } else {
+      // Edit: if the Disc % box was changed directly, that's an explicit manual
+      // override — respect it. Otherwise (most common case: user only changed
+      // Qty), re-resolve against the new quantity instead of keeping whatever
+      // was resolved at the old quantity.
       const existingItem = getValues(`items.${editingIndex}`);
+      const existingDiscountSource = (existingItem as any)?.discountsource ?? null;
       if (discountPct !== toNum(existingItem?.discountpercent)) {
         resolvedSource = 'manual';
         resolvedPromotionId = null;
-      } else {
-        resolvedSource = (existingItem as any)?.discountsource ?? null;
+      } else if (existingDiscountSource === 'manual') {
+        resolvedSource = 'manual';
         resolvedPromotionId = (existingItem as any)?.discountpromotionid ?? null;
+      } else {
+        const bulkTiers = toolItem.itemid ? await getBulkTiers(toolItem.itemid) : [];
+        const resolved = resolveDiscount({
+          itemDiscount: toolItem._itemdiscount ?? 0,
+          unitprice: toNum(toolItem.unitprice),
+          qty,
+          bulkTiers,
+          activePromotions,
+          itemid: toolItem.itemid!,
+          categoryid: toolItem._itemcategoryid ?? null,
+          warehouseid: getValues('warehouseid'),
+        });
+        resolvedSource = resolved.discountsource;
+        resolvedPromotionId = resolved.discountpromotionid;
+        if (resolvedSource) {
+          resolvedDiscountPct = resolved.discountpercent;
+        }
       }
     }
 
@@ -637,7 +667,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itempcs: toNum(toolItem.itempcs),
       itemquantity: qty,
       unitprice: toNum(toolItem.unitprice),
-      discountpercent: discountPct,
+      discountpercent: resolvedDiscountPct,
       discountsource: resolvedSource,
       discountpromotionid: resolvedPromotionId,
       itemmetal: toolItem.itemmetal,

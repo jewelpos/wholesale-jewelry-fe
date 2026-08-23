@@ -1202,14 +1202,15 @@ const SalesInvoiceForm = ({
 
   const totals = useMemo(() => {
     const items = watchedItems || [];
-    const discountPercent = toNum(watchedDiscountPercent);
 
     const lines = items.map((it) => computeLine(it, mode));
     const grossTotal = round2(lines.reduce((acc, l) => acc + l.gross, 0));
-    const lineDiscountTotal = lines.reduce((acc, l) => acc + l.discountAmt, 0);
-    const afterLineDiscount = grossTotal - lineDiscountTotal;
-    const invoiceDiscountAmt = afterLineDiscount * (discountPercent / 100);
-    const discountAmount = round2(lineDiscountTotal + invoiceDiscountAmt);
+    // The global "Discount %" box (see its onChange handler) already stamps this
+    // same percent onto every line item's discountpercent, so each line's own
+    // discountAmt already reflects it in full. Do not also apply discountPercent
+    // here on top of the line total — that double-applies it (e.g. 10% became a
+    // compounded ~19%).
+    const discountAmount = round2(lines.reduce((acc, l) => acc + l.discountAmt, 0));
     const subtotal = round2(grossTotal - discountAmount);
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
@@ -1501,6 +1502,7 @@ const SalesInvoiceForm = ({
     // Resolve discount for new items; for edits detect manual override
     let resolvedSource: string | null = null;
     let resolvedPromotionId: number | null = null;
+    let resolvedDiscountPct = discountPct;
 
     if (editingIndex == null) {
       // New line: resolve discount from item data + bulk + promotions
@@ -1517,15 +1519,47 @@ const SalesInvoiceForm = ({
       });
       resolvedSource = resolved.discountsource;
       resolvedPromotionId = resolved.discountpromotionid;
+      // resolveDiscount was being called here but its result was discarded —
+      // the qty typed into the tool (e.g. a bulk-discount-qualifying quantity)
+      // never actually reached the line, so bulk/promo tiers silently never
+      // applied. Only fall back to the raw box value when nothing resolved
+      // (source null, e.g. all items have zero discount) so a value the user
+      // typed directly into Disc % isn't clobbered in that case.
+      if (resolvedSource) {
+        resolvedDiscountPct = resolved.discountpercent;
+      }
     } else {
-      // Edit: if discount was changed by user vs existing, mark manual
+      // Edit: if the Disc % box was changed directly, that's an explicit manual
+      // override — respect it. Otherwise (most common case: user only changed
+      // Qty), re-resolve against the new quantity instead of keeping whatever
+      // was resolved at the old quantity — a qty edit that now qualifies for a
+      // bulk tier (or no longer does) must actually be re-evaluated, same as
+      // the quantity-bump paths elsewhere in this file already do.
       const existingItem = getValues(`items.${editingIndex}`);
+      const existingDiscountSource = (existingItem as any)?.discountsource ?? null;
       if (discountPct !== toNum(existingItem?.discountpercent)) {
         resolvedSource = 'manual';
         resolvedPromotionId = null;
-      } else {
-        resolvedSource = (existingItem as any)?.discountsource ?? null;
+      } else if (existingDiscountSource === 'manual') {
+        resolvedSource = 'manual';
         resolvedPromotionId = (existingItem as any)?.discountpromotionid ?? null;
+      } else {
+        const bulkTiers = await getBulkTiers(Number(toolItem.itemid));
+        const resolved = resolveDiscount({
+          itemDiscount: toolItem._itemdiscount ?? 0,
+          unitprice: unitPrice,
+          qty: Math.abs(normalizedQty),
+          bulkTiers,
+          activePromotions,
+          itemid: Number(toolItem.itemid),
+          categoryid: toolItem._itemcategoryid ?? null,
+          warehouseid: getValues('warehouseid'),
+        });
+        resolvedSource = resolved.discountsource;
+        resolvedPromotionId = resolved.discountpromotionid;
+        if (resolvedSource) {
+          resolvedDiscountPct = resolved.discountpercent;
+        }
       }
     }
 
@@ -1544,7 +1578,7 @@ const SalesInvoiceForm = ({
       itempcs: toNum(toolItem.itempcs),
       itemquantity: normalizedQty,
       unitprice: unitPrice,
-      discountpercent: discountPct,
+      discountpercent: resolvedDiscountPct,
       discountsource: resolvedSource,
       discountpromotionid: resolvedPromotionId,
       availableqty: toolItem.availableqty,

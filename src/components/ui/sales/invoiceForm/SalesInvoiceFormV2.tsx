@@ -886,14 +886,15 @@ const SalesInvoiceFormV2 = ({
 
   const totals = useMemo(() => {
     const items = watchedItems || [];
-    const discountPercent = toNum(watchedDiscountPercent);
 
     const lines = items.map((it) => computeLine(it, mode));
     const grossTotal = lines.reduce((acc, l) => acc + l.gross, 0);
-    const lineDiscountTotal = lines.reduce((acc, l) => acc + l.discountAmt, 0);
-    const afterLineDiscount = grossTotal - lineDiscountTotal;
-    const invoiceDiscountAmt = afterLineDiscount * (discountPercent / 100);
-    const discountAmount = lineDiscountTotal + invoiceDiscountAmt;
+    // The global "Discount %" box (see its onChange handler) already stamps this
+    // same percent onto every line item's discountpercent, so each line's own
+    // discountAmt already reflects it in full. Do not also apply discountPercent
+    // here on top of the line total — that double-applies it (e.g. 10% became a
+    // compounded ~19%).
+    const discountAmount = lines.reduce((acc, l) => acc + l.discountAmt, 0);
     const subtotal = grossTotal - discountAmount;
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);

@@ -37,10 +37,14 @@ export interface ResolvedDiscount {
 }
 
 function toPercent(discountamount: number, discounttype: 'PERCENT' | 'FLAT', unitprice: number): number {
+  // discountamount can arrive as a string (numeric DB columns serialize that
+  // way without an explicit transformer) — Number() here guarantees callers
+  // always get a real number back, since e.g. `"15".toFixed` doesn't exist.
+  const amt = Number(discountamount) || 0;
   if (discounttype === 'FLAT') {
-    return unitprice > 0 ? (discountamount / unitprice) * 100 : 0;
+    return unitprice > 0 ? (amt / unitprice) * 100 : 0;
   }
-  return discountamount;
+  return amt;
 }
 
 export function resolveDiscount(params: {
@@ -67,8 +71,8 @@ export function resolveDiscount(params: {
   // Bulk discount
   const matchingTier = bulkTiers.find(t => {
     if (warehouseid && t.warehouseid && t.warehouseid !== warehouseid) return false;
-    const minOk = qty >= t.minquantity;
-    const maxOk = t.maxquantity == null || qty <= t.maxquantity;
+    const minOk = qty >= Number(t.minquantity);
+    const maxOk = t.maxquantity == null || qty <= Number(t.maxquantity);
     return minOk && maxOk;
   });
   if (matchingTier) {
@@ -85,10 +89,14 @@ export function resolveDiscount(params: {
     if (promo.enddate && todayStr > promo.enddate) continue;
 
     for (const pi of promo.items) {
-      const itemMatch = pi.itemid != null && pi.itemid === itemid;
-      const catMatch = pi.categoryid != null && pi.categoryid === categoryid;
+      // pi.itemid comes back from the backend as a string (bigint column,
+      // explicitly String()'d in the resolver) while itemid here is always a
+      // number — `===` between those never matches, so item-specific promos
+      // silently never applied regardless of quantity. Compare as numbers.
+      const itemMatch = pi.itemid != null && Number(pi.itemid) === Number(itemid);
+      const catMatch = pi.categoryid != null && Number(pi.categoryid) === Number(categoryid);
       if (!itemMatch && !catMatch) continue;
-      if (pi.requiredquantity != null && qty < pi.requiredquantity) continue;
+      if (pi.requiredquantity != null && qty < Number(pi.requiredquantity)) continue;
 
       const promoPct = toPercent(pi.discountamount, pi.discounttype, unitprice);
       if (promoPct > best.discountpercent) {
