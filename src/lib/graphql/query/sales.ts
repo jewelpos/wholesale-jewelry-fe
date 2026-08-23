@@ -91,6 +91,8 @@ export const GET_MEMO_LIST_QUERY = gql`
         numberofitems
         totalamount
         discountamount
+        orderdiscountpercent
+        orderdiscountamount
         subtotal
         salestax
         shipping

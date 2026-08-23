@@ -81,6 +81,8 @@ export type MemoSummary = {
   numberofitems: number;
   totalamount: number;
   discountamount: number;
+  orderdiscountpercent: number;
+  orderdiscountamount: number;
   subtotal: number;
   salestax: number;
   shipping: number;
