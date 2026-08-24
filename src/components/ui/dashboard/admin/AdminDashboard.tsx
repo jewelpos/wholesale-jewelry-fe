@@ -55,7 +55,6 @@ const AdminDashboard = () => {
 
   const [selectedOutletId, setSelectedOutletId] = useState(outletId);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const years = [currentYear, currentYear - 1, currentYear - 2];
 
   // Outlets for selector
   const { data: outletsData } = useQuery(GET_OUTLETS_QUERY, {
@@ -84,6 +83,22 @@ const AdminDashboard = () => {
     GET_MONTHLY_SALES_PIVOT_QUERY,
     { variables: pVars(storeId, selectedOutletId, null, selectedYear - 1) }
   );
+
+  // Sales pivots fixed to currentYear-1/-2 (independent of selectedYear) — used only
+  // to decide which year pills to show, so pill visibility doesn't shift as the
+  // user clicks between years.
+  const { data: py1Data } = useQuery(GET_MONTHLY_SALES_PIVOT_QUERY, {
+    variables: pVars(storeId, selectedOutletId, null, currentYear - 1),
+  });
+  const { data: py2Data } = useQuery(GET_MONTHLY_SALES_PIVOT_QUERY, {
+    variables: pVars(storeId, selectedOutletId, null, currentYear - 2),
+  });
+  const years = useMemo(() => {
+    const list = [currentYear];
+    if ((py1Data?.getMonthlySalesPivot?.data ?? []).length > 0) list.push(currentYear - 1);
+    if ((py2Data?.getMonthlySalesPivot?.data ?? []).length > 0) list.push(currentYear - 2);
+    return list;
+  }, [py1Data, py2Data]);
 
   // Employee sales — needs mapped warehouse
   const { data: empData, loading: empLoading } = useQuery(
