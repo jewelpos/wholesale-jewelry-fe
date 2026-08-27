@@ -398,12 +398,15 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields.itemsellprice, selectedTemplate?.tagprefix, selectedTemplate?.tagsuffix, selectedTemplate?.labelid]);
 
-  // Fetch codechars once on mount
+  // Fetch codechars once on mount. 0 isn't a real warehouse — the backend treats it as
+  // "no warehouse filter" (`warehouseid ? {warehouseid} : {}`) and returns an arbitrary
+  // settings row via findOne({where:{}}), which is wrong on any multi-warehouse store.
+  // Only fetch once the product's real warehouse id is known.
   useEffect(() => {
-    if (!parsedStoreId || settingsFetchedRef.current) return;
+    if (!parsedStoreId || settingsFetchedRef.current || !product.itemwarehouseid) return;
     settingsFetchedRef.current = true;
     fetchSettings({
-      variables: { storeid: parsedStoreId, warehouiseid: product.itemwarehouseid ?? 0 },
+      variables: { storeid: parsedStoreId, warehouiseid: product.itemwarehouseid },
     }).then(({ data }) => {
       setCodechars(data?.getProductSettingsInfo?.[0]?.codechars ?? "");
     });
@@ -447,10 +450,13 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   const handleAutoFill = async () => {
     setAutoFillLoading(true);
     try {
-      const { data } = await fetchSettings({
-        variables: { storeid: parsedStoreId, warehouiseid: product.itemwarehouseid ?? 0 },
-      });
-      const settings = data?.getProductSettingsInfo?.[0] ?? null;
+      const settings = product.itemwarehouseid
+        ? (
+            await fetchSettings({
+              variables: { storeid: parsedStoreId, warehouiseid: product.itemwarehouseid },
+            })
+          ).data?.getProductSettingsInfo?.[0] ?? null
+        : null;
       const codechars: string = settings?.codechars ?? "";
       const price = product.itemsellprice ?? 0;
       const rawCoded = codechars ? encodePrice(price, codechars) : String(price);

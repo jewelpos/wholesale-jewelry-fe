@@ -11,9 +11,11 @@ import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 const SupplierListHeader = ({
   setShowInvoiceFormModal,
   setPaymentModal,
+  onExport,
 }: {
   setShowInvoiceFormModal: (value: boolean) => void;
   setPaymentModal: (value: string) => void;
+  onExport: () => void;
 }) => {
   const { currentMenu, currentPath } = useMenu();
 
@@ -27,6 +29,7 @@ const SupplierListHeader = ({
       const isInvoice  = btn.actionname.includes("invoice");
       const isCredit   = btn.actionname.includes(paymentModalTypes.add_credit_adjustment);
       const isPayment  = btn.actionname.includes(paymentModalTypes.add_supplier_payment);
+      const isExport   = btn.actionname.includes("export");
       const isModal    = isInvoice || isCredit || isPayment;
 
       const onClick = isModal
@@ -35,6 +38,11 @@ const SupplierListHeader = ({
             if (isInvoice) setShowInvoiceFormModal(true);
             else setPaymentModal(btn.actionname);
           }
+        : isExport
+        ? (e: React.MouseEvent) => {
+            e.preventDefault();
+            onExport();
+          }
         : undefined;
 
       return {
@@ -42,7 +50,7 @@ const SupplierListHeader = ({
         label: btn.actiondisplayname,
         icon: renderActionButtonIconName(btn.actionname) || undefined,
         colorClass: renderActionButtonColor(btn.actionname),
-        href: isModal ? "#" : `${currentPath}/new`,
+        href: isModal || isExport ? "#" : `${currentPath}/new`,
         onClick,
       };
     });

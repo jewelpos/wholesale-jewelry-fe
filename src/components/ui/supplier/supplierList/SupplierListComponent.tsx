@@ -24,6 +24,7 @@ import { GET_SUPPLIER_LIST_QUERY } from "@/lib/graphql/query/supplier";
 import { REFRESH_SUPPLIER_LIST_MUTATION } from "@/lib/graphql/mutations/supplier";
 import { SupplierListType } from "@/types/supplier";
 import { filterVariables } from "@/lib/utils/gridFilters";
+import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
 import { supplierListcolumnDefs } from "./ColumnDef";
 import POSGrid from "../../grid/POSGrid";
 import CustomFilterSections from "../../grid/CustomFilterSections";
@@ -133,6 +134,51 @@ const SupplierListComponent = () => {
     }
   }, [parsedStoreId, refreshSupplierListMutation, dispatch]);
 
+  const handleExport = useCallback(async () => {
+    const fakeRequest = {
+      startRow: 0,
+      endRow: 1,
+      filterModel: gridRef.current?.api?.getFilterModel() ?? {},
+      sortModel: (gridRef.current?.api?.getColumnState() ?? [])
+        .filter((c) => c.sort)
+        .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+        .map((c) => ({ colId: c.colId, sort: c.sort })),
+      groupKeys: [],
+      rowGroupCols: [],
+    };
+    const filters = filterVariables({ request: fakeRequest }, debouncedSearchRef.current, "companyname");
+    const result = await handleTryCatch(async () => {
+      await exportAllRowsToExcel(
+        gridRef.current?.api,
+        async (page, perpage) => {
+          const { data } = await getSupplierList({
+            variables: {
+              outletid: parsedOutletId,
+              ...filters,
+              page,
+              perpage,
+              filters: [
+                ...filters.filters,
+                ...(selectedOutletRef.current
+                  ? [{ key: "outletid", value: { filterType: "number", type: "equals", filter: selectedOutletRef.current } }]
+                  : []),
+              ],
+            },
+          });
+          return {
+            data: data?.getSupplierList?.data ?? [],
+            total: data?.getSupplierList?.total ?? 0,
+          };
+        },
+        { fileName: "suppliers", sheetName: "Suppliers" }
+      );
+      return true;
+    });
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  }, [getSupplierList, parsedOutletId, dispatch]);
+
   // Set datasource once when grid ready — stable datasource so this only fires once
   useEffect(() => {
     if (gridReady && gridRef.current?.api) {
@@ -185,6 +231,7 @@ const SupplierListComponent = () => {
         <SupplierListHeader
           setShowInvoiceFormModal={setShowInvoiceFormModal}
           setPaymentModal={setPaymentModal}
+          onExport={handleExport}
         />
         {isAdmin && (
           <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Supplier Summary">

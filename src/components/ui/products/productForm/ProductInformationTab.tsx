@@ -235,8 +235,18 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               maxImages={1}
               disabled={disableField}
             />
-            {/* hidden warehouse id for form submission */}
-            <input type="hidden" {...register("itemwarehouseid", { required: "Warehouse is required" })} />
+            {/* hidden warehouse id for form submission — `required` alone doesn't
+                catch this: a hidden number input holding 0 stringifies to "0",
+                which is non-empty and satisfies HTML's required check. Validate
+                the actual value instead so an unresolved warehouse (system
+                warehouse lookup still pending or not found for this outlet)
+                blocks submission instead of silently saving itemwarehouseid: 0. */}
+            <input
+              type="hidden"
+              {...register("itemwarehouseid", {
+                validate: (v) => Number(v) > 0 || "Warehouse is required",
+              })}
+            />
           </div>
 
           {/* ── Identity fields ── */}

@@ -5,7 +5,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { FieldErrors, SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import ActionFooter from "../../ActionFooter";
@@ -146,9 +146,18 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       ? Number(itempurchaseprice) * (Number(profitpercent) / 100)
       : 0;
 
+  // Settings (saletagkey/tagpricekey/codechars) are per-warehouse. Passing 0 here is
+  // treated by the backend as "no warehouse filter" (`warehouseid ? {warehouseid} : {}`),
+  // which returns an arbitrary settings row via findOne({where:{}}) instead of the
+  // current warehouse's row. That's invisible on a single-warehouse store (there's only
+  // one row to return) but silently uses the wrong warehouse's saletagkey/tagpricekey on
+  // a multi-warehouse store — e.g. showing a stale/blank price code and saving sell price
+  // as 0. Wait for the real warehouse id instead of ever falling back to the 0 sentinel.
+  const watchedWarehouseIdForSettings = watch("itemwarehouseid");
+  const productSettingsWarehouseId = Number(watchedWarehouseIdForSettings) || undefined;
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
-    variables: { storeid: parsedStoreId, warehouiseid: 0 },
-    skip: !parsedStoreId,
+    variables: { storeid: parsedStoreId, warehouiseid: productSettingsWarehouseId },
+    skip: !parsedStoreId || !productSettingsWarehouseId,
   });
   const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
 
@@ -190,8 +199,16 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     if (itemcode && productData) updatedParams = { ...updatedParams, itemid: productData.itemid };
 
     const { itemimagepath, ...rest } = formData;
+    // A blank number input becomes JS NaN via react-hook-form's valueAsNumber (e.g.
+    // itemsellprice), which then survives all the way to the DB as a literal NaN if
+    // nothing catches it — Postgres numeric columns accept NaN as a valid value, and
+    // that later breaks GraphQL's Float scalar for the whole row. Force any NaN here
+    // to 0 before it ever leaves the form.
+    const sanitizedRest = Object.fromEntries(
+      Object.entries(rest).map(([k, v]) => [k, typeof v === "number" && !Number.isFinite(v) ? 0 : v])
+    ) as typeof rest;
     const payload = {
-      ...rest,
+      ...sanitizedRest,
       itemtaxable: formData.itemtaxable ? 1 : 0,
       trackinventory: formData.trackinventory ? 1 : 0,
       itemalertwarning: formData.itemalertwarning ? 1 : 0,
@@ -352,8 +369,21 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
 
   if (loading) return <>{[1, 2, 3, 4, 5].map(i => <PlaceHolder key={i} />)}</>;
 
+  // handleSubmit silently no-ops on validation failure with no onInvalid handler —
+  // without this, a blocked submit (e.g. warehouse not resolved yet) would look to
+  // the user like the Save button did nothing.
+  const onInvalid = (formErrors: FieldErrors<ProductFormType>) => {
+    const firstError = Object.values(formErrors)[0] as { message?: string } | undefined;
+    dispatch(
+      showNotification({
+        message: firstError?.message || "Please fix the highlighted fields before saving.",
+        type: NOTIFICATION_TYPES.ERROR,
+      })
+    );
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
       <fieldset disabled={disableField}>
         <ProductInformationTab
           register={register}

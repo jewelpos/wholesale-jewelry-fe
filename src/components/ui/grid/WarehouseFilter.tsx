@@ -59,7 +59,14 @@ const WarehouseFilter = ({
             classNamePrefix="react-select"
             options={warehouseList}
             value={selectedWarehouse ? { value: selectedWarehouse, label: warehouseList.find((w) => w.value === selectedWarehouse)?.label || "" } : null}
-            onChange={(option) => setSelectedWarehouse(parseInt(option?.value as unknown as string, 10))}
+            onChange={(option) =>
+          // Clearing the select fires onChange(null) — option?.value is then undefined,
+          // and parseInt(undefined, 10) is NaN, not -1 (the "no warehouse selected"
+          // sentinel every consumer of this component checks for). NaN slips past every
+          // `!== -1` guard, so the empty filter still got sent to the backend and blew
+          // up as `warehouseid = ''` (Postgres: invalid input syntax for type integer).
+          setSelectedWarehouse(option ? parseInt(option.value as unknown as string, 10) : -1)
+        }
             isLoading={loading}
             isClearable
             styles={filterSelectStyles}
@@ -77,7 +84,14 @@ const WarehouseFilter = ({
         placeholder="Select Warehouse"
         options={warehouseList}
         value={selectedWarehouse ? { value: selectedWarehouse, label: warehouseList.find((w) => w.value === selectedWarehouse)?.label || "" } : null}
-        onChange={(option) => setSelectedWarehouse(parseInt(option?.value as unknown as string, 10))}
+        onChange={(option) =>
+          // Clearing the select fires onChange(null) — option?.value is then undefined,
+          // and parseInt(undefined, 10) is NaN, not -1 (the "no warehouse selected"
+          // sentinel every consumer of this component checks for). NaN slips past every
+          // `!== -1` guard, so the empty filter still got sent to the backend and blew
+          // up as `warehouseid = ''` (Postgres: invalid input syntax for type integer).
+          setSelectedWarehouse(option ? parseInt(option.value as unknown as string, 10) : -1)
+        }
         isLoading={loading}
         isClearable
         styles={filterSelectStyles}

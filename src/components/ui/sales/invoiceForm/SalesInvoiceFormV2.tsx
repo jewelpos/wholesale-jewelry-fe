@@ -292,13 +292,6 @@ const SalesInvoiceFormV2 = ({
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
-    variables: { storeid: parsedStoreId, warehouiseid: 0 },
-    skip: !parsedStoreId,
-  });
-  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
-  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
-  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const [productClearKey, setProductClearKey] = useState(0);
 
   const handlePrintDocumentNumber = async (documentNumber: number) => {
@@ -760,6 +753,19 @@ const SalesInvoiceFormV2 = ({
     const n = typeof watchedWarehouseId === "number" ? watchedWarehouseId : Number(watchedWarehouseId);
     return Number.isFinite(n) ? n : undefined;
   }, [watchedWarehouseId]);
+
+  // Settings (saletagkey/tagpricekey/allowpcsentry/allowcarriage) are per-warehouse.
+  // 0 is treated by the backend as "no filter" (`warehouseid ? {warehouseid} : {}`),
+  // which returns an arbitrary settings row via findOne({where:{}}) instead of the
+  // current warehouse's row — wrong on any multi-warehouse store. Wait for the real
+  // warehouse id instead of ever sending the 0 sentinel.
+  const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: parsedWarehouseId },
+    skip: !parsedStoreId || !parsedWarehouseId,
+  });
+  const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
+  const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
+  const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
 
   const customerId = watch("customerid");
   const shipSameAsBill = watch("shipSameAsBill");
