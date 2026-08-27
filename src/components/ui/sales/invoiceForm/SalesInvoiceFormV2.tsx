@@ -47,6 +47,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { useCurrency } from "@/hooks/useCurrency";
 import api from "@/lib/axios";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import { formatQty } from "@/lib/utils/numberFormat";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
 export type SalesInvoiceFormMode = "NEW_INVOICE" | "CREDIT_INVOICE";
@@ -1906,7 +1907,7 @@ const SalesInvoiceFormV2 = ({
                               {(item as any)?.itemunit}
                             </span>
                           )}
-                          {line.qty}
+                          {formatQty(line.qty)}
                         </td>
                         <td className="text-end">
                           <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>

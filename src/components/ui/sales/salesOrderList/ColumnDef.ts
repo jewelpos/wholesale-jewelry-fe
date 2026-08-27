@@ -2,7 +2,7 @@ import { TIME_FORMAT } from "@/lib/config/constants";
 import { SalesOrderListType } from "@/types/sales";
 import { ColDef, ICellRendererParams } from "ag-grid-community";
 import dayjs from "dayjs";
-import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
+import { currencyFormattedCellRenderer, qtyFormattedCellRenderer } from "../../products/list/columnDef";
 import SalesOrderActions from "./SalesOrderActions";
 
 export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
@@ -19,7 +19,7 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     valueGetter: (params) =>
       params.data ? `${params.data.customerid} - ${params.data.custcompanyname ?? ""}` : "",
   },
-  { headerName: "Items", field: "numberofitems", filter: "agTextColumnFilter" },
+  { headerName: "Items", field: "numberofitems", filter: "agTextColumnFilter", cellRenderer: qtyFormattedCellRenderer },
   {
     headerName: "Net amount",
     field: "netamount",
@@ -46,8 +46,8 @@ export const salesOrderColumnDefs: ColDef<SalesOrderListType>[] = [
     filter: "agTextColumnFilter",
   },
   { headerName: "Status", field: "statusname", filter: "agTextColumnFilter" },
-  { headerName: "Invoice Qty", field: "invoiceqty", filter: "agNumberColumnFilter" },
-  { headerName: "Bord Qty", field: "bordqty", filter: "agNumberColumnFilter" },
+  { headerName: "Invoice Qty", field: "invoiceqty", filter: "agNumberColumnFilter", cellRenderer: qtyFormattedCellRenderer },
+  { headerName: "Bord Qty", field: "bordqty", filter: "agNumberColumnFilter", cellRenderer: qtyFormattedCellRenderer },
   { headerName: "Terms", field: "termsname", filter: "agTextColumnFilter" },
   {
     headerName: "Warehouse name",

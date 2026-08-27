@@ -28,6 +28,7 @@ import {
   GET_SINGLE_PURCHASE_ORDER_QUERY,
 } from "@/lib/graphql/query/purchase";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import { formatQty } from "@/lib/utils/numberFormat";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
@@ -1565,9 +1566,9 @@ const PurchaseOrderForm = ({
                             <td className="text-nowrap">{displayItemCode}</td>
                             <td>{description}</td>
                             <td className="text-nowrap text-muted small">{getValues(`items.${index}.itemunit`)}</td>
-                            <td className="text-end">{qty}</td>
-                            {disableField && <td className="text-end">{recvQty}</td>}
-                            {disableField && <td className="text-end">{backorder}</td>}
+                            <td className="text-end">{formatQty(qty)}</td>
+                            {disableField && <td className="text-end">{formatQty(recvQty)}</td>}
+                            {disableField && <td className="text-end">{formatQty(backorder)}</td>}
                             <td className="text-end">{unitPrice}</td>
                             <td className="text-end">{discountPct}</td>
                             <td className="text-end">

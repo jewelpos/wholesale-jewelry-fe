@@ -56,6 +56,7 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { useCurrency } from "@/hooks/useCurrency";
 import api from "@/lib/axios";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import { formatQty } from "@/lib/utils/numberFormat";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import { BarcodeScannerModal } from "./BarcodeScannerModal";
 
@@ -2777,13 +2778,13 @@ const SalesInvoiceForm = ({
                           </span>
                         </td>
                         {allowPcsEntry && <td className="text-end">{toNum(item?.itempcs) || 0}</td>}
-                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcinvoice) || 0}</td>}
-                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcsreturn) || 0}</td>}
-                        {isMemoView && allowPcsEntry && <td className="text-end">{toNum(item?.memopcsremain) || 0}</td>}
-                        <td className="text-end">{line.qty}</td>
-                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyinvoice) || 0}</td>}
-                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyreturn) || 0}</td>}
-                        {isMemoView && <td className="text-end">{toNum(item?.memoqtyremain) || 0}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcinvoice))}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsreturn))}</td>}
+                        {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsremain))}</td>}
+                        <td className="text-end">{formatQty(line.qty)}</td>
+                        {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyinvoice))}</td>}
+                        {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyreturn))}</td>}
+                        {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyremain))}</td>}
                         <td className="text-end">
                           <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>
                           {line.unit === 0 && (

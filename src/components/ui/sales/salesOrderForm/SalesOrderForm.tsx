@@ -38,6 +38,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { useCurrency } from "@/hooks/useCurrency";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
+import { formatQty } from "@/lib/utils/numberFormat";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import api from "@/lib/axios";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
@@ -1235,12 +1236,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                             {item.itemunit || "Pc"}
                           </span>
                         </td>
-                        {allowPcsEntry && <td className="text-end">{toNum(item.itempcs)}</td>}
-                        {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.invoicepcs)}</td>}
-                        {allowPcsEntry && readOnly && <td className="text-end">{toNum(item.bordpcs)}</td>}
-                        <td className="text-end">{toNum(item.itemquantity)}</td>
-                        {readOnly && <td className="text-end">{toNum(item.invoiceqty)}</td>}
-                        {readOnly && <td className="text-end">{toNum(item.bordqty)}</td>}
+                        {allowPcsEntry && <td className="text-end">{formatQty(toNum(item.itempcs))}</td>}
+                        {allowPcsEntry && readOnly && <td className="text-end">{formatQty(toNum(item.invoicepcs))}</td>}
+                        {allowPcsEntry && readOnly && <td className="text-end">{formatQty(toNum(item.bordpcs))}</td>}
+                        <td className="text-end">{formatQty(toNum(item.itemquantity))}</td>
+                        {readOnly && <td className="text-end">{formatQty(toNum(item.invoiceqty))}</td>}
+                        {readOnly && <td className="text-end">{formatQty(toNum(item.bordqty))}</td>}
                         <td className="text-end">
                           <span className={toNum(item.unitprice) === 0 ? "text-danger fw-bold" : ""}>{formatMoney(item.unitprice)}</span>
                           {toNum(item.unitprice) === 0 && (

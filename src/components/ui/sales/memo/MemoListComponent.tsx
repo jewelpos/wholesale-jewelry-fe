@@ -22,7 +22,7 @@ import { MemoSummary, MemoSummaryTotals } from "@/types/sales";
 import { filterVariables } from "@/lib/utils/gridFilters";
 import POSGrid from "@/components/ui/grid/POSGrid";
 import CustomFilterSections from "@/components/ui/grid/CustomFilterSections";
-import { currencyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
+import { currencyFormattedCellRenderer, qtyFormattedCellRenderer } from "@/components/ui/products/list/columnDef";
 import MemoListHeader from "./MemoListHeader";
 import MemoActions from "./MemoActions";
 import { useSummaryPanel } from "@/hooks/useSummaryPanel";
@@ -81,7 +81,7 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
   { headerName: "Status", field: "statusname", filter: "agTextColumnFilter", cellRenderer: StatusPillRenderer },
   { headerName: "Mode",     field: "salemodename", filter: "agTextColumnFilter" },
   { headerName: "Date",     field: "saledate",    filter: "agDateColumnFilter", cellRenderer: dateRenderer },
-  { headerName: "Items",    field: "numberofitems", filter: "agNumberColumnFilter" },
+  { headerName: "Items",    field: "numberofitems", filter: "agNumberColumnFilter", cellRenderer: qtyFormattedCellRenderer },
   { headerName: "Total",    field: "totalamount",  filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer },
   { headerName: "Item Discount", field: "discountamount", filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer, hide: true },
   { headerName: "Order Discount", field: "orderdiscountamount", filter: "agNumberColumnFilter", cellRenderer: currencyFormattedCellRenderer, hide: true },
