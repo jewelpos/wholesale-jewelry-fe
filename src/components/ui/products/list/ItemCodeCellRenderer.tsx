@@ -19,7 +19,7 @@ function parseFirstImageUrl(raw: string | null | undefined): string | null {
 
 function isNewItem(createddate: string | number | null | undefined): boolean {
   if (!createddate) return false;
-  const ts = Number(createddate);
+  const ts = new Date(createddate).getTime();
   if (isNaN(ts)) return false;
   return Date.now() - ts < NEW_DAYS * 24 * 60 * 60 * 1000;
 }
