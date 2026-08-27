@@ -723,14 +723,13 @@ const ProductInformationTab: React.FC<ProductInformationTabProps> = ({
               <input type="text" className="form-control form-control-sm" {...register("itemcolor")} />
             </div>
           )}
-          {!isHidden("itemweight") && (
+          {!isHidden("itemweighttext") && (
             <div className="col-lg-3 col-md-6">
               <Label>Weight</Label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
                 className="form-control form-control-sm"
-                {...register("itemweight", { valueAsNumber: true })}
+                {...register("itemweighttext")}
               />
             </div>
           )}

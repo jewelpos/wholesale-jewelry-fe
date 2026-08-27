@@ -249,6 +249,7 @@ export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
       itemlength
       itemsize
       itemcolor
+      itemweighttext
       itemcategoryid
       subcategoryid
       itemstatus
@@ -425,6 +426,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         itemsize
         itemcolor
         itemweight
+        itemweighttext
         itemmetal
       }
     }

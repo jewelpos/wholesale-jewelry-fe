@@ -199,13 +199,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
       itemcategoryid: Number(formData.itemcategoryid),
       subcategoryid: formData.subcategoryid ? Number(formData.subcategoryid) : null,
       itempurchaseprice: Number(formData.itempurchaseprice),
-      // valueAsNumber on this field turns a blank input into NaN (not undefined),
-      // so `formData.itemweight ? ... : null` alone doesn't catch it — NaN is
-      // truthy-checked as falsy here only by chance of being compared, but the
-      // real guard needed is Number.isFinite, since NaN would otherwise slip
-      // through as-is and break the entire product list downstream (a single
-      // NaN Float value fails GraphQL serialization for the whole query).
-      itemweight: Number.isFinite(formData.itemweight) ? formData.itemweight : null,
+      itemweighttext: formData.itemweighttext || null,
       itemtagprice: formData.itemtagprice ? Number(formData.itemtagprice) : null,
       itemdiscount: formData.itemdiscount ? Number(formData.itemdiscount) : null,
       profitpercent: formData.profitpercent ? Number(formData.profitpercent) : null,

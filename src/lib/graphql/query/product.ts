@@ -32,6 +32,7 @@ export const GET_ALL_INVENTORY_ITEMS_QUERY = gql`
       adjdate
       adjremarks
       itemweight
+      itemweighttext
       itemmetalpremiume
       itemtype
       itemsetpcs
@@ -157,6 +158,7 @@ export const GET_ALL_INVENTORY_ITEMS_WITH_STOCK_QUERY = gql`
       adjdate
       adjremarks
       itemweight
+      itemweighttext
       itemmetalpremiume
       itemtype
       itemsetpcs

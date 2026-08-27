@@ -95,6 +95,7 @@ export type ProductListType = {
   itemsize?: string;
   itemcolor?: string;
   itemweight?: number;
+  itemweighttext?: string;
 };
 
 export type ProductListTypeResponseType = {
@@ -190,6 +191,7 @@ export type ProductFormType = {
   itemsize?: string;//Width
   itemcolor?: string;//Color
   itemweight?: number;//Weight
+  itemweighttext?: string;//Weight (text)
 
   // Information Tab - Product Settings Section
   itemcategoryid: number;//Department

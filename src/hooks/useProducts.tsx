@@ -47,6 +47,7 @@ export type ItemDetails = {
   adjremarks?: string;
 
   itemweight?: number;
+  itemweighttext?: string;
   itemmetalpremiume?: number;
   itemtype?: string;
   itemsetpcs?: string;

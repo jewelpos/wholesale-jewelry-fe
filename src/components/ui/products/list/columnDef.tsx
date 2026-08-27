@@ -19,6 +19,18 @@ export const currencyFormattedCellRenderer = (params: ICellRendererParams) => {
   );
 };
 
+const qtyNumberFormatter = new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+export const qtyFormattedCellRenderer = (params: ICellRendererParams) => {
+  if (params.value === null || params.value === undefined) return null;
+  const n = typeof params.value === "string" ? parseFloat(params.value) : Number(params.value);
+  return (
+    <span style={{ display: "block", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+      {Number.isFinite(n) ? qtyNumberFormatter.format(n) : params.value}
+    </span>
+  );
+};
+
 const dateRenderer = (params: ICellRendererParams) =>
   params.value ? dayjs(params.value).format(TIME_FORMAT) : "";
 
@@ -66,11 +78,11 @@ export function makeProductColumnDefs(
     { headerName: "Length",             field: "itemlength",         filter: "agTextColumnFilter",   hide: true },
     { headerName: "Width",              field: "itemsize",           filter: "agTextColumnFilter",   hide: true },
     { headerName: "Color",              field: "itemcolor",          filter: "agTextColumnFilter",   hide: true },
-    { headerName: "Qty In Hand",        field: "itemquantityinhand", filter: "agNumberColumnFilter", hide: false },
-    { headerName: "SO Quantity",        field: "soquantity",         filter: "agNumberColumnFilter", hide: false },
-    { headerName: "Available Qty",      field: "availableqty",       filter: "agNumberColumnFilter", hide: false },
-    { headerName: "Overall Qty",        field: "overall_qty",        filter: "agNumberColumnFilter", hide: false },
-    { headerName: "Memo Qty",           field: "memoqty",            filter: "agNumberColumnFilter", hide: false },
+    { headerName: "Qty In Hand",        field: "itemquantityinhand", filter: "agNumberColumnFilter", hide: false, cellRenderer: qtyFormattedCellRenderer },
+    { headerName: "SO Quantity",        field: "soquantity",         filter: "agNumberColumnFilter", hide: false, cellRenderer: qtyFormattedCellRenderer },
+    { headerName: "Available Qty",      field: "availableqty",       filter: "agNumberColumnFilter", hide: false, cellRenderer: qtyFormattedCellRenderer },
+    { headerName: "Overall Qty",        field: "overall_qty",        filter: "agNumberColumnFilter", hide: false, cellRenderer: qtyFormattedCellRenderer },
+    { headerName: "Memo Qty",           field: "memoqty",            filter: "agNumberColumnFilter", hide: false, cellRenderer: qtyFormattedCellRenderer },
     {
       headerName: "Status", field: "itemstatus", hide: true,
       filter: "agSetColumnFilter",
@@ -82,7 +94,7 @@ export function makeProductColumnDefs(
       filterParams: { values: makeSetValues(outletIdRef, "subcategoryname", apolloClientRef), refreshValuesOnOpen: true },
     },
     { headerName: "Supplier Name",      field: "supplier",           filter: "agTextColumnFilter",   hide: true },
-    { headerName: "Item Weight",        field: "itemweight",         filter: "agNumberColumnFilter", hide: true },
+    { headerName: "Item Weight",        field: "itemweighttext",     filter: "agTextColumnFilter",   hide: true },
     { headerName: "Metal Name",         field: "itemmetal",          filter: "agTextColumnFilter",   hide: true },
     { headerName: "Created Date",       field: "createddate",        filter: "agDateColumnFilter",   hide: true, cellRenderer: dateRenderer },
     { headerName: "Last Sale Date",     field: "lastsaledate",       filter: "agDateColumnFilter",   hide: true, cellRenderer: dateRenderer },

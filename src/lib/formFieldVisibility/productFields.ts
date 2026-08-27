@@ -19,7 +19,7 @@ export const PRODUCT_HIDEABLE_FIELDS: HideableFieldDef[] = [
   { key: "itemlength", label: "Length", section: "Inventory & Settings" },
   { key: "itemsize", label: "Width", section: "Inventory & Settings" },
   { key: "itemcolor", label: "Color", section: "Inventory & Settings" },
-  { key: "itemweight", label: "Weight", section: "Inventory & Settings" },
+  { key: "itemweighttext", label: "Weight", section: "Inventory & Settings" },
   { key: "itemreorderqtypnt", label: "Reorder Point", section: "Inventory & Settings" },
   { key: "itemreorderqty", label: "Reorder Quantity", section: "Inventory & Settings" },
   { key: "itemtaxable", label: "Taxable", section: "Inventory & Settings" },
