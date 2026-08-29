@@ -1311,7 +1311,11 @@ const SalesInvoiceForm = ({
     const itemid = Number(selected.itemid);
     const unitprice = Number(selected.itemsellprice || 0);
     const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
-    const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    // Wt items are individually weighed pieces — picking the same itemcode again is a
+    // separate piece, not more of the same one, so it must always get its own line.
+    // Only Pc items (interchangeable units) should accumulate onto an existing line.
+    const isWtItem = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+    const dupIndex = isWtItem ? -1 : currentItems.findIndex((it) => Number(it.itemid) === itemid);
     const availableqty = toNum(selected.itemquantityinhand);
     const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
     const tracked = mode !== "CREDIT_INVOICE" && trackinventory !== 0;
@@ -1471,8 +1475,11 @@ const SalesInvoiceForm = ({
 
     // Same item already on the invoice (e.g. scanned twice) — merge into that
     // row instead of creating a duplicate line. Only applies when adding a new
-    // line (not while editing an existing row in place).
-    if (editingIndex == null) {
+    // line (not while editing an existing row in place), and only for Pc items —
+    // a Wt item is an individually weighed piece, so picking the same itemcode
+    // again is a separate piece and must always get its own line.
+    const toolItemIsWt = (toolItem.itemunit ?? "").trim().toLowerCase() === "wt";
+    if (editingIndex == null && !toolItemIsWt) {
       const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
       const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === Number(toolItem.itemid));
       if (dupIndex >= 0) {

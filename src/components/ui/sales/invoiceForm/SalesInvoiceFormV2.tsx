@@ -964,7 +964,11 @@ const SalesInvoiceFormV2 = ({
     const itemid = Number(selected.itemid);
     const discountPct = Math.min(100, Math.max(0, Number(watch("discountpercent") || 0)));
     const currentItems: SalesInvoiceItemForm[] = getValues("items") || [];
-    const dupIndex = currentItems.findIndex((it) => Number(it.itemid) === itemid);
+    // Wt items are individually weighed pieces — picking the same itemcode again is a
+    // separate piece, not more of the same one, so it must always get its own line.
+    // Only Pc items (interchangeable units) should accumulate onto an existing line.
+    const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+    const dupIndex = isWt ? -1 : currentItems.findIndex((it) => Number(it.itemid) === itemid);
     const availableqty = toNum(selected.itemquantityinhand);
     const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
     const tracked = mode !== "CREDIT_INVOICE" && trackinventory !== 0;
@@ -992,7 +996,6 @@ const SalesInvoiceFormV2 = ({
       });
       warnIfShort(newQty);
     } else {
-      const isWt = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
       const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
       const premium = Number(selected.itempremium || 0);
       const labour = Number(selected.broakerage || 0);
