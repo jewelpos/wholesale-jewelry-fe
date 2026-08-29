@@ -4,7 +4,7 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FieldErrors, SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
@@ -161,9 +161,26 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   });
   const productSettings = productSettingsData?.getProductSettingsInfo?.[0] ?? null;
 
-  // Auto-calculate sell price, price code, and tag price from settings
+  // Cost/profit% as they were when the form last loaded a saved product — the auto-calc
+  // effect below only fires when the live values differ from this, so opening the edit
+  // form (which resets itempurchaseprice via reset()) doesn't itself trigger a
+  // recalculation that overwrites an already-saved sell price/tag price. Stays null for
+  // a brand-new product, so calculation always runs there as the user types (unchanged
+  // behavior for create).
+  const loadedPricingRef = useRef<{ cost: number; profit: number } | null>(null);
+
+  // Auto-calculate sell price, price code, and tag price from settings — but only once
+  // the user actually changes cost or profit% from what was loaded, not on initial load.
   useEffect(() => {
     if (!productSettings || !itempurchaseprice) return;
+    const loaded = loadedPricingRef.current;
+    if (
+      loaded &&
+      Number(itempurchaseprice) === loaded.cost &&
+      Number(profitpercent || 0) === loaded.profit
+    ) {
+      return;
+    }
 
     // 1. Sell price: profit margin takes priority; fall back to saletagkey multiplier
     let sellPrice = 0;
@@ -189,6 +206,8 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
     if (productSettings.tagpricekey) {
       setValue("itemtagprice", Number((sellPrice * productSettings.tagpricekey).toFixed(2)));
     }
+
+    loadedPricingRef.current = { cost: Number(itempurchaseprice), profit: Number(profitpercent || 0) };
   }, [itempurchaseprice, profitpercent, productSettings, setValue]);
 
   const onSubmit: SubmitHandler<ProductFormType> = async (formData) => {
@@ -343,6 +362,10 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
             } catch { /* ignore image load errors */ }
           }
           reset({ ...product, storeid: parsedStoreId, supplierid: Number(product.supplierid) });
+          loadedPricingRef.current = {
+            cost: Number(product.itempurchaseprice) || 0,
+            profit: Number(product.profitpercent) || 0,
+          };
           if (product.itemid) {
             const bd = await getBulkDiscounts({ variables: { storeid: parsedStoreId, itemid: String(product.itemid) } });
             const rows = bd.data?.getProductBulkDiscounts ?? [];
