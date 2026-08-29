@@ -8,7 +8,6 @@ export const supplierInvoiceListColumnDefs: ColDef[] = [
     field: "supplierinvoiceid",
     headerName: "Invoice ID",
     filter: "agNumberColumnFilter",
-    sort: "desc",
     hide: true,
   },
   {

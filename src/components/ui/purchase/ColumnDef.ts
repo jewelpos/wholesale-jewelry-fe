@@ -17,7 +17,6 @@ export const purchaseOrderColumnDefs: ColDef<PurchaseOrder>[] = [
     field: "ponumber",
     filter: "agNumberColumnFilter",
     width: 90,
-    sort: "desc",
   },
   {
     headerName: "Supplier",

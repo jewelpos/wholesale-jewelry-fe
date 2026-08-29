@@ -57,7 +57,12 @@ export function makeProductColumnDefs(
   apolloClientRef: React.RefObject<ApolloClient<any>>,
 ): ColDef<ProductListType>[] {
   return [
-    { headerName: "Item ID",            field: "itemid",             filter: "agNumberColumnFilter", hide: true, sort: "desc" },
+    // No `sort` here on purpose — a colDef-level sort is re-applied by AG Grid every time
+    // columnDefs gets a new array reference (e.g. the SSRM re-render after any sort/filter
+    // change), which permanently overrode any other sort the user picked. The backend
+    // already defaults to itemid desc when no sortModel is sent, so this isn't needed
+    // for the initial-load default either.
+    { headerName: "Item ID",            field: "itemid",             filter: "agNumberColumnFilter", hide: true },
     { headerName: "Item Code",          field: "itemcode",           filter: "agTextColumnFilter",   hide: false, cellRenderer: ItemCodeCellRenderer, width: 160, minWidth: 120 },
     { headerName: "Description",        field: "itemdescription",    filter: "agTextColumnFilter",   hide: false, resizable: true, tooltipField: "itemdescription" },
     { headerName: "Barcode ID",         field: "itembarcodeid",      filter: "agTextColumnFilter",   hide: false },

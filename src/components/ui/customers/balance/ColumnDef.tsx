@@ -62,7 +62,6 @@ export const getBalanceReportColumnDefs = (
   {
     headerName: "Balance Due",
     field: "total_due",
-    sort: "desc",
     cellRenderer: currencyFormattedCellRenderer,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellStyle: (params: any) =>

@@ -10,7 +10,6 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     field: "customerid",
     filter: "agNumberColumnFilter",
     enableRowGroup: false,
-    sort: "desc",
     width: 140,
     minWidth: 110,
     cellRenderer: CustomerIdCellRenderer,

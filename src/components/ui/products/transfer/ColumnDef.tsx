@@ -40,7 +40,6 @@ export const inventoryTransferColumnDefs: ColDef<InventoryTransfer>[] = [
     headerName: "Transfer ID",
     field: "inventoryitemtransferid",
     sortable: true,
-    sort: "desc",
     filter: "agNumberColumnFilter",
     width: 150,
     cellRenderer: "agGroupCellRenderer",

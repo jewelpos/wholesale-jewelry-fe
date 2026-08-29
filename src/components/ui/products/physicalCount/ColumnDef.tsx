@@ -37,7 +37,6 @@ export const physicalCountColumnDefs: ColDef[] = [
     field: "batchnumber",
     filter: "agTextColumnFilter",
     width: 130,
-    sort: "desc",
     pinned: "left",
   },
   {

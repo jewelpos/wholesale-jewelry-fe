@@ -14,7 +14,6 @@ export const salesInvoiceColumnDefs: ColDef<SalesInvoiceListType>[] = [
     headerName: "Invoice #",
     field: "invoicenumber",
     filter: "agNumberColumnFilter",
-    sort: "desc",
   },
   {
     headerName: "Customer",
