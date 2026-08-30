@@ -103,6 +103,7 @@ export const SEARCH_INVENTORY_ITEMS_QUERY = gql`
     searchInventoryItems(storeid: $storeid, search: $search, warehouseid: $warehouseid, limit: $limit) {
       itemid
       itembarcodeid
+      supplierbarcodeid
       itemcode
       itemdescription
       itemunit

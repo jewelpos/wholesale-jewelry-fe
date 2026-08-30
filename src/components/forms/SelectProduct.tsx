@@ -81,7 +81,8 @@ const SelectProduct = ({
       const exactMatch = options.find(
         (opt) =>
           Number(opt.data.itembarcodeid) === numericInput ||
-          Number(opt.data.itemid) === numericInput
+          Number(opt.data.itemid) === numericInput ||
+          Number(opt.data.supplierbarcodeid) === numericInput
       );
       if (!exactMatch) return false;
       setSelectedOption(exactMatch);
@@ -104,7 +105,7 @@ const SelectProduct = ({
       const items = await searchInventoryItems(storeId, getWarehouseFilter(), query);
       const options: ProductOption[] = items.map((item: ItemDetails) => ({
         value: item.itemid,
-        label: `${item.itembarcodeid ? `${item.itembarcodeid} - ` : ""}${item.itemcode} - ${item.itemdescription}`,
+        label: `${item.itembarcodeid ? `${item.itembarcodeid} - ` : ""}${item.supplierbarcodeid ? `${item.supplierbarcodeid} - ` : ""}${item.itemcode} - ${item.itemdescription}`,
         data: item,
       }));
       if (options.length === 0) {
@@ -155,7 +156,7 @@ const SelectProduct = ({
           const items = await searchInventoryItems(storeId, getWarehouseFilter(), inputValue);
           const options: ProductOption[] = items.map((item: ItemDetails) => ({
             value: item.itemid,
-            label: `${item.itembarcodeid ? `${item.itembarcodeid} - ` : ""}${item.itemcode} - ${item.itemdescription}`,
+            label: `${item.itembarcodeid ? `${item.itembarcodeid} - ` : ""}${item.supplierbarcodeid ? `${item.supplierbarcodeid} - ` : ""}${item.itemcode} - ${item.itemdescription}`,
             data: item,
           }));
 
