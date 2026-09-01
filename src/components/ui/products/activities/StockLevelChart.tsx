@@ -68,7 +68,10 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
     );
   }
 
-  const labels = data.map((d) => dayjs(d.transation_date).format("MMM DD"));
+  // transation_date is a STRING of epoch milliseconds (see ActivityTimeline.tsx's note) —
+  // dayjs parses a numeric string differently from a numeric value and silently produces
+  // a bogus historical date if not Number()'d first.
+  const labels = data.map((d) => dayjs(Number(d.transation_date)).format("MMM DD"));
   const pointColors = data.map((d) => resolveColor(d.transaction_type, d.activity_category));
 
   const chartData = {
@@ -102,7 +105,7 @@ const StockLevelChart = ({ data, itemLabel }: Props) => {
         callbacks: {
           title: (items) => {
             const d = data[items[0].dataIndex];
-            return `${dayjs(d.transation_date).format("MMM DD, YYYY")}  ·  ${d.reference ?? ""}`;
+            return `${dayjs(Number(d.transation_date)).format("MMM DD, YYYY")}  ·  ${d.reference ?? ""}`;
           },
           label: (ctx) => {
             const d = data[ctx.dataIndex];
