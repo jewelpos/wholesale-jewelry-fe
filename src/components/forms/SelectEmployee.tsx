@@ -41,6 +41,22 @@ any) => {
       }, []);
   }, [data]);
 
+  // A value set from a different outlet's context (e.g. a customer's default sales rep,
+  // when the invoice is being created from another outlet) won't be in the outlet-scoped
+  // options above, so it renders as a bare numeric id. Resolve just its label from a
+  // store-wide lookup — without widening the browsable dropdown itself, which is what the
+  // outlet scoping above exists to prevent (duplicate same-named accounts per outlet).
+  const valueMissingFromOptions =
+    value != null && value !== "" && value !== 0 && !options.some((o) => String(o.value) === String(value));
+  const { data: fallbackData } = useQuery(GET_USERS_LIST_QUERY, {
+    variables: { storeid: storeId },
+    skip: !storeId || !outletId || !valueMissingFromOptions,
+  });
+  const fallbackLabel = useMemo(() => {
+    const match = fallbackData?.getUserListUnderStore?.find((u: any) => String(u.userid) === String(value));
+    return match ? (match.userfullname || match.login) : undefined;
+  }, [fallbackData, value]);
+
   return (
     <Select<SelectOption>
       isLoading={loading}
@@ -51,7 +67,7 @@ any) => {
       className={`form-control p-0 ${className ?? ""} select-form-custom`}
       value={
         value != null && value !== "" && value !== 0
-          ? { value, label: options.find((o) => String(o.value) === String(value))?.label || String(value) }
+          ? { value, label: options.find((o) => String(o.value) === String(value))?.label || fallbackLabel || String(value) }
           : null
       }
       onChange={(option) => {

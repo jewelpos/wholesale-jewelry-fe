@@ -9,28 +9,34 @@ import MobileActionsDropdown, { ActionDef } from "../../MobileActionsDropdown";
 
 interface InventoryAdjustmentsHeaderProps {
   onExport?: () => void;
+  onAddNew?: () => void;
   viewMode?: "chart" | "grid";
   setViewMode?: (mode: "chart" | "grid") => void;
 }
 
-const InventoryAdjustmentsHeader = ({ onExport, viewMode, setViewMode }: InventoryAdjustmentsHeaderProps) => {
-  const { currentMenu, currentPath } = useMenu();
+const InventoryAdjustmentsHeader = ({ onExport, onAddNew, viewMode, setViewMode }: InventoryAdjustmentsHeaderProps) => {
+  const { currentMenu } = useMenu();
 
   const actions: ActionDef[] = [...(currentMenu?.action ?? [])]
     .sort((a: MenuAction, b: MenuAction) => a.actionorder - b.actionorder)
     .map((btn: MenuAction): ActionDef => {
       const isExport = btn.actionname.includes("export");
-      const isModal  = btn.actionname.includes("print") || isExport;
+      const isPrint = btn.actionname.includes("print");
 
       return {
         key: btn.actionname,
         label: btn.actiondisplayname,
         icon: renderActionButtonIconName(btn.actionname) || undefined,
         colorClass: renderActionButtonColor(btn.actionname),
-        href: isModal ? "#" : `${currentPath}/new`,
-        onClick: isModal
-          ? (e: React.MouseEvent) => { e.preventDefault(); if (isExport) onExport?.(); }
-          : undefined,
+        // No dedicated "/new" page exists for adjustments (unlike simple "Add X" list
+        // pages) — creating one always goes through this modal, which first has the
+        // user pick a warehouse + product since there's no row-context here yet.
+        href: "#",
+        onClick: (e: React.MouseEvent) => {
+          e.preventDefault();
+          if (isExport) onExport?.();
+          else if (!isPrint) onAddNew?.();
+        },
       };
     });
 

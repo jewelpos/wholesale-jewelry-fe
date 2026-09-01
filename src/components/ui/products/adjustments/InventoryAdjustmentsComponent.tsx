@@ -21,6 +21,7 @@ import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
 import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
 import ExportScopeModal from "../../grid/ExportScopeModal";
 import InventoryAdjustmentChartView from "./InventoryAdjustmentChartView";
+import ProductAdjustmentModal from "../list/ProductAdjustmentModal";
 import useOutlets from "@/hooks/useOutlets";
 import useWarehouse from "@/hooks/useWarehouse";
 import { OutletType } from "@/types/outlet";
@@ -51,6 +52,7 @@ const InventoryAdjustmentsComponent = () => {
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"chart" | "grid">("grid");
+  const [showNewAdjustmentModal, setShowNewAdjustmentModal] = useState(false);
   const [chartData, setChartData] = useState<InventoryAdjustmentChartResponse | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
 
@@ -263,7 +265,12 @@ const InventoryAdjustmentsComponent = () => {
 
   return (
     <>
-      <InventoryAdjustmentsHeader onExport={handleExport} viewMode={viewMode} setViewMode={setViewMode} />
+      <InventoryAdjustmentsHeader
+        onExport={handleExport}
+        onAddNew={() => setShowNewAdjustmentModal(true)}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+      />
       <div className="card table-list-card">
         <div className="card-body p-2">
 
@@ -345,6 +352,13 @@ const InventoryAdjustmentsComponent = () => {
       )}
       {exportProgress && (
         <ExportProgressOverlay fetched={exportProgress.fetched} total={exportProgress.total} />
+      )}
+      {showNewAdjustmentModal && (
+        <ProductAdjustmentModal
+          isOpen={showNewAdjustmentModal}
+          onClose={() => setShowNewAdjustmentModal(false)}
+          onSuccess={() => gridRef.current?.api?.refreshServerSide({ purge: true })}
+        />
       )}
     </>
   );

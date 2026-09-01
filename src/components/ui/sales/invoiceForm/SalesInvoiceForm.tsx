@@ -1223,7 +1223,17 @@ const SalesInvoiceForm = ({
     const subtotal = round2(grossTotal - discountAmount);
     // Order Discount is a separate, order-level deduction — applied once here, after
     // line-item discounts, never blended into any line's own price/discount.
-    const orderDiscountAmount = round2(Math.min(subtotal, Math.max(0, toNum(watchedOrderDiscountAmount))));
+    // Math.min(subtotal, input) assumes subtotal >= 0 (caps discount at the total).
+    // For a credit invoice/memo, subtotal is negative, so that same call would return
+    // the (very negative) subtotal itself whenever input is 0 — canceling the entire
+    // subtotal out of invoiceTotal below and making the total show as $0. Cap by
+    // magnitude instead, then restore subtotal's sign.
+    const orderDiscountInput = Math.max(0, toNum(watchedOrderDiscountAmount));
+    const orderDiscountAmount = round2(
+      subtotal >= 0
+        ? Math.min(subtotal, orderDiscountInput)
+        : -Math.min(Math.abs(subtotal), orderDiscountInput)
+    );
 
     const totalPcs = items.reduce((acc, it) => acc + toNum(it.itempcs), 0);
 

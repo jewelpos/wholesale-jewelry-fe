@@ -19,6 +19,7 @@ import { useParams } from "next/navigation";
 import { GET_INVENTORY_TRANSFER_LIST_QUERY } from "@/lib/graphql/query/products";
 import { inventoryTransferColumnDefs, statusBadgeStyle, STATUS_LABEL } from "./ColumnDef";
 import InventoryTransferListHeader from "./InventoryTransferListHeader";
+import InventoryTransferReportModal from "./InventoryTransferReportModal";
 import CancelTransferModal from "./CancelTransferModal";
 import { CHANGE_INVENTORY_TRANSFER_STATUS_MUTATION } from "@/lib/graphql/mutations/products";
 
@@ -110,6 +111,13 @@ const InventoryTransferListComponent = () => {
   const debouncedSearch = useDebounce(search, 500);
   const gridRef = useRef<AgGridReact>(null);
   const [gridReady, setGridReady] = useState<boolean>(false);
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [selectedTransferIds, setSelectedTransferIds] = useState<number[]>([]);
+
+  const handleSelectionChanged = useCallback(() => {
+    const selectedRows = gridRef.current?.api?.getSelectedRows() ?? [];
+    setSelectedTransferIds(selectedRows.map((r: { inventoryitemtransferid: number }) => r.inventoryitemtransferid));
+  }, []);
 
   // Same "does this user actually have more than one outlet to look at" check as the
   // header's store/outlet switcher (StoreDropdown.tsx) — no point showing an outlet
@@ -346,7 +354,7 @@ const InventoryTransferListComponent = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
-      <InventoryTransferListHeader />
+      <InventoryTransferListHeader onPrint={() => setShowReportModal(true)} />
       <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
         <div className="card-body p-2" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <CustomFilterSections
@@ -409,6 +417,8 @@ const InventoryTransferListComponent = () => {
               detailCellRenderer={InventoryTransferItemsComponent}
               detailCellRendererParams={{ onApproved: refreshGrid }}
               detailRowAutoHeight
+              rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true }}
+              onSelectionChanged={handleSelectionChanged}
             />
           </div>
         </div>
@@ -419,6 +429,13 @@ const InventoryTransferListComponent = () => {
           onClose={() => setCancelTargetId(null)}
           onConfirm={handleConfirmCancel}
           loading={actionLoadingId === cancelTargetId}
+        />
+      )}
+
+      {showReportModal && (
+        <InventoryTransferReportModal
+          onClose={() => setShowReportModal(false)}
+          initialTransferIds={selectedTransferIds}
         />
       )}
     </div>

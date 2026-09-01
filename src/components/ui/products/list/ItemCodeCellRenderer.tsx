@@ -81,6 +81,10 @@ const ItemCodeCellRenderer = (params: ICellRendererParams<ProductListType>) => {
 
   if (!data) return null;
 
+  if (params.node.rowPinned) {
+    return <span style={{ fontWeight: 700, fontSize: 12 }}>{data.itemcode}</span>;
+  }
+
   const imageUrl = parseFirstImageUrl(data.itemimagepath);
   const isNew = isNewItem(data.createddate);
 

@@ -23,6 +23,16 @@ const qtyNumberFormatter = new Intl.NumberFormat("en-US", { minimumFractionDigit
 
 export const qtyFormattedCellRenderer = (params: ICellRendererParams) => {
   if (params.value === null || params.value === undefined) return null;
+  // A pinned totals row (e.g. "123 Pc / 45.6 Wt") may hold an already-formatted display
+  // string rather than a plain number — render it as-is instead of re-parsing, since
+  // parseFloat would silently truncate it at the first non-numeric character.
+  if (params.node?.rowPinned) {
+    return (
+      <span style={{ display: "block", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
+        {params.value}
+      </span>
+    );
+  }
   const n = typeof params.value === "string" ? parseFloat(params.value) : Number(params.value);
   return (
     <span style={{ display: "block", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>

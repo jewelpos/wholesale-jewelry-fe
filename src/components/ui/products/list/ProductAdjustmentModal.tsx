@@ -11,16 +11,21 @@ import { ADJUST_PRODUCT_MUTATION } from "@/lib/graphql/mutations/products";
 import { AdjustProductInput } from "@/types/product";
 import { ProductListType } from "@/types/product";
 import SelectWarehouse from "@/components/forms/SelectWarehouse";
+import SelectProduct from "@/components/forms/SelectProduct";
+import { ItemDetails } from "@/hooks/useProducts";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 
 interface ProductAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (updated?: { itemid: number; itemquantityinhand: number }) => void;
+  // Row-action flow: product already known. Omitted for the list-level "New
+  // Adjustment" flow, which shows a warehouse + product picker instead.
   productData?: ProductListType | null;
 }
 
 interface AdjustmentFormData {
+  productid?: number;
   warehouseid: number;
   newquantity: number;
   newcost: number;
@@ -40,6 +45,12 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
   // Mirrors the "Adjusted Quantity" input's raw text so an in-progress "-" (before any
   // digits follow it) isn't clobbered by react-hook-form's numeric value on re-render.
   const [adjustQtyText, setAdjustQtyText] = useState("0");
+  // Only used in the list-level "New Adjustment" flow (no productData prop) — holds
+  // whichever product the user picks so the same display/quantity-math code below can
+  // read from it just like it reads from productData in the row-action flow.
+  const [pickedProduct, setPickedProduct] = useState<ItemDetails | null>(null);
+  const isNewMode = !productData;
+  const effectiveProduct = productData ?? pickedProduct;
 
   const [adjustProduct] = useMutation(ADJUST_PRODUCT_MUTATION);
 
@@ -50,15 +61,19 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
     setValue,
     trigger,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<AdjustmentFormData>({
     defaultValues: {
+      productid: undefined,
       warehouseid: 0,
       newquantity: 0,
       newcost: 0,
       updateremarks: "",
     },
   });
+
+  const pickedWarehouseId = watch("warehouseid");
 
   useEffect(() => {
     if (isOpen && productData) {
@@ -68,15 +83,29 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
     } else if (isOpen) {
       // Reset form for new adjustment
       reset({
+        productid: undefined,
         newquantity: 0,
         warehouseid: 0,
       });
+      setPickedProduct(null);
       setAdjustQtyText("0");
     }
   }, [isOpen, productData, setValue, reset]);
 
   const onSubmit = async (data: AdjustmentFormData) => {
-    if (!productData) return;
+    const itemid = productData?.itemid ?? data.productid;
+    if (!itemid) {
+      dispatch(
+        showNotification({ message: "Product is required", type: NOTIFICATION_TYPES.ERROR })
+      );
+      return;
+    }
+    if (!data.warehouseid) {
+      dispatch(
+        showNotification({ message: "Warehouse is required", type: NOTIFICATION_TYPES.ERROR })
+      );
+      return;
+    }
 
     setLoading(true);
 
@@ -84,14 +113,14 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
       const adjustInput: AdjustProductInput = {
         storeid: parsedStoreId,
         warehouseid: data.warehouseid,
-        productid: productData.itemid,
+        productid: itemid,
         updateremarks: data.updateremarks,
       };
       if (data.newquantity !== 0) {
         // Backend expects the absolute resulting quantity, not the typed delta —
         // the form's "Adjusted Quantity" field is a +/- delta on top of current stock.
         adjustInput.newquantity =
-          (productData.itemquantityinhand || 0) + data.newquantity;
+          (effectiveProduct?.itemquantityinhand || 0) + data.newquantity;
       }
       if (data.newcost !== 0) {
         adjustInput.newcost = data.newcost;
@@ -115,7 +144,7 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
             ? {
                 itemid: adjustInput.productid,
                 itemquantityinhand:
-                  adjustInput.newquantity ?? productData.itemquantityinhand ?? 0,
+                  adjustInput.newquantity ?? effectiveProduct?.itemquantityinhand ?? 0,
               }
             : undefined
         );
@@ -138,6 +167,7 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
 
   const handleClose = () => {
     reset();
+    setPickedProduct(null);
     onClose();
   };
 
@@ -145,30 +175,91 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
     <Modal show={isOpen} onHide={handleClose} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          Adjust Product - {productData?.itemdescription || "Product"}
+          {isNewMode ? "New Adjustment" : `Adjust Product - ${effectiveProduct?.itemdescription || "Product"}`}
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit(onSubmit)}>
         <Modal.Body>
-          {productData && (
+          {isNewMode && (
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Warehouse</Form.Label>
+                  <Controller
+                    name="warehouseid"
+                    control={control}
+                    rules={{ validate: (v) => v !== 0 || "Warehouse is required" }}
+                    render={({ field }) => (
+                      <SelectWarehouse
+                        {...field}
+                        onChange={(value: number) => {
+                          field.onChange(value);
+                          // Changing warehouse invalidates whatever product was picked
+                          // for the previous one — its stock qty won't be right here.
+                          setValue("productid", undefined);
+                          setPickedProduct(null);
+                        }}
+                        trigger={trigger}
+                        storeId={parsedStoreId}
+                        className={errors.warehouseid ? "is-invalid" : ""}
+                      />
+                    )}
+                  />
+                  {errors.warehouseid && (
+                    <div className="invalid-feedback d-block">{errors.warehouseid.message}</div>
+                  )}
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Product</Form.Label>
+                  <Controller
+                    name="productid"
+                    control={control}
+                    rules={{ required: "Product is required" }}
+                    render={({ field }) => (
+                      <SelectProduct
+                        {...field}
+                        onChange={(value: number) => field.onChange(value)}
+                        onChangeAdditional={(selected: ItemDetails | null) => setPickedProduct(selected)}
+                        trigger={trigger}
+                        storeId={parsedStoreId}
+                        hasWarehouseId
+                        warehouseId={pickedWarehouseId}
+                        disableField={!pickedWarehouseId}
+                        className={errors.productid ? "is-invalid" : ""}
+                      />
+                    )}
+                  />
+                  {errors.productid && (
+                    <div className="invalid-feedback d-block">{errors.productid.message}</div>
+                  )}
+                </Form.Group>
+              </Col>
+            </Row>
+          )}
+
+          {effectiveProduct && (
             <div className="mb-3 p-3 bg-light rounded text-primary">
               <Row>
                 <Col md={6}>
-                  <strong>Product Code:</strong> {productData.itemcode}
+                  <strong>Product Code:</strong> {effectiveProduct.itemcode}
                 </Col>
                 <Col md={6}>
                   <strong>Current Quantity:</strong>{" "}
-                  {productData.itemquantityinhand}
+                  {effectiveProduct.itemquantityinhand}
                 </Col>
               </Row>
               <Row className="mt-2">
                 <Col md={6}>
-                  <strong>Current Cost:</strong> ${productData.itemsellprice}
+                  <strong>Current Cost:</strong> ${effectiveProduct.itemsellprice}
                 </Col>
-                <Col md={6}>
-                  <strong>Current Warehouse:</strong>{" "}
-                  {productData.warehousename}
-                </Col>
+                {productData && (
+                  <Col md={6}>
+                    <strong>Current Warehouse:</strong>{" "}
+                    {productData.warehousename}
+                  </Col>
+                )}
               </Row>
             </div>
           )}
@@ -231,7 +322,7 @@ const ProductAdjustmentModal: React.FC<ProductAdjustmentModalProps> = ({
                   type="text"
                   disabled
                   value={
-                    (productData?.itemquantityinhand || 0) +
+                    (effectiveProduct?.itemquantityinhand || 0) +
                     (getValues("newquantity") || 0)
                   }
                 />

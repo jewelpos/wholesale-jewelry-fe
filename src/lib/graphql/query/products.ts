@@ -33,6 +33,30 @@ export const GET_TRANSFER_STATUS_LIST_QUERY = gql`
   }
 `;
 
+export const GET_INVENTORY_TRANSFER_REPORT_LIST_QUERY = gql`
+  query GetInventoryTransferReportList($storeid: Int!, $input: InventoryTransferReportInput!) {
+    getInventoryTransferReportList(storeid: $storeid, input: $input) {
+      inventoryitemtransferid
+      transferdatetime
+      transferstatus
+      fromwarehousename
+      towarehousename
+      requestedbyname
+      transferbyname
+      itemcode
+      itemdescription
+      itemunit
+      categoryname
+      quantityrequest
+      transferquantity
+      quantityreceived
+      unitprice
+      unitcost
+      totalcost
+    }
+  }
+`;
+
 export const GET_INVENTORY_TRANSFER_LIST_BY_STATUS_QUERY = gql`
   query GetInventoryTransferListByStatus($storeid: Int!, $transferstatusid: [Int!]!) {
     getInventoryTransferListByStatus(storeid: $storeid, transferstatusid: $transferstatusid) {
@@ -352,6 +376,8 @@ export const GET_PRODUCT_LIST_SUMMARY_QUERY = gql`
       out_of_stock
       low_stock
       total_inventory_value
+      total_pcs
+      total_quantity
     }
   }
 `;

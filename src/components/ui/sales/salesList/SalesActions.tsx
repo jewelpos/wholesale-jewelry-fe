@@ -144,6 +144,11 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     data.statusname !== "Picked up" &&
     data.statusname !== "Cancelled";
   const canSendSMS = data.statusname !== "Cancelled";
+  // The generic edit page can't tell a credit invoice from a regular one on its own
+  // (same route for both) — it relies on this query param to load SalesInvoiceForm
+  // in the right mode. Without it, edits silently ran as a regular invoice: new
+  // lines defaulted to positive qty and the qty input refused negative values.
+  const editHref = `${basePath}/sales/${data.invoicenumber}/edit${Number(data.salemodeid) === 5 ? "?credit=1" : ""}`;
 
   let editReason = "";
   if (!canEdit) {
@@ -173,7 +178,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const items: RowActionItem[] = [
     { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/sales/${data.invoicenumber}/view` },
     canEdit
-      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/sales/${data.invoicenumber}/edit` }
+      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: editHref }
       : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
     { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: () => handlePrint(defaultTemplate), disabled: printing },
     { key: 'packing-slip', label: 'Packing Slip', icon: <Package size={14} />, onClick: () => handlePrint('packing_slip'), disabled: printing },
@@ -250,7 +255,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
 
         {/* Edit */}
         {canEdit ? (
-          <Link className="p-1" href={`${basePath}/sales/${data.invoicenumber}/edit`} scroll={false} title="Edit">
+          <Link className="p-1" href={editHref} scroll={false} title="Edit">
             <Edit size={14} />
           </Link>
         ) : (

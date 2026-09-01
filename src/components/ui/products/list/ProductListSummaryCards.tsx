@@ -13,6 +13,8 @@ const CARDS = [
   { key: "out_of_stock"         as const, label: "Out of Stock",       format: fmtNum },
   { key: "low_stock"            as const, label: "Low Stock (≤5)",     format: fmtNum },
   { key: "total_inventory_value" as const, label: "Inventory Value",   format: fmtCurrency },
+  { key: "total_pcs"            as const, label: "Total Pcs",          format: fmtNum },
+  { key: "total_quantity"       as const, label: "Total Quantity (Wt)", format: fmtNum },
 ];
 
 const Skeleton = () => (
@@ -34,7 +36,7 @@ const ProductListSummaryCards = ({ outletid, filters }: Props) => {
       {CARDS.map((card) => {
         const value = Number(stats?.[card.key] ?? 0);
         return (
-          <div key={card.key} className="col-6 col-md-3">
+          <div key={card.key} className="col-6 col-md-2">
             <div
               style={{
                 background: "var(--surface-card)",

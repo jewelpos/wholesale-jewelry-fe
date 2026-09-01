@@ -38,6 +38,8 @@ import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
 import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
 import ExportScopeModal from "../../grid/ExportScopeModal";
 
+const pageTotalFormatter = new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
   const dispatch = useAppDispatch();
@@ -138,15 +140,34 @@ const ProductsListComponent = () => {
         const result = await handleTryCatch(async () => {
           const { data } = await getProductList({ variables: { outletid: outlet, ...filtersMain } });
           if (data.getProductListNew) {
-            params.success({ rowData: data.getProductListNew.data, rowCount: data.getProductListNew.total });
-            data.getProductListNew.data.length
-              ? gridRef.current?.api?.hideOverlay()
-              : gridRef.current?.api?.showNoRowsOverlay();
+            const rows: ProductListType[] = data.getProductListNew.data;
+            params.success({ rowData: rows, rowCount: data.getProductListNew.total });
+            if (rows.length) {
+              gridRef.current?.api?.hideOverlay();
+              // Page-level totals split by unit — Pc and Wt items aren't the same kind of
+              // quantity, so summing them together would be meaningless.
+              let pcs = 0;
+              let qty = 0;
+              for (const r of rows) {
+                const unit = (r.itemunit ?? "").trim().toLowerCase();
+                const n = Number(r.itemquantityinhand) || 0;
+                if (unit === "pc") pcs += n;
+                else if (unit === "wt") qty += n;
+              }
+              gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
+                itemcode: "Page Total",
+                itemquantityinhand: `${pageTotalFormatter.format(pcs)} Pc / ${pageTotalFormatter.format(qty)} Wt`,
+              }]);
+            } else {
+              gridRef.current?.api?.showNoRowsOverlay();
+              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
+            }
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
+          gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
           dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
@@ -203,7 +224,7 @@ const ProductsListComponent = () => {
         headerName: "Actions",
         field: "actions",
         cellRenderer: (params: ICellRendererParams<ProductListType>) =>
-          params.data ? (
+          params.data && !params.node.rowPinned ? (
             <ProductActions
               data={params.data}
               onDeleteSuccess={handleDeleteSuccess}
