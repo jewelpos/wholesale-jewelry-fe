@@ -145,6 +145,30 @@ const InventoryWarehousePivotComponent = () => {
     ];
   }, [rows, warehouseCount]);
 
+  // One pinned row per itemunit (Pc, Wt) at the grid's bottom — summed per warehouse
+  // column plus Total Qty/Total Cost, restricted to that unit's rows. Mirrors the
+  // summary cards' Pc/Wt split: mixing pieces and grams into one row would be
+  // meaningless, so each unit gets its own totals line instead of one combined row.
+  const pinnedBottomRowData = useMemo(() => {
+    if (!rows.length) return [];
+    const warehouseCols = columns.filter((c) => !FIXED_COLUMNS.has(c));
+    const units = Array.from(new Set(rows.map((r) => String(r.itemunit ?? "Pc")))).sort();
+    return units.map((unit) => {
+      const unitRows = rows.filter((r) => String(r.itemunit ?? "Pc") === unit);
+      const pinnedRow: Record<string, unknown> = {
+        categoryname: "TOTAL",
+        itemmetal: "",
+        itemunit: unit,
+        total_onhandquantity: unitRows.reduce((s, r) => s + Number(r.total_onhandquantity ?? 0), 0),
+        totalcostvalue: unitRows.reduce((s, r) => s + Number(r.totalcostvalue ?? 0), 0),
+      };
+      warehouseCols.forEach((wh) => {
+        pinnedRow[wh] = unitRows.reduce((s, r) => s + Number(r[wh] ?? 0), 0);
+      });
+      return pinnedRow;
+    });
+  }, [rows, columns]);
+
   // One bar per category — sums totalcostvalue across that category's metal/unit
   // breakdown rows, since the grid shows one row per (category, metal, unit).
   const { chartLabels, chartValues } = useMemo(() => {
@@ -184,6 +208,10 @@ const InventoryWarehousePivotComponent = () => {
               ref={gridRef}
               columnDefs={columnDefs}
               onGridReady={handleOnGridReady}
+              pinnedBottomRowData={pinnedBottomRowData}
+              getRowStyle={(params) =>
+                params.node.rowPinned ? { fontWeight: 700, background: "var(--surface-hover, #f8fafc)" } : undefined
+              }
               fillHeight
             />
           </div>

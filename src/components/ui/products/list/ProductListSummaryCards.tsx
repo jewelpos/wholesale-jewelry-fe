@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@apollo/client";
-import { GET_PRODUCT_LIST_SUMMARY_QUERY } from "@/lib/graphql/query/products";
 import { formatCurrency } from "@/lib/utils/currencyFormat";
 
 const fmtNum = (n: number) => new Intl.NumberFormat("en-US").format(Math.round(n));
@@ -21,16 +19,9 @@ const Skeleton = () => (
   <div style={{ height: 28, width: "60%", background: "var(--border-subtle)", borderRadius: 6, animation: "pulse 1.5s ease-in-out infinite" }} />
 );
 
-type Props = { outletid: number; filters?: any[] };
+type Props = { stats?: Record<string, unknown> | null; loading?: boolean };
 
-const ProductListSummaryCards = ({ outletid, filters }: Props) => {
-  const { data, loading } = useQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
-    variables: { outletid, filters: filters ?? [] },
-    skip: !outletid || outletid <= 0,
-  });
-
-  const stats = data?.getProductListSummary;
-
+const ProductListSummaryCards = ({ stats, loading }: Props) => {
   return (
     <div className="row g-2 mb-3">
       {CARDS.map((card) => {

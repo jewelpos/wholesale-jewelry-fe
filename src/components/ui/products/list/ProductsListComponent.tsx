@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useApolloClient, useLazyQuery } from "@apollo/client";
+import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
 import {
   ColDef,
   GridReadyEvent,
@@ -23,7 +23,7 @@ import "ag-grid-enterprise";
 import CustomFilterSections from "../../grid/CustomFilterSections";
 import { useDebounce } from "@/hooks/useDebounce";
 import useMenu from "@/hooks/useMenu";
-import { GET_PRODUCT_LIST_QUERY } from "@/lib/graphql/query/products";
+import { GET_PRODUCT_LIST_QUERY, GET_PRODUCT_LIST_SUMMARY_QUERY } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
 import { makeProductColumnDefs } from "./columnDef";
 import { filterVariables } from "@/lib/utils/gridFilters";
@@ -58,6 +58,14 @@ const ProductsListComponent = () => {
   const apolloClient = useApolloClient();
   const apolloClientRef = useRef(apolloClient);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  // Overall total across every row matching the current filters (or the whole table
+  // when there's no filter) — not just the page currently loaded in the grid. Shared
+  // with the summary cards above so both reflect exactly the same number.
+  const { data: summaryData, loading: summaryLoading } = useQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
+    variables: { outletid: selectedOutlet ?? 0, filters: activeGridFilters },
+    skip: !selectedOutlet || selectedOutlet <= 0,
+  });
 
   const SOLD_GROUP = ["soldtoday", "soldweek", "soldmonth"];
 
@@ -144,20 +152,6 @@ const ProductsListComponent = () => {
             params.success({ rowData: rows, rowCount: data.getProductListNew.total });
             if (rows.length) {
               gridRef.current?.api?.hideOverlay();
-              // Page-level totals split by unit — Pc and Wt items aren't the same kind of
-              // quantity, so summing them together would be meaningless.
-              let pcs = 0;
-              let qty = 0;
-              for (const r of rows) {
-                const unit = (r.itemunit ?? "").trim().toLowerCase();
-                const n = Number(r.itemquantityinhand) || 0;
-                if (unit === "pc") pcs += n;
-                else if (unit === "wt") qty += n;
-              }
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
-                itemcode: "Page Total",
-                itemquantityinhand: `${pageTotalFormatter.format(pcs)} Pc / ${pageTotalFormatter.format(qty)} Wt`,
-              }]);
             } else {
               gridRef.current?.api?.showNoRowsOverlay();
               gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
@@ -175,6 +169,21 @@ const ProductsListComponent = () => {
     }),
     [dispatch, getProductList]
   );
+
+  // Drives the pinned bottom row from the overall (filtered, or whole-table when no
+  // filter is applied) total — independent of getRows above, which only sees whatever
+  // page the grid last loaded.
+  useEffect(() => {
+    const stats = summaryData?.getProductListSummary;
+    if (!stats || Number(stats.total_products ?? 0) === 0) {
+      gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
+      return;
+    }
+    gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
+      itemcode: "Overall Total",
+      itemquantityinhand: `${pageTotalFormatter.format(Number(stats.total_pcs ?? 0))} Pc / ${pageTotalFormatter.format(Number(stats.total_quantity ?? 0))} Wt`,
+    }]);
+  }, [summaryData]);
 
   const handleDeleteSuccess = useCallback(() => {
     if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
@@ -313,7 +322,7 @@ const ProductsListComponent = () => {
       <ProductsListHeader onExport={handleExport} />
       {isAdmin && !!selectedOutlet && (
         <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
-          <ProductListSummaryCards outletid={selectedOutlet} filters={activeGridFilters} />
+          <ProductListSummaryCards stats={summaryData?.getProductListSummary} loading={summaryLoading} />
         </SummaryPanelWrapper>
       )}
       <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>
