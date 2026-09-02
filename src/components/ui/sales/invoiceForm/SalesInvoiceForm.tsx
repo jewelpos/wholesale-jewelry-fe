@@ -24,6 +24,7 @@ import ButtonLoader from "@/components/ui/ButtonLoader";
 
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import useWarehouse from "@/hooks/useWarehouse";
 import type { ItemDetails } from "@/hooks/useProducts";
 
@@ -1308,6 +1309,23 @@ const SalesInvoiceForm = ({
     },
   });
 
+  // Editing an already-saved invoice/memo has no hold concept — resuming a hold always
+  // creates a NEW record, which would be wrong here — so it gets the same Save / Discard
+  // / Cancel prompt as Customer/Product instead of auto-hold-on-leave (see
+  // NavigationGuardContext.tsx and the identical wiring in CustomerForm.tsx).
+  const { registerGuard } = useNavigationGuard();
+  const editIsDirtyRef = useRef(isDirty);
+  editIsDirtyRef.current = isDirty;
+  useEffect(() => {
+    if (isNewDoc || readOnly) return;
+    return registerGuard({
+      isDirty: () => editIsDirtyRef.current,
+      onSave: () => handleSubmit(onSubmit)(),
+      onDiscard: () => reset(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewDoc, readOnly]);
+
   // Silently holds an in-progress NEW invoice/memo (never an edit/view of an already
   // saved one — resuming a hold creates a fresh record, not an update) if the user
   // navigates away without saving, so "I just left to check inventory" no longer means
@@ -1340,6 +1358,43 @@ const SalesInvoiceForm = ({
     outletid: parsedOutletId || 0,
     doctype: documentType,
   });
+
+  // Nudges the user toward a held invoice the moment they land on a fresh New
+  // Invoice/Memo page, instead of relying on them to notice and open the (collapsible)
+  // Held panel themselves. Fires once per mount — not every time activeHolds refetches —
+  // and only picks the most recently touched hold, since that's almost always the one
+  // they actually want back.
+  //
+  // Deliberately placed here, before this component's mid-render loading early-returns
+  // (`if (... loading) return <Spinner/>` further down) — a hook positioned after one of
+  // those only runs once that condition clears, which is a genuine Rules-of-Hooks
+  // violation (hook count changes between renders). handleResumeHold is defined further
+  // down too, but that's fine — it's a plain function referenced from a callback that
+  // only actually runs after the full render commits, not a hook call itself.
+  const hasPromptedResumeRef = useRef(false);
+  useEffect(() => {
+    if (!isNewDoc || hasPromptedResumeRef.current || activeHolds.length === 0) return;
+    hasPromptedResumeRef.current = true;
+    const mostRecent = [...activeHolds].sort(
+      (a, b) => new Date(b.updatedat ?? b.createdat).getTime() - new Date(a.updatedat ?? a.createdat).getTime()
+    )[0];
+    const docLabel = documentType === "MEMO" ? "a memo" : "an invoice";
+    MySwal.fire({
+      toast: true,
+      position: "center",
+      icon: "info",
+      title: `You have ${docLabel} in progress`,
+      text: mostRecent.holdname || undefined,
+      showConfirmButton: true,
+      confirmButtonText: "Resume",
+      showCloseButton: true,
+      timer: 8000,
+      timerProgressBar: true,
+    }).then((result) => {
+      if (result.isConfirmed) handleResumeHold(mostRecent);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHolds, isNewDoc]);
 
   const resetToolItem = () => {
     setToolItem({
@@ -2282,36 +2337,6 @@ const SalesInvoiceForm = ({
     currentHoldIdRef.current = hold.holdid;
     setShowHoldsPanel(false);
   };
-
-  // Nudges the user toward a held invoice the moment they land on a fresh New
-  // Invoice/Memo page, instead of relying on them to notice and open the (collapsible)
-  // Held panel themselves. Fires once per mount — not every time activeHolds refetches —
-  // and only picks the most recently touched hold, since that's almost always the one
-  // they actually want back.
-  const hasPromptedResumeRef = useRef(false);
-  useEffect(() => {
-    if (!isNewDoc || hasPromptedResumeRef.current || activeHolds.length === 0) return;
-    hasPromptedResumeRef.current = true;
-    const mostRecent = [...activeHolds].sort(
-      (a, b) => new Date(b.updatedat ?? b.createdat).getTime() - new Date(a.updatedat ?? a.createdat).getTime()
-    )[0];
-    const docLabel = documentType === "MEMO" ? "a memo" : "an invoice";
-    MySwal.fire({
-      toast: true,
-      position: "center",
-      icon: "info",
-      title: `You have ${docLabel} in progress`,
-      text: mostRecent.holdname || undefined,
-      showConfirmButton: true,
-      confirmButtonText: "Resume",
-      showCloseButton: true,
-      timer: 8000,
-      timerProgressBar: true,
-    }).then((result) => {
-      if (result.isConfirmed) handleResumeHold(mostRecent);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeHolds, isNewDoc]);
 
   const handleDeleteHold = async (holdid: number) => {
     const result = await Swal.fire({

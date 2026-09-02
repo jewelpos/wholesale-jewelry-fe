@@ -21,6 +21,7 @@ import ButtonLoader from "@/components/ui/ButtonLoader";
 
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import useWarehouse from "@/hooks/useWarehouse";
 import type { ItemDetails } from "@/hooks/useProducts";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
@@ -546,6 +547,23 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       router.back();
     },
   });
+
+  // Editing an already-saved sales order has no hold concept — resuming a hold always
+  // creates a NEW record, which would be wrong here — so it gets the same Save / Discard
+  // / Cancel prompt as Customer/Product instead of auto-hold-on-leave (see
+  // NavigationGuardContext.tsx and the identical wiring in CustomerForm.tsx).
+  const { registerGuard } = useNavigationGuard();
+  const editIsDirtyRef = useRef(isDirty);
+  editIsDirtyRef.current = isDirty;
+  useEffect(() => {
+    if (isNewDoc || readOnly) return;
+    return registerGuard({
+      isDirty: () => editIsDirtyRef.current,
+      onSave: () => handleSubmit(onSubmit)(),
+      onDiscard: () => reset(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewDoc, readOnly]);
 
   // Nudges the user toward a held sales order the moment they land on a fresh New Sales
   // Order page — see the identical effect in SalesInvoiceForm.tsx for the full rationale.
