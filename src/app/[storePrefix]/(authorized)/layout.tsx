@@ -3,6 +3,7 @@ import ApolloClientProviderAuthorized from "./ApolloClientProviderAuthorized";
 import InitialDataLoader from "@/components/root/InitialDataLoader";
 import { PermissionGuard } from "@/components/root/PermissionGuard";
 import SessionExpiredModal from "@/components/root/SessionExpiredModal";
+import { NavigationGuardProvider } from "@/lib/context/NavigationGuardContext";
 
 export default function AuthorizedLayout({
   children,
@@ -19,9 +20,11 @@ export default function AuthorizedLayout({
             </div>
           }
         >
-          <InitialDataLoader>
-            <PermissionGuard>{children}</PermissionGuard>
-          </InitialDataLoader>
+          <NavigationGuardProvider>
+            <InitialDataLoader>
+              <PermissionGuard>{children}</PermissionGuard>
+            </InitialDataLoader>
+          </NavigationGuardProvider>
         </ErrorBoundary>
         <SessionExpiredModal />
       </ApolloClientProviderAuthorized>

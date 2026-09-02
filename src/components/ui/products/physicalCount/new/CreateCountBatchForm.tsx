@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@apollo/client";
 import { useAppDispatch } from "@/lib/store/hook";
@@ -48,6 +49,35 @@ const CreateCountBatchForm = () => {
       fetchSubCategoriesByStoreId(parsedStoreId, Number(categoryid));
     }
   }, [scope, categoryid, parsedStoreId]);
+
+  // Registers with the app-wide navigation guard (see NavigationGuardContext.tsx and the
+  // identical wiring in CustomerForm.tsx) so leaving a configured-but-unsaved count batch
+  // via a sidebar link asks Save / Discard / Cancel. This screen has no react-hook-form
+  // (plain useState fields), so "dirty" is a deliberate choice being made rather than
+  // still-at-defaults — free text typed, or a non-default scope/category picked.
+  const stateRef = useRef({ scope, categoryid, subcategoryid, locationfilter, remarks });
+  stateRef.current = { scope, categoryid, subcategoryid, locationfilter, remarks };
+  const { registerGuard } = useNavigationGuard();
+  useEffect(() => {
+    return registerGuard({
+      isDirty: () => {
+        const s = stateRef.current;
+        return s.scope !== "ALL" || s.categoryid !== "" || s.subcategoryid !== "" || !!s.locationfilter.trim() || !!s.remarks.trim();
+      },
+      onSave: () => handleSubmit({ preventDefault: () => {} } as React.FormEvent),
+      onDiscard: () => {
+        setWarehouseid("");
+        setScope("ALL");
+        setCategoryid("");
+        setSubcategoryid("");
+        setLocationfilter("");
+        setCountdate(today());
+        setBlindcount(false);
+        setRemarks("");
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

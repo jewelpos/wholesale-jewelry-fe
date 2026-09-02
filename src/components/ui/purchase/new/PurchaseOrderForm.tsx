@@ -32,6 +32,9 @@ import { formatQty } from "@/lib/utils/numberFormat";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
+import { GET_INVOICE_HOLDS_QUERY } from "@/lib/graphql/query/invoiceHold";
+import { SAVE_INVOICE_HOLD_MUTATION, DELETE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
 import useSupplier from "@/hooks/useSupplier";
 import useOutlets from "@/hooks/useOutlets";
 import useWarehouse from "@/hooks/useWarehouse";
@@ -201,6 +204,22 @@ const PurchaseOrderForm = ({
     control,
     name: "items",
   });
+
+  // A fresh from-scratch PO and a fresh supplier return both get hold protection —
+  // editing an existing PO is the only thing excluded (resuming a hold always creates a
+  // new record, which would be wrong there). Return uses its own doctype so a held
+  // return draft never shows up mixed in with regular new-PO holds or vice versa.
+  const isNewDoc = !isEdit;
+  const holdDoctype = isReturnOrder ? "PURCHASERETURN" : "PURCHASEORDER";
+  const [showHoldsPanel, setShowHoldsPanel] = useState(false);
+  const { data: holdsData, refetch: refetchHolds } = useQuery(GET_INVOICE_HOLDS_QUERY, {
+    variables: { storeid: parsedStoreId, outletid: Number.isFinite(parsedOutletId) ? parsedOutletId : 0, doctype: holdDoctype },
+    skip: !parsedStoreId || !isNewDoc,
+    fetchPolicy: "cache-and-network",
+  });
+  const activeHolds: any[] = holdsData?.getInvoiceHolds ?? [];
+  const [saveHoldMutation, { loading: savingHold }] = useMutation(SAVE_INVOICE_HOLD_MUTATION);
+  const [deleteHoldMutation] = useMutation(DELETE_INVOICE_HOLD_MUTATION);
 
   const supplierIdValue = watch("supplierid");
 
@@ -656,13 +675,158 @@ const PurchaseOrderForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReturnOrder, isEdit, returnOrderPoNumber, returnPoData, parsedStoreId, reset]);
 
+  // See useAutoHoldOnLeave.ts and the SalesInvoiceForm.tsx wiring for the full rationale
+  // — this is the same pattern applied to Purchase Orders.
+  const { currentHoldIdRef, suppressAutoHoldRef } = useAutoHoldOnLeave({
+    enabled: isNewDoc && !disableField,
+    isDirty,
+    hasContent: () => {
+      const v = getValues();
+      return !!v.supplierid || (v.items ?? []).length > 0;
+    },
+    getHoldPayload: () => {
+      const v = getValues();
+      const supplierName = (v as any).poordtocompanyname ?? "";
+      const itemCount = (v.items ?? []).length;
+      const autoName = [supplierName, itemCount ? `${itemCount} item${itemCount !== 1 ? "s" : ""}` : ""].filter(Boolean).join(" — ") || "Untitled";
+      return {
+        holdname: autoName,
+        // The hold table's customerid column doesn't apply to a supplier-based PO —
+        // left null rather than repurposed for a different entity type.
+        customerid: null,
+        formdata: {
+          ...v,
+          podate: v.podate ? (v.podate as any).toISOString?.() ?? String(v.podate) : null,
+          porequestdate: v.porequestdate ? (v.porequestdate as any).toISOString?.() ?? String(v.porequestdate) : null,
+          // returnOrderPoNumber lives in separate component state, not the form itself —
+          // without this a resumed return would lose which original PO it's against.
+          ...(isReturnOrder ? { returnOrderPoNumber } : {}),
+        },
+      };
+    },
+    storeid: parsedStoreId,
+    outletid: Number.isFinite(parsedOutletId) ? parsedOutletId : 0,
+    doctype: holdDoctype,
+  });
+
   const { handleCancel } = useUnsavedChanges({
     isDirty,
     onCancel: () => {
+      suppressAutoHoldRef.current = true;
       reset();
       router.back();
     },
   });
+
+  // Nudges the user toward a held purchase order the moment they land on a fresh New PO
+  // page — see the identical effect in SalesInvoiceForm.tsx for the full rationale.
+  const hasPromptedResumeRef = useRef(false);
+  useEffect(() => {
+    if (!isNewDoc || hasPromptedResumeRef.current || activeHolds.length === 0) return;
+    hasPromptedResumeRef.current = true;
+    const mostRecent = [...activeHolds].sort(
+      (a, b) => new Date(b.updatedat ?? b.createdat).getTime() - new Date(a.updatedat ?? a.createdat).getTime()
+    )[0];
+    MySwal.fire({
+      toast: true,
+      position: "center",
+      icon: "info",
+      title: isReturnOrder ? "You have a supplier return in progress" : "You have a purchase order in progress",
+      text: mostRecent.holdname || undefined,
+      showConfirmButton: true,
+      confirmButtonText: "Resume",
+      showCloseButton: true,
+      timer: 8000,
+      timerProgressBar: true,
+    }).then((result) => {
+      if (result.isConfirmed) handleResumeHold(mostRecent);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHolds, isNewDoc]);
+
+  const handleHold = async () => {
+    const formValues = getValues();
+    const hasItems = (formValues.items ?? []).length > 0;
+    if (!hasItems) {
+      MySwal.fire({ icon: "info", title: "Nothing to hold", text: "Add at least one item before holding.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    const supplierName = (formValues as any).poordtocompanyname ?? "";
+    const itemCount = formValues.items.length;
+    const autoName = [supplierName, `${itemCount} item${itemCount !== 1 ? "s" : ""}`].filter(Boolean).join(" — ");
+    const { value: holdName, isConfirmed } = await MySwal.fire({
+      title: isReturnOrder ? "Hold Supplier Return" : "Hold Purchase Order",
+      input: "text",
+      inputLabel: "Hold name (optional)",
+      inputValue: autoName,
+      showCancelButton: true,
+      confirmButtonText: "Hold",
+      cancelButtonText: "Cancel",
+      inputPlaceholder: "e.g. ACME Supplies — 3 items",
+    });
+    if (!isConfirmed) return;
+    const holdData = {
+      ...formValues,
+      podate: formValues.podate ? (formValues.podate as any).toISOString?.() ?? String(formValues.podate) : null,
+      porequestdate: formValues.porequestdate ? (formValues.porequestdate as any).toISOString?.() ?? String(formValues.porequestdate) : null,
+      ...(isReturnOrder ? { returnOrderPoNumber } : {}),
+    };
+    try {
+      await saveHoldMutation({
+        variables: {
+          input: {
+            holdid: currentHoldIdRef.current ?? undefined,
+            storeid: parsedStoreId,
+            outletid: Number.isFinite(parsedOutletId) ? parsedOutletId : 0,
+            doctype: holdDoctype,
+            holdname: holdName || autoName,
+            customerid: null,
+            formdata: holdData,
+          },
+        },
+      });
+      currentHoldIdRef.current = null;
+      reset();
+      refetchHolds();
+      MySwal.fire({
+        icon: "success",
+        title: isReturnOrder ? "Supplier return held" : "Purchase order held",
+        text: `You can resume it from the Held ${isReturnOrder ? "Supplier Returns" : "Purchase Orders"} panel.`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch {
+      MySwal.fire("Error", "Failed to save hold. Please try again.", "error");
+    }
+  };
+
+  const handleResumeHold = async (hold: any) => {
+    const fd = hold.formdata ?? {};
+    reset({
+      ...fd,
+      podate: fd.podate ? dayjs(fd.podate) : dayjs(),
+      porequestdate: fd.porequestdate ? dayjs(fd.porequestdate) : dayjs(),
+    });
+    if (fd.podate) setSelectedDate(dayjs(fd.podate));
+    if (isReturnOrder && fd.returnOrderPoNumber) setReturnOrderPoNumber(Number(fd.returnOrderPoNumber));
+    currentHoldIdRef.current = hold.holdid;
+    setShowHoldsPanel(false);
+  };
+
+  const handleDeleteHold = async (holdid: number) => {
+    const result = await MySwal.fire({
+      title: "Discard hold?",
+      text: "This hold will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Discard",
+      confirmButtonColor: "#dc3545",
+    });
+    if (!result.isConfirmed) return;
+    if (currentHoldIdRef.current === holdid) currentHoldIdRef.current = null;
+    await deleteHoldMutation({ variables: { holdid, storeid: parsedStoreId } });
+    refetchHolds();
+  };
 
   const handleDateChange = (date: Dayjs | null) => {
     if (date) setSelectedDate(date);
@@ -937,6 +1101,19 @@ const PurchaseOrderForm = ({
       const { data } = response;
       const successData = data?.createPurchaseOrder || data?.editPurchaseOrder || data?.returnPurchaseOrder;
       if (successData) {
+        // Must happen before anything else — see the identical note in
+        // SalesInvoiceForm.tsx. This form in particular never calls reset() before
+        // router.back() (or doesn't navigate away at all if the AP-invoice modal opens
+        // next), so isDirty can stay true well past this point.
+        suppressAutoHoldRef.current = true;
+        if (currentHoldIdRef.current != null) {
+          const holdIdToClear = currentHoldIdRef.current;
+          currentHoldIdRef.current = null;
+          deleteHoldMutation({ variables: { holdid: holdIdToClear, storeid: parsedStoreId } })
+            .then(() => refetchHolds())
+            .catch(() => {});
+        }
+
         // Log import history now that PO is actually saved
         if (pendingImportMeta) {
           const meta = pendingImportMeta;
@@ -1075,6 +1252,40 @@ const PurchaseOrderForm = ({
           void openSaveModeModalAndSubmit();
         }}
       >
+        {isNewDoc && activeHolds.length > 0 && (
+          <div className="card mb-3" style={{ borderColor: "#f59e0b" }}>
+            <div
+              className="card-body py-2 px-3 d-flex justify-content-between align-items-center"
+              style={{ background: "#fffbeb", cursor: "pointer", borderBottom: showHoldsPanel ? "1px solid #f59e0b" : "none" }}
+              onClick={() => setShowHoldsPanel((v) => !v)}
+            >
+              <span className="fw-semibold" style={{ fontSize: 13, color: "#92400e" }}>
+                Held {isReturnOrder ? "Supplier Returns" : "Purchase Orders"} ({activeHolds.length})
+              </span>
+              <span style={{ fontSize: 11, color: "#b45309" }}>{showHoldsPanel ? "▲ Hide" : "▼ Show"}</span>
+            </div>
+            {showHoldsPanel && (
+              <div className="card-body py-2 px-3">
+                <table className="table table-sm mb-0">
+                  <tbody>
+                    {activeHolds.map((hold: any) => (
+                      <tr key={hold.holdid} style={{ borderBottom: "1px solid #fde68a" }}>
+                        <td style={{ fontSize: 13 }}>{hold.holdname || `Hold #${hold.holdid}`}</td>
+                        <td style={{ fontSize: 11, color: "#a8a29e" }}>
+                          {hold.createdat ? new Date(hold.createdat).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                        </td>
+                        <td className="text-end">
+                          <button type="button" className="btn btn-sm btn-success" style={{ fontSize: 11, padding: "2px 10px" }} onClick={() => handleResumeHold(hold)}>Resume</button>{" "}
+                          <button type="button" className="btn btn-sm btn-outline-danger" style={{ fontSize: 11, padding: "2px 10px" }} onClick={() => handleDeleteHold(hold.holdid)}>Discard</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
         <fieldset disabled={disableField}>
 
           {/* ── HEADER STRIP ─────────────────────────────── */}
@@ -2036,6 +2247,11 @@ const PurchaseOrderForm = ({
           </div>
         ) : (
           <ActionFooter handleCancel={handleCancel}>
+            {isNewDoc && (
+              <button type="button" className="btn btn-outline-warning me-2" disabled={savingHold} onClick={handleHold}>
+                {savingHold ? "Saving…" : "Hold"}
+              </button>
+            )}
             <ButtonLoader
               loading={creating || updating || returning || creatingSupplierReturn || poLoading}
               btnText={isEdit ? "Update" : "Save"}

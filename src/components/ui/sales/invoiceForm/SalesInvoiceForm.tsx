@@ -23,6 +23,7 @@ import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
 import useWarehouse from "@/hooks/useWarehouse";
 import type { ItemDetails } from "@/hooks/useProducts";
 
@@ -1298,9 +1299,46 @@ const SalesInvoiceForm = ({
   const { handleCancel } = useUnsavedChanges({
     isDirty,
     onCancel: () => {
+      // An explicit Cancel is the user deliberately discarding this data — the
+      // subsequent unmount (router.back()) must not auto-hold it right back into
+      // existence, same race as the post-success case below.
+      suppressAutoHoldRef.current = true;
       reset();
       router.back();
     },
+  });
+
+  // Silently holds an in-progress NEW invoice/memo (never an edit/view of an already
+  // saved one — resuming a hold creates a fresh record, not an update) if the user
+  // navigates away without saving, so "I just left to check inventory" no longer means
+  // starting over. currentHoldIdRef is also fed by the manual Hold button and Resume
+  // below so all three paths (manual hold, auto-hold, resume-then-leave-again) share one
+  // row instead of piling up duplicates.
+  const { currentHoldIdRef, suppressAutoHoldRef } = useAutoHoldOnLeave({
+    enabled: isNewDoc && !readOnly,
+    isDirty,
+    hasContent: () => {
+      const v = getValues();
+      return !!v.customerid || (v.items ?? []).length > 0;
+    },
+    getHoldPayload: () => {
+      const v = getValues();
+      const customerName = v.invbilltocompanyname ?? "";
+      const itemCount = (v.items ?? []).length;
+      const autoName = [customerName, itemCount ? `${itemCount} item${itemCount !== 1 ? "s" : ""}` : ""].filter(Boolean).join(" — ") || "Untitled";
+      return {
+        holdname: autoName,
+        customerid: v.customerid ?? null,
+        formdata: {
+          ...v,
+          saledate: v.saledate ? (v.saledate as any).toISOString?.() ?? String(v.saledate) : null,
+          shippingdate: v.shippingdate ? (v.shippingdate as any).toISOString?.() ?? String(v.shippingdate) : null,
+        },
+      };
+    },
+    storeid: parsedStoreId,
+    outletid: parsedOutletId || 0,
+    doctype: documentType,
   });
 
   const resetToolItem = () => {
@@ -1922,6 +1960,24 @@ const SalesInvoiceForm = ({
               : result?.data?.createInvoice;
 
     if (response?.success) {
+      // Must happen before anything else in this block: the post-success flow (payment
+      // modal, print, email) often doesn't reset() the form until several user
+      // interactions later, so it stays "dirty" the whole time — without this, an
+      // unmount anywhere in that window would auto-hold this already-saved data right
+      // back into existence.
+      suppressAutoHoldRef.current = true;
+
+      // The document this hold was tracking now exists for real — the hold's only job
+      // (surviving an unsaved navigate-away) is done, so clean it up. Fire-and-forget:
+      // the invoice is already saved either way, this is just tidying up the draft row.
+      if (currentHoldIdRef.current != null) {
+        const holdIdToClear = currentHoldIdRef.current;
+        currentHoldIdRef.current = null;
+        deleteHoldMutation({ variables: { holdid: holdIdToClear, storeid: parsedStoreId } })
+          .then(() => refetchHolds())
+          .catch(() => {});
+      }
+
       // Update SO items and status after successful invoice creation from SO
       if (salesordernoFromSO && documentType === "INVOICE" && !isEdit) {
         const soItems = formData.items
@@ -2189,6 +2245,9 @@ const SalesInvoiceForm = ({
       await saveHoldMutation({
         variables: {
           input: {
+            // Reuse this session's row (e.g. from an earlier auto-hold or Resume)
+            // instead of creating a duplicate.
+            holdid: currentHoldIdRef.current ?? undefined,
             storeid: parsedStoreId,
             outletid: parsedOutletId || 0,
             doctype: documentType,
@@ -2198,6 +2257,9 @@ const SalesInvoiceForm = ({
           },
         },
       });
+      // Manual Hold is a deliberate "I'm done for now" handoff — reset() below starts a
+      // genuinely blank session, so this hold's id must not keep being reused for it.
+      currentHoldIdRef.current = null;
       reset();
       refetchHolds();
       Swal.fire({ icon: "success", title: "Invoice held", text: "You can resume it from the Held Invoices panel.", timer: 2000, showConfirmButton: false });
@@ -2213,10 +2275,43 @@ const SalesInvoiceForm = ({
       saledate: fd.saledate ? dayjs(fd.saledate) : dayjs(),
       shippingdate: fd.shippingdate ? dayjs(fd.shippingdate) : undefined,
     });
-    await deleteHoldMutation({ variables: { holdid: hold.holdid, storeid: parsedStoreId } });
-    refetchHolds();
+    // Resuming no longer deletes the hold — it stays alive (now tracked as THIS
+    // session's row) until the invoice is actually created or explicitly discarded, so
+    // leaving again before finishing still has a safety net instead of silently losing
+    // it a second time.
+    currentHoldIdRef.current = hold.holdid;
     setShowHoldsPanel(false);
   };
+
+  // Nudges the user toward a held invoice the moment they land on a fresh New
+  // Invoice/Memo page, instead of relying on them to notice and open the (collapsible)
+  // Held panel themselves. Fires once per mount — not every time activeHolds refetches —
+  // and only picks the most recently touched hold, since that's almost always the one
+  // they actually want back.
+  const hasPromptedResumeRef = useRef(false);
+  useEffect(() => {
+    if (!isNewDoc || hasPromptedResumeRef.current || activeHolds.length === 0) return;
+    hasPromptedResumeRef.current = true;
+    const mostRecent = [...activeHolds].sort(
+      (a, b) => new Date(b.updatedat ?? b.createdat).getTime() - new Date(a.updatedat ?? a.createdat).getTime()
+    )[0];
+    const docLabel = documentType === "MEMO" ? "a memo" : "an invoice";
+    MySwal.fire({
+      toast: true,
+      position: "center",
+      icon: "info",
+      title: `You have ${docLabel} in progress`,
+      text: mostRecent.holdname || undefined,
+      showConfirmButton: true,
+      confirmButtonText: "Resume",
+      showCloseButton: true,
+      timer: 8000,
+      timerProgressBar: true,
+    }).then((result) => {
+      if (result.isConfirmed) handleResumeHold(mostRecent);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHolds, isNewDoc]);
 
   const handleDeleteHold = async (holdid: number) => {
     const result = await Swal.fire({
@@ -2228,6 +2323,7 @@ const SalesInvoiceForm = ({
       confirmButtonColor: "#dc3545",
     });
     if (!result.isConfirmed) return;
+    if (currentHoldIdRef.current === holdid) currentHoldIdRef.current = null;
     await deleteHoldMutation({ variables: { holdid, storeid: parsedStoreId } });
     refetchHolds();
   };

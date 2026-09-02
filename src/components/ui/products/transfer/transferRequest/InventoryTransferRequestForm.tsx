@@ -19,6 +19,7 @@ import { WarehouseType } from "@/types/warehouse";
 import ActionFooter from "@/components/ui/ActionFooter";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 import { SelectOption } from "@/types/form";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 
 // A "Request Transfer" is a PULL: the outlet you're logged into is always the one
 // asking to RECEIVE stock (the destination/"To Outlet", fixed to your current outlet —
@@ -310,6 +311,23 @@ const InventoryTransferRequestForm = () => {
     setRows([]);
     resetToolItem();
   };
+
+  // Registers with the app-wide navigation guard (see NavigationGuardContext.tsx and the
+  // identical wiring in CustomerForm.tsx) so leaving with requested items still in the
+  // list via a sidebar link asks Save / Discard / Cancel instead of silently losing them.
+  // The header fields (react-hook-form) aren't the real signal of unsaved work here —
+  // the requested-items list (plain component state, not part of the form) is.
+  const { registerGuard } = useNavigationGuard();
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  useEffect(() => {
+    return registerGuard({
+      isDirty: () => rowsRef.current.length > 0,
+      onSave: () => handleSubmit(onSubmit)(),
+      onDiscard: () => handleResetFromOutlet(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSubmit = async (data: InventoryTransferRequestFormType) => {
     if (!parsedStoreId || !parsedOutletId) return;

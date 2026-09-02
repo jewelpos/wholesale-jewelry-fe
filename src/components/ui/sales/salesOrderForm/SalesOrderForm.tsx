@@ -20,12 +20,15 @@ import ActionFooter from "@/components/ui/ActionFooter";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
 import useWarehouse from "@/hooks/useWarehouse";
 import type { ItemDetails } from "@/hooks/useProducts";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
+import { GET_INVOICE_HOLDS_QUERY } from "@/lib/graphql/query/invoiceHold";
+import { SAVE_INVOICE_HOLD_MUTATION, DELETE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
 import { GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
 import { GET_ALL_WAREHOUSE_SETTINGS_QUERY } from "@/lib/graphql/query/warehouse";
 import { GET_CURRENT_METAL_RATES_QUERY } from "@/lib/graphql/query/metalRates";
@@ -301,6 +304,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const { fields: itemFields, append, remove, update, replace } = useFieldArray({ control, name: "items" });
 
+  const isNewDoc = !isEdit;
+  const [showHoldsPanel, setShowHoldsPanel] = useState(false);
+  const { data: holdsData, refetch: refetchHolds } = useQuery(GET_INVOICE_HOLDS_QUERY, {
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId || 0, doctype: "SALESORDER" },
+    skip: !parsedStoreId || !isNewDoc,
+    fetchPolicy: "cache-and-network",
+  });
+  const activeHolds: any[] = holdsData?.getInvoiceHolds ?? [];
+  const [saveHoldMutation, { loading: savingHold }] = useMutation(SAVE_INVOICE_HOLD_MUTATION);
+  const [deleteHoldMutation] = useMutation(DELETE_INVOICE_HOLD_MUTATION);
+
   const watchedWarehouseIdForSettings = watch("warehouseid");
   const productSettingsWarehouseId = Number(watchedWarehouseIdForSettings) || undefined;
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
@@ -496,10 +510,141 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     return { totalItems: items.length, totalPcs, unitQtyTotals, grossTotal, discountAmount, subtotal, orderDiscountAmount, shipping, orderTotal };
   }, [watchedDiscountPercent, watchedOrderDiscountAmount, watchedItems, watchedShipping]);
 
+  // See useAutoHoldOnLeave.ts and the SalesInvoiceForm.tsx wiring for the full rationale
+  // — this is the same pattern applied to Sales Orders.
+  const { currentHoldIdRef, suppressAutoHoldRef } = useAutoHoldOnLeave({
+    enabled: isNewDoc && !readOnly,
+    isDirty,
+    hasContent: () => {
+      const v = getValues();
+      return !!v.customerid || (v.items ?? []).length > 0;
+    },
+    getHoldPayload: () => {
+      const v = getValues();
+      const customerName = v.invbilltocompanyname ?? "";
+      const itemCount = (v.items ?? []).length;
+      const autoName = [customerName, itemCount ? `${itemCount} item${itemCount !== 1 ? "s" : ""}` : ""].filter(Boolean).join(" — ") || "Untitled";
+      return {
+        holdname: autoName,
+        customerid: v.customerid ?? null,
+        formdata: {
+          ...v,
+          orderdate: v.orderdate ? (v.orderdate as any).toISOString?.() ?? String(v.orderdate) : null,
+        },
+      };
+    },
+    storeid: parsedStoreId,
+    outletid: parsedOutletId || 0,
+    doctype: "SALESORDER",
+  });
+
   const { handleCancel } = useUnsavedChanges({
     isDirty,
-    onCancel: () => { reset(); router.back(); },
+    onCancel: () => {
+      suppressAutoHoldRef.current = true;
+      reset();
+      router.back();
+    },
   });
+
+  // Nudges the user toward a held sales order the moment they land on a fresh New Sales
+  // Order page — see the identical effect in SalesInvoiceForm.tsx for the full rationale.
+  const hasPromptedResumeRef = useRef(false);
+  useEffect(() => {
+    if (!isNewDoc || hasPromptedResumeRef.current || activeHolds.length === 0) return;
+    hasPromptedResumeRef.current = true;
+    const mostRecent = [...activeHolds].sort(
+      (a, b) => new Date(b.updatedat ?? b.createdat).getTime() - new Date(a.updatedat ?? a.createdat).getTime()
+    )[0];
+    MySwal.fire({
+      toast: true,
+      position: "center",
+      icon: "info",
+      title: "You have a sales order in progress",
+      text: mostRecent.holdname || undefined,
+      showConfirmButton: true,
+      confirmButtonText: "Resume",
+      showCloseButton: true,
+      timer: 8000,
+      timerProgressBar: true,
+    }).then((result) => {
+      if (result.isConfirmed) handleResumeHold(mostRecent);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHolds, isNewDoc]);
+
+  const handleHold = async () => {
+    const formValues = getValues();
+    const hasItems = (formValues.items ?? []).length > 0;
+    if (!hasItems) {
+      MySwal.fire({ icon: "info", title: "Nothing to hold", text: "Add at least one item before holding.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    const customerName = formValues.invbilltocompanyname ?? "";
+    const itemCount = formValues.items.length;
+    const autoName = [customerName, `${itemCount} item${itemCount !== 1 ? "s" : ""}`].filter(Boolean).join(" — ");
+    const { value: holdName, isConfirmed } = await MySwal.fire({
+      title: "Hold Sales Order",
+      input: "text",
+      inputLabel: "Hold name (optional)",
+      inputValue: autoName,
+      showCancelButton: true,
+      confirmButtonText: "Hold",
+      cancelButtonText: "Cancel",
+      inputPlaceholder: "e.g. John Smith — ring + chain",
+    });
+    if (!isConfirmed) return;
+    const holdData = {
+      ...formValues,
+      orderdate: formValues.orderdate ? (formValues.orderdate as any).toISOString?.() ?? String(formValues.orderdate) : null,
+    };
+    try {
+      await saveHoldMutation({
+        variables: {
+          input: {
+            holdid: currentHoldIdRef.current ?? undefined,
+            storeid: parsedStoreId,
+            outletid: parsedOutletId || 0,
+            doctype: "SALESORDER",
+            holdname: holdName || autoName,
+            customerid: formValues.customerid ?? null,
+            formdata: holdData,
+          },
+        },
+      });
+      currentHoldIdRef.current = null;
+      reset();
+      refetchHolds();
+      MySwal.fire({ icon: "success", title: "Sales order held", text: "You can resume it from the Held Sales Orders panel.", timer: 2000, showConfirmButton: false });
+    } catch {
+      MySwal.fire("Error", "Failed to save hold. Please try again.", "error");
+    }
+  };
+
+  const handleResumeHold = async (hold: any) => {
+    const fd = hold.formdata ?? {};
+    reset({
+      ...fd,
+      orderdate: fd.orderdate ? dayjs(fd.orderdate) : dayjs(),
+    });
+    currentHoldIdRef.current = hold.holdid;
+    setShowHoldsPanel(false);
+  };
+
+  const handleDeleteHold = async (holdid: number) => {
+    const result = await MySwal.fire({
+      title: "Discard hold?",
+      text: "This hold will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Discard",
+      confirmButtonColor: "#dc3545",
+    });
+    if (!result.isConfirmed) return;
+    if (currentHoldIdRef.current === holdid) currentHoldIdRef.current = null;
+    await deleteHoldMutation({ variables: { holdid, storeid: parsedStoreId } });
+    refetchHolds();
+  };
 
   const resetToolItem = () => {
     setToolItem({
@@ -818,6 +963,16 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
       if (!responseData?.success) throw new Error(responseData?.error || `Failed to ${isEdit ? "update" : "create"} sales order`);
 
+      // Must happen before anything else — see the identical note in SalesInvoiceForm.tsx.
+      suppressAutoHoldRef.current = true;
+      if (currentHoldIdRef.current != null) {
+        const holdIdToClear = currentHoldIdRef.current;
+        currentHoldIdRef.current = null;
+        deleteHoldMutation({ variables: { holdid: holdIdToClear, storeid: parsedStoreId } })
+          .then(() => refetchHolds())
+          .catch(() => {});
+      }
+
       const soNumber = responseData.data ? Number(responseData.data) : (salesordernoEdit ? Number(salesordernoEdit) : null);
 
       const popupResult = await MySwal.fire({
@@ -890,6 +1045,41 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       {readOnly && (
         <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2">
           <strong>View Only</strong> — this sales order cannot be edited in its current status.
+        </div>
+      )}
+      {isNewDoc && activeHolds.length > 0 && (
+        <div className="card mb-3" style={{ borderColor: "#f59e0b" }}>
+          <div
+            className="card-body py-2 px-3 d-flex justify-content-between align-items-center"
+            style={{ background: "#fffbeb", cursor: "pointer", borderBottom: showHoldsPanel ? "1px solid #f59e0b" : "none" }}
+            onClick={() => setShowHoldsPanel((v) => !v)}
+          >
+            <span className="fw-semibold" style={{ fontSize: 13, color: "#92400e" }}>
+              Held Sales Orders ({activeHolds.length})
+            </span>
+            <span style={{ fontSize: 11, color: "#b45309" }}>{showHoldsPanel ? "▲ Hide" : "▼ Show"}</span>
+          </div>
+          {showHoldsPanel && (
+            <div className="card-body py-2 px-3">
+              <table className="table table-sm mb-0">
+                <tbody>
+                  {activeHolds.map((hold: any) => (
+                    <tr key={hold.holdid} style={{ borderBottom: "1px solid #fde68a" }}>
+                      <td style={{ fontSize: 13 }}>{hold.holdname || `Hold #${hold.holdid}`}</td>
+                      <td style={{ fontSize: 12, color: "#78716c" }}>{hold.formdata?.invbilltocompanyname || "—"}</td>
+                      <td style={{ fontSize: 11, color: "#a8a29e" }}>
+                        {hold.createdat ? new Date(hold.createdat).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </td>
+                      <td className="text-end">
+                        <button type="button" className="btn btn-sm btn-success" style={{ fontSize: 11, padding: "2px 10px" }} onClick={() => handleResumeHold(hold)}>Resume</button>{" "}
+                        <button type="button" className="btn btn-sm btn-outline-danger" style={{ fontSize: 11, padding: "2px 10px" }} onClick={() => handleDeleteHold(hold.holdid)}>Discard</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
       <fieldset disabled={readOnly} style={readOnly ? { opacity: 0.85 } : undefined}>
@@ -1609,6 +1799,11 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         </div>
       ) : (
         <ActionFooter handleCancel={handleDeleteConfirm}>
+          {isNewDoc && (
+            <button type="button" className="btn btn-outline-warning me-2" disabled={savingHold} onClick={handleHold}>
+              {savingHold ? "Saving…" : "Hold"}
+            </button>
+          )}
           <ButtonLoader
             loading={saving}
             btnText="Save Sales Order"

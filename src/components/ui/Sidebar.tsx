@@ -4,8 +4,9 @@ import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useAppSelector } from "@/lib/store/hook";
 import { Menus } from "@/types/permissions";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import * as LucideIcons from "lucide-react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -25,6 +26,8 @@ const getIcon = (name?: string): LucideIcon | null => {
 
 const Sidebar = ({ menus }: Props) => {
   const path = usePathname();
+  const router = useRouter();
+  const { guardedNavigate } = useNavigationGuard();
   const { basePath } = useDefaultRoute();
   const pathname = path.replace(basePath, "");
   const { storePrefix, outletId } = useParams<{ storePrefix: string; outletId: string }>();
@@ -220,9 +223,13 @@ const Sidebar = ({ menus }: Props) => {
                                   textDecoration: "none",
                                   background: isActive ? "#ede9fe" : "transparent",
                                 }}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   setOutletOpen(false);
                                   closeMobileSidebar();
+                                  guardedNavigate(() =>
+                                    router.push(`/${storePrefix}/${str.storeid}/${o.outletid}${urlAfterOutlet}`)
+                                  );
                                 }}
                               >
                                 {o.outletname}
@@ -318,9 +325,12 @@ const Sidebar = ({ menus }: Props) => {
                                             ? "subdrop"
                                             : ""
                                         }`}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.preventDefault();
                                           toggleSubsidebar(item.menuname);
                                           closeMobileSidebar();
+                                          const href = `${basePath}${menu.menuurl}${item.menuurl}`;
+                                          guardedNavigate(() => router.push(href));
                                         }}
                                       >
                                         {ChildIcon && (
@@ -371,6 +381,11 @@ const Sidebar = ({ menus }: Props) => {
                                                     ? "active"
                                                     : ""
                                                 }`}
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  const href = `${menu.menuurl}${item.menuurl}${items.menuurl}`;
+                                                  guardedNavigate(() => router.push(href));
+                                                }}
                                               >
                                                 {items.menuname}
                                               </Link>

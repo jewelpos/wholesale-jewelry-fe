@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import { useParams, useRouter } from "next/navigation";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import { useDispatch } from "react-redux";
@@ -127,6 +128,32 @@ const PromotionForm: React.FC<PromotionFormProps> = ({ promotionId }) => {
   const removeRule = (idx: number) => {
     setRules(prev => prev.filter((_, i) => i !== idx));
   };
+
+  // Registers with the app-wide navigation guard (see NavigationGuardContext.tsx and the
+  // identical wiring in CustomerForm.tsx) so leaving an in-progress promotion via a
+  // sidebar link asks Save / Discard / Cancel. No react-hook-form here (plain useState
+  // fields), so "dirty" is any meaningfully-filled field or rule rather than isDirty.
+  const stateRef = useRef({ name, startdate, enddate, description, rules });
+  stateRef.current = { name, startdate, enddate, description, rules };
+  const { registerGuard } = useNavigationGuard();
+  useEffect(() => {
+    return registerGuard({
+      isDirty: () => {
+        const s = stateRef.current;
+        return !!s.name.trim() || !!s.startdate || !!s.enddate || !!s.description.trim() || s.rules.some(r => r.itemid || r.categoryid);
+      },
+      onSave: () => handleSave(),
+      onDiscard: () => {
+        setName("");
+        setStartdate("");
+        setEnddate("");
+        setIsactive(1);
+        setDescription("");
+        setRules([emptyRule()]);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) { dispatch(showNotification({ message: "Promotion name is required", type: NOTIFICATION_TYPES.ERROR })); return; }

@@ -13,7 +13,7 @@ import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { AddUserFormType } from "@/types/user";
 import { useMutation, useQuery } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 
@@ -30,6 +30,7 @@ import { AddUserMenusType, AddUserPermissionType, UsersListMenuType } from "@/ty
 import ActionFooter from "../ActionFooter";
 import ButtonLoader from "../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import { GET_USER_QUERY } from "@/lib/graphql/query/user";
 
 const AddUserForm = () => {
@@ -111,6 +112,21 @@ const AddUserForm = () => {
       router.back();
     },
   });
+
+  // Registers with the app-wide navigation guard (see NavigationGuardContext.tsx and the
+  // identical wiring in CustomerForm.tsx) so leaving an in-progress user via a sidebar
+  // link asks Save / Discard / Cancel instead of silently losing the entry.
+  const { registerGuard } = useNavigationGuard();
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+  useEffect(() => {
+    return registerGuard({
+      isDirty: () => isDirtyRef.current,
+      onSave: () => handleSubmit(onSubmit)(),
+      onDiscard: () => reset(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isNewUser || !parsedStoreId) return;

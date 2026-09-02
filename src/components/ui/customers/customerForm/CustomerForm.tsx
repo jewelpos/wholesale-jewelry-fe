@@ -4,12 +4,13 @@ import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import ActionFooter from "../../ActionFooter";
 import ButtonLoader from "../../ButtonLoader";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
+import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import { CustomerFormType } from "@/types/customer";
 import CustomerInputsA from "./CustomerInputsA";
 import CustomerInputsB from "./CustomerInputsB";
@@ -121,6 +122,23 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
       router.back();
     },
   });
+
+  // Registers with the app-wide navigation guard (see NavigationGuardContext.tsx) so
+  // clicking a sidebar link away from an in-progress customer asks "Save / Discard /
+  // Cancel" instead of silently losing the entry — the customer form has no draft/hold
+  // concept to fall back on the way Invoice/SO/PO do, so this is a real decision point.
+  const { registerGuard } = useNavigationGuard();
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+  useEffect(() => {
+    if (disableField) return;
+    return registerGuard({
+      isDirty: () => isDirtyRef.current,
+      onSave: () => handleSubmit(onSubmit)(),
+      onDiscard: () => reset(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disableField]);
 
   const onSubmit: SubmitHandler<CustomerFormType> = async (formData) => {
     setLoading(true);
