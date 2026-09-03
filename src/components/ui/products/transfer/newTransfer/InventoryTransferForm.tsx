@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, PlusCircle, Trash2 } from "react-feather";
 import { Controller, useForm } from "react-hook-form";
-import { useLazyQuery, useMutation } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
 import Select from "react-select/base";
 
@@ -12,8 +12,8 @@ import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { GET_WAREHOUSES_BY_OUTLET_ID_QUERY } from "@/lib/graphql/query/warehouse";
-import { GET_INVENTORY_TRANSFER_ITEM_QUERY } from "@/lib/graphql/query/products";
-import { CREATE_INVENTORY_TRANSFER_MUTATION } from "@/lib/graphql/mutations/products";
+import { GET_INVENTORY_TRANSFER_ITEM_QUERY, GET_PRODUCT_SETTINGS_INFO_QUERY } from "@/lib/graphql/query/products";
+import { CREATE_INVENTORY_TRANSFER_MUTATION, CREATE_DIRECT_OUTLET_TRANSFER_MUTATION } from "@/lib/graphql/mutations/products";
 import useProducts, { ItemDetails } from "@/hooks/useProducts";
 import {
   InventoryItemTransfer,
@@ -25,8 +25,10 @@ import ActionFooter from "@/components/ui/ActionFooter";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 import { SelectOption } from "@/types/form";
 import SelectTransferRequest from "@/components/forms/SelectTransferRequest";
+import SelectProduct from "@/components/forms/SelectProduct";
+import { BarcodeScannerModal } from "@/components/ui/sales/invoiceForm/BarcodeScannerModal";
 
-type TransferRequestType = "REQUEST" | "INTERNAL";
+type TransferRequestType = "REQUEST" | "INTERNAL" | "DIRECT";
 
 type InventoryTransferFormType = {
   transferRequestId?: number;
@@ -44,6 +46,7 @@ type TransferRow = {
   itemdescription: string;
   availableqty: number;
   transferquantity: number;
+  itemunit?: string;
 };
 
 const InventoryTransferForm = () => {
@@ -62,6 +65,10 @@ const InventoryTransferForm = () => {
   const [fromWarehouseInput, setFromWarehouseInput] = useState("");
   const [toWarehouseMenuIsOpen, setToWarehouseMenuIsOpen] = useState(false);
   const [toWarehouseInput, setToWarehouseInput] = useState("");
+  const [fromOutletMenuIsOpen, setFromOutletMenuIsOpen] = useState(false);
+  const [fromOutletInput, setFromOutletInput] = useState("");
+  const [toOutletMenuIsOpen, setToOutletMenuIsOpen] = useState(false);
+  const [toOutletInput, setToOutletInput] = useState("");
   const [productMenuIsOpen, setProductMenuIsOpen] = useState(false);
   const [productInput, setProductInput] = useState("");
 
@@ -87,6 +94,36 @@ const InventoryTransferForm = () => {
   const [createTransfer, { loading: saving }] = useMutation(
     CREATE_INVENTORY_TRANSFER_MUTATION
   );
+  const [createDirectTransfer, { loading: savingDirect }] = useMutation(
+    CREATE_DIRECT_OUTLET_TRANSFER_MUTATION
+  );
+
+  // "Outlet to Outlet" direct-transfer tab: no request/approve step, restricted to each
+  // outlet's own system warehouse (resolved here, not user-selectable), scanned the same
+  // way as the invoice form — Pc items auto-add/increment on scan (when carriage is
+  // enabled for the source warehouse), Wt items populate a tool row for a manual qty/
+  // weight entry since each piece is distinct and can't be auto-incremented.
+  const [directFromWarehouseId, setDirectFromWarehouseId] = useState<number | undefined>(undefined);
+  const [directFromWarehouseName, setDirectFromWarehouseName] = useState<string | undefined>(undefined);
+  const [directToWarehouseId, setDirectToWarehouseId] = useState<number | undefined>(undefined);
+  const [directToWarehouseName, setDirectToWarehouseName] = useState<string | undefined>(undefined);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [barcodeScanValue, setBarcodeScanValue] = useState<string | undefined>(undefined);
+  const [directProductClearKey, setDirectProductClearKey] = useState(0);
+  const [directToolItem, setDirectToolItem] = useState<{
+    itemid?: number;
+    itemcode?: string;
+    itemdescription?: string;
+    itemunit?: string;
+    availableqty: number;
+    transferquantity: number;
+  }>({ itemid: undefined, itemcode: undefined, itemdescription: undefined, itemunit: undefined, availableqty: 0, transferquantity: 1 });
+
+  const { data: directProductSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
+    variables: { storeid: parsedStoreId, warehouiseid: directFromWarehouseId },
+    skip: !parsedStoreId || !directFromWarehouseId,
+  });
+  const directAllowCarriage = !!directProductSettingsData?.getProductSettingsInfo?.[0]?.allowcarriage;
 
   const outletOptions: SelectOption[] = useMemo(() => {
     const enabled = (store?.outlets || []).filter((o) => o.isenabled);
@@ -305,6 +342,92 @@ const InventoryTransferForm = () => {
     fetchProductsWithStockByStoreAndWarehouseId,
   ]);
 
+  // DIRECT mode: from/to are OUTLETS, not warehouses — resolve each to that outlet's own
+  // system warehouse (never a manual choice, matching the Request-Transfer flow's own
+  // convention). fromOutletId===toOutletId is blocked the same way from/to warehouse
+  // equality already is above.
+  useEffect(() => {
+    const fromId = Number(fromOutletId);
+    const toId = Number(toOutletId);
+    if (Number.isFinite(fromId) && fromId > 0 && Number.isFinite(toId) && toId > 0 && fromId === toId) {
+      setValue("toOutletId", undefined);
+    }
+  }, [fromOutletId, toOutletId, setValue]);
+
+  const prevDirectFromOutletIdRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (transferType !== "DIRECT") {
+      prevDirectFromOutletIdRef.current = undefined;
+      return;
+    }
+
+    const outletId = Number(fromOutletId);
+    const normalizedOutletId = Number.isFinite(outletId) && outletId > 0 ? outletId : undefined;
+
+    if (prevDirectFromOutletIdRef.current !== normalizedOutletId) {
+      setRows([]);
+      setDirectToolItem({ itemid: undefined, itemcode: undefined, itemdescription: undefined, itemunit: undefined, availableqty: 0, transferquantity: 1 });
+      setDirectFromWarehouseId(undefined);
+      setDirectFromWarehouseName(undefined);
+    }
+    prevDirectFromOutletIdRef.current = normalizedOutletId;
+
+    if (!normalizedOutletId) return;
+
+    (async () => {
+      const result = await handleTryCatch(async () => {
+        const { data } = await getWarehousesByOutletId({
+          variables: { outletid: normalizedOutletId },
+          fetchPolicy: "no-cache",
+        });
+        const list = (data?.getWarehousesByOutletId || []) as WarehouseType[];
+        const sysWarehouse = list.find((w) => w.issystem);
+        if (!sysWarehouse) {
+          throw new Error("Selected outlet has no active system warehouse");
+        }
+        setDirectFromWarehouseId(sysWarehouse.warehouseid);
+        setDirectFromWarehouseName(sysWarehouse.warehousename);
+        return true;
+      });
+      if (result.error) {
+        dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      }
+    })();
+  }, [transferType, fromOutletId, getWarehousesByOutletId, dispatch]);
+
+  useEffect(() => {
+    if (transferType !== "DIRECT") {
+      setDirectToWarehouseId(undefined);
+      setDirectToWarehouseName(undefined);
+      return;
+    }
+    const outletId = Number(toOutletId);
+    if (!Number.isFinite(outletId) || outletId <= 0) {
+      setDirectToWarehouseId(undefined);
+      setDirectToWarehouseName(undefined);
+      return;
+    }
+    (async () => {
+      const result = await handleTryCatch(async () => {
+        const { data } = await getWarehousesByOutletId({
+          variables: { outletid: outletId },
+          fetchPolicy: "no-cache",
+        });
+        const list = (data?.getWarehousesByOutletId || []) as WarehouseType[];
+        const sysWarehouse = list.find((w) => w.issystem);
+        if (!sysWarehouse) {
+          throw new Error("Selected outlet has no active system warehouse");
+        }
+        setDirectToWarehouseId(sysWarehouse.warehouseid);
+        setDirectToWarehouseName(sysWarehouse.warehousename);
+        return true;
+      });
+      if (result.error) {
+        dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      }
+    })();
+  }, [transferType, toOutletId, getWarehousesByOutletId, dispatch]);
+
   const resetToolItem = () => {
     setToolItem({
       itemid: undefined,
@@ -390,6 +513,106 @@ const InventoryTransferForm = () => {
     setRows((prev) => prev.filter((r) => r.itemid !== itemid));
   };
 
+  const resetDirectToolItem = () => {
+    setDirectToolItem({ itemid: undefined, itemcode: undefined, itemdescription: undefined, itemunit: undefined, availableqty: 0, transferquantity: 1 });
+  };
+
+  // Mirrors SalesInvoiceForm.tsx's autoAddItem — scan a Pc item with carriage enabled and
+  // it's added (or merged onto its existing row) immediately; a Wt item, or carriage
+  // disabled, instead populates the tool row below for an explicit qty/weight entry,
+  // since a Wt piece can't be auto-incremented (each one is physically distinct) and a
+  // disabled-carriage warehouse wants a deliberate confirm step either way.
+  const handleDirectItemSelect = (selected: ItemDetails | null) => {
+    if (!selected) return;
+    const isWtItem = (selected.itemunit ?? "").trim().toLowerCase() === "wt";
+    const availableqty = Number(selected.itemquantityinhand || 0);
+
+    if (directAllowCarriage && !isWtItem) {
+      let blocked = false;
+      setRows((prev) => {
+        const idx = prev.findIndex((r) => r.itemid === Number(selected.itemid));
+        if (idx >= 0) {
+          const newQty = prev[idx].transferquantity + 1;
+          if (newQty > availableqty) {
+            blocked = true;
+            return prev;
+          }
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], transferquantity: newQty, availableqty };
+          return updated;
+        }
+        if (availableqty < 1) {
+          blocked = true;
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            itemid: Number(selected.itemid),
+            itemcode: selected.itemcode ?? "",
+            itemdescription: selected.itemdescription ?? "",
+            itemunit: selected.itemunit,
+            availableqty,
+            transferquantity: 1,
+          },
+        ];
+      });
+      if (blocked) {
+        dispatch(showNotification({ message: `${selected.itemcode || "Item"}: only ${availableqty} in stock`, type: NOTIFICATION_TYPES.ERROR }));
+      }
+      setDirectProductClearKey((k) => k + 1);
+      return;
+    }
+
+    setDirectToolItem({
+      itemid: Number(selected.itemid),
+      itemcode: selected.itemcode,
+      itemdescription: selected.itemdescription,
+      itemunit: selected.itemunit,
+      availableqty,
+      transferquantity: isWtItem ? 0 : 1,
+    });
+  };
+
+  const addDirectRow = () => {
+    if (!directToolItem.itemid) {
+      dispatch(showNotification({ message: "Select item code", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+    const qty = Number(directToolItem.transferquantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      dispatch(showNotification({ message: "Transfer quantity is required", type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+    const isWtItem = (directToolItem.itemunit ?? "").trim().toLowerCase() === "wt";
+    const existingIdx = isWtItem ? -1 : rows.findIndex((r) => r.itemid === directToolItem.itemid);
+    const existingQty = existingIdx >= 0 ? rows[existingIdx].transferquantity : 0;
+    if (existingQty + qty > directToolItem.availableqty) {
+      dispatch(showNotification({ message: `Only ${directToolItem.availableqty} in stock`, type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+
+    setRows((prev) => {
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], transferquantity: existingQty + qty };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          itemid: directToolItem.itemid!,
+          itemcode: directToolItem.itemcode ?? "",
+          itemdescription: directToolItem.itemdescription ?? "",
+          itemunit: directToolItem.itemunit,
+          availableqty: directToolItem.availableqty,
+          transferquantity: qty,
+        },
+      ];
+    });
+    resetDirectToolItem();
+  };
+
   const loadRequestLines = async (inventoryitemtransferid: number) => {
     if (!parsedStoreId) return;
 
@@ -455,6 +678,66 @@ const InventoryTransferForm = () => {
 
   const onSubmit = async (data: InventoryTransferFormType) => {
     if (!parsedStoreId || !parsedOutletId) return;
+
+    if (transferType === "DIRECT") {
+      const fromOut = Number(data.fromOutletId);
+      const toOut = Number(data.toOutletId);
+      if (!Number.isFinite(fromOut) || fromOut <= 0 || !Number.isFinite(toOut) || toOut <= 0) {
+        dispatch(showNotification({ message: "From Outlet and To Outlet are required", type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+      if (fromOut === toOut) {
+        dispatch(showNotification({ message: "From and To outlet can not be same", type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+      if (!rows.length) {
+        dispatch(showNotification({ message: "Add at least one item", type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+      const invalidRow = rows.find(
+        (r) =>
+          !Number.isFinite(Number(r.transferquantity)) ||
+          Number(r.transferquantity) <= 0 ||
+          Number(r.transferquantity) > Number(r.availableqty)
+      );
+      if (invalidRow) {
+        dispatch(showNotification({ message: "Transfer quantity must be > 0 and <= available quantity", type: NOTIFICATION_TYPES.ERROR }));
+        return;
+      }
+
+      const result = await handleTryCatch(async () => {
+        const response = await createDirectTransfer({
+          variables: {
+            createDirectOutletTransferInput: {
+              storeid: parsedStoreId,
+              fromoutletid: fromOut,
+              tooutletid: toOut,
+              remarks: data.remarks || "",
+              items: rows.map((r) => ({ itemid: r.itemid, transferquantity: Number(r.transferquantity) })),
+            },
+          },
+        });
+
+        const successData = response.data?.createDirectOutletTransfer;
+        if (successData) {
+          dispatch(
+            showNotification({
+              message: successData.message,
+              type: successData.success ? NOTIFICATION_TYPES.SUCCESS : NOTIFICATION_TYPES.ERROR,
+            })
+          );
+          if (successData.success) {
+            router.back();
+          }
+        }
+        return true;
+      });
+
+      if (result.error) {
+        dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+      }
+      return;
+    }
 
     if (transferType === "REQUEST") {
       const req = Number(data.transferRequestId);
@@ -599,6 +882,7 @@ const InventoryTransferForm = () => {
   const selectedProduct = productById.get(Number(toolItem.itemid || 0));
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)}>
 
       {/* ── CARD 1: Transfer Details ─────────────────────── */}
@@ -642,6 +926,23 @@ const InventoryTransferForm = () => {
                     }}
                   >
                     Internal Warehouse Transfer
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${field.value === "DIRECT" ? "btn-primary" : "btn-outline-secondary"}`}
+                    style={{ fontSize: 12, padding: "5px 16px" }}
+                    onClick={() => {
+                      field.onChange("DIRECT");
+                      setValue("transferRequestId", undefined);
+                      setValue("fromOutletId", undefined);
+                      setValue("toOutletId", undefined);
+                      setValue("fromWarehouseId", undefined);
+                      setValue("toWarehouseId", undefined);
+                      setRows([]);
+                      resetDirectToolItem();
+                    }}
+                  >
+                    Outlet to Outlet (Direct)
                   </button>
                 </div>
               )}
@@ -768,6 +1069,90 @@ const InventoryTransferForm = () => {
             </div>
           )}
 
+          {/* ── DIRECT flow (Outlet to Outlet, no request/approve) ── */}
+          {transferType === "DIRECT" && (
+            <div className="row g-3 align-items-end">
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div style={sectionLabel}>From Outlet <span className="text-danger">*</span></div>
+                <Controller
+                  control={control}
+                  name="fromOutletId"
+                  render={({ field }) => (
+                    <Select<SelectOption>
+                      options={outletOptions}
+                      value={outletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
+                      onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                      isClearable
+                      placeholder="Select outlet..."
+                      className="form-control p-0 select-form-custom"
+                      menuPortalTarget={portalTarget}
+                      menuPosition="fixed"
+                      styles={{
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                        menu: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
+                      menuIsOpen={fromOutletMenuIsOpen}
+                      onMenuOpen={() => setFromOutletMenuIsOpen(true)}
+                      onMenuClose={() => setFromOutletMenuIsOpen(false)}
+                      inputValue={fromOutletInput}
+                      onInputChange={setFromOutletInput}
+                    />
+                  )}
+                />
+                {directFromWarehouseName && (
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                    System warehouse: {directFromWarehouseName}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-auto d-flex align-items-center" style={{ paddingBottom: 2 }}>
+                <ArrowRight size={20} color="#6b7280" />
+              </div>
+
+              <div className="col-lg-4 col-md-6 col-sm-12">
+                <div style={sectionLabel}>To Outlet <span className="text-danger">*</span></div>
+                <Controller
+                  control={control}
+                  name="toOutletId"
+                  render={({ field }) => (
+                    <Select<SelectOption>
+                      options={outletOptions.filter((o) => Number(o.value) !== Number(fromOutletId))}
+                      value={outletOptions.find((o) => Number(o.value) === Number(field.value)) || null}
+                      onChange={(opt) => field.onChange(opt?.value ? Number((opt as SelectOption).value) : undefined)}
+                      isClearable
+                      placeholder="Select outlet..."
+                      className="form-control p-0 select-form-custom"
+                      menuPortalTarget={portalTarget}
+                      menuPosition="fixed"
+                      styles={{
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                        menu: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
+                      menuIsOpen={toOutletMenuIsOpen}
+                      onMenuOpen={() => setToOutletMenuIsOpen(true)}
+                      onMenuClose={() => setToOutletMenuIsOpen(false)}
+                      inputValue={toOutletInput}
+                      onInputChange={setToOutletInput}
+                    />
+                  )}
+                />
+                {directToWarehouseName && (
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                    System warehouse: {directToWarehouseName}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-12">
+                <div className="alert alert-info py-2 px-3 mb-0" style={{ fontSize: 12 }}>
+                  This transfers stock immediately between each outlet&apos;s system warehouse —
+                  no approval step, no separate receive step. It completes as soon as you save.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Remarks */}
           <div className="mt-4">
             <div style={sectionLabel}>Remarks</div>
@@ -786,90 +1171,176 @@ const InventoryTransferForm = () => {
       <div className="card mb-3">
         <div className="card-body p-0">
 
-          {/* Add-item bar */}
-          <div
-            className="px-3 py-3"
-            style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", borderRadius: "8px 8px 0 0" }}
-          >
-            <div className="row g-2 align-items-end">
-              <div className="col-lg-5 col-md-12">
-                <div style={sectionLabel}>Search / Scan Item</div>
-                <Select<SelectOption>
-                  isLoading={productsLoading}
-                  options={productOptions}
-                  value={selectedProductOption}
-                  onChange={(opt) => {
-                    const selected = products.find(
-                      (p) => p.itemid === Number((opt as SelectOption | null)?.value)
-                    );
-                    if (!selected) {
-                      setToolItem((prev) => ({ ...prev, itemid: undefined, itemcode: undefined }));
-                      return;
-                    }
-                    setToolItem((prev) => ({
-                      ...prev,
-                      itemid: Number(selected.itemid),
-                      itemcode: String(selected.itemcode || ""),
-                    }));
-                  }}
-                  isClearable
-                  placeholder="Item code or description..."
-                  className="form-control p-0 select-form-custom"
-                  menuPortalTarget={portalTarget}
-                  menuPosition="fixed"
-                  styles={{
-                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                    menu: (base) => ({ ...base, zIndex: 9999 }),
-                  }}
-                  menuIsOpen={productMenuIsOpen}
-                  onMenuOpen={() => setProductMenuIsOpen(true)}
-                  onMenuClose={() => setProductMenuIsOpen(false)}
-                  inputValue={productInput}
-                  onInputChange={setProductInput}
-                />
-              </div>
-
-              <div className="col-lg-3 col-md-6">
-                <div style={sectionLabel}>Description</div>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={selectedProduct?.itemdescription || ""}
-                  readOnly
-                  placeholder="—"
-                />
-              </div>
-
-              <div className="col-lg-2 col-md-4" style={{ maxWidth: 160 }}>
-                <div style={sectionLabel}>
-                  Qty{selectedProduct ? ` (avail: ${selectedProduct.availableqty})` : ""}
+          {/* Add-item bar (Request/Internal) */}
+          {transferType !== "DIRECT" && (
+            <div
+              className="px-3 py-3"
+              style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", borderRadius: "8px 8px 0 0" }}
+            >
+              <div className="row g-2 align-items-end">
+                <div className="col-lg-5 col-md-12">
+                  <div style={sectionLabel}>Search / Scan Item</div>
+                  <Select<SelectOption>
+                    isLoading={productsLoading}
+                    options={productOptions}
+                    value={selectedProductOption}
+                    onChange={(opt) => {
+                      const selected = products.find(
+                        (p) => p.itemid === Number((opt as SelectOption | null)?.value)
+                      );
+                      if (!selected) {
+                        setToolItem((prev) => ({ ...prev, itemid: undefined, itemcode: undefined }));
+                        return;
+                      }
+                      setToolItem((prev) => ({
+                        ...prev,
+                        itemid: Number(selected.itemid),
+                        itemcode: String(selected.itemcode || ""),
+                      }));
+                    }}
+                    isClearable
+                    placeholder="Item code or description..."
+                    className="form-control p-0 select-form-custom"
+                    menuPortalTarget={portalTarget}
+                    menuPosition="fixed"
+                    styles={{
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menu: (base) => ({ ...base, zIndex: 9999 }),
+                    }}
+                    menuIsOpen={productMenuIsOpen}
+                    onMenuOpen={() => setProductMenuIsOpen(true)}
+                    onMenuClose={() => setProductMenuIsOpen(false)}
+                    inputValue={productInput}
+                    onInputChange={setProductInput}
+                  />
                 </div>
-                <input
-                  type="number"
-                  step="0.001"
-                  min={0}
-                  className="form-control text-end"
-                  value={toolItem.transferquantity}
-                  onChange={(e) => {
-                    const n = Number(e.target.value || 0);
-                    setToolItem((prev) => ({ ...prev, transferquantity: Math.round(Math.abs(n) * 1000) / 1000 }));
-                  }}
-                />
-              </div>
 
-              <div className="col-auto">
-                <button
-                  type="button"
-                  className="btn btn-primary d-flex align-items-center gap-1"
-                  onClick={addRow}
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  <PlusCircle size={15} />
-                  Add
-                </button>
+                <div className="col-lg-3 col-md-6">
+                  <div style={sectionLabel}>Description</div>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={selectedProduct?.itemdescription || ""}
+                    readOnly
+                    placeholder="—"
+                  />
+                </div>
+
+                <div className="col-lg-2 col-md-4" style={{ maxWidth: 160 }}>
+                  <div style={sectionLabel}>
+                    Qty{selectedProduct ? ` (avail: ${selectedProduct.availableqty})` : ""}
+                  </div>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min={0}
+                    className="form-control text-end"
+                    value={toolItem.transferquantity}
+                    onChange={(e) => {
+                      const n = Number(e.target.value || 0);
+                      setToolItem((prev) => ({ ...prev, transferquantity: Math.round(Math.abs(n) * 1000) / 1000 }));
+                    }}
+                  />
+                </div>
+
+                <div className="col-auto">
+                  <button
+                    type="button"
+                    className="btn btn-primary d-flex align-items-center gap-1"
+                    onClick={addRow}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    <PlusCircle size={15} />
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Add-item bar (DIRECT) — scan-driven, same convention as the invoice form:
+              Pc items auto-add on scan when carriage is enabled; Wt items (or carriage
+              disabled) land in the qty row below for an explicit confirm. */}
+          {transferType === "DIRECT" && (
+            <div
+              className="px-3 py-3"
+              style={{ background: "#f8f9fa", borderBottom: "1px solid #e5e7eb", borderRadius: "8px 8px 0 0" }}
+            >
+              {!directFromWarehouseId ? (
+                <div className="text-muted" style={{ fontSize: 13 }}>Select a From Outlet above to start scanning items.</div>
+              ) : (
+                <div className="row g-2 align-items-end">
+                  <div className="col-lg-5 col-md-12">
+                    <div style={sectionLabel}>Search / Scan Item</div>
+                    <div className="d-flex gap-2">
+                      <div style={{ flex: 1 }}>
+                        <SelectProduct
+                          key={directProductClearKey}
+                          storeId={parsedStoreId}
+                          hasWarehouseId
+                          warehouseId={directFromWarehouseId}
+                          scanValue={barcodeScanValue}
+                          clearKey={directProductClearKey}
+                          onChangeAdditional={(selected: ItemDetails | null) => handleDirectItemSelect(selected)}
+                          className=""
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        title="Scan barcode with camera"
+                        onClick={() => setShowBarcodeScanner(true)}
+                      >
+                        📷
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="col-lg-3 col-md-6">
+                    <div style={sectionLabel}>Description</div>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={directToolItem.itemdescription || ""}
+                      readOnly
+                      placeholder="—"
+                    />
+                  </div>
+
+                  <div className="col-lg-2 col-md-4" style={{ maxWidth: 160 }}>
+                    <div style={sectionLabel}>
+                      {(directToolItem.itemunit ?? "").trim().toLowerCase() === "wt" ? "Weight/Qty" : "Qty"}
+                      {directToolItem.itemid ? ` (avail: ${directToolItem.availableqty})` : ""}
+                    </div>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min={0}
+                      className="form-control text-end"
+                      value={directToolItem.transferquantity}
+                      onChange={(e) => {
+                        const n = Number(e.target.value || 0);
+                        setDirectToolItem((prev) => ({ ...prev, transferquantity: Math.round(Math.abs(n) * 1000) / 1000 }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="col-auto">
+                    <button
+                      type="button"
+                      className="btn btn-primary d-flex align-items-center gap-1"
+                      onClick={addDirectRow}
+                      disabled={!directToolItem.itemid}
+                      style={{ whiteSpace: "nowrap" }}
+                    >
+                      <PlusCircle size={15} />
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Items table */}
           <div style={{ maxHeight: 440, overflowY: "auto" }}>
@@ -879,6 +1350,7 @@ const InventoryTransferForm = () => {
                   <th style={{ width: 36 }}>#</th>
                   <th className="text-nowrap">Item Code</th>
                   <th>Description</th>
+                  <th className="text-center text-nowrap" style={{ width: 60 }}>Unit</th>
                   <th className="text-end text-nowrap" style={{ width: 120 }}>Qty to Transfer</th>
                   <th className="text-center" style={{ width: 60 }}></th>
                 </tr>
@@ -886,7 +1358,7 @@ const InventoryTransferForm = () => {
               <tbody>
                 {!rows.length ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-4 text-muted" style={{ fontSize: 13 }}>
+                    <td colSpan={6} className="text-center py-4 text-muted" style={{ fontSize: 13 }}>
                       No items added yet
                     </td>
                   </tr>
@@ -896,6 +1368,11 @@ const InventoryTransferForm = () => {
                       <td className="text-muted">{index + 1}</td>
                       <td className="text-nowrap fw-semibold">{r.itemcode}</td>
                       <td className="text-muted">{r.itemdescription}</td>
+                      <td className="text-center">
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: (r.itemunit ?? "").toLowerCase() === "wt" ? "#fef3c7" : "#eff6ff", color: (r.itemunit ?? "").toLowerCase() === "wt" ? "#92400e" : "#1e40af" }}>
+                          {r.itemunit || "Pc"}
+                        </span>
+                      </td>
                       <td style={{ width: 120 }}>
                         <input
                           type="number"
@@ -906,6 +1383,10 @@ const InventoryTransferForm = () => {
                           onChange={(e) => {
                             const n = Number(e.target.value || 0);
                             const normalized = Math.round(Math.abs(n) * 1000) / 1000;
+                            if (normalized > r.availableqty) {
+                              dispatch(showNotification({ message: `${r.itemcode}: only ${r.availableqty} in stock`, type: NOTIFICATION_TYPES.ERROR }));
+                              return;
+                            }
                             setRows((prev) =>
                               prev.map((x) =>
                                 x.itemid === r.itemid ? { ...x, transferquantity: normalized } : x
@@ -952,14 +1433,24 @@ const InventoryTransferForm = () => {
 
       <ActionFooter handleCancel={() => router.back()}>
         <ButtonLoader
-          loading={saving}
-          btnText="Save Transfer"
+          loading={saving || savingDirect}
+          btnText={transferType === "DIRECT" ? "Transfer Now" : "Save Transfer"}
           loadingText="Saving..."
           className="btn btn-primary"
           disabled={!isValid}
         />
       </ActionFooter>
     </form>
+    {showBarcodeScanner && (
+      <BarcodeScannerModal
+        onScan={(code) => {
+          setBarcodeScanValue(code);
+          setShowBarcodeScanner(false);
+        }}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
+    )}
+    </>
   );
 };
 

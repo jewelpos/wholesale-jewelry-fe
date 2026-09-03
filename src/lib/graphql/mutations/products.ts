@@ -123,6 +123,21 @@ export const CREATE_INVENTORY_TRANSFER_MUTATION = gql`
   }
 `;
 
+export const CREATE_DIRECT_OUTLET_TRANSFER_MUTATION = gql`
+  mutation CreateDirectOutletTransfer(
+    $createDirectOutletTransferInput: CreateDirectOutletTransferInput!
+  ) {
+    createDirectOutletTransfer(
+      createDirectOutletTransferInput: $createDirectOutletTransferInput
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
 export const REQUEST_INVENTORY_TRANSFER_MUTATION = gql`
   mutation RequestInventoryTransfer(
     $requestInventoryTransferInput: RequestInventoryTransferInput!
