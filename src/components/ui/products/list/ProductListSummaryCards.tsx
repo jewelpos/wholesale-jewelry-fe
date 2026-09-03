@@ -19,12 +19,21 @@ const Skeleton = () => (
   <div style={{ height: 28, width: "60%", background: "var(--border-subtle)", borderRadius: 6, animation: "pulse 1.5s ease-in-out infinite" }} />
 );
 
-type Props = { stats?: Record<string, unknown> | null; loading?: boolean };
+type Props = {
+  stats?: Record<string, unknown> | null;
+  loading?: boolean;
+  showFinancial?: boolean;
+  // Last on-demand recalculation for the grid's current search/filter/pill selection —
+  // null until the user clicks Recalculate. Rendered as a small comparison line under
+  // the static (unfiltered) total so both numbers are visible at once.
+  filteredStats?: Record<string, unknown> | null;
+};
 
-const ProductListSummaryCards = ({ stats, loading }: Props) => {
+const ProductListSummaryCards = ({ stats, loading, showFinancial = true, filteredStats }: Props) => {
+  const cards = showFinancial ? CARDS : CARDS.filter((c) => c.key !== "total_inventory_value");
   return (
     <div className="row g-2 mb-3">
-      {CARDS.map((card) => {
+      {cards.map((card) => {
         const value = Number(stats?.[card.key] ?? 0);
         return (
           <div key={card.key} className="col-6 col-md-2">
@@ -46,6 +55,11 @@ const ProductListSummaryCards = ({ stats, loading }: Props) => {
               ) : (
                 <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.15 }}>
                   {card.format(value)}
+                </div>
+              )}
+              {filteredStats && (
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginTop: 2 }}>
+                  Filtered: {card.format(Number(filteredStats[card.key] ?? 0))}
                 </div>
               )}
             </div>

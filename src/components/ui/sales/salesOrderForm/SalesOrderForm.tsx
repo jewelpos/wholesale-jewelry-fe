@@ -23,8 +23,10 @@ import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
 import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import useWarehouse from "@/hooks/useWarehouse";
+import useOutlets from "@/hooks/useOutlets";
 import type { ItemDetails } from "@/hooks/useProducts";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
+import { handleEnterAsTab } from "@/lib/utils/formKeyboard";
 
 import { CREATE_SALES_ORDER_MUTATION, EDIT_SALES_ORDER_MUTATION } from "@/lib/graphql/mutations/sales";
 import { GET_SALES_ORDER_QUERY } from "@/lib/graphql/query/sales";
@@ -326,17 +328,53 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const allowPcsEntry = productSettings == null || !!productSettings.allowpcsentry;
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
 
-  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
-  useEffect(() => {
-    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
-  }, [fetchWarehouseByOutletId, parsedOutletId]);
-
-  const currentWarehouse = useMemo(() => warehouses.find((w) => w.issystem) ?? warehouses[0], [warehouses]);
+  const { fetchWarehouseByOutletId, fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  // getOutlets with includeAll=false is already scoped to outlets this user is actually
+  // assigned to — the source of truth for "how many outlets can they pick from" below.
+  const { fetchOutletsList, outlets: accessibleOutlets } = useOutlets();
 
   useEffect(() => {
-    if (!warehouses?.length || !currentWarehouse?.warehouseid) return;
-    setValue("warehouseid", Number(currentWarehouse.warehouseid), { shouldDirty: false, shouldTouch: false });
-  }, [currentWarehouse, setValue, warehouses]);
+    if (!isNewDoc) {
+      if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+      return;
+    }
+    // New documents only: need warehouses across every outlet the user can access (not
+    // just the current URL outlet) so a multi-outlet user can pick which outlet's stock
+    // this order draws from.
+    if (parsedStoreId) {
+      fetchWarehouseByStoreId(parsedStoreId);
+      fetchOutletsList([parsedStoreId], false);
+    }
+  }, [isNewDoc, fetchWarehouseByOutletId, fetchWarehouseByStoreId, fetchOutletsList, parsedStoreId, parsedOutletId]);
+
+  const accessibleOutletIds = useMemo(
+    () => new Set((accessibleOutlets ?? []).map((o: any) => Number(o.outletid))),
+    [accessibleOutlets]
+  );
+
+  // Only meaningful on new documents (see fetch above) — getWarehousesByStoreId isn't
+  // outlet-access scoped server-side, so this filters it down to outlets the user is
+  // actually assigned to before it's ever shown as a choice.
+  const accessibleSystemWarehouses = useMemo(
+    () => (isNewDoc ? warehouses.filter((w) => w.issystem && accessibleOutletIds.has(Number(w.outletid))) : []),
+    [isNewDoc, warehouses, accessibleOutletIds]
+  );
+
+  const hasMultiOutletAccess = isNewDoc && accessibleOutletIds.size > 1;
+
+  const currentWarehouse = useMemo(() => {
+    if (!isNewDoc) return warehouses.find((w) => w.issystem) ?? warehouses[0];
+    return (
+      accessibleSystemWarehouses.find((w) => Number(w.outletid) === Number(parsedOutletId)) ??
+      accessibleSystemWarehouses[0]
+    );
+  }, [isNewDoc, warehouses, accessibleSystemWarehouses, parsedOutletId]);
+
+  useEffect(() => {
+    const nextWarehouseId = Number(currentWarehouse?.warehouseid);
+    if (!Number.isFinite(nextWarehouseId) || nextWarehouseId <= 0) return;
+    setValue("warehouseid", nextWarehouseId, { shouldDirty: false, shouldTouch: false });
+  }, [currentWarehouse, setValue]);
 
   // Populate form when loading existing SO for edit
   useEffect(() => {
@@ -641,9 +679,23 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const handleResumeHold = async (hold: any) => {
     const fd = hold.formdata ?? {};
+    // Holds saved before the NaN-input fixes elsewhere in this form could have
+    // serialized a bad numeric value (e.g. a line item's price/qty/discount) straight
+    // into their stored formdata — reset() would otherwise reintroduce that exact NaN
+    // on every resume, regardless of the input-level guards now in place. Re-sanitize.
     reset({
       ...fd,
       orderdate: fd.orderdate ? dayjs(fd.orderdate) : dayjs(),
+      discountpercent: toNum(fd.discountpercent),
+      orderdiscountpercent: toNum(fd.orderdiscountpercent),
+      orderdiscountamount: toNum(fd.orderdiscountamount),
+      items: (fd.items ?? []).map((it: any) => ({
+        ...it,
+        itemquantity: toNum(it.itemquantity),
+        unitprice: toNum(it.unitprice),
+        discountpercent: toNum(it.discountpercent),
+        itempcs: toNum(it.itempcs),
+      })),
     });
     currentHoldIdRef.current = hold.holdid;
     setShowHoldsPanel(false);
@@ -892,6 +944,76 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     remove(index);
   };
 
+  // Direct in-grid editing for an existing line — Qty/Tag Price/Disc% write straight
+  // through to the row, and Ext. Price runs the same math in reverse (back-solving Tag
+  // Price from qty + disc%) instead of routing every tweak back through the tool row.
+  // Uses setValue on the specific field path rather than useFieldArray's update() —
+  // update() unmounts and remounts the whole row on every call, which kicks focus out
+  // of the input after a single keystroke.
+  const updateInlineItemQuantity = (index: number, item: SalesOrderItemForm, rawValue: string) => {
+    const qty = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
+    setValue(`items.${index}.itemquantity`, qty, { shouldDirty: true });
+    const isWtItem = (item.itemunit ?? "").trim().toLowerCase() === "wt";
+    if (isWtItem) {
+      const rateField = getRateField(item.itemmetal, metalTypeList);
+      const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+      const newUnitPrice = calcWtUnitPrice(item.itemmetal, currentRates as any, item.itempremium ?? 0, item.broakerage ?? 0, metalTypeList);
+      setValue(`items.${index}.unitprice`, newUnitPrice, { shouldDirty: true });
+      setValue(`items.${index}.goldprice_used`, goldRate, { shouldDirty: true });
+      setValue(`items.${index}.premium_used`, item.itempremium, { shouldDirty: true });
+      setValue(`items.${index}.labour_used`, item.broakerage, { shouldDirty: true });
+    }
+  };
+
+  const updateInlineUnitPrice = (index: number, item: SalesOrderItemForm, rawValue: string) => {
+    const clamped = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
+    setValue(`items.${index}.unitprice`, clamped, { shouldDirty: true });
+  };
+
+  const updateInlineDiscountPercent = (index: number, item: SalesOrderItemForm, rawValue: string) => {
+    const clamped = Math.round(Math.min(100, Math.max(0, toNum(rawValue))) * 1000) / 1000;
+    setValue(`items.${index}.discountpercent`, clamped, { shouldDirty: true });
+    setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+  };
+
+  // Reverse calc: holds qty and disc% fixed, back-solves Tag Price so the line's net
+  // total matches what was typed. No-ops on qty=0 or disc%=100 (both divide by zero).
+  const updateInlineExtPrice = (index: number, item: SalesOrderItemForm, rawValue: string) => {
+    const qty = toNum(item.itemquantity);
+    const disc = toNum(item.discountpercent);
+    if (qty <= 0 || disc >= 100) return;
+    const extPrice = toNum(rawValue);
+    const newUnitPrice = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
+    if (!Number.isFinite(newUnitPrice)) return;
+    setValue(`items.${index}.unitprice`, Math.max(0, newUnitPrice), { shouldDirty: true });
+    setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+  };
+
+  // Line items are priced/validated against the warehouse they were added under
+  // (stock availability, Wt gold-rate lookups, carriage settings) — switching to a
+  // different outlet's warehouse invalidates all of that, so confirm before wiping them.
+  const handleWarehouseChange = (newWarehouseId: number, onConfirm: () => void) => {
+    if (itemFields.length === 0) {
+      onConfirm();
+      return;
+    }
+    MySwal.fire({
+      title: "Change warehouse?",
+      text: "This sales order has line items added under the current warehouse. Switching warehouses will reset the order and remove all line items.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, change warehouse",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        replace([]);
+        setEditingIndex(null);
+        resetToolItem();
+        onConfirm();
+      }
+    });
+  };
+
   const onSubmit: SubmitHandler<SalesOrderFormType> = async (values) => {
     if (!values.items || values.items.length === 0) {
       dispatch(showNotification({ message: "Add at least one item", type: NOTIFICATION_TYPES.ERROR }));
@@ -1047,13 +1169,19 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
   const billToCompanyName = watch("invbilltocompanyname") || "";
   const [addrOpen, setAddrOpen] = useState(true);
-  const autoCollapsedRef = useRef(false);
+  // Re-collapses every time a Bill To gets (re-)selected — not just the first time ever —
+  // so reopening the panel to pick a different customer collapses it again afterward.
   useEffect(() => {
-    if (billToCompanyName && !autoCollapsedRef.current) {
-      setAddrOpen(false);
-      autoCollapsedRef.current = true;
-    }
+    if (billToCompanyName && addrOpen) setAddrOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billToCompanyName]);
+  // Also collapses when "Same as Bill To" is (re-)checked, even if the Bill To customer
+  // itself didn't change. Unchecking must NOT collapse (the panel needs to stay open so
+  // the user can fill in a separate Ship To), so this only fires on the true transition.
+  useEffect(() => {
+    if (shipSameAsBill && billToCompanyName && addrOpen) setAddrOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipSameAsBill]);
 
   if (isEdit && editLoading) return <div className="text-center py-5"><div className="spinner-border" /></div>;
 
@@ -1129,8 +1257,36 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
 
             <div>
               <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Warehouse</div>
-              <div className="fw-semibold">{currentWarehouse?.warehousename || <span className="text-muted">&mdash;</span>}</div>
-              <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+              {hasMultiOutletAccess ? (
+                <Controller
+                  name="warehouseid"
+                  control={control}
+                  rules={{ required: true, min: 1 }}
+                  render={({ field }) => (
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ minWidth: 220 }}
+                      value={Number.isFinite(field.value) ? field.value : ""}
+                      onChange={(e) => {
+                        const newWarehouseId = Number(e.target.value);
+                        if (newWarehouseId === Number(field.value)) return;
+                        handleWarehouseChange(newWarehouseId, () => field.onChange(newWarehouseId));
+                      }}
+                    >
+                      {accessibleSystemWarehouses.map((w) => (
+                        <option key={w.warehouseid} value={w.warehouseid}>
+                          {(accessibleOutlets as any[]).find((o) => Number(o.outletid) === Number(w.outletid))?.outletname ?? `Outlet ${w.outletid}`} — {w.warehousename}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+              ) : (
+                <>
+                  <div className="fw-semibold">{currentWarehouse?.warehousename || <span className="text-muted">&mdash;</span>}</div>
+                  <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+                </>
+              )}
             </div>
 
             <div className="vr align-self-stretch" />
@@ -1422,7 +1578,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                   </tr>
                 ) : (
                   itemFields.map((field, index) => {
-                    const item = field;
+                    // watch() (not the raw field array `field`) so inline edits made via
+                    // setValue below re-render this row immediately.
+                    const item = (watch(`items.${index}`) ?? field) as SalesOrderItemForm;
                     const line = computeLine(item);
                     return (
                       <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
@@ -1447,25 +1605,93 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                         {allowPcsEntry && <td className="text-end">{formatQty(toNum(item.itempcs))}</td>}
                         {allowPcsEntry && readOnly && <td className="text-end">{formatQty(toNum(item.invoicepcs))}</td>}
                         {allowPcsEntry && readOnly && <td className="text-end">{formatQty(toNum(item.bordpcs))}</td>}
-                        <td className="text-end">{formatQty(toNum(item.itemquantity))}</td>
-                        {readOnly && <td className="text-end">{formatQty(toNum(item.invoiceqty))}</td>}
-                        {readOnly && <td className="text-end">{formatQty(toNum(item.bordqty))}</td>}
-                        <td className="text-end">
-                          <span className={toNum(item.unitprice) === 0 ? "text-danger fw-bold" : ""}>{formatMoney(item.unitprice)}</span>
-                          {toNum(item.unitprice) === 0 && (
-                            <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                        <td className="text-end" style={{ minWidth: 90 }}>
+                          {readOnly ? (
+                            formatQty(toNum(item.itemquantity))
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.001"
+                              min={0}
+                              className="form-control form-control-sm text-end"
+                              value={toNum(item.itemquantity)}
+                              onChange={(e) => updateInlineItemQuantity(index, item, e.target.value)}
+                              onKeyDown={handleEnterAsTab}
+                            />
                           )}
                         </td>
-                        <td className="text-end">
-                          <div>{toNum(item.discountpercent).toFixed(1)}%</div>
-                          {item.discountsource && item.discountsource !== 'item' && (
-                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
-                            </span>
+                        {readOnly && <td className="text-end">{formatQty(toNum(item.invoiceqty))}</td>}
+                        {readOnly && <td className="text-end">{formatQty(toNum(item.bordqty))}</td>}
+                        <td className="text-end" style={{ minWidth: 100 }}>
+                          {readOnly ? (
+                            <>
+                              <span className={toNum(item.unitprice) === 0 ? "text-danger fw-bold" : ""}>{formatMoney(item.unitprice)}</span>
+                              {toNum(item.unitprice) === 0 && (
+                                <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min={0}
+                                className={`form-control form-control-sm text-end${toNum(item.unitprice) === 0 ? " border-danger" : ""}`}
+                                value={toNum(item.unitprice)}
+                                onChange={(e) => updateInlineUnitPrice(index, item, e.target.value)}
+                                onKeyDown={handleEnterAsTab}
+                              />
+                              {toNum(item.unitprice) === 0 && (
+                                <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                              )}
+                            </>
+                          )}
+                        </td>
+                        <td className="text-end" style={{ minWidth: 90 }}>
+                          {readOnly ? (
+                            <>
+                              <div>{toNum(item.discountpercent).toFixed(1)}%</div>
+                              {item.discountsource && item.discountsource !== 'item' && (
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min={0}
+                                max={100}
+                                className="form-control form-control-sm text-end"
+                                value={toNum(item.discountpercent)}
+                                onChange={(e) => updateInlineDiscountPercent(index, item, e.target.value)}
+                                onKeyDown={handleEnterAsTab}
+                              />
+                              {item.discountsource && item.discountsource !== 'item' && (
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
                         {showUnitPriceCol && <td className="text-end">{formatMoney(line.unitAfterDiscount)}</td>}
-                        <td className="text-end">{formatMoney(line.net)}</td>
+                        <td className="text-end" style={{ minWidth: 100 }}>
+                          {readOnly ? (
+                            formatMoney(line.net)
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="form-control form-control-sm text-end"
+                              value={Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0}
+                              onChange={(e) => updateInlineExtPrice(index, item, e.target.value)}
+                              onKeyDown={handleEnterAsTab}
+                            />
+                          )}
+                        </td>
                         <td className="text-center">
                           <button
                             type="button"
@@ -1574,6 +1800,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     className="form-control"
                     value={toolItem.itemdescription || ""}
                     onChange={(e) => setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                 </div>
 
@@ -1587,6 +1814,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                       step="1"
                       value={toolItem.itempcs}
                       onChange={(e) => setToolItem((p) => ({ ...p, itempcs: toNum(e.target.value) }))}
+                      onKeyDown={handleEnterAsTab}
                     />
                   </div>
                 )}
@@ -1618,6 +1846,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           return { ...p, itemquantity: qty };
                         });
                       }}
+                      onKeyDown={handleEnterAsTab}
                     />
                     {toolItem.itemid != null &&
                       toolItem.trackinventory !== 0 &&
@@ -1641,6 +1870,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     step="0.001"
                     value={toolItem.unitprice}
                     onChange={(e) => setToolItem((p) => ({ ...p, unitprice: toNum(e.target.value) }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                   {toolItem.itemid != null && !toolItem.unitprice && (
                     <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
@@ -1657,6 +1887,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                     step="0.001"
                     value={toolItem.discountpercent ?? 0}
                     onChange={(e) => setToolItem((p) => ({ ...p, discountpercent: toNum(e.target.value) }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                 </div>
 
@@ -1759,9 +1990,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           max={100}
                           className="form-control form-control-sm text-end d-inline-block"
                           style={{ width: 60 }}
-                          value={watch("orderdiscountpercent") ?? 0}
+                          value={toNum(watch("orderdiscountpercent"))}
                           onChange={(e) => {
-                            const pct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+                            const pct = Math.min(100, Math.max(0, toNum(e.target.value)));
                             setValue("orderdiscountpercent", pct, { shouldDirty: true });
                             const amt = Math.round(totals.subtotal * (pct / 100) * 100) / 100;
                             setValue("orderdiscountamount", amt, { shouldDirty: true });
@@ -1774,9 +2005,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           min={0}
                           className="form-control form-control-sm text-end d-inline-block"
                           style={{ width: 100 }}
-                          value={watch("orderdiscountamount") ?? 0}
+                          value={toNum(watch("orderdiscountamount"))}
                           onChange={(e) => {
-                            const amt = Math.max(0, Number(e.target.value || 0));
+                            const amt = Math.max(0, toNum(e.target.value));
                             setValue("orderdiscountamount", amt, { shouldDirty: true });
                             const pct = totals.subtotal > 0 ? Math.round((amt / totals.subtotal) * 100 * 100) / 100 : 0;
                             setValue("orderdiscountpercent", Math.min(100, pct), { shouldDirty: true });

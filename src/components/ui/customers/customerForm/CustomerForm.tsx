@@ -21,11 +21,13 @@ import PlaceHolder from "../../PlaceHolder";
 import { UserRound, Settings } from "lucide-react";
 import useWarehouse from "@/hooks/useWarehouse";
 import useFieldVisibility from "@/hooks/useFieldVisibility";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
   const { customerId } = useParams();
   const dispatch = useDispatch();
   const router = useRouter();
+  const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
@@ -204,7 +206,7 @@ const CustomerForm = ({ disableField }: { disableField?: boolean }) => {
               type: NOTIFICATION_TYPES.SUCCESS,
             })
           );
-          router.back();
+          router.push(`${basePath}/customers/list`);
         } else {
           throw new Error(data.message || "Save failed");
         }

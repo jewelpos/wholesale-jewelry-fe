@@ -38,8 +38,6 @@ import { exportAllRowsToExcel } from "@/lib/utils/exportAllRows";
 import ExportProgressOverlay from "../../grid/ExportProgressOverlay";
 import ExportScopeModal from "../../grid/ExportScopeModal";
 
-const pageTotalFormatter = new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
 const ProductsListComponent = () => {
   const [getProductList] = useLazyQuery(GET_PRODUCT_LIST_QUERY);
   const dispatch = useAppDispatch();
@@ -59,13 +57,37 @@ const ProductsListComponent = () => {
   const apolloClientRef = useRef(apolloClient);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
-  // Overall total across every row matching the current filters (or the whole table
-  // when there's no filter) — not just the page currently loaded in the grid. Shared
-  // with the summary cards above so both reflect exactly the same number.
-  const { data: summaryData, loading: summaryLoading } = useQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
-    variables: { outletid: selectedOutlet ?? 0, filters: activeGridFilters },
+  // Static full-outlet total — only recomputed when outlet/warehouse changes (both
+  // structural pickers), never on search/column-filter/pill changes, so it isn't a
+  // heavy aggregate query firing on every keystroke.
+  const staticSummaryFilters = useMemo(() => {
+    const filters: any[] = [];
+    if (selectedOutlet) {
+      filters.push({ key: "outletid", value: { filterType: "text", type: "equals", filter: selectedOutlet } });
+    }
+    if (selectedWarehouse !== -1 && selectedWarehouse !== undefined) {
+      filters.push({ key: "itemwarehouseid", value: { filterType: "text", type: "equals", filter: selectedWarehouse } });
+    }
+    return filters;
+  }, [selectedOutlet, selectedWarehouse]);
+
+  const { data: staticSummaryData, loading: staticSummaryLoading } = useQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
+    variables: { outletid: selectedOutlet ?? 0, filters: staticSummaryFilters },
     skip: !selectedOutlet || selectedOutlet <= 0,
   });
+
+  // On-demand total for the current search/filter/pill selection — only fetched when
+  // the user explicitly clicks Recalculate, so it never runs on every keystroke.
+  const [filteredSummary, setFilteredSummary] = useState<Record<string, unknown> | null>(null);
+  const [fetchFilteredSummary, { loading: filteredSummaryLoading }] = useLazyQuery(GET_PRODUCT_LIST_SUMMARY_QUERY, {
+    fetchPolicy: "network-only",
+    onCompleted: (data) => setFilteredSummary(data?.getProductListSummary ?? null),
+  });
+  useEffect(() => { setFilteredSummary(null); }, [selectedOutlet]);
+  const handleRecalculateFiltered = useCallback(() => {
+    if (!selectedOutlet) return;
+    fetchFilteredSummary({ variables: { outletid: selectedOutlet, filters: activeGridFilters } });
+  }, [selectedOutlet, activeGridFilters, fetchFilteredSummary]);
 
   const SOLD_GROUP = ["soldtoday", "soldweek", "soldmonth"];
 
@@ -154,14 +176,12 @@ const ProductsListComponent = () => {
               gridRef.current?.api?.hideOverlay();
             } else {
               gridRef.current?.api?.showNoRowsOverlay();
-              gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
             }
           }
           return true;
         });
         if (result.error) {
           gridRef.current?.api?.showNoRowsOverlay();
-          gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
           dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
           params.fail();
         }
@@ -170,20 +190,7 @@ const ProductsListComponent = () => {
     [dispatch, getProductList]
   );
 
-  // Drives the pinned bottom row from the overall (filtered, or whole-table when no
-  // filter is applied) total — independent of getRows above, which only sees whatever
-  // page the grid last loaded.
-  useEffect(() => {
-    const stats = summaryData?.getProductListSummary;
-    if (!stats || Number(stats.total_products ?? 0) === 0) {
-      gridRef.current?.api?.setGridOption("pinnedBottomRowData", []);
-      return;
-    }
-    gridRef.current?.api?.setGridOption("pinnedBottomRowData", [{
-      itemcode: "Overall Total",
-      itemquantityinhand: `${pageTotalFormatter.format(Number(stats.total_pcs ?? 0))} Pc / ${pageTotalFormatter.format(Number(stats.total_quantity ?? 0))} Wt`,
-    }]);
-  }, [summaryData]);
+  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("product-list");
 
   const handleDeleteSuccess = useCallback(() => {
     if (gridReady) gridRef.current?.api?.refreshServerSide({ purge: true });
@@ -255,8 +262,6 @@ const ProductsListComponent = () => {
     [handleDeleteSuccess, handleAdjustmentSuccess]
   );
 
-  const { isAdmin, isCollapsed, toggle } = useSummaryPanel("product-list");
-
   const [exportScopeModalOpen, setExportScopeModalOpen] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ fetched: number; total: number } | null>(null);
 
@@ -320,9 +325,36 @@ const ProductsListComponent = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 150px)", overflow: "hidden" }}>
       <ProductsListHeader onExport={handleExport} />
-      {isAdmin && !!selectedOutlet && (
-        <SummaryPanelWrapper isCollapsed={isCollapsed} onToggle={toggle} title="Product Summary">
-          <ProductListSummaryCards stats={summaryData?.getProductListSummary} loading={summaryLoading} />
+      {!!selectedOutlet && (
+        <SummaryPanelWrapper
+          isCollapsed={isCollapsed}
+          onToggle={toggle}
+          title="Product Summary"
+          titleRight={
+            <button
+              type="button"
+              onClick={handleRecalculateFiltered}
+              disabled={filteredSummaryLoading}
+              style={{
+                background: "none",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 11,
+                color: "#64748b",
+                cursor: filteredSummaryLoading ? "default" : "pointer",
+              }}
+            >
+              {filteredSummaryLoading ? "Calculating…" : "Recalculate for Current Filters"}
+            </button>
+          }
+        >
+          <ProductListSummaryCards
+            stats={staticSummaryData?.getProductListSummary}
+            loading={staticSummaryLoading}
+            showFinancial={isAdmin}
+            filteredStats={filteredSummary}
+          />
         </SummaryPanelWrapper>
       )}
       <div className="card table-list-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginBottom: 0 }}>

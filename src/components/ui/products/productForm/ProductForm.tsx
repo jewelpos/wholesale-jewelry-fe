@@ -28,11 +28,13 @@ import ProductBulkPricingCard from "./ProductBulkPricingCard";
 import PlaceHolder from "../../PlaceHolder";
 import useFieldVisibility from "@/hooks/useFieldVisibility";
 import { STONE_DETAILS_SECTION_KEY } from "@/lib/formFieldVisibility/types";
+import useDefaultRoute from "@/hooks/useDefaultRoute";
 
 const ProductForm = ({ disableField }: { disableField?: boolean }) => {
   const { itemcode } = useParams();
   const dispatch = useDispatch();
   const router = useRouter();
+  const { basePath } = useDefaultRoute();
   const { refetchCurrentStore } = useStores();
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -333,7 +335,7 @@ const ProductForm = ({ disableField }: { disableField?: boolean }) => {
           }
         }
         dispatch(showNotification({ message: data.message, type: NOTIFICATION_TYPES.SUCCESS }));
-        router.back();
+        router.push(`${basePath}/products/list`);
       }
       return true;
     });

@@ -195,6 +195,7 @@ const CustomerInputsB = ({
                   <SelectEmployee
                     storeId={storeId}
                     outletId={outletId}
+                    includeAll
                     isDisabled={disableField}
                     trigger={trigger}
                     {...field}

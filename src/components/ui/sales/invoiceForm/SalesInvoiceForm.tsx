@@ -26,7 +26,9 @@ import useUnsavedChanges from "@/hooks/useUnsavedChanges";
 import { useAutoHoldOnLeave } from "@/hooks/useAutoHoldOnLeave";
 import { useNavigationGuard } from "@/lib/context/NavigationGuardContext";
 import useWarehouse from "@/hooks/useWarehouse";
+import useOutlets from "@/hooks/useOutlets";
 import type { ItemDetails } from "@/hooks/useProducts";
+import { handleEnterAsTab } from "@/lib/utils/formKeyboard";
 
 import {
   CREATE_CREDIT_INVOICE_MUTATION,
@@ -732,6 +734,18 @@ const SalesInvoiceForm = ({
     name: "items",
   });
 
+  // Keeps the newly scanned/added row in view once the list grows past the
+  // scrollable table's visible height, instead of leaving it hidden below the fold.
+  const itemsScrollRef = useRef<HTMLDivElement>(null);
+  const prevItemCountRef = useRef(itemFields.length);
+  useEffect(() => {
+    if (itemFields.length > prevItemCountRef.current) {
+      const el = itemsScrollRef.current;
+      if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }));
+    }
+    prevItemCountRef.current = itemFields.length;
+  }, [itemFields.length]);
+
   const watchedWarehouseIdForSettings = watch("warehouseid");
   const productSettingsWarehouseId = Number(watchedWarehouseIdForSettings) || undefined;
   const { data: productSettingsData } = useQuery(GET_PRODUCT_SETTINGS_INFO_QUERY, {
@@ -743,29 +757,58 @@ const SalesInvoiceForm = ({
   const allowCarriage = productSettings != null && !!productSettings.allowcarriage;
   const showInvoicePayment = !!productSettings?.showinvoicepayment;
 
-  const { fetchWarehouseByOutletId, warehouses } = useWarehouse();
-  useEffect(() => {
-    if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
-  }, [fetchWarehouseByOutletId, parsedOutletId]);
+  const { fetchWarehouseByOutletId, fetchWarehouseByStoreId, warehouses } = useWarehouse();
+  // getOutlets with includeAll=false is already scoped to outlets this user is actually
+  // assigned to — the source of truth for "how many outlets can they pick from" below.
+  const { fetchOutletsList, outlets: accessibleOutlets } = useOutlets();
 
-  const currentWarehouse = useMemo(
-    () => warehouses.find((w) => w.issystem) ?? warehouses[0],
-    [warehouses]
+  useEffect(() => {
+    if (!isNewDoc) {
+      if (parsedOutletId) fetchWarehouseByOutletId(parsedOutletId);
+      return;
+    }
+    // New documents only: need warehouses across every outlet the user can access (not
+    // just the current URL outlet) so a multi-outlet user can pick which outlet's stock
+    // this document draws from.
+    if (parsedStoreId) {
+      fetchWarehouseByStoreId(parsedStoreId);
+      fetchOutletsList([parsedStoreId], false);
+    }
+  }, [isNewDoc, fetchWarehouseByOutletId, fetchWarehouseByStoreId, fetchOutletsList, parsedStoreId, parsedOutletId]);
+
+  const accessibleOutletIds = useMemo(
+    () => new Set((accessibleOutlets ?? []).map((o: any) => Number(o.outletid))),
+    [accessibleOutlets]
   );
 
+  // Only meaningful on new documents (see fetch above) — getWarehousesByStoreId isn't
+  // outlet-access scoped server-side, so this filters it down to outlets the user is
+  // actually assigned to before it's ever shown as a choice.
+  const accessibleSystemWarehouses = useMemo(
+    () => (isNewDoc ? warehouses.filter((w) => w.issystem && accessibleOutletIds.has(Number(w.outletid))) : []),
+    [isNewDoc, warehouses, accessibleOutletIds]
+  );
+
+  const hasMultiOutletAccess = isNewDoc && accessibleOutletIds.size > 1;
+
+  const currentWarehouse = useMemo(() => {
+    if (!isNewDoc) return warehouses.find((w) => w.issystem) ?? warehouses[0];
+    return (
+      accessibleSystemWarehouses.find((w) => Number(w.outletid) === Number(parsedOutletId)) ??
+      accessibleSystemWarehouses[0]
+    );
+  }, [isNewDoc, warehouses, accessibleSystemWarehouses, parsedOutletId]);
+
   useEffect(() => {
-    if (!warehouses?.length) return;
+    const nextWarehouseId = Number(currentWarehouse?.warehouseid);
+    if (!Number.isFinite(nextWarehouseId) || nextWarehouseId <= 0) return;
     const current = getValues("warehouseid");
     if (Number.isFinite(Number(current)) && Number(current) > 0) return;
-
-    const selected = currentWarehouse;
-    if (selected?.warehouseid) {
-      setValue("warehouseid", Number(selected.warehouseid), {
-        shouldDirty: false,
-        shouldTouch: false,
-      });
-    }
-  }, [currentWarehouse, getValues, setValue, warehouses]);
+    setValue("warehouseid", nextWarehouseId, {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+  }, [currentWarehouse, getValues, setValue]);
 
   // Load sales order data for pre-population when creating invoice from SO
   const { data: soQueryData, error: soQueryError, loading: soQueryLoading, refetch: refetchSO } = useQuery(GET_SALES_ORDER_QUERY, {
@@ -1091,19 +1134,6 @@ const SalesInvoiceForm = ({
       setValue("invoicestatusid", 2);
     }
   }, [watchedTrackingNo, watchedShippingMethod, shippingModesData, setValue, readOnly, documentType, viewInvoicenumber, isDirty]);
-
-  useEffect(() => {
-    if (!shipSameAsBill) return;
-    const billId = getValues("customerid");
-    const shipId = getValues("shiptocustomerid");
-    if (!billId || !shipId) return;
-    if (Number(billId) === Number(shipId)) return;
-
-    setValue("shipSameAsBill", false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-  }, [customerId, getValues, setValue, shipSameAsBill, shipToCustomerId]);
 
   useEffect(() => {
     const c = customerData?.getCustomer;
@@ -1730,6 +1760,83 @@ const SalesInvoiceForm = ({
     setProductClearKey((k) => k + 1);
   };
 
+  // Direct in-grid editing for an existing line — Qty/Tag Price/Disc% write straight
+  // through to the row, and Ext. Price runs the same math in reverse (back-solving Tag
+  // Price from qty + disc%) instead of routing every tweak back through the tool row.
+  // These four use setValue on the specific field path rather than useFieldArray's
+  // update() — update() unmounts and remounts the whole row on every call, which kicks
+  // focus out of the input after a single keystroke. setValue mutates in place and
+  // stays reactive because each row reads its values via watch(`items.${index}`).
+  const updateInlineItemQuantity = (index: number, item: any, rawValue: string) => {
+    const abs = Math.abs(toNum(rawValue));
+    const maxQty = item?.maxqty;
+    if (typeof maxQty === "number" && abs > maxQty) {
+      dispatch(showNotification({ message: `Quantity cannot exceed remaining balance (${maxQty})`, type: NOTIFICATION_TYPES.ERROR }));
+      return;
+    }
+    const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
+    setValue(`items.${index}.itemquantity`, normalized, { shouldDirty: true });
+    const isWtItem = (item?.itemunit ?? "").trim().toLowerCase() === "wt";
+    if (isWtItem) {
+      const rateField = getRateField(item?.itemmetal, metalTypeList);
+      const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
+      const newUnitPrice = calcWtUnitPrice(item?.itemmetal, currentRates as any, item?.itempremium ?? 0, item?.broakerage ?? 0, metalTypeList);
+      setValue(`items.${index}.unitprice`, newUnitPrice, { shouldDirty: true });
+      setValue(`items.${index}.goldprice_used`, goldRate, { shouldDirty: true });
+      setValue(`items.${index}.premium_used`, item?.itempremium, { shouldDirty: true });
+      setValue(`items.${index}.labour_used`, item?.broakerage, { shouldDirty: true });
+    }
+  };
+
+  const updateInlineUnitPrice = (index: number, item: any, rawValue: string) => {
+    const clamped = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
+    setValue(`items.${index}.unitprice`, clamped, { shouldDirty: true });
+  };
+
+  const updateInlineDiscountPercent = (index: number, item: any, rawValue: string) => {
+    const clamped = Math.round(Math.min(100, Math.max(0, toNum(rawValue))) * 1000) / 1000;
+    setValue(`items.${index}.discountpercent`, clamped, { shouldDirty: true });
+    setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+  };
+
+  // Reverse calc: holds qty and disc% fixed, back-solves Tag Price so the line's net
+  // total matches what was typed. No-ops on qty=0 or disc%=100 (both divide by zero).
+  const updateInlineExtPrice = (index: number, item: any, rawValue: string) => {
+    const qty = toNum(item?.itemquantity);
+    const disc = toNum(item?.discountpercent);
+    if (Math.abs(qty) <= 0 || disc >= 100) return;
+    const extPrice = toNum(rawValue);
+    const newUnitPrice = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
+    if (!Number.isFinite(newUnitPrice)) return;
+    setValue(`items.${index}.unitprice`, Math.max(0, newUnitPrice), { shouldDirty: true });
+    setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+  };
+
+  // Line items are priced/validated against the warehouse they were added under
+  // (stock availability, Wt gold-rate lookups, carriage settings) — switching to a
+  // different outlet's warehouse invalidates all of that, so confirm before wiping them.
+  const handleWarehouseChange = (newWarehouseId: number, onConfirm: () => void) => {
+    if (itemFields.length === 0) {
+      onConfirm();
+      return;
+    }
+    MySwal.fire({
+      title: "Change warehouse?",
+      text: "This invoice has line items added under the current warehouse. Switching warehouses will reset the invoice and remove all line items.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, change warehouse",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        replace([]);
+        setEditingIndex(null);
+        resetToolItem();
+        onConfirm();
+      }
+    });
+  };
+
   const handleCollectPayment = async () => {
     try {
       await createPayment({
@@ -2232,13 +2339,20 @@ const SalesInvoiceForm = ({
   const shipToAddress = watch("invshiptoadd1") || "";
 
   const [addrOpen, setAddrOpen] = useState(true);
-  const autoCollapsedRef = useRef(false);
+  // Re-collapses every time a Bill To gets (re-)selected — not just the first time ever —
+  // so reopening the panel to pick a different customer collapses it again afterward.
   useEffect(() => {
-    if (billToCompanyName && !autoCollapsedRef.current) {
-      setAddrOpen(false);
-      autoCollapsedRef.current = true;
-    }
+    if (billToCompanyName && addrOpen) setAddrOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billToCompanyName]);
+  // Also collapses when "Same as Bill To" is (re-)checked, even if the Bill To customer
+  // itself didn't change — e.g. after manually re-checking it following the divergence
+  // fix below. Unchecking must NOT collapse (the user needs the panel open to pick a
+  // separate Ship To customer), so this only fires on the true transition.
+  useEffect(() => {
+    if (shipSameAsBill && billToCompanyName && addrOpen) setAddrOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipSameAsBill]);
 
   // Show loader while SO data is being fetched / retrying
   if (salesordernoFromSO && (soQueryLoading || (soQueryError && !soQueryData))) {
@@ -2325,10 +2439,30 @@ const SalesInvoiceForm = ({
 
   const handleResumeHold = async (hold: any) => {
     const fd = hold.formdata ?? {};
+    // Holds saved before the NaN-input fixes above could have serialized a bad numeric
+    // value (e.g. a line item's price/qty/discount) straight into their stored formdata —
+    // reset() would otherwise reintroduce that exact NaN into the form on every resume,
+    // regardless of the input-level guards now in place. Re-sanitize on the way back in.
     reset({
       ...fd,
       saledate: fd.saledate ? dayjs(fd.saledate) : dayjs(),
       shippingdate: fd.shippingdate ? dayjs(fd.shippingdate) : undefined,
+      discountpercent: toNum(fd.discountpercent),
+      orderdiscountpercent: toNum(fd.orderdiscountpercent),
+      orderdiscountamount: toNum(fd.orderdiscountamount),
+      salestaxrate: toNum(fd.salestaxrate),
+      shipping: toNum(fd.shipping),
+      items: (fd.items ?? []).map((it: any) => ({
+        ...it,
+        itemquantity: toNum(it.itemquantity),
+        unitprice: toNum(it.unitprice),
+        discountpercent: toNum(it.discountpercent),
+        itempcs: toNum(it.itempcs),
+      })),
+      salesreps: (fd.salesreps ?? []).map((r: any) => ({
+        ...r,
+        split_percent: toNum(r.split_percent),
+      })),
     });
     // Resuming no longer deletes the hold — it stays alive (now tracked as THIS
     // session's row) until the invoice is actually created or explicitly discarded, so
@@ -2447,8 +2581,36 @@ const SalesInvoiceForm = ({
 
             <div>
               <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Warehouse</div>
-              <div className="fw-semibold">{currentWarehouse?.warehousename || <span className="text-muted">&mdash;</span>}</div>
-              <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+              {hasMultiOutletAccess ? (
+                <Controller
+                  name="warehouseid"
+                  control={control}
+                  rules={{ required: true, min: 1 }}
+                  render={({ field }) => (
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ minWidth: 220 }}
+                      value={Number.isFinite(field.value) ? field.value : ""}
+                      onChange={(e) => {
+                        const newWarehouseId = Number(e.target.value);
+                        if (newWarehouseId === Number(field.value)) return;
+                        handleWarehouseChange(newWarehouseId, () => field.onChange(newWarehouseId));
+                      }}
+                    >
+                      {accessibleSystemWarehouses.map((w) => (
+                        <option key={w.warehouseid} value={w.warehouseid}>
+                          {(accessibleOutlets as any[]).find((o) => Number(o.outletid) === Number(w.outletid))?.outletname ?? `Outlet ${w.outletid}`} — {w.warehousename}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+              ) : (
+                <>
+                  <div className="fw-semibold">{currentWarehouse?.warehousename || <span className="text-muted">&mdash;</span>}</div>
+                  <input type="hidden" {...register("warehouseid", { valueAsNumber: true, required: true, min: 1 })} />
+                </>
+              )}
             </div>
 
             <div className="vr align-self-stretch" />
@@ -2740,12 +2902,13 @@ const SalesInvoiceForm = ({
                             <SelectEmployee
                               storeId={parsedStoreId}
                               outletId={parsedOutletId}
+                              includeAll
                               value={rep.userid || null}
                               isDisabled
                               onChange={() => {}}
                             />
                           </div>
-                          <span className="text-muted" style={{ fontSize: "0.8rem" }}>{rep.split_percent}%</span>
+                          <span className="text-muted" style={{ fontSize: "0.8rem" }}>{toNum(rep.split_percent)}%</span>
                         </div>
                       ))
                     )}
@@ -2761,6 +2924,7 @@ const SalesInvoiceForm = ({
                           <SelectEmployee
                             storeId={parsedStoreId}
                             outletId={parsedOutletId}
+                            includeAll
                             value={rep.userid || null}
                             trigger={trigger}
                             name={`salesreps.${idx}.userid`}
@@ -2775,10 +2939,10 @@ const SalesInvoiceForm = ({
                           type="number" min={0} max={100} step={0.1}
                           style={{ width: 52 }}
                           className="form-control form-control-sm"
-                          value={rep.split_percent ?? 0}
+                          value={toNum(rep.split_percent)}
                           onChange={(e) => {
                             const next = [...(getValues("salesreps") ?? [])];
-                            next[idx] = { ...next[idx], split_percent: Number(e.target.value) };
+                            next[idx] = { ...next[idx], split_percent: toNum(e.target.value) };
                             setValue("salesreps", next);
                           }}
                         />
@@ -2859,7 +3023,7 @@ const SalesInvoiceForm = ({
           )}
 
           {/* Scrollable items table */}
-          <div style={{ maxHeight: 400, overflowY: "auto", overflowX: "auto" }}>
+          <div ref={itemsScrollRef} style={{ maxHeight: 400, overflowY: "auto", overflowX: "auto" }}>
             <table className="table datanew mb-0">
               <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
                 <tr>
@@ -2919,26 +3083,93 @@ const SalesInvoiceForm = ({
                         {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcinvoice))}</td>}
                         {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsreturn))}</td>}
                         {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsremain))}</td>}
-                        <td className="text-end">{formatQty(line.qty)}</td>
+                        <td className="text-end" style={{ minWidth: 90 }}>
+                          {readOnly ? (
+                            formatQty(line.qty)
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.001"
+                              className="form-control form-control-sm text-end"
+                              value={toNum(item?.itemquantity)}
+                              onChange={(e) => updateInlineItemQuantity(index, item, e.target.value)}
+                              onKeyDown={handleEnterAsTab}
+                            />
+                          )}
+                        </td>
                         {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyinvoice))}</td>}
                         {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyreturn))}</td>}
                         {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyremain))}</td>}
-                        <td className="text-end">
-                          <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>
-                          {line.unit === 0 && (
-                            <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                        <td className="text-end" style={{ minWidth: 100 }}>
+                          {readOnly ? (
+                            <>
+                              <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>
+                              {line.unit === 0 && (
+                                <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min={0}
+                                className={`form-control form-control-sm text-end${line.unit === 0 ? " border-danger" : ""}`}
+                                value={toNum(item?.unitprice)}
+                                onChange={(e) => updateInlineUnitPrice(index, item, e.target.value)}
+                                onKeyDown={handleEnterAsTab}
+                              />
+                              {line.unit === 0 && (
+                                <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
+                              )}
+                            </>
                           )}
                         </td>
-                        <td className="text-end">
-                          <div>{line.disc}</div>
-                          {item?.discountsource && item.discountsource !== 'item' && (
-                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
-                            </span>
+                        <td className="text-end" style={{ minWidth: 90 }}>
+                          {readOnly ? (
+                            <>
+                              <div>{line.disc}</div>
+                              {item?.discountsource && item.discountsource !== 'item' && (
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min={0}
+                                max={100}
+                                className="form-control form-control-sm text-end"
+                                value={toNum(item?.discountpercent)}
+                                onChange={(e) => updateInlineDiscountPercent(index, item, e.target.value)}
+                                onKeyDown={handleEnterAsTab}
+                              />
+                              {item?.discountsource && item.discountsource !== 'item' && (
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
                         {showUnitPriceCol && <td className="text-end">{formatMoney(line.unitAfterDiscount)}</td>}
-                        <td className="text-end">{formatMoney(line.net)}</td>
+                        <td className="text-end" style={{ minWidth: 100 }}>
+                          {readOnly ? (
+                            formatMoney(line.net)
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="form-control form-control-sm text-end"
+                              value={Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0}
+                              onChange={(e) => updateInlineExtPrice(index, item, e.target.value)}
+                              onKeyDown={handleEnterAsTab}
+                            />
+                          )}
+                        </td>
                         {!readOnly && (
                           <td className="text-center">
                             <button
@@ -3074,6 +3305,7 @@ const SalesInvoiceForm = ({
                     className="form-control"
                     value={toolItem.itemdescription || ""}
                     onChange={(e) => setToolItem((prev) => ({ ...prev, itemdescription: e.target.value }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                 </div>
 
@@ -3085,6 +3317,7 @@ const SalesInvoiceForm = ({
                       className="form-control text-end"
                       value={toolItem.itempcs}
                       onChange={(e) => setToolItem((prev) => ({ ...prev, itempcs: toNum(e.target.value) }))}
+                      onKeyDown={handleEnterAsTab}
                     />
                   </div>
                 )}
@@ -3103,9 +3336,9 @@ const SalesInvoiceForm = ({
                       type="number"
                       step="0.001"
                       className="form-control text-end"
-                      value={toolItem.itemquantity}
+                      value={toNum(toolItem.itemquantity)}
                       onChange={(e) => {
-                        const abs = Math.abs(Number(e.target.value || 0));
+                        const abs = Math.abs(toNum(e.target.value));
                         const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
                         setToolItem((prev) => {
                           if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
@@ -3117,6 +3350,7 @@ const SalesInvoiceForm = ({
                           return { ...prev, itemquantity: normalized };
                         });
                       }}
+                      onKeyDown={handleEnterAsTab}
                     />
                     {toolItem.itemid != null &&
                       mode !== "CREDIT_INVOICE" &&
@@ -3139,8 +3373,9 @@ const SalesInvoiceForm = ({
                     step="0.001"
                     min={0}
                     className={`form-control text-end${toolItem.itemid != null && !toolItem.unitprice ? " border-danger" : ""}`}
-                    value={toolItem.unitprice}
-                    onChange={(e) => setToolItem((prev) => ({ ...prev, unitprice: Math.round(Math.max(0, Number(e.target.value || 0)) * 1000) / 1000 }))}
+                    value={toNum(toolItem.unitprice)}
+                    onChange={(e) => setToolItem((prev) => ({ ...prev, unitprice: Math.round(Math.max(0, toNum(e.target.value)) * 1000) / 1000 }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                   {toolItem.itemid != null && !toolItem.unitprice && (
                     <div className="text-danger" style={{ fontSize: 11 }}>Price not set</div>
@@ -3155,8 +3390,9 @@ const SalesInvoiceForm = ({
                     min={0}
                     max={100}
                     className="form-control text-end"
-                    value={toolItem.discountpercent}
-                    onChange={(e) => setToolItem((prev) => ({ ...prev, discountpercent: Math.round(Math.min(100, Math.max(0, Number(e.target.value || 0))) * 1000) / 1000 }))}
+                    value={toNum(toolItem.discountpercent)}
+                    onChange={(e) => setToolItem((prev) => ({ ...prev, discountpercent: Math.round(Math.min(100, Math.max(0, toNum(e.target.value))) * 1000) / 1000 }))}
+                    onKeyDown={handleEnterAsTab}
                   />
                 </div>
 
@@ -3290,9 +3526,9 @@ const SalesInvoiceForm = ({
                           max={100}
                           className="form-control form-control-sm text-end d-inline-block"
                           style={{ width: 60 }}
-                          value={watch("orderdiscountpercent") ?? 0}
+                          value={toNum(watch("orderdiscountpercent"))}
                           onChange={(e) => {
-                            const pct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+                            const pct = Math.min(100, Math.max(0, toNum(e.target.value)));
                             setValue("orderdiscountpercent", pct, { shouldDirty: true });
                             const amt = Math.round(totals.subtotal * (pct / 100) * 100) / 100;
                             setValue("orderdiscountamount", amt, { shouldDirty: true });
@@ -3305,9 +3541,9 @@ const SalesInvoiceForm = ({
                           min={0}
                           className="form-control form-control-sm text-end d-inline-block"
                           style={{ width: 100 }}
-                          value={watch("orderdiscountamount") ?? 0}
+                          value={toNum(watch("orderdiscountamount"))}
                           onChange={(e) => {
-                            const amt = Math.max(0, Number(e.target.value || 0));
+                            const amt = Math.max(0, toNum(e.target.value));
                             setValue("orderdiscountamount", amt, { shouldDirty: true });
                             const pct = totals.subtotal > 0 ? Math.round((amt / totals.subtotal) * 100 * 100) / 100 : 0;
                             setValue("orderdiscountpercent", Math.min(100, pct), { shouldDirty: true });
