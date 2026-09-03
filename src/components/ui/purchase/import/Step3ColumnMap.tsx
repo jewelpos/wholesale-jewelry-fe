@@ -27,6 +27,8 @@ export interface ColumnMapping {
   itemsize: string;
   itemcolor: string;
   itemweight: string;
+  itemsaleprice: string;
+  itemtagprice: string;
   defaultUnit: string;
   categoryid?: number;
   subcategoryid?: number;
@@ -44,12 +46,14 @@ const EMPTY_MAPPING: ColumnMapping = {
   itemsize: '',
   itemcolor: '',
   itemweight: '',
+  itemsaleprice: '',
+  itemtagprice: '',
   defaultUnit: 'Pc',
 };
 
 const REQUIRED_FIELDS: StringColumnKey[] = ['itemcode', 'itemdescription', 'qtyordered', 'orderunitcost'];
 
-type StringColumnKey = 'itemcode' | 'itemdescription' | 'qtyordered' | 'orderunitcost' | 'imageurl' | 'orddiscount' | 'itemlength' | 'itemsize' | 'itemcolor' | 'itemweight' | 'defaultUnit';
+type StringColumnKey = 'itemcode' | 'itemdescription' | 'qtyordered' | 'orderunitcost' | 'imageurl' | 'orddiscount' | 'itemlength' | 'itemsize' | 'itemcolor' | 'itemweight' | 'itemsaleprice' | 'itemtagprice' | 'defaultUnit';
 
 interface FieldDef {
   key: StringColumnKey;
@@ -64,6 +68,8 @@ const FIELDS: FieldDef[] = [
   { key: 'orderunitcost', label: 'Unit Cost', required: true },
   { key: 'imageurl', label: 'Image URL', required: false },
   { key: 'orddiscount', label: 'Discount %', required: false },
+  { key: 'itemsaleprice', label: 'Sale Price', required: false },
+  { key: 'itemtagprice', label: 'Tag Price', required: false },
   { key: 'itemlength', label: 'Length', required: false },
   { key: 'itemsize', label: 'Width', required: false },
   { key: 'itemcolor', label: 'Color', required: false },
@@ -273,6 +279,13 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
           </tbody>
         </table>
       </div>
+
+      {(mapping.itemsaleprice || mapping.itemtagprice) && (
+        <div className="alert alert-info py-2 mb-3 small">
+          Sale/Tag Price mapped — imported values will be used as-is for new items instead of
+          being auto-calculated from the store&apos;s price code settings.
+        </div>
+      )}
 
       {/* Global options — Unit, Category, Sub-Category */}
       <div className="border rounded p-2 mb-3 bg-light">

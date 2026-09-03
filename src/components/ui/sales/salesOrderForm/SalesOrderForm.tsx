@@ -1651,7 +1651,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                           {readOnly ? (
                             <>
                               <div>{toNum(item.discountpercent).toFixed(1)}%</div>
-                              {item.discountsource && item.discountsource !== 'item' && (
+                              {item.discountsource && item.discountsource !== 'item' && toNum(item.discountpercent) > 0 && (
                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                   {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
                                 </span>
@@ -1669,7 +1669,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                                 onChange={(e) => updateInlineDiscountPercent(index, item, e.target.value)}
                                 onKeyDown={handleEnterAsTab}
                               />
-                              {item.discountsource && item.discountsource !== 'item' && (
+                              {item.discountsource && item.discountsource !== 'item' && toNum(item.discountpercent) > 0 && (
                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: item.discountsource === 'manual' ? '#fef3c7' : item.discountsource === 'bulk' ? '#dcfce7' : '#ede9fe', color: item.discountsource === 'manual' ? '#92400e' : item.discountsource === 'bulk' ? '#166534' : '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                   {item.discountsource === 'bulk' ? 'Bulk' : item.discountsource === 'promotion' ? 'Promo' : 'Manual'}
                                 </span>

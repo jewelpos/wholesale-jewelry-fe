@@ -17,6 +17,8 @@ export interface ImportedPOItem {
   orderunitcost: number;
   orddiscount: number;
   itemimagepath?: string;
+  itemsaleprice?: number;
+  itemtagprice?: number;
 }
 
 type DupAction = 'merge' | 'keepall' | 'removeextras';
@@ -37,6 +39,8 @@ interface MappedRow {
   itemsize: string;
   itemcolor: string;
   itemweight: string;
+  itemsaleprice: number | null;
+  itemtagprice: number | null;
   hasHardError: boolean;
   missingDescOnly: boolean;
   itemid?: number;
@@ -175,6 +179,8 @@ export default function Step4Preview({
       const itemsize = mapping.itemsize ? cleanCell(getCell(row, mapping.itemsize)) : '';
       const itemcolor = mapping.itemcolor ? cleanCell(getCell(row, mapping.itemcolor)) : '';
       const itemweight = mapping.itemweight ? cleanCell(getCell(row, mapping.itemweight)) : '';
+      const itemsaleprice = mapping.itemsaleprice ? cleanNumeric(getCell(row, mapping.itemsaleprice)) : null;
+      const itemtagprice = mapping.itemtagprice ? cleanNumeric(getCell(row, mapping.itemtagprice)) : null;
 
       if (!itemcode && !itemdescription && qtyordered === null && orderunitcost === null) continue;
 
@@ -197,6 +203,8 @@ export default function Step4Preview({
         itemsize,
         itemcolor,
         itemweight,
+        itemsaleprice,
+        itemtagprice,
         hasHardError,
         missingDescOnly,
       });
@@ -363,6 +371,8 @@ export default function Step4Preview({
             itemunit: r.itemunit,
             itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
             itempurchaseprice: r.orderunitcost ?? 0,
+            itemsellprice: r.itemsaleprice ?? undefined,
+            itemtagprice: r.itemtagprice ?? undefined,
             categoryid: r.categoryid ?? undefined,
             subcategoryid: r.subcategoryid ?? undefined,
             itemmetal: r.itemmetal ?? undefined,
@@ -420,6 +430,8 @@ export default function Step4Preview({
       orderunitcost: r.orderunitcost ?? 0,
       orddiscount: r.orddiscount ?? 0,
       itemimagepath: r.imageurl?.startsWith('http') ? r.imageurl : undefined,
+      itemsaleprice: r.itemsaleprice ?? undefined,
+      itemtagprice: r.itemtagprice ?? undefined,
     }));
 
     setImporting(false);
@@ -665,6 +677,8 @@ export default function Step4Preview({
               <th className="text-end">Qty</th>
               <th className="text-end">Unit Cost</th>
               <th className="text-end">Disc %</th>
+              <th className="text-end">Sale Price</th>
+              <th className="text-end">Tag Price</th>
             </tr>
           </thead>
           <tbody>
@@ -779,6 +793,8 @@ export default function Step4Preview({
                   <td className="text-end">{r.qtyordered ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orderunitcost ?? <span className="text-danger">!</span>}</td>
                   <td className="text-end">{r.orddiscount ?? 0}</td>
+                  <td className="text-end">{r.itemsaleprice ?? <span className="text-muted">—</span>}</td>
+                  <td className="text-end">{r.itemtagprice ?? <span className="text-muted">—</span>}</td>
                 </tr>
               );
             })}
