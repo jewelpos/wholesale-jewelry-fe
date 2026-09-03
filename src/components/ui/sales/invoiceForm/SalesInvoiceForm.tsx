@@ -518,6 +518,11 @@ const SalesInvoiceForm = ({
   // route-driven invoice-from-memo flows (memonumber prop).
   const [pickedMemoNumber, setPickedMemoNumber] = useState<number | undefined>(undefined);
   const isStandaloneCreditMemo = documentType === "MEMO" && mode === "CREDIT_INVOICE" && !memonumber;
+  // documentType alone conflates a plain Invoice with a Credit Invoice (both "INVOICE"),
+  // and a plain Memo with a standalone Credit Memo (both "MEMO") — holds saved/fetched
+  // under just documentType would then leak across those screens. Fold mode in so each
+  // of the four screens (Invoice, Credit Invoice, Memo, Credit Memo) gets its own bucket.
+  const holdDocType = mode === "CREDIT_INVOICE" ? `${documentType}_CREDIT` : documentType;
   const effectiveMemoNumber = memonumber ?? (isStandaloneCreditMemo ? pickedMemoNumber : undefined);
   // True whenever items must come from a memo — including before one's been picked in the
   // standalone flow, so free item entry stays locked out until a memo is selected.
@@ -537,7 +542,7 @@ const SalesInvoiceForm = ({
   const isNewDoc = !invoiceId && !viewInvoicenumber;
   const [showHoldsPanel, setShowHoldsPanel] = useState(false);
   const { data: holdsData, refetch: refetchHolds } = useQuery(GET_INVOICE_HOLDS_QUERY, {
-    variables: { storeid: parsedStoreId, outletid: parsedOutletId || 0, doctype: documentType },
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId || 0, doctype: holdDocType },
     skip: !parsedStoreId || !isNewDoc,
     fetchPolicy: "cache-and-network",
   });
@@ -1386,7 +1391,7 @@ const SalesInvoiceForm = ({
     },
     storeid: parsedStoreId,
     outletid: parsedOutletId || 0,
-    doctype: documentType,
+    doctype: holdDocType,
   });
 
   // Nudges the user toward a held invoice the moment they land on a fresh New
@@ -2419,7 +2424,7 @@ const SalesInvoiceForm = ({
             holdid: currentHoldIdRef.current ?? undefined,
             storeid: parsedStoreId,
             outletid: parsedOutletId || 0,
-            doctype: documentType,
+            doctype: holdDocType,
             holdname: holdName || autoName,
             customerid: formValues.customerid ?? null,
             formdata: holdData,
@@ -2432,8 +2437,9 @@ const SalesInvoiceForm = ({
       reset();
       refetchHolds();
       Swal.fire({ icon: "success", title: "Invoice held", text: "You can resume it from the Held Invoices panel.", timer: 2000, showConfirmButton: false });
-    } catch {
-      Swal.fire("Error", "Failed to save hold. Please try again.", "error");
+    } catch (err: any) {
+      console.error("[handleHold] save failed", err);
+      Swal.fire("Error", err?.message || "Failed to save hold. Please try again.", "error");
     }
   };
 
