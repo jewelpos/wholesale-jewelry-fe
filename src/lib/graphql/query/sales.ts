@@ -406,6 +406,33 @@ export const GET_DAY_END_REPORT_QUERY = gql`
   }
 `;
 
+export const GET_DAY_END_PAYMENT_TRANSACTIONS_QUERY = gql`
+  query GetDayEndPaymentTransactions($storeid: Int!, $date: String!, $outletid: Int) {
+    getDayEndPaymentTransactions(storeid: $storeid, date: $date, outletid: $outletid) {
+      transactions {
+        customerpaymentid customerid companyname invoicenumber amountreceived paymode outletid outletname salesrepname
+      }
+      byOutlet { outletid outletname totalpayment }
+      byPaymentType { paymode totalpayment }
+      bySalesRep { userid username totalpayment }
+      totalReceived
+    }
+  }
+`;
+
+export const GET_DAY_END_ITEMS_SOLD_QUERY = gql`
+  query GetDayEndItemsSold($storeid: Int!, $date: String!, $outletid: Int) {
+    getDayEndItemsSold(storeid: $storeid, date: $date, outletid: $outletid) {
+      items { itemcode itemdescription categoryname itemunit totalqty salevalue }
+      byCategory { categoryname totalqty salevalue }
+      byUnit { itemunit totalqty salevalue }
+      byOutlet { outletid outletname totalqty salevalue }
+      totalQty
+      totalSaleValue
+    }
+  }
+`;
+
 export const GET_CASH_DRAWER_SESSION_QUERY = gql`
   query GetCashDrawerSession($storeid: Int!, $outletid: Int!, $date: String) {
     getCashDrawerSession(storeid: $storeid, outletid: $outletid, date: $date) {
