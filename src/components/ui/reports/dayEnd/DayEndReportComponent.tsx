@@ -248,8 +248,8 @@ const DayEndReportComponent = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {transactions.map((t: any) => (
-                          <tr key={t.customerpaymentid}>
+                        {transactions.map((t: any, i: number) => (
+                          <tr key={`${t.customerpaymentid}-${t.invoicenumber ?? i}`}>
                             <td className="px-3">{t.customerid ?? "—"}</td>
                             <td>{t.companyname ?? "—"}</td>
                             <td className="fw-semibold" style={{ color: "#6366f1" }}>{t.invoicenumber ? `#${t.invoicenumber}` : "—"}</td>
