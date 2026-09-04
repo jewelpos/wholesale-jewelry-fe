@@ -244,6 +244,7 @@ const DayEndReportComponent = () => {
                           <th className="text-end">Amount Received</th>
                           <th>Payment Mode</th>
                           <th>Outlet</th>
+                          <th>Invoice Created By</th>
                           <th className="px-3">Sales Rep</th>
                         </tr>
                       </thead>
@@ -256,6 +257,7 @@ const DayEndReportComponent = () => {
                             <td className="text-end fw-semibold" style={{ fontVariantNumeric: "tabular-nums", color: "#059669" }}>{formatCurrency(t.amountreceived)}</td>
                             <td>{t.paymode ?? "—"}</td>
                             <td>{t.outletname ?? "—"}</td>
+                            <td>{t.invoicecreatedby ?? "—"}</td>
                             <td className="px-3">{t.salesrepname ?? "—"}</td>
                           </tr>
                         ))}

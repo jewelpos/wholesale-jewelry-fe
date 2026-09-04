@@ -410,7 +410,7 @@ export const GET_DAY_END_PAYMENT_TRANSACTIONS_QUERY = gql`
   query GetDayEndPaymentTransactions($storeid: Int!, $date: String!, $outletid: Int) {
     getDayEndPaymentTransactions(storeid: $storeid, date: $date, outletid: $outletid) {
       transactions {
-        customerpaymentid customerid companyname invoicenumber amountreceived paymode outletid outletname salesrepname
+        customerpaymentid customerid companyname invoicenumber amountreceived paymode outletid outletname invoicecreatedby salesrepname
       }
       byOutlet { outletid outletname totalpayment }
       byPaymentType { paymode totalpayment }

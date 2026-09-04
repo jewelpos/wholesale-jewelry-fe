@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLazyQuery, useQuery } from '@apollo/client';
 import { cleanCell, cleanNumeric, DEFAULT_UNITS, RawSheet } from '@/lib/utils/poImportParser';
 import { ColumnMapping } from './Step3ColumnMap';
@@ -119,10 +119,6 @@ export default function Step4Preview({
   const [bulkSubcategoryId, setBulkSubcategoryId] = useState<number | null>(mapping.subcategoryid ?? null);
   const [bulkMetalName, setBulkMetalName] = useState<string | null>(mapping.itemmetal ?? null);
 
-  // Subcategory cache keyed by categoryid
-  const [subCatCache, setSubCatCache] = useState<Record<number, SubcategoryItem[]>>({});
-  const fetchingSubcats = useRef<Set<number>>(new Set());
-
   const [fetchItems, { loading: loadingItems }] = useLazyQuery(GET_INVENTORY_ITEMS_BY_ITEMCODES, {
     fetchPolicy: 'network-only',
   });
@@ -139,25 +135,14 @@ export default function Step4Preview({
   });
   const metalTypes: { metaltypeid: number; metalname: string }[] = metalTypeData?.getMetalTypeList ?? [];
 
-  const [fetchSubcats] = useLazyQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
+  // Subcategory is independent of category — one flat list for the whole store, not
+  // scoped/cached per categoryid. Each selector still stays gated behind picking a
+  // category first (see render below); this just controls what fills it once it opens.
+  const { data: subcategoriesData } = useQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
+    variables: { storeid: storeId },
     fetchPolicy: 'cache-first',
   });
-
-  const ensureSubcats = (catId: number | null) => {
-    if (!catId || subCatCache[catId] !== undefined || fetchingSubcats.current.has(catId)) return;
-    fetchingSubcats.current.add(catId);
-    fetchSubcats({ variables: { storeid: storeId, categoryid: catId } }).then(({ data }) => {
-      const list: SubcategoryItem[] = data?.getItemSubcategories ?? [];
-      setSubCatCache((prev) => ({ ...prev, [catId]: list }));
-    });
-  };
-
-  // Pre-load subcategories for the bulk category and the default mapping category
-  useEffect(() => {
-    if (bulkCategoryId) ensureSubcats(bulkCategoryId);
-    if (mapping.categoryid) ensureSubcats(mapping.categoryid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bulkCategoryId, mapping.categoryid]);
+  const allSubcategories: SubcategoryItem[] = subcategoriesData?.getItemSubcategories ?? [];
 
   // Build raw mapped rows from the sheet
   const rawRows: MappedRow[] = useMemo(() => {
@@ -449,7 +434,7 @@ export default function Step4Preview({
   const catName = (id: number | null) => categories.find((c) => c.categoryid === id)?.categoryname ?? '—';
   const subCatName = (catId: number | null, subId: number | null) => {
     if (!catId || !subId) return '—';
-    return subCatCache[catId]?.find((s) => s.subcategoryid === subId)?.subcategoryname ?? '—';
+    return allSubcategories.find((s) => s.subcategoryid === subId)?.subcategoryname ?? '—';
   };
 
   return (
@@ -504,7 +489,6 @@ export default function Step4Preview({
             const v = e.target.value ? Number(e.target.value) : null;
             setBulkCategoryId(v);
             setBulkSubcategoryId(null);
-            if (v) ensureSubcats(v);
           }}
         >
           <option value="">— Category —</option>
@@ -520,7 +504,7 @@ export default function Step4Preview({
             onChange={(e) => setBulkSubcategoryId(e.target.value ? Number(e.target.value) : null)}
           >
             <option value="">— Sub-Category —</option>
-            {(subCatCache[bulkCategoryId] ?? []).map((s) => (
+            {allSubcategories.map((s) => (
               <option key={s.subcategoryid} value={s.subcategoryid}>{s.subcategoryname}</option>
             ))}
           </select>
@@ -688,7 +672,7 @@ export default function Step4Preview({
               if (r.hasHardError) rowClass = 'table-warning';
               else if (r.missingDescOnly && !isOptedIn) rowClass = 'table-warning';
 
-              const subcats = r.categoryid ? (subCatCache[r.categoryid] ?? []) : [];
+              const subcats = r.categoryid ? allSubcategories : [];
 
               return (
                 <tr key={i} className={rowClass}>
@@ -742,7 +726,6 @@ export default function Step4Preview({
                       onChange={(e) => {
                         const v = e.target.value ? Number(e.target.value) : null;
                         updateRowOverride(r.rowNum, { categoryid: v, subcategoryid: null });
-                        if (v) ensureSubcats(v);
                       }}
                     >
                       <option value="">— None —</option>

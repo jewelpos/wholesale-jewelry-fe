@@ -109,9 +109,10 @@ export default function Step3ColumnMap({ storeId, sheet, startRow, onNext, onBac
   const categories: { categoryid: number; categoryname: string }[] =
     categoriesData?.getItemCategories ?? [];
 
+  // Deliberately not scoped to categoryId — subcategory is independent of category here,
+  // the selector just stays gated behind picking a category first (see render below).
   const { data: subcategoriesData } = useQuery(GET_ITEM_SUBCATEGORIES_QUERY, {
-    variables: { storeid: storeId, categoryid: categoryId ?? undefined },
-    skip: !categoryId,
+    variables: { storeid: storeId },
     fetchPolicy: 'cache-first',
   });
   const subcategories: { subcategoryid: number; subcategoryname: string }[] =

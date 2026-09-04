@@ -29,6 +29,7 @@ import {
 } from "@/lib/graphql/query/purchase";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { formatQty } from "@/lib/utils/numberFormat";
+import { handleEnterAsTab } from "@/lib/utils/formKeyboard";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import useUnsavedChanges from "@/hooks/useUnsavedChanges";
@@ -51,6 +52,11 @@ const PURCHASE_ORDER_SAVE_MODE = {
   BACKORDER: "SAVE_AS_BACKORDER",
   RECEIVE: "SAVE_AND_RECEIVE",
 } as const;
+
+const toNum = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
 
 const MySwal = withReactContent(Swal);
 
@@ -205,6 +211,18 @@ const PurchaseOrderForm = ({
     name: "items",
   });
 
+  // Same pattern as the Invoice form: scroll the line-items panel down to reveal a
+  // newly added row instead of leaving it below the fold.
+  const itemsScrollRef = useRef<HTMLDivElement>(null);
+  const prevItemCountRef = useRef(itemFields.length);
+  useEffect(() => {
+    if (itemFields.length > prevItemCountRef.current) {
+      const el = itemsScrollRef.current;
+      if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }));
+    }
+    prevItemCountRef.current = itemFields.length;
+  }, [itemFields.length]);
+
   // A fresh from-scratch PO and a fresh supplier return both get hold protection —
   // editing an existing PO is the only thing excluded (resuming a hold always creates a
   // new record, which would be wrong there). Return uses its own doctype so a held
@@ -345,6 +363,49 @@ const PurchaseOrderForm = ({
     return Math.round(value * 1000) / 1000;
   };
 
+  // Same convention as the Invoice grid's inline editing: setValue on the specific field
+  // path (not useFieldArray's update(), which remounts the whole row and kicks focus out
+  // after a single keystroke) so typing stays uninterrupted, with the row re-rendering
+  // reactively via the watchedItems subscription below.
+  const updateInlinePOQty = (index: number, rawValue: string) => {
+    const abs = Math.abs(toNum(rawValue));
+    const normalized = isReturnOrder ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
+    setValue(`items.${index}.qtyordered`, normalized, { shouldDirty: true });
+    const cost = toNum(getValues(`items.${index}.orderunitcost`));
+    const disc = toNum(getValues(`items.${index}.orddiscount`));
+    setValue(`items.${index}.ordextendedprice`, calculateOrdExtendedPrice(normalized, cost, disc), { shouldDirty: true });
+  };
+
+  const updateInlinePOUnitCost = (index: number, rawValue: string) => {
+    const clamped = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
+    setValue(`items.${index}.orderunitcost`, clamped, { shouldDirty: true });
+    const qty = toNum(getValues(`items.${index}.qtyordered`));
+    const disc = toNum(getValues(`items.${index}.orddiscount`));
+    setValue(`items.${index}.ordextendedprice`, calculateOrdExtendedPrice(qty, clamped, disc), { shouldDirty: true });
+  };
+
+  const updateInlinePODiscPercent = (index: number, rawValue: string) => {
+    const clamped = Math.round(Math.min(100, Math.max(0, toNum(rawValue))) * 1000) / 1000;
+    setValue(`items.${index}.orddiscount`, clamped, { shouldDirty: true });
+    const qty = toNum(getValues(`items.${index}.qtyordered`));
+    const cost = toNum(getValues(`items.${index}.orderunitcost`));
+    setValue(`items.${index}.ordextendedprice`, calculateOrdExtendedPrice(qty, cost, clamped), { shouldDirty: true });
+  };
+
+  // Reverse calc: holds qty and disc% fixed, back-solves Unit Cost so the line's
+  // extended price matches what was typed. No-ops on qty=0 or disc%=100 (both divide by
+  // zero) — same rule as the Invoice grid's Ext. Price reverse calc.
+  const updateInlinePOExtPrice = (index: number, rawValue: string) => {
+    const qty = toNum(getValues(`items.${index}.qtyordered`));
+    const disc = toNum(getValues(`items.${index}.orddiscount`));
+    if (Math.abs(qty) <= 0 || disc >= 100) return;
+    const extPrice = toNum(rawValue);
+    const newUnitCost = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
+    if (!Number.isFinite(newUnitCost)) return;
+    setValue(`items.${index}.orderunitcost`, Math.max(0, newUnitCost), { shouldDirty: true });
+    setValue(`items.${index}.ordextendedprice`, Math.round(extPrice * 1000) / 1000, { shouldDirty: true });
+  };
+
   const watchedPoDiscount = watch("podiscount");
   const defaultItemDiscount = useMemo(() => {
     const raw = watchedPoDiscount;
@@ -458,6 +519,7 @@ const PurchaseOrderForm = ({
   }));
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [productClearKey, setProductClearKey] = useState(0);
 
   const resetToolItem = () => {
     setToolItem({
@@ -470,6 +532,10 @@ const PurchaseOrderForm = ({
       orddiscount: defaultItemDiscount,
     });
     setIsToolDiscountTouched(false);
+    // Same pattern as the Invoice form: bumping this refocuses the item search box
+    // (SelectProduct clears/refocuses on clearKey change) so the next item can be
+    // scanned/typed immediately without reaching for the mouse.
+    setProductClearKey((k) => k + 1);
   };
 
   useEffect(() => {
@@ -1708,7 +1774,7 @@ const PurchaseOrderForm = ({
             <div className="card-body">
 
               {/* Items table */}
-              <div style={{ maxHeight: 480, overflowY: "auto" }}>
+              <div ref={itemsScrollRef} style={{ maxHeight: 480, overflowY: "auto" }}>
                 <table className="table datanew mb-0">
                   <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
                     <tr>
@@ -1736,22 +1802,22 @@ const PurchaseOrderForm = ({
                       </tr>
                     ) : (
                       itemFields.map((field, index) => {
-                        const displayItemCode =
-                          String(getValues(`items.${index}.itemcode`) || "");
-                        const description = String(getValues(`items.${index}.itemdescription`) || "");
-                        const qty = Number(getValues(`items.${index}.qtyordered`) || 0);
-                        const recvQty = Number(getValues(`items.${index}.itemqtyreceived`) || 0);
-                        const backorder = Number(getValues(`items.${index}.itemqtybackorder`) || 0);
-                        const unitPrice = Number(getValues(`items.${index}.orderunitcost`) || 0);
-                        const discountPct = Number(getValues(`items.${index}.orddiscount`) || 0);
-                        const savedExtPrice = Number(
-                          getValues(`items.${index}.ordextendedprice`) as unknown as number
-                        );
+                        // Reads from the watchedItems subscription (not getValues) so
+                        // the row re-renders live as inline edits come in.
+                        const rowItem: any = watchedItems?.[index] ?? {};
+                        const displayItemCode = String(rowItem.itemcode || "");
+                        const description = String(rowItem.itemdescription || "");
+                        const qty = toNum(rowItem.qtyordered);
+                        const recvQty = toNum(rowItem.itemqtyreceived);
+                        const backorder = toNum(rowItem.itemqtybackorder);
+                        const unitPrice = toNum(rowItem.orderunitcost);
+                        const discountPct = toNum(rowItem.orddiscount);
+                        const savedExtPrice = Number(rowItem.ordextendedprice as unknown as number);
                         const extPrice = Number.isFinite(savedExtPrice)
                           ? savedExtPrice
                           : calculateOrdExtendedPrice(qty, unitPrice, discountPct);
-                        const additionalcost = Number(getValues(`items.${index}.additionalcost`) || 0);
-                        const finalunitcost = Number(getValues(`items.${index}.finalunitcost`) || 0);
+                        const additionalcost = toNum(rowItem.additionalcost);
+                        const finalunitcost = toNum(rowItem.finalunitcost);
                         return (
                           <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                             <td>
@@ -1776,14 +1842,67 @@ const PurchaseOrderForm = ({
                             </td>
                             <td className="text-nowrap">{displayItemCode}</td>
                             <td>{description}</td>
-                            <td className="text-nowrap text-muted small">{getValues(`items.${index}.itemunit`)}</td>
-                            <td className="text-end">{formatQty(qty)}</td>
+                            <td className="text-nowrap text-muted small">{rowItem.itemunit}</td>
+                            <td className="text-end" style={{ minWidth: 90 }}>
+                              {disableField ? (
+                                formatQty(qty)
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  className="form-control form-control-sm text-end"
+                                  value={qty}
+                                  onChange={(e) => updateInlinePOQty(index, e.target.value)}
+                                  onKeyDown={handleEnterAsTab}
+                                />
+                              )}
+                            </td>
                             {disableField && <td className="text-end">{formatQty(recvQty)}</td>}
                             {disableField && <td className="text-end">{formatQty(backorder)}</td>}
-                            <td className="text-end">{unitPrice}</td>
-                            <td className="text-end">{discountPct}</td>
-                            <td className="text-end">
-                              {Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""}
+                            <td className="text-end" style={{ minWidth: 100 }}>
+                              {disableField ? (
+                                unitPrice
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min={0}
+                                  className="form-control form-control-sm text-end"
+                                  value={unitPrice}
+                                  onChange={(e) => updateInlinePOUnitCost(index, e.target.value)}
+                                  onKeyDown={handleEnterAsTab}
+                                />
+                              )}
+                            </td>
+                            <td className="text-end" style={{ minWidth: 90 }}>
+                              {disableField ? (
+                                discountPct
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min={0}
+                                  max={100}
+                                  className="form-control form-control-sm text-end"
+                                  value={discountPct}
+                                  onChange={(e) => updateInlinePODiscPercent(index, e.target.value)}
+                                  onKeyDown={handleEnterAsTab}
+                                />
+                              )}
+                            </td>
+                            <td className="text-end" style={{ minWidth: 100 }}>
+                              {disableField ? (
+                                Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="form-control form-control-sm text-end"
+                                  value={Number.isFinite(extPrice) ? Number(extPrice.toFixed(2)) : 0}
+                                  onChange={(e) => updateInlinePOExtPrice(index, e.target.value)}
+                                  onKeyDown={handleEnterAsTab}
+                                />
+                              )}
                             </td>
                             <td className="text-end text-muted">
                               {additionalcost > 0 ? additionalcost.toFixed(3) : "—"}
@@ -1858,6 +1977,7 @@ const PurchaseOrderForm = ({
                         trigger={trigger}
                         disableField={disableField}
                         value={toolItem.itemid}
+                        clearKey={productClearKey}
                         onChange={(val: number | undefined) =>
                           setToolItem((prev) => ({ ...prev, itemid: val }))
                         }
@@ -1955,7 +2075,8 @@ const PurchaseOrderForm = ({
                     <div className="col-lg-1 col-md-3 col-sm-6">
                       <label className="form-label small text-muted mb-1">Ext Price</label>
                       <input
-                        type="text"
+                        type="number"
+                        step="0.01"
                         className="form-control text-end"
                         value={(() => {
                           const v = calculateOrdExtendedPrice(
@@ -1963,9 +2084,22 @@ const PurchaseOrderForm = ({
                             toolItem.orderunitcost,
                             toolItem.orddiscount
                           );
-                          return Number.isFinite(v) ? v.toFixed(3) : "";
+                          return Number.isFinite(v) ? Number(v.toFixed(2)) : 0;
                         })()}
-                        readOnly
+                        disabled={disableField}
+                        onChange={(e) => {
+                          // Reverse calc: holds qty and disc% fixed, back-solves Unit
+                          // Price so the extended price matches what was typed — same
+                          // rule as the grid's Ext. Price reverse calc (no-ops on qty=0
+                          // or disc%=100, both of which would divide by zero).
+                          const qty = toNum(toolItem.qtyordered);
+                          const disc = toNum(toolItem.orddiscount);
+                          if (Math.abs(qty) <= 0 || disc >= 100) return;
+                          const extPrice = toNum(e.target.value);
+                          const newUnitCost = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
+                          if (!Number.isFinite(newUnitCost)) return;
+                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.max(0, newUnitCost) }));
+                        }}
                       />
                     </div>
 

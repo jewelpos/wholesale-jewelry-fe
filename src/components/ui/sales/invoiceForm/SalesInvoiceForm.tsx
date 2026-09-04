@@ -3405,10 +3405,27 @@ const SalesInvoiceForm = ({
                 <div className="col-lg-1 col-md-3 col-sm-6">
                   <label className="form-label small text-muted mb-1">Ext Price</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.01"
                     className="form-control text-end"
-                    readOnly
-                    value={formatMoney(computeLine({ itemquantity: toolItem.itemquantity, unitprice: toolItem.unitprice, discountpercent: toolItem.discountpercent }, mode).net)}
+                    value={(() => {
+                      const net = computeLine({ itemquantity: toolItem.itemquantity, unitprice: toolItem.unitprice, discountpercent: toolItem.discountpercent }, mode).net;
+                      return Number.isFinite(net) ? Number(net.toFixed(2)) : 0;
+                    })()}
+                    onChange={(e) => {
+                      // Reverse calc: holds qty and disc% fixed, back-solves Tag Price
+                      // so the line's net total matches what was typed — same rule as
+                      // the grid's Ext. Price reverse calc (no-ops on qty=0 or disc%=100,
+                      // both of which would divide by zero).
+                      const qty = toNum(toolItem.itemquantity);
+                      const disc = toNum(toolItem.discountpercent);
+                      if (Math.abs(qty) <= 0 || disc >= 100) return;
+                      const extPrice = toNum(e.target.value);
+                      const newUnitPrice = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
+                      if (!Number.isFinite(newUnitPrice)) return;
+                      setToolItem((prev) => ({ ...prev, unitprice: Math.max(0, newUnitPrice) }));
+                    }}
+                    onKeyDown={handleEnterAsTab}
                   />
                 </div>
 

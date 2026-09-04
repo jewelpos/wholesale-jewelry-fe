@@ -21,9 +21,35 @@ import { Save, Trash2, Pencil, PlusCircle } from "lucide-react";
 import useWarehouse from "@/hooks/useWarehouse";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
+import { handleEnterAsTab } from "@/lib/utils/formKeyboard";
 
 type FormValues = {
   entries: CheckOnHandType[];
+};
+
+// Comma-grouped, 2-decimal display (the "$" itself comes from the input-group prefix
+// next to it, so this formatter deliberately leaves the currency symbol out) — used to
+// show a fully-settled value (on mount, and again on blur).
+const amountDisplayFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const formatAmountForDisplay = (value: unknown): string => {
+  const n = Number(value);
+  if (value === "" || value == null || !Number.isFinite(n)) return "";
+  return amountDisplayFormatter.format(n);
+};
+
+// Live, as-you-type comma grouping on just the integer part — deliberately does NOT
+// force 2 decimal places (that would fight the user mid-keystroke, e.g. typing "123.5"
+// getting padded to "123.50" before they've typed the second digit). Padding to 2
+// decimals only happens once, on blur, via formatAmountForDisplay above.
+const formatAmountLive = (raw: string): string => {
+  const dotIndex = raw.indexOf(".");
+  const intPart = dotIndex === -1 ? raw : raw.slice(0, dotIndex);
+  const decPart = dotIndex === -1 ? "" : "." + raw.slice(dotIndex + 1).replace(/\./g, "");
+  const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return intFormatted + decPart;
 };
 
 const blankEntry = (warehouseId: string | number = ""): CheckOnHandType => ({
@@ -116,7 +142,9 @@ const AddOnHandChequeModal = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let updateEntry: any = {
       customerid: Number(entry.customerid),
-      checkamount: Number(entry.checkamount),
+      // Defensive: strip any comma grouping in case this field was never focused/blurred
+      // (e.g. only other fields were edited) and still holds the display-formatted text.
+      checkamount: Number(String(entry.checkamount).replace(/,/g, "")),
       warehouseid: Number(entry.warehouseid),
       checkpostingdate: new Date(entry.checkpostingdate).toISOString(),
       checkno: entry.checkno,
@@ -236,18 +264,20 @@ const AddOnHandChequeModal = ({
             />
           </div>
 
-          {/* Body */}
+          {/* Body — wrapped in a <form> (no submit handler/button; it's here purely so
+              handleEnterAsTab's closest("form") lookup can find the row's fields) */}
           <div className="modal-body p-0" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+            <form onSubmit={(e) => e.preventDefault()}>
             <table className="table table-borderless mb-0" style={{ minWidth: 860 }}>
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: "22%" }}>Customer</th>
                   <th style={{ ...thStyle, width: "15%" }}>Outlet</th>
                   <th style={{ ...thStyle, width: "12%" }}>Check No</th>
-                  <th style={{ ...thStyle, width: "10%" }}>Amount</th>
+                  <th style={{ ...thStyle, width: "14%" }}>Amount</th>
                   <th style={{ ...thStyle, width: "12%" }}>Check Date</th>
                   <th style={{ ...thStyle, width: "14%" }}>Invoice #</th>
-                  <th style={{ ...thStyle, width: "15%", textAlign: "center" }}>Actions</th>
+                  <th style={{ ...thStyle, width: "11%", textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,6 +352,7 @@ const AddOnHandChequeModal = ({
                           {...register(`entries.${index}.checkno`, {
                             required: "Required",
                           })}
+                          onKeyDown={handleEnterAsTab}
                         />
                         {rowErrors.checkno && (
                           <div className="invalid-feedback" style={{ fontSize: 10 }}>
@@ -330,18 +361,50 @@ const AddOnHandChequeModal = ({
                         )}
                       </td>
 
-                      {/* Amount */}
+                      {/* Amount — uncontrolled input: the displayed text is written
+                          straight to the DOM (comma-grouped live as the user types, then
+                          padded to 2 decimals on blur), while RHF's tracked value is set
+                          explicitly via setValue on every change rather than relying on
+                          register's own onChange to read the (already-rewritten) DOM
+                          value, which would depend on internal ordering we don't control. */}
                       <td style={tdStyle}>
-                        <input
-                          disabled={!isEditable}
-                          type="text"
-                          className={`form-control form-control-sm${rowErrors.checkamount ? " is-invalid" : ""}`}
-                          {...register(`entries.${index}.checkamount`, {
-                            required: "Required",
-                          })}
-                        />
+                        <div className="input-group input-group-sm">
+                          <span className="input-group-text" style={{ background: "#f8fafc", fontSize: 13 }}>$</span>
+                          <input
+                            disabled={!isEditable}
+                            type="text"
+                            inputMode="decimal"
+                            defaultValue={formatAmountForDisplay(field.checkamount)}
+                            className={`form-control form-control-sm${rowErrors.checkamount ? " is-invalid" : ""}`}
+                            {...(() => {
+                              const { name, ref } = register(`entries.${index}.checkamount`, { required: "Required" });
+                              return { name, ref };
+                            })()}
+                            onChange={(e) => {
+                              let raw = e.target.value.replace(/[^0-9.]/g, "");
+                              const firstDot = raw.indexOf(".");
+                              if (firstDot !== -1) {
+                                raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, "");
+                              }
+                              e.target.value = formatAmountLive(raw);
+                              setValue(`entries.${index}.checkamount`, raw, { shouldValidate: true });
+                            }}
+                            onBlur={(e) => {
+                              const raw = getValues(`entries.${index}.checkamount`);
+                              const n = Number(raw);
+                              if (raw !== "" && Number.isFinite(n)) {
+                                e.target.value = formatAmountForDisplay(n);
+                              }
+                            }}
+                            onFocus={(e) => {
+                              const current = getValues(`entries.${index}.checkamount`);
+                              e.target.value = current != null && current !== "" ? String(current) : "";
+                            }}
+                            onKeyDown={handleEnterAsTab}
+                          />
+                        </div>
                         {rowErrors.checkamount && (
-                          <div className="invalid-feedback" style={{ fontSize: 10 }}>
+                          <div className="invalid-feedback d-block" style={{ fontSize: 10 }}>
                             {rowErrors.checkamount.message}
                           </div>
                         )}
@@ -382,6 +445,7 @@ const AddOnHandChequeModal = ({
                           className="form-control form-control-sm"
                           placeholder="Optional"
                           {...register(`entries.${index}.chkinvoiceno`)}
+                          onKeyDown={handleEnterAsTab}
                         />
                       </td>
 
@@ -399,7 +463,7 @@ const AddOnHandChequeModal = ({
                               title="Save"
                               onClick={() => handleSave(index)}
                             >
-                              <Save size={14} />
+                              <Save size={18} />
                             </button>
                           )}
                           {field.customercheckdetailid && editIndex !== index && (
@@ -431,6 +495,7 @@ const AddOnHandChequeModal = ({
                 })}
               </tbody>
             </table>
+            </form>
           </div>
 
           {/* Footer */}
