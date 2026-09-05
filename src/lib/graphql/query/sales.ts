@@ -387,11 +387,11 @@ export const GET_TODAY_INVOICE_STATS_QUERY = gql`
 `;
 
 export const GET_DAY_END_REPORT_QUERY = gql`
-  query GetDayEndReport($storeid: Int!, $outletid: Int!, $date: String!) {
-    getDayEndReport(storeid: $storeid, outletid: $outletid, date: $date) {
+  query GetDayEndReport($storeid: Int!, $date: String!, $outletid: Int) {
+    getDayEndReport(storeid: $storeid, date: $date, outletid: $outletid) {
       date
       summary {
-        totalSales totalOutstanding invoiceCount paidCount
+        totalSales totalOutstanding invoiceCount paidCount todaySalesReceived accountsReceivableReceived
       }
       paymentBreakdown {
         paymode paymentCount totalReceived
@@ -400,7 +400,7 @@ export const GET_DAY_END_REPORT_QUERY = gql`
         employeeid employeename invoiceCount totalSales outstanding
       }
       invoices {
-        invoicenumber companyname saledate salemodename netamount balancedue statusname
+        invoicenumber companyname saledate salemodename netamount balancedue statusname outletid outletname createdby salesrepname
       }
     }
   }

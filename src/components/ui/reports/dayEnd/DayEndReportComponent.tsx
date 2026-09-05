@@ -30,15 +30,22 @@ type TabKey = typeof TABS[number]["key"];
 
 const DayEndReportComponent = () => {
   const router = useRouter();
-  const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
+  const { storeId: storeIdParam } = useParams();
   const storeid = parseInt(storeIdParam as string, 10);
-  const outletid = parseInt(outletIdParam as string, 10);
   const [date, setDate] = useState(today());
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
+  // Overview tab — defaults to the outlet already in the URL (OutletsFilter's own
+  // autoSelectCurrentOutlet behavior), same as this page always has, but the user can
+  // switch to "All Outlets" or any other outlet they have access to.
+  const [overviewOutlet, setOverviewOutlet] = useState<number | undefined>(undefined);
+  const { fetchOutletsList, outlets, loading: outletsLoading } = useOutlets();
+  // Outlet columns (Overview's invoice list, Payments tab) only add value once there's
+  // more than one outlet to tell apart.
+  const hasMultipleOutlets = outlets.length > 1;
   const { data, loading } = useQuery(GET_DAY_END_REPORT_QUERY, {
-    variables: { storeid, outletid, date },
-    skip: !storeid || !outletid || !date,
+    variables: { storeid, date, outletid: overviewOutlet },
+    skip: !storeid || !date,
     fetchPolicy: "network-only",
   });
 
@@ -53,7 +60,6 @@ const DayEndReportComponent = () => {
   // outletid = "All"), since the by-outlet/by-sales-rep cards are meaningless scoped to
   // just the current URL outlet like the rest of this page is.
   const [paymentsOutlet, setPaymentsOutlet] = useState<number | undefined>(undefined);
-  const { fetchOutletsList, outlets, loading: outletsLoading } = useOutlets();
   const { data: paymentsData, loading: paymentsLoading } = useQuery(GET_DAY_END_PAYMENT_TRANSACTIONS_QUERY, {
     variables: { storeid, date, outletid: paymentsOutlet },
     skip: !storeid || !date || activeTab !== "payments",
@@ -238,12 +244,12 @@ const DayEndReportComponent = () => {
                     <table className="table table-sm align-middle mb-0" style={{ fontSize: 12 }}>
                       <thead style={{ fontSize: 11, backgroundColor: "var(--surface-secondary)" }}>
                         <tr>
-                          <th className="px-3">Customer ID</th>
+                          {hasMultipleOutlets && <th className="px-3">Outlet</th>}
+                          <th className={hasMultipleOutlets ? "" : "px-3"}>Customer ID</th>
                           <th>Company Name</th>
                           <th>Invoice #</th>
                           <th className="text-end">Amount Received</th>
                           <th>Payment Mode</th>
-                          <th>Outlet</th>
                           <th>Invoice Created By</th>
                           <th className="px-3">Sales Rep</th>
                         </tr>
@@ -251,12 +257,12 @@ const DayEndReportComponent = () => {
                       <tbody>
                         {transactions.map((t: any, i: number) => (
                           <tr key={`${t.customerpaymentid}-${t.invoicenumber ?? i}`}>
-                            <td className="px-3">{t.customerid ?? "—"}</td>
+                            {hasMultipleOutlets && <td className="px-3">{t.outletname ?? "—"}</td>}
+                            <td className={hasMultipleOutlets ? "" : "px-3"}>{t.customerid ?? "—"}</td>
                             <td>{t.companyname ?? "—"}</td>
                             <td className="fw-semibold" style={{ color: "#6366f1" }}>{t.invoicenumber ? `#${t.invoicenumber}` : "—"}</td>
                             <td className="text-end fw-semibold" style={{ fontVariantNumeric: "tabular-nums", color: "#059669" }}>{formatCurrency(t.amountreceived)}</td>
                             <td>{t.paymode ?? "—"}</td>
-                            <td>{t.outletname ?? "—"}</td>
                             <td>{t.invoicecreatedby ?? "—"}</td>
                             <td className="px-3">{t.salesrepname ?? "—"}</td>
                           </tr>
@@ -424,12 +430,28 @@ const DayEndReportComponent = () => {
           </>
         ) : (
         <>
-        {/* Summary Cards */}
-        <div className="row row-cols-2 row-cols-md-4 g-3 mb-4">
-          <SummaryCard label="Total Sales"    value={formatCurrency(summary?.totalSales ?? 0)}       accent="#6366f1" loading={loading} />
-          <SummaryCard label="Total Received" value={formatCurrency(totalReceived)}                  accent="#10b981" loading={loading} />
-          <SummaryCard label="Outstanding"    value={formatCurrency(summary?.totalOutstanding ?? 0)} accent="#f59e0b" loading={loading} />
-          <SummaryCard label={`Invoices (${summary?.invoiceCount ?? 0})`} value={`${summary?.paidCount ?? 0} paid`} accent="#8b5cf6" loading={loading} />
+        <div className="d-flex justify-content-end mb-3">
+          <div style={{ width: 220 }}>
+            <OutletsFilter
+              fetchOutletsList={fetchOutletsList}
+              outlets={outlets}
+              loading={outletsLoading}
+              setSelectedOutlet={setOverviewOutlet}
+              selectedOutlet={overviewOutlet}
+              stacked
+            />
+          </div>
+        </div>
+
+        {/* Summary Cards — Total Received is split into money collected for a sale made
+            today vs. money collected today against an older invoice (AR), so it's clear
+            at a glance how much of today's cash is fresh sales vs. collections. */}
+        <div className="row row-cols-2 row-cols-md-5 g-3 mb-4">
+          <SummaryCard label="Total Sales"          value={formatCurrency(summary?.totalSales ?? 0)}                    accent="#6366f1" loading={loading} />
+          <SummaryCard label="Today's Sales (Recv)" value={formatCurrency(summary?.todaySalesReceived ?? 0)}            accent="#10b981" loading={loading} />
+          <SummaryCard label="A/R Collected"        value={formatCurrency(summary?.accountsReceivableReceived ?? 0)}   accent="#0ea5e9" loading={loading} />
+          <SummaryCard label="Outstanding"          value={formatCurrency(summary?.totalOutstanding ?? 0)}              accent="#f59e0b" loading={loading} />
+          <SummaryCard label={`Invoices (${summary?.invoiceCount ?? 0})`} value={`${summary?.paidCount ?? 0} paid`}      accent="#8b5cf6" loading={loading} />
         </div>
 
         <div className="row g-3 mb-4">
@@ -520,19 +542,23 @@ const DayEndReportComponent = () => {
                 <table className="table table-sm align-middle mb-0" style={{ fontSize: 12 }}>
                   <thead style={{ fontSize: 11, backgroundColor: "var(--surface-secondary)" }}>
                     <tr>
-                      <th className="px-3">Invoice #</th>
+                      {hasMultipleOutlets && <th className="px-3">Outlet</th>}
+                      <th className={hasMultipleOutlets ? "" : "px-3"}>Invoice #</th>
                       <th>Customer</th>
                       <th>Time</th>
                       <th>Sale Mode</th>
                       <th className="text-end">Amount</th>
                       <th className="text-end">Balance Due</th>
                       <th className="px-3">Status</th>
+                      <th>Create By</th>
+                      <th className="px-3">Sales Rep</th>
                     </tr>
                   </thead>
                   <tbody>
                     {invoices.map((inv: any) => (
                       <tr key={inv.invoicenumber}>
-                        <td className="fw-semibold px-3" style={{ color: "#6366f1" }}>#{inv.invoicenumber}</td>
+                        {hasMultipleOutlets && <td className="px-3">{inv.outletname ?? "—"}</td>}
+                        <td className={`fw-semibold${hasMultipleOutlets ? "" : " px-3"}`} style={{ color: "#6366f1" }}>#{inv.invoicenumber}</td>
                         <td>{inv.companyname ?? "—"}</td>
                         <td className="text-muted">{inv.saledate?.split(" ")[1] ?? "—"}</td>
                         <td>{inv.salemodename ?? "—"}</td>
@@ -551,6 +577,8 @@ const DayEndReportComponent = () => {
                             {inv.statusname}
                           </span>
                         </td>
+                        <td>{inv.createdby ?? "—"}</td>
+                        <td className="px-3">{inv.salesrepname ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>
