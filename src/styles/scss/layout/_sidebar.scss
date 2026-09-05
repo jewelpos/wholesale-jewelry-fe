@@ -153,7 +153,9 @@
                   @include position(absolute, 16px, null, null, 16px);
                 }
                 &:hover {
+                  background: $primary-100;
                   color: $primary;
+                  border-radius: 5px;
                   &:after {
                     background: $primary;
                     border: 2px solid #fdb;
@@ -200,7 +202,9 @@
                   }
                 }
                 &:hover {
+                  background: $primary-100;
                   color: $primary;
+                  border-radius: 5px;
                   &:after {
                     background: $primary;
                     border: 2px solid #fdb;
@@ -253,8 +257,11 @@
         }
         .submenu > {
           a {
+            // Darker than the child's $primary-100 below — the parent's highlight means
+            // "somewhere in this section", stronger so the child (the actual page you're
+            // on) still reads as the lighter, more specific one.
             &.active {
-              background: $primary-100;
+              background: $primary-200;
               color: $primary;
               border-radius: 5px;
               span {
@@ -272,7 +279,9 @@
         .submenu .submenu-two > {
           a {
             &.active {
-              background: transparent;
+              background: $primary-100;
+              color: $primary;
+              border-radius: 5px;
             }
           }
         }
