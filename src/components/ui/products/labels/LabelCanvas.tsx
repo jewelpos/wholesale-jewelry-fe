@@ -39,6 +39,16 @@ export interface LabelTemplate {
   isactive?: string;
   fieldconfigs?: string;
   contentAlign?: "center" | "left";
+  /** Which side of the physical stock the blank tail sits on for a rattail label (print
+   * only matters when leftmargin >= labelwidth, i.e. isTailLabel). Undefined/"left" is
+   * the original, unchanged behavior (tail on the left, flag flush right) — existing
+   * templates are never affected by this. "right" flips it (tail on the right, flag
+   * flush left) for stock/printers loaded the other way around. */
+  tailside?: "left" | "right";
+  /** Inches to nudge the flag content clear of the printer's feed-start edge when tailside is
+   * "right" (see the marginLeft comment below). Ignored/irrelevant when tailside is "left"/unset —
+   * that side already clears the edge via the template's own leftmargin. Defaults to 0.08 if unset. */
+  tailsidemargin?: string;
 }
 
 export interface FieldPrintConfig {
@@ -444,8 +454,17 @@ const LabelCanvas: React.FC<Props> = ({ template, data, scale = 1, showFaceLabel
 
   // Tail label in print: wrapper div provides marginLeft to shift content into the printable area.
   // This wrapper is outside .label-item so it is NOT zeroed by `margin:0 !important` in print CSS.
+  // tailside "right" flips which side of the (unchanged) @page width the blank tail falls on.
+  // The unflipped side already clears x=0 by leftIn (often 1"+), which is why it's always printed
+  // clean. Flush-left (marginLeft:0) puts the flag content exactly at x=0 instead — many label
+  // printers can't reliably print right at the very start of the feed (a small dead strip at the
+  // physical edge), which is what was clipping text on the left after flipping. A small safety
+  // buffer nudges the flag just clear of that edge while still leaving the tail on the right.
   if (printMode && isTailLabel) {
-    return <div style={{ marginLeft: `${leftIn}in` }}>{labelItem}</div>;
+    const tailOnRight = template.tailside === "right";
+    const rawEdgeMargin = parseFloat(template.tailsidemargin ?? "");
+    const edgeMarginIn = isNaN(rawEdgeMargin) ? 0.08 : rawEdgeMargin;
+    return <div style={{ marginLeft: tailOnRight ? `${edgeMarginIn}in` : `${leftIn}in` }}>{labelItem}</div>;
   }
   return labelItem;
 };

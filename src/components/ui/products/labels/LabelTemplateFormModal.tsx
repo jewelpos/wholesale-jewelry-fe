@@ -43,6 +43,14 @@ const DEFAULT_FORM = {
   backgroundimage: "",
   isactive: "1",
   contentAlign: "left" as "left" | "center",
+  // Which side of the physical stock the blank tail sits on for a rattail label. "left"
+  // (the default/unset value) reproduces the original, always-worked behavior exactly —
+  // this only matters once leftmargin >= labelwidth (tail-label mode) at print time.
+  tailside: "left" as "left" | "right",
+  // Only used when tailside is "right" — inches to nudge the flag content clear of the
+  // printer's feed-start edge (see LabelCanvas.tsx). Printer dead-zones vary, so this is
+  // user-tunable rather than a hardcoded guess.
+  tailsidemargin: "0.08",
 };
 
 type FormState = typeof DEFAULT_FORM;
@@ -67,6 +75,26 @@ function extractContentAlign(label: LabelTemplate): "left" | "center" {
     if (raw && !Array.isArray(raw) && raw.align === "center") return "center";
   } catch { /* fall through */ }
   return "left";
+}
+
+// Defaults to "left" for any template missing this key, which reproduces its original
+// print behavior exactly — existing templates are never affected just by being reopened.
+function extractTailSide(label: LabelTemplate): "left" | "right" {
+  if (!label.fieldconfigs) return "left";
+  try {
+    const raw = JSON.parse(label.fieldconfigs);
+    if (raw && !Array.isArray(raw) && raw.tailside === "right") return "right";
+  } catch { /* fall through */ }
+  return "left";
+}
+
+function extractTailSideMargin(label: LabelTemplate): string {
+  if (!label.fieldconfigs) return "0.08";
+  try {
+    const raw = JSON.parse(label.fieldconfigs);
+    if (raw && !Array.isArray(raw) && typeof raw.tailsidemargin === "string") return raw.tailsidemargin;
+  } catch { /* fall through */ }
+  return "0.08";
 }
 
 function initFieldConfigs(label: LabelTemplate): FieldPrintConfig[] {
@@ -122,6 +150,8 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
         backgroundimage: editLabel.backgroundimage ?? "",
         isactive:        editLabel.isactive ?? "1",
         contentAlign:    extractContentAlign(editLabel),
+        tailside:        extractTailSide(editLabel),
+        tailsidemargin:  extractTailSideMargin(editLabel),
       });
       setFieldConfigs(initFieldConfigs(editLabel));
     } else {
@@ -193,7 +223,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
       sellpriceside:   cfg("itemsellprice")?.side    ?? "back",
       codedpriceside:  cfg("codedprice")?.side       ?? "front",
       categoryside:    cfg("categoryname")?.side     ?? "back",
-      fieldconfigs:    JSON.stringify({ align: form.contentAlign, fields: fieldConfigs }),
+      fieldconfigs:    JSON.stringify({ align: form.contentAlign, tailside: form.tailside, tailsidemargin: form.tailsidemargin, fields: fieldConfigs }),
     };
     try {
       if (editLabel) {
@@ -232,6 +262,8 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
     categoryside:    fieldConfigs.find((c) => c.key === "categoryname")?.side    ?? "back",
     backgroundimage: form.backgroundimage || undefined,
     contentAlign: form.contentAlign as "left" | "center",
+    tailside: form.tailside as "left" | "right",
+    tailsidemargin: form.tailsidemargin,
   };
 
   const isRattail = form.labletype === "rattail";
@@ -332,6 +364,37 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                   {field("Left Margin", (
                     <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"
                       value={form.leftmargin} onChange={(e) => set("leftmargin", e.target.value)} />
+                  ))}
+                  {isRattail && field("Tail Side", (
+                    <>
+                      <div className="d-flex gap-2">
+                        {(["left", "right"] as const).map(s => (
+                          <button key={s} type="button"
+                            onClick={() => set("tailside", s)}
+                            style={{
+                              padding: "3px 14px", fontSize: 12, borderRadius: 5, cursor: "pointer",
+                              border: `1px solid ${form.tailside === s ? "#6366f1" : "#e2e8f0"}`,
+                              background: form.tailside === s ? "#6366f1" : "#fff",
+                              color: form.tailside === s ? "#fff" : "#475569",
+                              fontWeight: form.tailside === s ? 600 : 400,
+                            }}>
+                            {s === "left" ? "Left" : "Right"}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>
+                        Only affects printing when Left Margin ≥ Width (blank-tail stock). Existing templates keep printing as before.
+                      </div>
+                    </>
+                  ))}
+                  {isRattail && form.tailside === "right" && field("Right-Tail Edge Margin", (
+                    <>
+                      <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"
+                        value={form.tailsidemargin} onChange={(e) => set("tailsidemargin", e.target.value)} />
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>
+                        Gap (inches) between the flag content and the printer's feed-start edge. Raise this if text is still getting cut off after a test print; lower it if too much blank space shows up before the tail.
+                      </div>
+                    </>
                   ))}
                   {field("Top Margin", (
                     <input type="number" min="0" max="0.5" step="0.01" className="form-control form-control-sm"

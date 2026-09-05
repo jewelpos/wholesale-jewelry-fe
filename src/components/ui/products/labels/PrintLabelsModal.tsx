@@ -281,8 +281,18 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
       if (!t.fieldconfigs) return t;
       try {
         const raw = JSON.parse(t.fieldconfigs);
-        if (raw && !Array.isArray(raw) && (raw.align === "center" || raw.align === "left")) {
-          return { ...t, contentAlign: raw.align as "center" | "left" };
+        if (raw && !Array.isArray(raw)) {
+          const merged: LabelTemplate = { ...t };
+          if (raw.align === "center" || raw.align === "left") {
+            merged.contentAlign = raw.align as "center" | "left";
+          }
+          if (raw.tailside === "right" || raw.tailside === "left") {
+            merged.tailside = raw.tailside as "left" | "right";
+          }
+          if (typeof raw.tailsidemargin === "string") {
+            merged.tailsidemargin = raw.tailsidemargin;
+          }
+          return merged;
         }
       } catch { /* fall through */ }
       return t;
