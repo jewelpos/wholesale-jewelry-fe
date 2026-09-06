@@ -653,6 +653,7 @@ export const GET_INVENTORY_TRANSFER_LIST_QUERY = gql`
         towarehouse
         transferstatus
         transferstatusid
+        requestedbyid
       }
     }
   }

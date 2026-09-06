@@ -278,6 +278,7 @@ export interface InventoryTransfer {
   towarehouse?: number;
   transferstatus?: string;
   transferstatusid?: number;
+  requestedbyid?: number;
 }
 
 export type InventoryTransferItemInput = {

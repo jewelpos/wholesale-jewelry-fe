@@ -1035,8 +1035,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       storeid: parsedStoreId,
       customerid: Number(values.customerid),
       warehouseid: Number(values.warehouseid),
-      // Literal local date/time, no UTC conversion — see SalesInvoiceForm.tsx for why.
-      orderdate: values.orderdate?.format("YYYY-MM-DDTHH:mm:ss.SSS"),
+      // Plain calendar date, no time-of-day — see SalesInvoiceForm.tsx's saledate fix for
+      // why the previous "no zone" datetime format was still ambiguous across timezones.
+      orderdate: values.orderdate?.format("YYYY-MM-DD"),
       termsid: values.termsid ?? null,
       invshippingmethod: values.invshippingmethod ? String(values.invshippingmethod) : null,
       orderedby: values.orderedby || null,

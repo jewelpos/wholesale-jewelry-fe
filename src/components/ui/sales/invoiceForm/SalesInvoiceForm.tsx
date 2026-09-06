@@ -1976,10 +1976,14 @@ const SalesInvoiceForm = ({
       customerid: formData.customerid ? Number(formData.customerid) : undefined,
       warehouseid: warehouseId,
 
-      // Send the literal local date/time the user sees (no UTC conversion) so it's
-      // stored as-is regardless of which server timezone processes the request —
-      // avoids the invoice landing on the wrong calendar day for date-range filters.
-      saledate: formData.saledate?.format?.("YYYY-MM-DDTHH:mm:ss.SSS"),
+      // Plain calendar date, no time-of-day — a prior "no UTC conversion" attempt here
+      // sent "YYYY-MM-DDTHH:mm:ss.SSS" (no zone offset), but that's still ambiguous: the
+      // backend's `new Date(...)` would re-interpret those literal digits as local time in
+      // whichever timezone the SERVER runs in, not the browser's, so it could still land on
+      // the wrong calendar day. A bare date-only string sidesteps that entirely — the
+      // backend parses it via explicit Y/M/D components (parseDateOnlyAsLocalMidnight),
+      // never through any timezone-sensitive Date parser.
+      saledate: formData.saledate?.format?.("YYYY-MM-DD"),
 
       invoicestatusid: formData.invoicestatusid ? Number(formData.invoicestatusid) : undefined,
       termsid: formData.termsid != null ? Number(formData.termsid) : undefined,

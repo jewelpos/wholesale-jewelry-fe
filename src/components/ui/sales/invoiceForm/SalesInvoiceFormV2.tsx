@@ -1168,7 +1168,13 @@ const SalesInvoiceFormV2 = ({
       customerid: formData.customerid ? Number(formData.customerid) : undefined,
       warehouseid: warehouseId,
 
-      saledate: formData.saledate?.toISOString?.(),
+      // Plain calendar date, no time-of-day — sending a full UTC instant (.toISOString())
+      // can push the date across a day boundary for users far from UTC (e.g. evening in a
+      // timezone behind UTC converts to the next UTC day), landing the invoice on the wrong
+      // calendar day. A bare date-only string sidesteps that: the backend parses it via
+      // explicit Y/M/D components (parseDateOnlyAsLocalMidnight), never through a
+      // timezone-sensitive Date parser — see SalesInvoiceForm.tsx's matching fix.
+      saledate: formData.saledate?.format?.("YYYY-MM-DD"),
 
       invoicestatusid: formData.invoicestatusid ? Number(formData.invoicestatusid) : undefined,
       termsid: formData.termsid ? Number(formData.termsid) : undefined,

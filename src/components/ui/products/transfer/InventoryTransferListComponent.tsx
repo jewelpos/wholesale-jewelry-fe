@@ -317,7 +317,7 @@ const InventoryTransferListComponent = () => {
         }
 
         const label = row.transferstatus || STATUS_LABEL[statusId] || "—";
-        return (
+        const badge = (
           <span
             style={{
               ...statusBadgeStyle(statusId),
@@ -332,6 +332,38 @@ const InventoryTransferListComponent = () => {
             {label}
           </span>
         );
+
+        if (statusId === 3) {
+          const disabled = actionLoadingId === id;
+          const isRequestingOutlet =
+            Number.isFinite(parsedOutletId) && Number(row.tooutletid) === parsedOutletId;
+          // Only a Request-flow transfer (requestInventoryTransfer) can be cancelled here —
+          // its source stock isn't actually decremented until Receive, so cancelling while
+          // still in transit costs nothing and the source outlet's on-hand quantity stays
+          // exactly as it was. A Create-flow transfer (the source outlet pushed it directly)
+          // already decremented its own warehouse at creation; the backend rejects a cancel
+          // on those (there'd be stock to reverse), so don't offer the button for them at
+          // all. requestedbyid is only ever set by the Request flow — a reliable marker.
+          const canCancel = isRequestingOutlet && !!row.requestedbyid;
+          if (canCancel) {
+            return (
+              <div className="d-flex align-items-center gap-2">
+                {badge}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  disabled={disabled}
+                  title="Cancel before it's received — the source outlet's stock hasn't been deducted yet and stays unchanged"
+                  onClick={() => setCancelTargetId(id)}
+                >
+                  Cancel
+                </button>
+              </div>
+            );
+          }
+        }
+
+        return badge;
       },
     };
     return [...inventoryTransferColumnDefs, actionsCol];

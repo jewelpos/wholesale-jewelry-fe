@@ -9,7 +9,7 @@ import api from "@/lib/axios";
 import useStores from "@/hooks/useStores";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
-type DefaultTemplate = "compact" | "thumbnail" | "barcode";
+type DefaultTemplate = "compact" | "thumbnail" | "barcode" | "memo_invoice";
 type Template = DefaultTemplate | "packing_slip";
 
 interface LayoutOption {
@@ -147,6 +147,12 @@ const LAYOUTS: LayoutOption[] = [
     bullets: ["No prices — for packing & shipping", "4-column: #, code, description, qty", "Signature line at the bottom"],
     mockup: <PackingMockup />,
     previewOnly: true,
+  },
+  {
+    id: "memo_invoice",
+    title: "Memo Invoice",
+    bullets: ["Identical to Standard layout", "Header reads \"MEMO INVOICE\" instead of INVOICE", "Can also be picked per-print from the print menu"],
+    mockup: <CompactMockup />,
   },
 ];
 
