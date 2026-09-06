@@ -3,7 +3,6 @@ import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 import { TIME_FORMAT } from "@/lib/config/constants";
 import { SupplierPayment } from "@/types/supplier";
-import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
 
 export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
   {
@@ -41,30 +40,27 @@ export const supplierPaymentColumnDefs: ColDef<SupplierPayment>[] = [
     filter: "agTextColumnFilter",
   },
   {
-    headerName: "Status",
-    field: "checkstatus",
-    filter: "agTextColumnFilter",
-    cellRenderer: StatusPillRenderer,
-  },
-  {
     headerName: "Check/Card No",
     field: "checkcardno",
     filter: "agTextColumnFilter",
   },
   {
-    headerName: "Description",
+    headerName: "Status",
     field: "chk_description",
     filter: "agTextColumnFilter",
   },
   {
+    // appliedby comes back blank from the backend — username is what's actually
+    // populated and reliably reflects who applied the payment.
     headerName: "Applied By",
-    field: "appliedby",
+    field: "username",
     filter: "agTextColumnFilter",
   },
   {
     headerName: "Bank",
     field: "bankname",
     filter: "agTextColumnFilter",
+    hide: true,
   },
   {
     headerName: "Warehouse",

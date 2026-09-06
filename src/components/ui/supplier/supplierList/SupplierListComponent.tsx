@@ -247,6 +247,10 @@ const SupplierListComponent = () => {
               selectedOutlet={selectedOutlet}
               setSelectedOutlet={setSelectedOutlet}
               autoSelectCurrentOutlet={false}
+              // The custom Refresh button below already does a superset of the default
+              // (recomputes supplier balances, then refreshes the grid) — showing both
+              // was a duplicate "Refresh" button.
+              showRefreshButton={false}
               extraActions={
                 <button
                   type="button"

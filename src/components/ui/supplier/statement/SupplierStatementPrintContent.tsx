@@ -63,6 +63,9 @@ interface Props {
   // The outlet this statement is being viewed/printed from — rows whose own outlet
   // differs get a "*"/"**" marker instead of a wide always-on Outlet column.
   primaryOutletId?: number;
+  // When true, openInvoices also contains fully-paid (closed) invoices — adds a
+  // Status column so mixed open/closed rows are still distinguishable.
+  includeClosed?: boolean;
 }
 
 const fmt = (n: number | null | undefined) =>
@@ -131,7 +134,7 @@ const CitationFooter = ({ legend }: { legend: string[] }) =>
 
 const SupplierStatementPrintContent: React.FC<Props> = ({
   type, supplier, openInvoices, ledgerRows, payments,
-  fromDate, toDate, showSummaryCard, storeName, primaryOutletId,
+  fromDate, toDate, showSummaryCard, storeName, primaryOutletId, includeClosed,
 }) => {
   const today = dayjs().format("MM/DD/YYYY");
   const periodLabel =
@@ -162,7 +165,7 @@ const SupplierStatementPrintContent: React.FC<Props> = ({
           <div style={{ fontSize: 18, fontWeight: 800, color: "#166534" }}>{storeName}</div>
           <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>Vendor Statement</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-            {type === "open" ? "Open Payables" : type === "history" ? "Transaction History" : "Payment Summary"}
+            {type === "open" ? (includeClosed ? "All Invoices" : "Open Payables") : type === "history" ? "Transaction History" : "Payment Summary"}
             {type !== "open" && ` · ${periodLabel}`}
           </div>
         </div>
@@ -187,6 +190,11 @@ const SupplierStatementPrintContent: React.FC<Props> = ({
             { label: "Balance Due", value: fmt(supplier.balancedue), accent: "#dc2626" },
             { label: "Open Credits", value: fmt(supplier.opencredit), accent: "#16a34a" },
             { label: "Total Purchases", value: fmt(supplier.totalpurchase), accent: "#166534" },
+            // Amount Paid = Total Purchases - Balance Due — same identity already used for
+            // the Open Invoices totals row below, computed here at the account level (all
+            // invoices, not just open ones) so it's directly comparable to Total Purchases
+            // instead of leaving the reader to guess at the difference.
+            { label: "Amount Paid", value: fmt(Number(supplier.totalpurchase ?? 0) - Number(supplier.balancedue ?? 0)), accent: "#0d9488" },
             { label: "Last Purchase", value: fmtDate(supplier.lastpurchasedate) || "—", accent: "#475569" },
             { label: "Last Payment", value: fmtDate(supplier.lastpaymentdate) || "—", accent: "#475569" },
           ].map((item) => (
@@ -212,7 +220,7 @@ const SupplierStatementPrintContent: React.FC<Props> = ({
         );
         return openInvoices.length === 0 ? (
           <div style={{ textAlign: "center", color: "#94a3b8", padding: "32px 0", fontSize: 13 }}>
-            No open payables for this supplier.
+            {includeClosed ? "No invoices for this supplier." : "No open payables for this supplier."}
           </div>
         ) : (
           <>
@@ -224,20 +232,35 @@ const SupplierStatementPrintContent: React.FC<Props> = ({
                   <th style={{ ...TH, textAlign: "right" }}>Invoice Amount</th>
                   <th style={{ ...TH, textAlign: "right" }}>Amount Paid</th>
                   <th style={{ ...TH, textAlign: "right" }}>Balance Due</th>
+                  {includeClosed && <th style={TH}>Status</th>}
                 </tr>
               </thead>
               <tbody>
-                {openInvoices.map((inv) => (
-                  <tr key={inv.supplierinvoiceid}>
-                    <td style={TD}>{inv.veninvoiceno}<OutletMark marker={markerOf(inv.outletid)} /></td>
-                    <td style={TD}>{fmtDate(inv.veninvoicedate)}</td>
-                    <td style={TDR}>{fmt(inv.veninvoicetotal)}</td>
-                    <td style={TDR}>{fmt(inv.veninvamtpaid)}</td>
-                    <td style={{ ...TDR, color: Number(inv.veninvamtbalance) > 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>
-                      {fmt(inv.veninvamtbalance)}
-                    </td>
-                  </tr>
-                ))}
+                {openInvoices.map((inv) => {
+                  const isClosed = Number(inv.veninvamtbalance) <= 0;
+                  return (
+                    <tr key={inv.supplierinvoiceid}>
+                      <td style={TD}>{inv.veninvoiceno}<OutletMark marker={markerOf(inv.outletid)} /></td>
+                      <td style={TD}>{fmtDate(inv.veninvoicedate)}</td>
+                      <td style={TDR}>{fmt(inv.veninvoicetotal)}</td>
+                      <td style={TDR}>{fmt(inv.veninvamtpaid)}</td>
+                      <td style={{ ...TDR, color: Number(inv.veninvamtbalance) > 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>
+                        {fmt(inv.veninvamtbalance)}
+                      </td>
+                      {includeClosed && (
+                        <td style={TD}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                            color: isClosed ? "#166534" : "#92400e",
+                            background: isClosed ? "#dcfce7" : "#fef3c7",
+                          }}>
+                            {isClosed ? "Closed" : "Open"}
+                          </span>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr style={{ background: "#f0f4f8" }}>
@@ -245,6 +268,7 @@ const SupplierStatementPrintContent: React.FC<Props> = ({
                   <td style={{ ...TDR, fontWeight: 700 }}>{fmt(totalOwed)}</td>
                   <td style={{ ...TDR, fontWeight: 700 }}>{fmt(totalPaid)}</td>
                   <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(totalBalance)}</td>
+                  {includeClosed && <td style={TD} />}
                 </tr>
               </tfoot>
             </table>

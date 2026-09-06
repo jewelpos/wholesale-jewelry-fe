@@ -31,6 +31,11 @@ interface Props {
   // backed (e.g. POSGridClient pages, where data comes from a rowData prop rather
   // than a datasource the grid can re-request itself).
   onRefresh?: () => void;
+  // Suppress the built-in Refresh button — use when the page already renders its own
+  // (e.g. one that also recomputes server-side data, not just refetching the grid) via
+  // extraActions, so the two don't show up side by side. gridRef is still needed for the
+  // Filters toggle, so this can't be done by simply omitting gridRef.
+  showRefreshButton?: boolean;
 }
 
 const CustomFilterSections = ({
@@ -48,6 +53,7 @@ const CustomFilterSections = ({
   extraActions,
   autoSelectCurrentOutlet,
   onRefresh,
+  showRefreshButton = true,
 }: Props) => {
   const { storeId: storeIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -127,7 +133,7 @@ const CustomFilterSections = ({
               Filters
             </button>
           )}
-          {(gridRef || onRefresh) && (
+          {(gridRef || onRefresh) && showRefreshButton && (
             <button
               type="button"
               onClick={handleRefresh}

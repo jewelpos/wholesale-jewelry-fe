@@ -353,8 +353,8 @@ query GetSingleSupplierInvoice($storeid: Int!, $supplierinvoiceid: Int!) {
 `;
 
 export const GET_SUPPLIER_BALANCE_DUE_QUERY = gql`
-query GetSupplierBalanceDue($storeid: Int!, $outletid: Int, $supplierid: Int!) {
-  getSupplierBalanceDue(storeid: $storeid, outletid: $outletid, supplierid: $supplierid) {
+query GetSupplierBalanceDue($storeid: Int!, $outletid: Int, $supplierid: Int!, $includeClosed: Boolean) {
+  getSupplierBalanceDue(storeid: $storeid, outletid: $outletid, supplierid: $supplierid, includeClosed: $includeClosed) {
     supplierinvoiceid
     supplierid
     veninvoiceno

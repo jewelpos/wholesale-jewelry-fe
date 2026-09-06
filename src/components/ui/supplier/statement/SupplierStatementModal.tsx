@@ -81,6 +81,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
   const [fromDate, setFromDate] = useState<Dayjs | null>(null);
   const [toDate, setToDate] = useState<Dayjs | null>(null);
   const [showSummaryCard, setShowSummaryCard] = useState(true);
+  const [includeClosed, setIncludeClosed] = useState(false);
   // Global by default — every section (open payables, ledger, payments) pulls
   // across all outlets unless the user narrows to one here.
   const [selectedOutlet, setSelectedOutlet] = useState<number | undefined>(undefined);
@@ -108,6 +109,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
           // every outlet come back; narrowed only when selectedOutlet is set.
           outletid: selectedOutlet ?? null,
           supplierid: supplierId,
+          includeClosed,
         },
       });
     } else if (t === "history") {
@@ -147,7 +149,7 @@ const SupplierStatementModal: React.FC<Props> = ({ supplier, onClose }) => {
   useEffect(() => {
     load(type, fromDate, toDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, fromDate, toDate, selectedOutlet]);
+  }, [type, fromDate, toDate, selectedOutlet, includeClosed]);
 
   const handlePreset = (p: Preset) => {
     setPreset(p);
@@ -359,6 +361,17 @@ ${safeBody}
                   />
                   Show account summary
                 </label>
+                {type === "open" && (
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13, color: "#334155" }}>
+                    <input
+                      type="checkbox"
+                      checked={includeClosed}
+                      onChange={(e) => setIncludeClosed(e.target.checked)}
+                      style={{ accentColor: "#15803d" }}
+                    />
+                    Include closed (fully paid) invoices
+                  </label>
+                )}
               </div>
             </div>
 
@@ -409,6 +422,7 @@ ${safeBody}
                   showSummaryCard={showSummaryCard}
                   storeName={storeName}
                   primaryOutletId={selectedOutlet ?? parsedOutletId}
+                  includeClosed={type === "open" ? includeClosed : undefined}
                 />
               </div>
             </div>
