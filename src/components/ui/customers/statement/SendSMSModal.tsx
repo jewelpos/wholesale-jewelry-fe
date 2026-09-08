@@ -23,12 +23,13 @@ interface SendSMSModalProps {
   todate?: string;
   showaging: boolean;
   showsummarycard: boolean;
+  includeclosed?: boolean;
   onClose: () => void;
   onSent: () => void;
 }
 
 const SendSMSModal: React.FC<SendSMSModalProps> = ({
-  customerName, defaultPhone, storeName, storeid, customerid, outletid, type, fromdate, todate, showaging, showsummarycard, onClose, onSent,
+  customerName, defaultPhone, storeName, storeid, customerid, outletid, type, fromdate, todate, showaging, showsummarycard, includeclosed, onClose, onSent,
 }) => {
   const dispatch = useAppDispatch();
   const [phone, setPhone] = useState(defaultPhone);
@@ -46,7 +47,7 @@ const SendSMSModal: React.FC<SendSMSModalProps> = ({
         variables: {
           input: {
             storeid, customerid, outletid, phoneNumber: phone.trim(),
-            type, fromdate, todate, showaging, showsummarycard,
+            type, fromdate, todate, showaging, showsummarycard, includeclosed,
           },
         },
       });

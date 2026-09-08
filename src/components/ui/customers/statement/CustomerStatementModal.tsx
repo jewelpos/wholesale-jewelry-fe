@@ -83,6 +83,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const [toDate, setToDate] = useState<Dayjs | null>(null);
   const [showAging, setShowAging] = useState(true);
   const [showSummaryCard, setShowSummaryCard] = useState(true);
+  const [includeClosed, setIncludeClosed] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -119,6 +120,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           outletid: selectedOutlet ?? null,
           warehouseid: null,
           isCredit: false,
+          includeClosed,
         },
       });
       fetchAging({
@@ -167,7 +169,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   useEffect(() => {
     load(type, fromDate, toDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, fromDate, toDate, selectedOutlet]);
+  }, [type, fromDate, toDate, selectedOutlet, includeClosed]);
 
   const handlePreset = (p: Preset) => {
     setPreset(p);
@@ -238,6 +240,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           todate: type !== "open" && toDate ? toDate.format("YYYY-MM-DD") : undefined,
           showaging: showAging,
           showsummarycard: showSummaryCard,
+          includeclosed: type === "open" ? includeClosed : undefined,
         },
         { responseType: "blob", headers: { "Content-Type": "application/json" } }
       );
@@ -377,7 +380,10 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
                 <ControlLabel>Display Options</ControlLabel>
                 {[
                   { key: "showSummaryCard", label: "Show account summary", value: showSummaryCard, set: setShowSummaryCard },
-                  ...(type === "open" ? [{ key: "showAging", label: "Show aging breakdown", value: showAging, set: setShowAging }] : []),
+                  ...(type === "open" ? [
+                    { key: "showAging", label: "Show aging breakdown", value: showAging, set: setShowAging },
+                    { key: "includeClosed", label: "Include closed (fully paid) invoices", value: includeClosed, set: setIncludeClosed },
+                  ] : []),
                 ].map((opt) => (
                   <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13, color: "#334155" }}>
                     <input
@@ -461,6 +467,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
                   storeName={storeName}
                   agingData={agingData}
                   primaryOutletId={selectedOutlet ?? parsedOutletId}
+                  includeClosed={type === "open" ? includeClosed : undefined}
                 />
               </div>
             </div>
@@ -482,6 +489,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           todate={type !== "open" && toDate ? toDate.format("YYYY-MM-DD") : undefined}
           showaging={showAging}
           showsummarycard={showSummaryCard}
+          includeclosed={type === "open" ? includeClosed : undefined}
           onClose={() => setSmsOpen(false)}
           onSent={() => { setSmsOpen(false); }}
         />

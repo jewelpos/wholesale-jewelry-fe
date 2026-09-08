@@ -11,6 +11,7 @@ export type InvoiceBalanceDue = {
   saledate: string;
   totalamount: number;
   amountreceived: number;
+  creditamountapplied?: number;
   balancedue: number;
   warehouseid?: number;
   warehousename?: string;
@@ -47,6 +48,9 @@ interface Props {
   // differs get a "*" marker instead of a wide always-on Outlet column (cross-outlet
   // activity is rare, so a full column would just waste space on the common case).
   primaryOutletId?: number;
+  // When true, openInvoices also contains fully-paid/credit (closed) invoices — adds a
+  // Status column so mixed open/closed rows are still distinguishable.
+  includeClosed?: boolean;
 }
 
 const fmt = (n: number | null | undefined) =>
@@ -123,7 +127,7 @@ const CitationFooter = ({ legend }: { legend: string[] }) =>
 const StatementPrintContent = ({
   type, customer, openInvoices, ledgerRows, openingBalance,
   payments, fromDate, toDate, showAging, showSummaryCard, storeName, agingData,
-  primaryOutletId,
+  primaryOutletId, includeClosed,
 }: Props) => {
   const today = dayjs().format("MM/DD/YYYY");
 
@@ -133,7 +137,7 @@ const StatementPrintContent = ({
       : "All Transactions";
 
   const typeLabel =
-    type === "open" ? "Open Invoices Statement" :
+    type === "open" ? (includeClosed ? "All Invoices Statement" : "Open Invoices Statement") :
     type === "history" ? "Transaction History" :
     "Payment Summary";
 
@@ -280,16 +284,22 @@ const StatementPrintContent = ({
           <>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr>{["Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Balance Due", "Days Outstanding"].map(h => (
+                <tr>{[
+                  "Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Balance Due", "Days Outstanding",
+                  ...(includeClosed ? ["Status"] : []),
+                ].map(h => (
                   <th key={h} style={TH}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {openInvoices.length === 0 ? (
-                  <tr><td colSpan={6} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>No open invoices found.</td></tr>
+                  <tr><td colSpan={includeClosed ? 7 : 6} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>
+                    {includeClosed ? "No invoices found." : "No open invoices found."}
+                  </td></tr>
                 ) : openInvoices.map((inv, i) => {
                   const age = ageInDays(inv.saledate);
                   const ageColor = age > 90 ? "#dc2626" : age > 60 ? "#ea580c" : age > 30 ? "#d97706" : "#16a34a";
+                  const isClosed = Number(inv.balancedue) <= 0;
                   return (
                     <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
                       <td style={TD}>{inv.invoicenumber}<OutletMark marker={markerOf(inv.outletid)} /></td>
@@ -298,6 +308,17 @@ const StatementPrintContent = ({
                       <td style={TDR}>{fmt(inv.amountreceived)}</td>
                       <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(inv.balancedue)}</td>
                       <td style={{ ...TDR, color: ageColor, fontWeight: 600 }}>{age}d</td>
+                      {includeClosed && (
+                        <td style={TD}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                            color: isClosed ? "#166534" : "#92400e",
+                            background: isClosed ? "#dcfce7" : "#fef3c7",
+                          }}>
+                            {isClosed ? "Closed" : "Open"}
+                          </span>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -308,6 +329,7 @@ const StatementPrintContent = ({
                     <td style={TD} colSpan={4}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
                     <td style={{ ...TDR, fontWeight: 800, color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</td>
                     <td style={TD} />
+                    {includeClosed && <td style={TD} />}
                   </tr>
                 </tfoot>
               )}

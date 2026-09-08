@@ -2,14 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQuery } from "@apollo/client";
+import { useQuery, useLazyQuery } from "@apollo/client";
 import { X, Edit, ArrowLeft, FileText } from "react-feather";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import {
   GET_CUSTOMER_QUERY,
   GET_CUSTOMER_LIST_QUERY,
+  GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY,
 } from "@/lib/graphql/query/customer";
+import { InvoiceBalanceDue } from "@/components/ui/customers/statement/StatementPrintContent";
 import { GET_PAYMENT_TERMS_QUERY } from "@/lib/graphql/query/payment";
 import { GET_SHIPPING_MODES_QUERY } from "@/lib/graphql/query/shipping";
 import { CustomerType, CustomersListType } from "@/types/customer";
@@ -165,6 +167,8 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [statementOpen, setStatementOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "invoices">("details");
+  const [invoicesLoaded, setInvoicesLoaded] = useState(false);
   const { basePath } = useDefaultRoute();
   const router = useRouter();
 
@@ -214,6 +218,39 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
     skip: !customerId || !storeId,
   });
 
+  const [fetchInvoices, { data: invoicesData, loading: invoicesLoading }] = useLazyQuery(
+    GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY,
+    // network-only — opened on demand, should always reflect the latest invoices rather
+    // than a stale cache-first result from a previous time this tab was viewed.
+    { fetchPolicy: "network-only" },
+  );
+
+  // invoicesLoaded only ever flips true→true once fetched — without resetting it here, a
+  // drawer instance reused for a different customer would keep showing the first
+  // customer's invoices.
+  useEffect(() => {
+    setInvoicesLoaded(false);
+  }, [customerId]);
+
+  useEffect(() => {
+    if (activeTab === "invoices" && !invoicesLoaded && customerId && storeId) {
+      setInvoicesLoaded(true);
+      fetchInvoices({
+        variables: {
+          storeid: storeId,
+          customerid: customerId,
+          // Global by default — every outlet's invoices for this customer, matching the
+          // Statement's own "global unless narrowed" convention.
+          outletid: null,
+          warehouseid: null,
+          isCredit: false,
+          includeClosed: true,
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, invoicesLoaded, customerId, storeId]);
+
   const { data: termsData } = useQuery(GET_PAYMENT_TERMS_QUERY, {
     variables: { storeid: storeId },
     skip: !storeId,
@@ -227,6 +264,13 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
   const customer: CustomerType | undefined = profileData?.getCustomer;
   const listCustomer: CustomersListType | undefined =
     listData?.getCustomerList?.data?.[0];
+
+  const invoices: InvoiceBalanceDue[] = useMemo(() => {
+    const rows: InvoiceBalanceDue[] = invoicesData?.getCustomerBalanceDueInvoices ?? [];
+    // Newest/current invoice on top, as asked — the query itself sorts saledate/invoicenumber
+    // ascending (right for a statement's chronological table), so reverse it here instead.
+    return [...rows].sort((a, b) => Number(b.invoicenumber) - Number(a.invoicenumber));
+  }, [invoicesData]);
 
   const termsName = useMemo(() => {
     if (!customer?.termsid || !termsData?.getPaymentTerms) return null;
@@ -416,9 +460,83 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
         </div>
       </div>
 
+      {/* ── Tab bar ───────────────────────────────────────── */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", flexShrink: 0 }}>
+        {(["details", "invoices"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab ? "2px solid #0f172a" : "2px solid transparent",
+              fontSize: 12,
+              fontWeight: activeTab === tab ? 700 : 500,
+              color: activeTab === tab ? "#0f172a" : "#94a3b8",
+              cursor: "pointer",
+              textTransform: "capitalize",
+              letterSpacing: "0.3px",
+            }}
+          >
+            {tab === "details" ? "Details" : "Invoices"}
+          </button>
+        ))}
+      </div>
+
       {/* ── Scrollable body ────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {loading ? (
+        {activeTab === "invoices" ? (
+          <div style={{ padding: "14px 14px 28px" }}>
+            {invoicesLoading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "24px 0" }}>
+                <div className="spinner-border spinner-border-sm text-secondary" />
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>Loading invoices…</span>
+              </div>
+            ) : invoices.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 13, padding: "24px 0" }}>
+                No invoices found for this customer.
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      {["Invoice #", "Create Date", "Total Sale", "Amount Paid", "Credit Applied", "Balance Due"].map((h, i) => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: "6px 8px", textAlign: i === 0 ? "left" : "right",
+                            fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em",
+                            color: "#94a3b8", fontWeight: 700, borderBottom: "1px solid #e2e8f0",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((inv, i) => (
+                      <tr key={inv.invoicenumber} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
+                        <td style={{ padding: "6px 8px", fontWeight: 600, color: "#0f172a" }}>{inv.invoicenumber}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right", color: "#475569" }}>{fmtDate(inv.saledate) ?? "—"}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.totalamount)}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.amountreceived)}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.creditamountapplied)}</td>
+                        <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: Number(inv.balancedue) > 0 ? "#b91c1c" : "#15803d" }}>
+                          {fmt(inv.balancedue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : loading ? (
           <div
             style={{
               display: "flex",
