@@ -38,9 +38,10 @@ import dayjs from "dayjs";
 const NO_FILTER: never[] = [];
 
 // ── Date period pills ──────────────────────────────────────────────────────────
-type DatePill = "today" | "week" | "month" | "year";
+type DatePill = "all" | "today" | "week" | "month" | "year";
 
 const DATE_PILLS: { key: DatePill; label: string }[] = [
+  { key: "all",   label: "All" },
   { key: "today", label: "Today" },
   { key: "week",  label: "This Week" },
   { key: "month", label: "This Month" },
@@ -48,14 +49,17 @@ const DATE_PILLS: { key: DatePill; label: string }[] = [
 ];
 
 const DATE_PILL_LABEL: Record<DatePill, string> = {
+  all:   "All",
   today: "Today",
   week:  "This Week",
   month: "This Month",
   year:  "This Year",
 };
 
-function getDateRange(pill: DatePill): { startDate: string; endDate: string } {
+// null means "all time" — no date filter applied at all, not just a very wide range.
+function getDateRange(pill: DatePill): { startDate: string; endDate: string } | null {
   const today = dayjs();
+  if (pill === "all") return null;
   if (pill === "today")
     return { startDate: today.format("YYYY-MM-DD"), endDate: today.format("YYYY-MM-DD") };
   if (pill === "week")
@@ -118,7 +122,7 @@ const AppliedPaymentsComponent = () => {
   // Compute current date range from selected pill
   const dateRange = useMemo(() => getDateRange(datePill), [datePill]);
 
-  const dateFilter = useMemo(() => ([
+  const dateFilter = useMemo(() => (!dateRange ? [] : [
     {
       key: "paymentdate",
       value: {
@@ -242,17 +246,19 @@ const AppliedPaymentsComponent = () => {
     const outlet = selectedOutletRef.current;
     if (!outlet) { params.fail(); return; }
 
-    const filtersMain = filterVariables(params, debouncedSearchRef.current, "transactionno, custcompanyname");
+    const filtersMain = filterVariables(params, debouncedSearchRef.current, "transactionno, custcompanyname, customerid");
     const mode = modePillRef.current;
     const modeExtra =
       mode !== "all"
         ? [{ key: "paymode", value: { filterType: "text", type: "equals", filter: mode } }]
         : [];
 
-    const { startDate, endDate } = getDateRange(datePillRef.current);
-    const dateExtra = [
-      { key: "paymentdate", value: { filterType: "date", type: "inRange", dateFrom: startDate, dateTo: endDate } },
-    ];
+    const range = getDateRange(datePillRef.current);
+    const dateExtra = !range
+      ? []
+      : [
+          { key: "paymentdate", value: { filterType: "date", type: "inRange", dateFrom: range.startDate, dateTo: range.endDate } },
+        ];
 
     const result = await handleTryCatch(async () => {
       const { data } = await getCustomerPaymentList({
@@ -400,6 +406,7 @@ const AppliedPaymentsComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search transaction #, company, or customer ID"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
           />

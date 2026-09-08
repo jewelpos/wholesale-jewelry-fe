@@ -58,7 +58,7 @@ const SupplierInvoiceListComponent = () => {
 
   // Stable getRows — useCallback with empty deps so datasource is never recreated
   const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
-    const filters = filterVariables(params, debouncedSearchRef.current, "veninvoiceno");
+    const filters = filterVariables(params, debouncedSearchRef.current, "veninvoiceno, companyname, refponumber");
     const result = await handleTryCatch(async () => {
       const { data } = await getSupplierInvoiceList({
         variables: { storeid: parsedStoreId, ...filters },
@@ -140,7 +140,7 @@ const SupplierInvoiceListComponent = () => {
       <SupplierInvoiceListHeader onAdd={() => setShowAddModal(true)} />
       <div className="card table-list-card">
         <div className="card-body p-2">
-          <CustomFilterSections search={search} setSearch={setSearch} />
+          <CustomFilterSections search={search} setSearch={setSearch} searchPlaceholder="Search invoice #, company, or PO reference" />
           <div className="ag-theme-quartz custom-theme">
             <POSGrid gridKey="supplier-invoice-list"
               ref={gridRef}

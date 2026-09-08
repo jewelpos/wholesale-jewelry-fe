@@ -440,6 +440,7 @@ const SalesListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search invoice #, company, or customer ID"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
           />

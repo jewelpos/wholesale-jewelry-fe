@@ -142,7 +142,7 @@ const CustomerListComponent = () => {
   const getRows = useCallback(async (params: IServerSideGetRowsParams) => {
     const outlet = selectedOutletRef.current;
     const pill = segmentPillRef.current;
-    const filtersMain = filterVariables(params, debouncedSearchRef.current, "fullname, custcompanyname");
+    const filtersMain = filterVariables(params, debouncedSearchRef.current, "fullname, custcompanyname, customerid");
 
     // The specific-outlet dropdown is ignored while "All Outlets" is on — otherwise
     // it would silently keep narrowing to whichever outlet it defaulted to.
@@ -398,6 +398,7 @@ const CustomerListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search name, company, or customer ID"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
             extraActions={

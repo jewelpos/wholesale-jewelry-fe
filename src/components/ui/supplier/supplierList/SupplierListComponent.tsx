@@ -71,7 +71,7 @@ const SupplierListComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearchRef.current, "companyname");
+        const filters = filterVariables(params, debouncedSearchRef.current, "companyname, contactname, supplierid");
         const result = await handleTryCatch(async () => {
           const { data } = await getSupplierList({
             variables: {
@@ -244,6 +244,7 @@ const SupplierListComponent = () => {
               gridRef={gridRef}
               search={search}
               setSearch={setSearch}
+              searchPlaceholder="Search company, contact, or supplier ID"
               selectedOutlet={selectedOutlet}
               setSelectedOutlet={setSelectedOutlet}
               autoSelectCurrentOutlet={false}

@@ -198,6 +198,7 @@ const BalanceAgingComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search company, name, or customer ID"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
           />

@@ -407,6 +407,7 @@ const MemoListComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search memo #, company, or customer ID"
             selectedOutlet={selectedOutlet}
             setSelectedOutlet={setSelectedOutlet}
             selectedWarehouse={selectedWarehouse}

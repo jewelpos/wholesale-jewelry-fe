@@ -72,7 +72,7 @@ const SupplierPaymentsComponent = () => {
   const datasource = useMemo(
     () => ({
       getRows: async (params: IServerSideGetRowsParams) => {
-        const filters = filterVariables(params, debouncedSearch, "companyname, reference");
+        const filters = filterVariables(params, debouncedSearch, "companyname, reference, supplierid, paymentid");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let variables: any = { storeid: parsedStoreId };
         if (selectedSupplier !== -1) {
@@ -205,6 +205,7 @@ const SupplierPaymentsComponent = () => {
             gridRef={gridRef}
             search={search}
             setSearch={setSearch}
+            searchPlaceholder="Search company, reference, supplier or payment ID"
             selectedSupplier={selectedSupplier}
             setSelectedSupplier={setSelectedSupplier}
           />
