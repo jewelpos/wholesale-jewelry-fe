@@ -35,6 +35,15 @@ function fmtDate(val: string | null | undefined): string | null {
   return d.format("MMM D, YYYY");
 }
 
+// Compact date for the Invoices tab table — that table is width-constrained (the drawer
+// is ~480px wide with 6 columns), and the full "MMM D, YYYY" format was wide enough to
+// push Balance Due (the column that actually matters) off-screen.
+function fmtDateShort(val: string | null | undefined): string {
+  if (!val) return "—";
+  const d = dayjs(val);
+  return d.isValid() ? d.format("MM/DD/YY") : "—";
+}
+
 const BG_PALETTE = [
   "#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#e0f2fe",
 ];
@@ -169,6 +178,7 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
   const [statementOpen, setStatementOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "invoices">("details");
   const [invoicesLoaded, setInvoicesLoaded] = useState(false);
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "open">("all");
   const { basePath } = useDefaultRoute();
   const router = useRouter();
 
@@ -271,6 +281,13 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
     // ascending (right for a statement's chronological table), so reverse it here instead.
     return [...rows].sort((a, b) => Number(b.invoicenumber) - Number(a.invoicenumber));
   }, [invoicesData]);
+
+  // Always fetched with includeClosed:true so switching the filter is instant (no
+  // refetch) — "Open" just hides the already-loaded closed/zero-balance rows client-side.
+  const visibleInvoices: InvoiceBalanceDue[] = useMemo(
+    () => invoiceFilter === "open" ? invoices.filter(inv => Number(inv.balancedue) > 0) : invoices,
+    [invoices, invoiceFilter],
+  );
 
   const termsName = useMemo(() => {
     if (!customer?.termsid || !termsData?.getPaymentTerms) return null;
@@ -489,48 +506,84 @@ const CustomerDrawer: React.FC<CustomerDrawerProps> = ({
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
         {activeTab === "invoices" ? (
           <div style={{ padding: "14px 14px 28px" }}>
+            {/* All / Open filter */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+              {([
+                { key: "all" as const, label: "All" },
+                { key: "open" as const, label: "Open Invoices" },
+              ]).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setInvoiceFilter(opt.key)}
+                  style={{
+                    padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer",
+                    border: invoiceFilter === opt.key ? "none" : "1px solid #cbd5e1",
+                    background: invoiceFilter === opt.key ? "#0f172a" : "#fff",
+                    color: invoiceFilter === opt.key ? "#fff" : "#374151",
+                    fontWeight: invoiceFilter === opt.key ? 600 : 400,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             {invoicesLoading ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "24px 0" }}>
                 <div className="spinner-border spinner-border-sm text-secondary" />
                 <span style={{ fontSize: 12, color: "#94a3b8" }}>Loading invoices…</span>
               </div>
-            ) : invoices.length === 0 ? (
+            ) : visibleInvoices.length === 0 ? (
               <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 13, padding: "24px 0" }}>
-                No invoices found for this customer.
+                {invoiceFilter === "open" ? "No open invoices for this customer." : "No invoices found for this customer."}
               </div>
             ) : (
+              // overflowX handles very small viewports gracefully, but Balance Due (the
+              // number that actually matters here) is pinned via position:sticky so it
+              // never requires scrolling to see, even then.
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
                   <thead>
                     <tr>
-                      {["Invoice #", "Create Date", "Total Sale", "Amount Paid", "Credit Applied", "Balance Due"].map((h, i) => (
-                        <th
-                          key={h}
-                          style={{
-                            padding: "6px 8px", textAlign: i === 0 ? "left" : "right",
-                            fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em",
-                            color: "#94a3b8", fontWeight: 700, borderBottom: "1px solid #e2e8f0",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      {["Invoice #", "Date", "Total Sale", "Paid", "Credit", "Balance Due"].map((h, i) => {
+                        const isLast = i === 5;
+                        return (
+                          <th
+                            key={h}
+                            style={{
+                              padding: "6px 6px", textAlign: i === 0 ? "left" : "right",
+                              fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em",
+                              color: "#94a3b8", fontWeight: 700, borderBottom: "1px solid #e2e8f0",
+                              whiteSpace: "nowrap",
+                              ...(isLast ? { position: "sticky" as const, right: 0, background: "#fff", boxShadow: "-4px 0 6px -4px rgba(0,0,0,0.15)" } : {}),
+                            }}
+                          >
+                            {h}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((inv, i) => (
-                      <tr key={inv.invoicenumber} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                        <td style={{ padding: "6px 8px", fontWeight: 600, color: "#0f172a" }}>{inv.invoicenumber}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", color: "#475569" }}>{fmtDate(inv.saledate) ?? "—"}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.totalamount)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.amountreceived)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(inv.creditamountapplied)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: Number(inv.balancedue) > 0 ? "#b91c1c" : "#15803d" }}>
-                          {fmt(inv.balancedue)}
-                        </td>
-                      </tr>
-                    ))}
+                    {visibleInvoices.map((inv, i) => {
+                      const rowBg = i % 2 === 0 ? "#fff" : "#f8fafc";
+                      return (
+                        <tr key={inv.invoicenumber} style={{ background: rowBg }}>
+                          <td style={{ padding: "6px 6px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap" }}>{inv.invoicenumber}</td>
+                          <td style={{ padding: "6px 6px", textAlign: "right", color: "#475569", whiteSpace: "nowrap" }}>{fmtDateShort(inv.saledate)}</td>
+                          <td style={{ padding: "6px 6px", textAlign: "right", whiteSpace: "nowrap" }}>{fmt(inv.totalamount)}</td>
+                          <td style={{ padding: "6px 6px", textAlign: "right", whiteSpace: "nowrap" }}>{fmt(inv.amountreceived)}</td>
+                          <td style={{ padding: "6px 6px", textAlign: "right", whiteSpace: "nowrap" }}>{fmt(inv.creditamountapplied)}</td>
+                          <td style={{
+                            padding: "6px 6px", textAlign: "right", fontWeight: 700, whiteSpace: "nowrap",
+                            color: Number(inv.balancedue) > 0 ? "#b91c1c" : "#15803d",
+                            position: "sticky", right: 0, background: rowBg, boxShadow: "-4px 0 6px -4px rgba(0,0,0,0.15)",
+                          }}>
+                            {fmt(inv.balancedue)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
