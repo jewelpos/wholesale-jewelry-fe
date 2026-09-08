@@ -706,9 +706,33 @@ const ReceivePaymentModal = ({
     setSaving(true);
 
     const result = await handleTryCatch(async () => {
+      // Track how much of each row's own "Apply" amount is still unmet as credits (and
+      // then cash) are consumed one at a time — lets multiple credit sources and cash
+      // each cover their own slice of what the user actually typed per row, instead of
+      // the backend dumping each credit/payment entirely onto the first invoice in the
+      // list regardless of what was distributed across the others.
+      const invoiceRemaining = new Map(selectedInvoices);
+      const memoRemaining = new Map(selectedMemos);
+
+      const allocateFrom = (remainingMap: Map<number, number>, amount: number) => {
+        let remaining = amount;
+        const allocations: { invoicenumber: string; amount: number }[] = [];
+        for (const [no, need] of remainingMap.entries()) {
+          if (remaining <= 0) break;
+          if (need <= 0) continue;
+          const take = Math.min(need, remaining);
+          if (take <= 0) continue;
+          allocations.push({ invoicenumber: String(no), amount: take });
+          remainingMap.set(no, need - take);
+          remaining -= take;
+        }
+        return allocations;
+      };
+
       // 1. Apply invoice credits to selected invoices
       for (const [creditNo, amount] of selectedInvCredits.entries()) {
         if (amount <= 0) continue;
+        const allocations = allocateFrom(invoiceRemaining, amount);
         await createCreditApply({
           variables: {
             input: {
@@ -718,7 +742,8 @@ const ReceivePaymentModal = ({
               postingdate: postingDate,
               creditInvoiceNumber: String(creditNo),
               amountToApply: amount,
-              targetInvoiceNumbers: [...selectedInvoices.keys()].map(String),
+              targetInvoiceNumbers: allocations.map((a) => a.invoicenumber),
+              invoiceAllocations: allocations,
               reference: reference || undefined,
             },
           },
@@ -728,6 +753,7 @@ const ReceivePaymentModal = ({
       // 2. Apply memo credits to selected memos
       for (const [creditNo, amount] of selectedMemoCredits.entries()) {
         if (amount <= 0) continue;
+        const allocations = allocateFrom(memoRemaining, amount);
         await createCreditApply({
           variables: {
             input: {
@@ -737,7 +763,8 @@ const ReceivePaymentModal = ({
               postingdate: postingDate,
               creditInvoiceNumber: String(creditNo),
               amountToApply: amount,
-              targetInvoiceNumbers: [...selectedMemos.keys()].map(String),
+              targetInvoiceNumbers: allocations.map((a) => a.invoicenumber),
+              invoiceAllocations: allocations,
               reference: reference || undefined,
             },
           },
@@ -750,19 +777,15 @@ const ReceivePaymentModal = ({
           ...[...selectedInvoices.keys()].map(String),
           ...[...selectedMemos.keys()].map(String),
         ];
-        // When no credit is being applied in this same transaction, each row's Apply
-        // amount is the full (and only) intended split — send it explicitly instead of
-        // just a total, which the backend used to dump entirely onto the first invoice
-        // in the list regardless of what was typed per row. With credits also in play,
-        // there's no single row-level cash/credit split to send, so fall back to letting
-        // the backend auto-apply the total (unchanged from before).
-        const hasCreditsApplied = invCreditsTotal > 0 || memoCreditsTotal > 0;
-        const invoiceAllocations = hasCreditsApplied
-          ? undefined
-          : [
-              ...[...selectedInvoices.entries()].map(([no, amt]) => ({ invoicenumber: String(no), amount: amt })),
-              ...[...selectedMemos.entries()].map(([no, amt]) => ({ invoicenumber: String(no), amount: amt })),
-            ].filter((a) => a.amount > 0);
+        // Whatever's left of each row's own Apply amount after credits took their share
+        // (invoiceRemaining/memoRemaining are untouched clones of the original selection
+        // when no credit was applied at all, so this covers the cash-only case too) —
+        // capped to cashAmount itself in case the user is leaving some balance unpaid.
+        let cashLeft = cashAmount;
+        const invoiceCashAllocations = allocateFrom(invoiceRemaining, cashLeft);
+        cashLeft -= invoiceCashAllocations.reduce((s, a) => s + a.amount, 0);
+        const memoCashAllocations = allocateFrom(memoRemaining, cashLeft);
+        const invoiceAllocations = [...invoiceCashAllocations, ...memoCashAllocations];
         await createPayment({
           variables: {
             input: {

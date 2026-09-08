@@ -141,8 +141,16 @@ const StatementPrintContent = ({
     type === "history" ? "Transaction History" :
     "Payment Summary";
 
-  // Open invoices
+  // Open invoices — these three plus totalOutstanding (Balance Due) are shown together in
+  // the Account Summary so the reduction is explicit: Total Invoice Amount - Total Paid -
+  // Total Credit Applied = Balance Due. Balance Due already nets out credit applications
+  // the same way it nets out real payments (both createCustomerPayment and
+  // createCustomerCreditApply decrement the same balancedue field) — without a visible
+  // Credit Applied figure, that reduction looked unexplained.
   const totalOutstanding = openInvoices.reduce((s, inv) => s + inv.balancedue, 0);
+  const totalInvoiceAmount = openInvoices.reduce((s, inv) => s + Number(inv.totalamount ?? 0), 0);
+  const totalInvoicePaid = openInvoices.reduce((s, inv) => s + Number(inv.amountreceived ?? 0), 0);
+  const totalCreditApplied = openInvoices.reduce((s, inv) => s + Number(inv.creditamountapplied ?? 0), 0);
 
   // Use DB view aging when available (accurate), fall back to client-side calc
   const aging = agingData
@@ -215,12 +223,24 @@ const StatementPrintContent = ({
           </div>
           {type === "open" && <>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ color: "#64748b" }}>Total Outstanding:</span>
-              <strong style={{ color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</strong>
+              <span style={{ color: "#64748b" }}>Total Invoice Amount:</span>
+              <strong style={{ color: "#0f172a" }}>{fmt(totalInvoiceAmount)}</strong>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: "#64748b" }}>Total Paid:</span>
+              <strong style={{ color: "#16a34a" }}>{fmt(totalInvoicePaid)}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: "#64748b" }}>Total Credit Applied:</span>
+              <strong style={{ color: "#16a34a" }}>{fmt(totalCreditApplied)}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ color: "#64748b" }}>Credit Available:</span>
               <strong style={{ color: "#16a34a" }}>{fmt(customer.opencredit)}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0", paddingTop: 6, marginTop: 2 }}>
+              <span style={{ color: "#64748b" }}>Balance Due:</span>
+              <strong style={{ color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</strong>
             </div>
           </>}
           {type === "history" && <>
@@ -285,7 +305,7 @@ const StatementPrintContent = ({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>{[
-                  "Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Balance Due", "Days Outstanding",
+                  "Invoice #", "Invoice Date", "Original Amount", "Amount Paid", "Credit Applied", "Balance Due", "Days Outstanding",
                   ...(includeClosed ? ["Status"] : []),
                 ].map(h => (
                   <th key={h} style={TH}>{h}</th>
@@ -293,7 +313,7 @@ const StatementPrintContent = ({
               </thead>
               <tbody>
                 {openInvoices.length === 0 ? (
-                  <tr><td colSpan={includeClosed ? 7 : 6} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>
+                  <tr><td colSpan={includeClosed ? 8 : 7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>
                     {includeClosed ? "No invoices found." : "No open invoices found."}
                   </td></tr>
                 ) : openInvoices.map((inv, i) => {
@@ -306,6 +326,7 @@ const StatementPrintContent = ({
                       <td style={TD}>{fmtDate(inv.saledate)}</td>
                       <td style={TDR}>{fmt(inv.totalamount)}</td>
                       <td style={TDR}>{fmt(inv.amountreceived)}</td>
+                      <td style={{ ...TDR, color: "#166534" }}>{fmt(inv.creditamountapplied)}</td>
                       <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(inv.balancedue)}</td>
                       <td style={{ ...TDR, color: ageColor, fontWeight: 600 }}>{age}d</td>
                       {includeClosed && (
@@ -326,7 +347,7 @@ const StatementPrintContent = ({
               {openInvoices.length > 0 && (
                 <tfoot>
                   <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
-                    <td style={TD} colSpan={4}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
+                    <td style={TD} colSpan={5}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
                     <td style={{ ...TDR, fontWeight: 800, color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</td>
                     <td style={TD} />
                     {includeClosed && <td style={TD} />}
