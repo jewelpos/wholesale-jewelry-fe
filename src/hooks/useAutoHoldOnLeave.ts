@@ -111,14 +111,7 @@ export function useAutoHoldOnLeave({
   latestRef.current = { enabled, isDirty, hasContent, getHoldPayload, storeid, outletid, doctype };
 
   useEffect(() => {
-    // TEMP DIAGNOSTIC — remove once the "adding an item forces a new hold instead of
-    // updating" report is root-caused. If this logs more than once for a single visit
-    // to the invoice page, the component (and therefore currentHoldIdRef) is remounting.
-    // eslint-disable-next-line no-console
-    console.log("[useAutoHoldOnLeave] mounted, currentHoldIdRef =", currentHoldIdRef.current);
     return () => {
-      // eslint-disable-next-line no-console
-      console.log("[useAutoHoldOnLeave] unmounting, suppressed =", suppressAutoHoldRef.current, "currentHoldIdRef =", currentHoldIdRef.current);
       if (suppressAutoHoldRef.current) return;
       const { enabled, isDirty, hasContent, getHoldPayload, storeid, outletid, doctype } = latestRef.current;
       if (!enabled || !isDirty) return;

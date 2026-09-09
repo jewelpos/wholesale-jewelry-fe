@@ -2447,10 +2447,6 @@ const SalesInvoiceForm = ({
   const isMemoView = readOnly && documentType === "MEMO";
 
   const handleHold = async () => {
-    // TEMP DIAGNOSTIC — remove once the "adding an item forces a new hold instead of
-    // updating" report is root-caused.
-    // eslint-disable-next-line no-console
-    console.log("[handleHold] currentHoldIdRef.current =", currentHoldIdRef.current);
     const formValues = getValues();
     const hasItems = (formValues.items ?? []).length > 0;
     if (!hasItems) {
@@ -2536,10 +2532,6 @@ const SalesInvoiceForm = ({
     // leaving again before finishing still has a safety net instead of silently losing
     // it a second time.
     currentHoldIdRef.current = hold.holdid;
-    // TEMP DIAGNOSTIC — remove once the "adding an item forces a new hold instead of
-    // updating" report is root-caused.
-    // eslint-disable-next-line no-console
-    console.log("[handleResumeHold] set currentHoldIdRef.current =", currentHoldIdRef.current);
     setShowHoldsPanel(false);
   };
 
