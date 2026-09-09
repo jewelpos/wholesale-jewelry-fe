@@ -1,9 +1,50 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { SAVE_INVOICE_HOLD_MUTATION } from "@/lib/graphql/mutations/invoiceHold";
+
+// Backs "which hold am I currently resuming" with sessionStorage instead of a plain
+// React ref. A plain useRef's value only lives as long as this exact component
+// instance does — if anything ever remounts the form (a key change, a route-level
+// re-render, React recovering from an error boundary, etc.) a bare ref silently resets
+// to null and the very next Hold click creates a duplicate row instead of updating the
+// one the user is actually working on. sessionStorage survives all of that within the
+// same tab, and clears itself when the tab closes (never leaks across a fresh session).
+// A Proxy lets every existing `ref.current = x` assignment throughout the invoice form
+// keep working unchanged while transparently persisting each write.
+function makePersistedHoldIdRef(storageKey: string): React.MutableRefObject<number | null> {
+  let initial: number | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      const parsed = raw != null ? Number(raw) : NaN;
+      if (Number.isFinite(parsed)) initial = parsed;
+    } catch {
+      // sessionStorage unavailable (SSR, privacy mode, quota) — falls back to
+      // in-memory-only behavior, same as the plain ref this replaces.
+    }
+  }
+  const box: React.MutableRefObject<number | null> = { current: initial };
+  return new Proxy(box, {
+    set(target, prop, value) {
+      if (prop === "current") {
+        target.current = value;
+        if (typeof window !== "undefined") {
+          try {
+            if (value == null) sessionStorage.removeItem(storageKey);
+            else sessionStorage.setItem(storageKey, String(value));
+          } catch {
+            // ignore — worst case this falls back to in-memory-only for this write
+          }
+        }
+        return true;
+      }
+      return Reflect.set(target, prop, value);
+    },
+  });
+}
 
 export interface AutoHoldPayload {
   holdname: string;
@@ -54,7 +95,11 @@ export function useAutoHoldOnLeave({
 }: UseAutoHoldOnLeaveParams) {
   const apolloClient = useApolloClient();
   const dispatch = useAppDispatch();
-  const currentHoldIdRef = useRef<number | null>(null);
+  // Lazy one-time init (the function only runs on the first render; React guarantees
+  // the returned state value's identity is stable across re-renders thereafter,
+  // exactly like a ref would be) — scoped by doctype so INVOICE and MEMO sessions in
+  // the same tab never share one "current hold" pointer.
+  const [currentHoldIdRef] = useState(() => makePersistedHoldIdRef(`invoiceHold:currentId:${doctype}`));
   // Once the document this form was building has actually been saved for real, there is
   // nothing left to protect — flip this (before any reset()/navigation, which may happen
   // much later through a payment/print/email flow with the form still "dirty" the whole
@@ -66,7 +111,14 @@ export function useAutoHoldOnLeave({
   latestRef.current = { enabled, isDirty, hasContent, getHoldPayload, storeid, outletid, doctype };
 
   useEffect(() => {
+    // TEMP DIAGNOSTIC — remove once the "adding an item forces a new hold instead of
+    // updating" report is root-caused. If this logs more than once for a single visit
+    // to the invoice page, the component (and therefore currentHoldIdRef) is remounting.
+    // eslint-disable-next-line no-console
+    console.log("[useAutoHoldOnLeave] mounted, currentHoldIdRef =", currentHoldIdRef.current);
     return () => {
+      // eslint-disable-next-line no-console
+      console.log("[useAutoHoldOnLeave] unmounting, suppressed =", suppressAutoHoldRef.current, "currentHoldIdRef =", currentHoldIdRef.current);
       if (suppressAutoHoldRef.current) return;
       const { enabled, isDirty, hasContent, getHoldPayload, storeid, outletid, doctype } = latestRef.current;
       if (!enabled || !isDirty) return;
