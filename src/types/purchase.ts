@@ -183,6 +183,8 @@ export type PurchaseOrderItem = {
   poitemid: number;
   ponumber: string;
   itemcode: string;
+  itemid?: number;
+  itembarcodeid?: string;
   itemdescription?: string;
   qtyordered?: number;
   itemqtyreceived?: number;

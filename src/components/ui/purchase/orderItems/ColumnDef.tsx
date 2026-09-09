@@ -13,6 +13,18 @@ const purchaseOrderItemsColumnDefs: ColDef<PurchaseOrderItem>[] = [
     flex: 1,
   },
   {
+    headerName: "Item ID",
+    field: "itemid",
+    filter: "agNumberColumnFilter",
+    flex: 1,
+  },
+  {
+    headerName: "Barcode ID",
+    field: "itembarcodeid",
+    filter: "agTextColumnFilter",
+    flex: 1,
+  },
+  {
     headerName: "Description",
     field: "itemdescription",
     filter: "agTextColumnFilter",

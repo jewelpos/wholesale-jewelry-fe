@@ -419,6 +419,18 @@ const PurchaseOrderForm = ({
   const watchedFreight = watch("pofreight");
   const watchedDutyPaid = watch("podutypaid");
 
+  // Qty ordered summed per itemunit (e.g. "Pc", "Gm") — same pattern used on
+  // Invoice/Sales Order forms, so a mixed-unit PO shows "X Pc" / "Y Gm" etc.
+  // next to the item count instead of one meaningless combined quantity.
+  const unitQtyTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const it of watchedItems || []) {
+      const unit = (it?.itemunit ?? "Pc").trim() || "Pc";
+      totals[unit] = (totals[unit] ?? 0) + Math.abs(toNum(it?.qtyordered));
+    }
+    return totals;
+  }, [watchedItems]);
+
   useEffect(() => {
     const totals = (watchedItems || []).reduce(
       (acc, item) => {
@@ -2285,6 +2297,13 @@ const PurchaseOrderForm = ({
                 <div className="card-body">
                   <div className="d-flex justify-content-between mb-3 text-muted small">
                     <span>{itemFields.length} item{itemFields.length !== 1 ? "s" : ""}</span>
+                    <span className="d-flex gap-2 flex-wrap justify-content-end">
+                      {Object.entries(unitQtyTotals).map(([unit, qty]) => (
+                        <span key={unit} style={{ fontWeight: 600 }}>
+                          {Number.isInteger(qty) ? qty : qty.toFixed(3)} {unit}
+                        </span>
+                      ))}
+                    </span>
                   </div>
                   <table className="table table-sm table-borderless mb-0">
                     <tbody>

@@ -274,6 +274,8 @@ export const GET_SUPPLIER_PURCHASE_ORDER_ITEMS_LIST_QUERY = gql`
         poitemid
         ponumber
         itemcode
+        itemid
+        itembarcodeid
         itemdescription
         qtyordered
         itemqtyreceived
