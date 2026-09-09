@@ -9,7 +9,14 @@ let sessionExpiredFlag = false;
 // refresh token is never used twice (rotation would invalidate the first caller's result).
 let inflightRefresh: Promise<boolean> | null = null;
 
-async function refreshToken(): Promise<boolean> {
+// Exported so every refresh trigger in the app (a 401 here, the idle modal's proactive
+// timer, its "Continue Working" button) shares this one in-flight promise. The backend
+// rotates the refresh token on every use — invalidating it as soon as it's redeemed —
+// so two independent, uncoordinated refresh calls landing close together can race: both
+// can pass validation, but only one write wins in the DB, and if the other's Set-Cookie
+// lands second the browser ends up holding a token that no longer matches the DB. The
+// next refresh then genuinely fails and force-logs-out an otherwise still-active user.
+export async function refreshToken(): Promise<boolean> {
   if (!inflightRefresh) {
     inflightRefresh = fetch("/api/auth/refresh", { method: "POST" })
       .then(r => {

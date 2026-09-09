@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { logoutAndRedirect } from "@/lib/graphql/errorLinks";
+import { logoutAndRedirect, refreshToken } from "@/lib/graphql/errorLinks";
 import { Clock, LogIn, LogOut, RefreshCw } from "react-feather";
 
 const IDLE_WARN_MS   = 45 * 60 * 1000;
@@ -29,11 +29,15 @@ export default function SessionExpiredModal() {
     return () => evts.forEach(e => window.removeEventListener(e, reset));
   }, []);
 
-  // ── Proactive token refresh every 29 min while user is active ─────────────
+  // ── Proactive token refresh every 55 min while user is active ─────────────
+  // Goes through the same shared singleton as every other refresh trigger in the
+  // app (see errorLinks.ts) — never fires its own independent /api/auth/refresh
+  // call, so it can't race a reactive (401-triggered) refresh over the same
+  // single-use, rotating refresh token.
   useEffect(() => {
     const id = setInterval(() => {
       if (visible) return;
-      fetch("/api/auth/refresh", { method: "POST" }).catch(() => {/* silent */});
+      refreshToken().catch(() => {/* silent */});
     }, 55 * 60 * 1000);
     return () => clearInterval(id);
   }, [visible]);
@@ -90,8 +94,8 @@ export default function SessionExpiredModal() {
   const handleResume = async () => {
     setState("resuming");
     try {
-      const res = await fetch("/api/auth/refresh", { method: "POST" });
-      if (res.ok) {
+      const ok = await refreshToken();
+      if (ok) {
         if (reason === "idle") {
           // Token refreshed — dismiss the modal without a full page reload
           setVisible(false);

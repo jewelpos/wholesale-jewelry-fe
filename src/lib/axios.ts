@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { refreshToken as sharedRefreshToken } from "@/lib/graphql/errorLinks";
 
 // Create axios instance
 const api = axios.create({
@@ -23,18 +24,14 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
+// Goes through the same shared singleton the GraphQL error link and the idle-session
+// modal use (see errorLinks.ts) — the backend rotates the refresh token on every use,
+// so a REST call's 401 racing an independent GraphQL-triggered (or proactive timer)
+// refresh over the same single-use token could otherwise force-logout an active user.
 async function refreshTokenCall(): Promise<boolean> {
-  try {
-    const response = await fetch("/api/auth/refresh", {
-      method: "POST",
-    });
-    if (response.ok) {
-      return true;
-    }
-    throw new Error("");
-  } catch {
-    throw new Error("");
-  }
+  const ok = await sharedRefreshToken().catch(() => false);
+  if (!ok) throw new Error("");
+  return true;
 }
 
 async function logout(): Promise<boolean> {
