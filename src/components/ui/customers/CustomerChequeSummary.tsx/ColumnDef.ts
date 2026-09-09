@@ -25,6 +25,11 @@ export const customerChequeSummaryColumnDefs: ColDef<CustomerChequeSummaryListTy
     filter: "agTextColumnFilter",
     cellRenderer: currencyFormattedCellRenderer,
   },
+  {
+    headerName: "Total Checks",
+    field: "yearly_check_count",
+    filter: "agNumberColumnFilter",
+  },
   { headerName: "January", field: "Jan", filter: "agTextColumnFilter" },
   { headerName: "February", field: "Feb", filter: "agTextColumnFilter" },
   {

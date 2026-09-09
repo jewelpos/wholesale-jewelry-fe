@@ -141,6 +141,7 @@ const CustomerChequeSummaryComponent = () => {
       customerid: "",
       custcompanyname: "Grand Total",
       yearly_total: String(sum("yearly_total")),
+      yearly_check_count: sum("yearly_check_count"),
       Jan: String(sum("Jan")), Feb: String(sum("Feb")), Mar: String(sum("Mar")),
       Apr: String(sum("Apr")), May: String(sum("May")), Jun: String(sum("Jun")),
       Jul: String(sum("Jul")), Aug: String(sum("Aug")), Sep: String(sum("Sep")),

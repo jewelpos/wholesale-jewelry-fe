@@ -66,6 +66,7 @@ export type CustomerChequeSummaryListType = {
   Nov: string;
   Dec: string;
   yearly_total: string;
+  yearly_check_count: number;
 };
 
 export type CustomerLedgerReportType = {
