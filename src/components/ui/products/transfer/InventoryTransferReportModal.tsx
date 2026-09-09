@@ -34,6 +34,7 @@ interface ReportRow {
   requestedbyname: string;
   transferbyname: string;
   itemcode: string;
+  itembarcodeid: string | null;
   itemdescription: string;
   itemunit: string;
   categoryname: string;
@@ -41,8 +42,6 @@ interface ReportRow {
   transferquantity: number;
   quantityreceived: number;
   unitprice: number;
-  unitcost: number;
-  totalcost: number;
 }
 
 const ControlLabel: React.FC<React.PropsWithChildren> = ({ children }) => (
@@ -114,7 +113,10 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
   }, [parsedStoreId]);
 
   const rows: ReportRow[] = reportData?.getInventoryTransferReportList ?? [];
-  const totalCost = useMemo(() => rows.reduce((sum, r) => sum + (Number(r.totalcost) || 0), 0), [rows]);
+  const totalTagValue = useMemo(
+    () => rows.reduce((sum, r) => sum + (Number(r.transferquantity) || 0) * (Number(r.unitprice) || 0), 0),
+    [rows]
+  );
 
   // Same "total by unit" / "total by category+unit" breakdown as the invoice print —
   // Pc and Wt are different kinds of quantity, so they're never summed together.
@@ -316,13 +318,12 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
                     <th style={{ padding: "6px 6px" }}>From</th>
                     <th style={{ padding: "6px 6px" }}>To</th>
                     <th style={{ padding: "6px 6px" }}>Item Code</th>
+                    <th style={{ padding: "6px 6px" }}>Barcode ID</th>
                     <th style={{ padding: "6px 6px" }}>Description</th>
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Req Qty</th>
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Xfer Qty</th>
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Recv Qty</th>
-                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Unit Price</th>
-                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Unit Cost</th>
-                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Total Cost</th>
+                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Tag Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -334,18 +335,17 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
                       <td style={{ padding: "5px 6px" }}>{r.fromwarehousename}</td>
                       <td style={{ padding: "5px 6px" }}>{r.towarehousename}</td>
                       <td style={{ padding: "5px 6px" }}>{r.itemcode}</td>
+                      <td style={{ padding: "5px 6px" }}>{r.itembarcodeid ?? ""}</td>
                       <td style={{ padding: "5px 6px" }}>{r.itemdescription}</td>
                       <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.quantityrequest || 0).toFixed(2)}</td>
                       <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.transferquantity || 0).toFixed(2)}</td>
                       <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.quantityreceived || 0).toFixed(2)}</td>
                       <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.unitprice || 0).toFixed(2)}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.unitcost || 0).toFixed(2)}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right" }}>{Number(r.totalcost || 0).toFixed(2)}</td>
                     </tr>
                   ))}
                   {!loading && rows.length === 0 && (
                     <tr>
-                      <td colSpan={13} style={{ padding: "20px 8px", textAlign: "center", color: "#94a3b8" }}>
+                      <td colSpan={12} style={{ padding: "20px 8px", textAlign: "center", color: "#94a3b8" }}>
                         No transfers found for the selected filters.
                       </td>
                     </tr>
@@ -354,8 +354,8 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
                 {rows.length > 0 && (
                   <tfoot>
                     <tr style={{ borderTop: "2px solid #0f172a", fontWeight: 700 }}>
-                      <td colSpan={12} style={{ padding: "8px" }}>Total Cost</td>
-                      <td style={{ padding: "8px", textAlign: "right" }}>{totalCost.toFixed(2)}</td>
+                      <td colSpan={11} style={{ padding: "8px" }}>Total Tag Value</td>
+                      <td style={{ padding: "8px", textAlign: "right" }}>{totalTagValue.toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 )}

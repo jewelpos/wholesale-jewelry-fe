@@ -44,6 +44,7 @@ export const GET_INVENTORY_TRANSFER_REPORT_LIST_QUERY = gql`
       requestedbyname
       transferbyname
       itemcode
+      itembarcodeid
       itemdescription
       itemunit
       categoryname
@@ -51,8 +52,6 @@ export const GET_INVENTORY_TRANSFER_REPORT_LIST_QUERY = gql`
       transferquantity
       quantityreceived
       unitprice
-      unitcost
-      totalcost
     }
   }
 `;
