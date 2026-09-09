@@ -511,6 +511,7 @@ export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
     Nov
     Dec
     yearly_total
+    yearly_check_count
   }
 }`;
 
