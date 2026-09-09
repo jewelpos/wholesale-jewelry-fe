@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { Package2 } from "lucide-react";
 import { GET_PRODUCT_LIST_QUERY, GET_PRODUCT_LIST_SUMMARY_QUERY, GET_PRODUCT_AGING_LIST_QUERY } from "@/lib/graphql/query/products";
+import { GET_AVAILABLE_SALES_YEARS_QUERY } from "@/lib/graphql/query/reports";
 import { ProductListType } from "@/types/product";
 import { num, currentYear } from "./utils";
 
@@ -19,8 +20,6 @@ import AbcAnalysis from "./AbcAnalysis";
 import ActivityFeed from "./ActivityFeed";
 
 type StockStatus = "all" | "instock" | "lowstock" | "outofstock";
-
-const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 const ChipBtn = ({ active, onClick, label, color = "#6366f1" }: {
   active: boolean;
@@ -53,6 +52,17 @@ const ProductDashboard = () => {
   const [metalFilter, setMetalFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [stockStatus, setStockStatus] = useState<StockStatus>("all");
+
+  // Year pills reflect whatever years actually have sales activity, instead of a
+  // hardcoded "current + 2 back" window.
+  const { data: availableYearsData } = useQuery(GET_AVAILABLE_SALES_YEARS_QUERY, {
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId || undefined },
+    skip: !parsedStoreId,
+  });
+  const YEARS = useMemo(() => {
+    const years: number[] = availableYearsData?.getAvailableSalesYears ?? [];
+    return years.includes(currentYear) ? years : [currentYear, ...years];
+  }, [availableYearsData]);
 
   // Product list (all-time inventory state)
   const { data: listData, loading: listLoading } = useQuery(GET_PRODUCT_LIST_QUERY, {

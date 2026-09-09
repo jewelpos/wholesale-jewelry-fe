@@ -515,6 +515,12 @@ export const GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY = gql`
   }
 }`;
 
+export const GET_AVAILABLE_CHECK_YEARS_QUERY = gql`
+  query GetAvailableCheckYears($storeid: Int!) {
+    getAvailableCheckYears(storeid: $storeid)
+  }
+`;
+
 export const GET_CUSTOMER_CHECKS_FOR_PRINT_QUERY = gql`
   query GetCustomerChecksForPrint(
     $storeid: Int!

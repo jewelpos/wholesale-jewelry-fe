@@ -11,6 +11,7 @@ import {
   GET_SUPPLIER_MONTHLY_PURCHASE_PIVOT_QUERY,
   GET_MONTHLY_DAILY_PAYMENTS_PIVOT_QUERY,
   GET_ITEM_SOLD_BY_CATEGORY_PIVOT_QUERY,
+  GET_AVAILABLE_SALES_YEARS_QUERY,
 } from "@/lib/graphql/query/reports";
 import {
   GET_CUSTOMER_LIST_SUMMARY_QUERY,
@@ -84,21 +85,18 @@ const AdminDashboard = () => {
     { variables: pVars(storeId, selectedOutletId, null, selectedYear - 1) }
   );
 
-  // Sales pivots fixed to currentYear-1/-2 (independent of selectedYear) — used only
-  // to decide which year pills to show, so pill visibility doesn't shift as the
-  // user clicks between years.
-  const { data: py1Data } = useQuery(GET_MONTHLY_SALES_PIVOT_QUERY, {
-    variables: pVars(storeId, selectedOutletId, null, currentYear - 1),
-  });
-  const { data: py2Data } = useQuery(GET_MONTHLY_SALES_PIVOT_QUERY, {
-    variables: pVars(storeId, selectedOutletId, null, currentYear - 2),
+  // Year pills reflect whatever years actually have sales activity — a single cheap
+  // DISTINCT query against the sales pivot view, instead of firing a full pivot query
+  // per candidate year just to probe "does this year have any data" (which was also
+  // capped at 2 years back regardless of how much real history the store had).
+  const { data: availableYearsData } = useQuery(GET_AVAILABLE_SALES_YEARS_QUERY, {
+    variables: { storeid: storeId, outletid: selectedOutletId || undefined },
+    skip: !storeId,
   });
   const years = useMemo(() => {
-    const list = [currentYear];
-    if ((py1Data?.getMonthlySalesPivot?.data ?? []).length > 0) list.push(currentYear - 1);
-    if ((py2Data?.getMonthlySalesPivot?.data ?? []).length > 0) list.push(currentYear - 2);
-    return list;
-  }, [py1Data, py2Data]);
+    const list: number[] = availableYearsData?.getAvailableSalesYears ?? [];
+    return list.includes(currentYear) ? list : [currentYear, ...list];
+  }, [availableYearsData]);
 
   // Employee sales — needs mapped warehouse
   const { data: empData, loading: empLoading } = useQuery(

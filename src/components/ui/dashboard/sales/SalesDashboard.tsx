@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { RefreshCw } from "lucide-react";
-import { GET_MONTHLY_SALES_PIVOT_QUERY } from "@/lib/graphql/query/reports";
+import { GET_MONTHLY_SALES_PIVOT_QUERY, GET_AVAILABLE_SALES_YEARS_QUERY } from "@/lib/graphql/query/reports";
 import { WarehouseSalesSummary } from "@/types/reports";
 import { currentYear, yearFilter, stdVars } from "./utils";
 import TodayPulseStrip from "./TodayPulseStrip";
@@ -16,8 +16,6 @@ import EmployeeLeaderboard from "./EmployeeLeaderboard";
 import PaymentModeDonut from "./PaymentModeDonut";
 import ProfitDrillDown from "./ProfitDrillDown";
 
-const YEAR_RANGE = [currentYear, currentYear - 1, currentYear - 2];
-
 const SalesDashboard = () => {
   const { storeId, outletId } = useParams();
   const parsedStoreId = parseInt(storeId as string, 10);
@@ -26,6 +24,17 @@ const SalesDashboard = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [warehouseFilter, setWarehouseFilter] = useState<number | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  // Year pills reflect whatever years actually have sales activity, instead of a
+  // hardcoded "current + 2 back" window.
+  const { data: availableYearsData } = useQuery(GET_AVAILABLE_SALES_YEARS_QUERY, {
+    variables: { storeid: parsedStoreId, outletid: parsedOutletId || undefined },
+    skip: !parsedStoreId,
+  });
+  const YEAR_RANGE = useMemo(() => {
+    const years: number[] = availableYearsData?.getAvailableSalesYears ?? [];
+    return years.includes(currentYear) ? years : [currentYear, ...years];
+  }, [availableYearsData]);
 
   // Current year sales pivot (drives RevenueProfitTrend + ForecastPanel)
   const currentYearQuery = useQuery(GET_MONTHLY_SALES_PIVOT_QUERY, {

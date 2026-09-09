@@ -6,8 +6,8 @@ import { customerChequeSummaryColumnDefs } from "./ColumnDef";
 import { AgGridReact } from "ag-grid-react";
 import { CustomerChequeSummaryListType } from "@/types/customer";
 import { GridReadyEvent } from "ag-grid-enterprise";
-import { useLazyQuery } from "@apollo/client";
-import { GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY } from "@/lib/graphql/query/customer";
+import { useLazyQuery, useQuery } from "@apollo/client";
+import { GET_CUSTOMER_CHEQUE_SUMMARY_LIST_QUERY, GET_AVAILABLE_CHECK_YEARS_QUERY } from "@/lib/graphql/query/customer";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
@@ -26,12 +26,6 @@ import ReportSummaryCards, { SummaryCardDef } from "../../reports/shared/ReportS
 import ReportMiniChart from "../../reports/shared/ReportMiniChart";
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_CHIPS = [
-  { label: "All", value: 0 },
-  { label: String(CURRENT_YEAR - 2), value: CURRENT_YEAR - 2 },
-  { label: String(CURRENT_YEAR - 1), value: CURRENT_YEAR - 1 },
-  { label: String(CURRENT_YEAR), value: CURRENT_YEAR },
-];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
@@ -52,6 +46,22 @@ const CustomerChequeSummaryComponent = () => {
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("cheque-summary");
+
+  // Year pills reflect whatever years actually have check activity, instead of a
+  // hardcoded "current + 2 back" window that hides older data (e.g. a store with
+  // several years of history).
+  const { data: availableYearsData } = useQuery(GET_AVAILABLE_CHECK_YEARS_QUERY, {
+    variables: { storeid: parsedStoreId },
+    skip: !parsedStoreId,
+  });
+  const yearChips = useMemo(() => {
+    const years: number[] = availableYearsData?.getAvailableCheckYears ?? [];
+    const withCurrent = years.includes(CURRENT_YEAR) ? years : [CURRENT_YEAR, ...years];
+    return [
+      { label: "All", value: 0 },
+      ...withCurrent.map((y) => ({ label: String(y), value: y })),
+    ];
+  }, [availableYearsData]);
 
   // On-hand cheques are global by default (a held cheque is tied to the customer's
   // account, not one outlet) — the warehouse picker below is an optional narrow-down,
@@ -281,7 +291,7 @@ const CustomerChequeSummaryComponent = () => {
 
           {/* Year pills */}
           <div className="d-flex gap-1 flex-wrap mb-2">
-            {YEAR_CHIPS.map((chip) => (
+            {yearChips.map((chip) => (
               <button
                 key={chip.value}
                 type="button"

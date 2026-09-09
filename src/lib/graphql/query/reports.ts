@@ -614,6 +614,12 @@ export const GET_MONTHLY_SALES_PIVOT_QUERY = gql`
   }
 `;
 
+export const GET_AVAILABLE_SALES_YEARS_QUERY = gql`
+  query GetAvailableSalesYears($storeid: Int!, $outletid: Int) {
+    getAvailableSalesYears(storeid: $storeid, outletid: $outletid)
+  }
+`;
+
 export const GET_MONTHLY_SALES_PROFIT_PIVOT_QUERY = gql`
   query GetMonthlySalesProfitPivot(
     $storeid: Int!

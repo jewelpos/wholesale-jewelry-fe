@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
 import {
   GET_PAYMENT_COLLECTION_STATS_QUERY,
   GET_MONTHLY_PAYMENT_PIVOT_QUERY,
   GET_MONTHLY_DAILY_PAYMENTS_PIVOT_QUERY,
+  GET_AVAILABLE_SALES_YEARS_QUERY,
 } from "@/lib/graphql/query/reports";
 import { GET_WAREHOUSES_BY_OUTLET_ID_QUERY } from "@/lib/graphql/query/warehouse";
 import { currentYear, yearFilter } from "@/components/ui/dashboard/admin/utils";
@@ -29,7 +30,17 @@ const PaymentDashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const years = [currentYear, currentYear - 1, currentYear - 2];
+
+  // Year pills reflect whatever years actually have sales/payment activity, instead
+  // of a hardcoded "current + 2 back" window.
+  const { data: availableYearsData } = useQuery(GET_AVAILABLE_SALES_YEARS_QUERY, {
+    variables: { storeid: storeId, outletid: outletId || undefined },
+    skip: !storeId,
+  });
+  const years = useMemo(() => {
+    const list: number[] = availableYearsData?.getAvailableSalesYears ?? [];
+    return list.includes(currentYear) ? list : [currentYear, ...list];
+  }, [availableYearsData]);
 
   const { data: warehouseData } = useQuery(GET_WAREHOUSES_BY_OUTLET_ID_QUERY, {
     variables: { outletid: outletId },
