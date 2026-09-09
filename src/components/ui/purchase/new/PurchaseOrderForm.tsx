@@ -508,6 +508,11 @@ const PurchaseOrderForm = ({
     qtyordered: number;
     orderunitcost: number;
     orddiscount: number;
+    // Set only while Ext. Price was the last field edited — holds the line total
+    // exactly as typed, so Add/Save don't silently recompute it from the reverse-
+    // solved (rounded) Unit Cost and land a cent off. Cleared the moment qty/Unit
+    // Cost/disc% get edited directly instead.
+    ordextendedprice?: number;
   }>(() => ({
     itemid: undefined,
     itemcode: undefined,
@@ -1927,6 +1932,10 @@ const PurchaseOrderForm = ({
                                       qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
                                       orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
                                       orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
+                                      ordextendedprice: (() => {
+                                        const v = Number(getValues(`items.${index}.ordextendedprice`));
+                                        return Number.isFinite(v) ? v : undefined;
+                                      })(),
                                     });
                                   }}
                                 >
@@ -2032,7 +2041,7 @@ const PurchaseOrderForm = ({
                           const abs = Math.abs(n);
                           const normalizedAbs = Math.round(abs * 1000) / 1000;
                           const normalized = isReturnOrder ? -normalizedAbs : normalizedAbs;
-                          setToolItem((prev) => ({ ...prev, qtyordered: normalized }));
+                          setToolItem((prev) => ({ ...prev, qtyordered: normalized, ordextendedprice: undefined }));
                         }}
                       />
                     </div>
@@ -2048,7 +2057,7 @@ const PurchaseOrderForm = ({
                         disabled={disableField}
                         onChange={(e) => {
                           const n = Math.max(0, Number(e.target.value || 0));
-                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.round(n * 1000) / 1000 }));
+                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.round(n * 1000) / 1000, ordextendedprice: undefined }));
                         }}
                       />
                     </div>
@@ -2067,7 +2076,7 @@ const PurchaseOrderForm = ({
                           const n = Number(e.target.value || 0);
                           const clamped = Math.min(100, Math.max(0, n));
                           setIsToolDiscountTouched(true);
-                          setToolItem((prev) => ({ ...prev, orddiscount: Math.round(clamped * 1000) / 1000 }));
+                          setToolItem((prev) => ({ ...prev, orddiscount: Math.round(clamped * 1000) / 1000, ordextendedprice: undefined }));
                         }}
                       />
                     </div>
@@ -2079,6 +2088,7 @@ const PurchaseOrderForm = ({
                         step="0.01"
                         className="form-control text-end"
                         value={(() => {
+                          if (toolItem.ordextendedprice !== undefined) return toolItem.ordextendedprice;
                           const v = calculateOrdExtendedPrice(
                             toolItem.qtyordered,
                             toolItem.orderunitcost,
@@ -2091,14 +2101,17 @@ const PurchaseOrderForm = ({
                           // Reverse calc: holds qty and disc% fixed, back-solves Unit
                           // Price so the extended price matches what was typed — same
                           // rule as the grid's Ext. Price reverse calc (no-ops on qty=0
-                          // or disc%=100, both of which would divide by zero).
+                          // or disc%=100, both of which would divide by zero). Also
+                          // records the typed total directly so Add/Save use it as-is
+                          // instead of recomputing from the reverse-solved (rounded)
+                          // Unit Cost, which can land a cent off (e.g. 3000 -> 3000.01).
                           const qty = toNum(toolItem.qtyordered);
                           const disc = toNum(toolItem.orddiscount);
                           if (Math.abs(qty) <= 0 || disc >= 100) return;
                           const extPrice = toNum(e.target.value);
                           const newUnitCost = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
                           if (!Number.isFinite(newUnitCost)) return;
-                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.max(0, newUnitCost) }));
+                          setToolItem((prev) => ({ ...prev, orderunitcost: Math.max(0, newUnitCost), ordextendedprice: extPrice }));
                         }}
                       />
                     </div>
@@ -2151,11 +2164,13 @@ const PurchaseOrderForm = ({
                               qtyordered: normalizedQty,
                               orderunitcost: toolItem.orderunitcost,
                               orddiscount: toolItem.orddiscount,
-                              ordextendedprice: calculateOrdExtendedPrice(
-                                normalizedQty,
-                                toolItem.orderunitcost,
-                                toolItem.orddiscount
-                              ),
+                              ordextendedprice:
+                                toolItem.ordextendedprice ??
+                                calculateOrdExtendedPrice(
+                                  normalizedQty,
+                                  toolItem.orderunitcost,
+                                  toolItem.orddiscount
+                                ),
                             });
                             resetToolItem();
                           }}
@@ -2212,11 +2227,13 @@ const PurchaseOrderForm = ({
                                 qtyordered: normalizedQty,
                                 orderunitcost: toolItem.orderunitcost,
                                 orddiscount: toolItem.orddiscount,
-                                ordextendedprice: calculateOrdExtendedPrice(
-                                  normalizedQty,
-                                  toolItem.orderunitcost,
-                                  toolItem.orddiscount
-                                ),
+                                ordextendedprice:
+                                  toolItem.ordextendedprice ??
+                                  calculateOrdExtendedPrice(
+                                    normalizedQty,
+                                    toolItem.orderunitcost,
+                                    toolItem.orddiscount
+                                  ),
                               });
                               setEditingIndex(null);
                               resetToolItem();

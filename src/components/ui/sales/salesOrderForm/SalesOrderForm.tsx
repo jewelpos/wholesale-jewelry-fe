@@ -63,6 +63,11 @@ type SalesOrderItemForm = {
   discountpercent?: number;
   discountsource?: string | null;
   discountpromotionid?: number | null;
+  // Set only while Ext. Price was the last field edited — holds the line total exactly
+  // as typed, so the reverse-solved (and rounded-to-3-decimal) Tag Price doesn't cause
+  // the actual saved total to land a cent off (e.g. entering 3000 producing 3000.01).
+  // Cleared the moment qty/Tag Price/disc% get edited directly instead.
+  extpriceoverride?: number;
   invoicepcs?: number;
   invoiceqty?: number;
   bordpcs?: number;
@@ -90,6 +95,7 @@ type ToolItem = {
   itemquantity: number;
   unitprice: number;
   discountpercent?: number;
+  extpriceoverride?: number;
   itemmetal?: string;
   itempremium?: number;
   broakerage?: number;
@@ -180,7 +186,12 @@ const computeLine = (item: SalesOrderItemForm) => {
   const disc = toNum(item.discountpercent);
   const gross = qty * unit;
   const discountAmt = gross * (disc / 100);
-  const net = gross - discountAmt;
+  // Ext. Price back-solves Tag Price from a target total, then rounds that Tag Price
+  // to 3 decimals — re-multiplying it back out doesn't always land exactly on the
+  // number that was typed. When the line total was last set via Ext. Price directly,
+  // trust that typed number as authoritative instead of recomputing it from the
+  // (necessarily rounded) Tag Price, so the actual saved total matches what was entered.
+  const net = Number.isFinite(item.extpriceoverride as number) ? (item.extpriceoverride as number) : gross - discountAmt;
   const unitAfterDiscount = Math.round(unit * (1 - disc / 100) * 100) / 100;
   return { qty, unit, disc, gross, discountAmt, net, unitAfterDiscount };
 };
@@ -225,6 +236,12 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const [products, setProducts] = useState<ItemDetails[]>([]);
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // Ext. Price shows a value reverse-solved and rounded back through Tag Price on every
+  // keystroke — if the round-trip doesn't reproduce exactly what was typed (any qty/
+  // disc% combo that doesn't divide evenly), the displayed value snaps to something
+  // else after each keystroke and typing breaks. This buffer holds the raw text while
+  // a row's field is focused; the reverse-calc only commits (and clears) on blur.
+  const [extPriceEditBuffer, setExtPriceEditBuffer] = useState<Record<string, string>>({});
   const [toolItem, setToolItem] = useState<ToolItem>({
     itemid: undefined,
     itemcode: undefined,
@@ -889,6 +906,17 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       }
     }
 
+    // Only trust a carried-over Ext. Price override if qty/Tag Price/disc% weren't
+    // actually touched via the tool row since it was set — otherwise it's stale and
+    // the line total needs to come from qty × Tag Price × disc again.
+    const existingItemForOverride = editingIndex != null ? (getValues(`items.${editingIndex}`) as SalesOrderItemForm | undefined) : undefined;
+    const overrideStillValid =
+      existingItemForOverride != null &&
+      Number.isFinite(toolItem.extpriceoverride as number) &&
+      qty === toNum(existingItemForOverride.itemquantity) &&
+      toNum(toolItem.unitprice) === toNum(existingItemForOverride.unitprice) &&
+      resolvedDiscountPct === toNum(existingItemForOverride.discountpercent);
+
     const newItem: SalesOrderItemForm = {
       itemid: toolItem.itemid,
       itemcode: toolItem.itemcode,
@@ -901,6 +929,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       discountpercent: resolvedDiscountPct,
       discountsource: resolvedSource,
       discountpromotionid: resolvedPromotionId,
+      extpriceoverride: overrideStillValid ? toolItem.extpriceoverride : undefined,
       itemmetal: toolItem.itemmetal,
       itempremium: toolItem.itempremium,
       broakerage: toolItem.broakerage,
@@ -922,7 +951,11 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   };
 
   const handleEditItem = (index: number) => {
-    const item = itemFields[index];
+    // getValues, not the raw field array (itemFields) — itemFields only holds each
+    // row's values as of when it was added/registered and doesn't pick up later
+    // inline (setValue-based) edits, so editing right after an inline tweak would
+    // otherwise reload the tool row with stale pre-edit numbers.
+    const item = getValues(`items.${index}`) as SalesOrderItemForm;
     setEditingIndex(index);
     setToolItem({
       itemid: item.itemid,
@@ -934,6 +967,7 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
       itemquantity: toNum(item.itemquantity),
       unitprice: toNum(item.unitprice),
       discountpercent: toNum(item.discountpercent),
+      extpriceoverride: item.extpriceoverride,
       availableqty: item.availableqty,
       trackinventory: item.trackinventory,
     });
@@ -942,6 +976,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const handleRemoveItem = (index: number) => {
     if (editingIndex === index) { setEditingIndex(null); resetToolItem(); }
     remove(index);
+    // Removing a row shifts every later index — any remembered Ext. Price text keyed
+    // by index would now point at the wrong row, so just drop all of it.
+    setExtPriceEditBuffer({});
   };
 
   // Direct in-grid editing for an existing line — Qty/Tag Price/Disc% write straight
@@ -950,9 +987,23 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   // Uses setValue on the specific field path rather than useFieldArray's update() —
   // update() unmounts and remounts the whole row on every call, which kicks focus out
   // of the input after a single keystroke.
+  // Clears a row's remembered Ext. Price text/override once something else (qty, Tag
+  // Price, disc%) changes the math underneath it — both are only valid for the inputs
+  // they were solved against.
+  const clearExtPriceOverride = (index: number) => {
+    setValue(`items.${index}.extpriceoverride`, undefined, { shouldDirty: true });
+    setExtPriceEditBuffer((prev) => {
+      if (!(index in prev)) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
   const updateInlineItemQuantity = (index: number, item: SalesOrderItemForm, rawValue: string) => {
     const qty = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
     setValue(`items.${index}.itemquantity`, qty, { shouldDirty: true });
+    clearExtPriceOverride(index);
     const isWtItem = (item.itemunit ?? "").trim().toLowerCase() === "wt";
     if (isWtItem) {
       const rateField = getRateField(item.itemmetal, metalTypeList);
@@ -968,12 +1019,14 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
   const updateInlineUnitPrice = (index: number, item: SalesOrderItemForm, rawValue: string) => {
     const clamped = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
     setValue(`items.${index}.unitprice`, clamped, { shouldDirty: true });
+    clearExtPriceOverride(index);
   };
 
   const updateInlineDiscountPercent = (index: number, item: SalesOrderItemForm, rawValue: string) => {
     const clamped = Math.round(Math.min(100, Math.max(0, toNum(rawValue))) * 1000) / 1000;
     setValue(`items.${index}.discountpercent`, clamped, { shouldDirty: true });
     setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+    clearExtPriceOverride(index);
   };
 
   // Reverse calc: holds qty and disc% fixed, back-solves Tag Price so the line's net
@@ -987,6 +1040,9 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
     if (!Number.isFinite(newUnitPrice)) return;
     setValue(`items.${index}.unitprice`, Math.max(0, newUnitPrice), { shouldDirty: true });
     setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+    // Trust the typed total exactly rather than whatever the rounded Tag Price above
+    // multiplies back out to — see the comment on computeLine's net calculation.
+    setValue(`items.${index}.extpriceoverride`, extPrice, { shouldDirty: true });
   };
 
   // Line items are priced/validated against the warehouse they were added under
@@ -1084,6 +1140,11 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
         // Per-unit price after discount (quantity-independent) — e.g. $10 sell price
         // at 30% discount = $7, regardless of how many units are on the line.
         itemunitprice: Math.round(toNum(it.unitprice) * (1 - toNum(it.discountpercent) / 100) * 100) / 100,
+        // computeLine's net trusts extpriceoverride (the exact total typed into Ext.
+        // Price) when set, so the backend can match against it instead of only ever
+        // landing on whatever qty × Tag Price × disc recomputes to (see
+        // resolveExtendedPrice server-side for why that can drift by a cent).
+        extendedprice: computeLine(it).net,
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
         goldprice_used: it.goldprice_used ?? undefined,
@@ -1687,8 +1748,24 @@ const SalesOrderForm = ({ salesorderno: salesordernoEdit, readOnly = false }: { 
                               type="number"
                               step="0.01"
                               className="form-control form-control-sm text-end"
-                              value={Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0}
-                              onChange={(e) => updateInlineExtPrice(index, item, e.target.value)}
+                              value={
+                                extPriceEditBuffer[index] !== undefined
+                                  ? extPriceEditBuffer[index]
+                                  : Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0
+                              }
+                              onChange={(e) => setExtPriceEditBuffer((prev) => ({ ...prev, [index]: e.target.value }))}
+                              onBlur={(e) => {
+                                // Commits both the reverse-solved Tag Price AND an
+                                // extpriceoverride holding the typed total exactly —
+                                // so the recomputed line.net below matches what was
+                                // typed and this buffer can safely clear.
+                                updateInlineExtPrice(index, item, e.target.value);
+                                setExtPriceEditBuffer((prev) => {
+                                  const next = { ...prev };
+                                  delete next[index];
+                                  return next;
+                                });
+                              }}
                               onKeyDown={handleEnterAsTab}
                             />
                           )}

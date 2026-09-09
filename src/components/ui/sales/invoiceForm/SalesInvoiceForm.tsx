@@ -95,6 +95,11 @@ type SalesInvoiceItemForm = {
   discountpercent?: number;
   discountsource?: string | null;
   discountpromotionid?: number | null;
+  // Set only while Ext. Price was the last field edited — holds the line total exactly
+  // as typed, so the reverse-solved (and rounded-to-3-decimal) Tag Price doesn't cause
+  // the actual saved total to land a cent off (e.g. entering 3000 producing 3000.01).
+  // Cleared the moment qty/Tag Price/disc% get edited directly instead.
+  extpriceoverride?: number;
   maxpcs?: number;
   maxqty?: number;
   goldprice_used?: number;
@@ -231,6 +236,11 @@ type ToolItem = {
   itemquantity: number;
   unitprice: number;
   discountpercent?: number;
+  // Set only while Ext. Price was the last field edited — holds the line total exactly
+  // as typed, so the reverse-solved (and rounded-to-3-decimal) Tag Price doesn't cause
+  // the actual saved total to land a cent off (e.g. entering 3000 producing 3000.01).
+  // Cleared the moment qty/Tag Price/disc% get edited directly instead.
+  extpriceoverride?: number;
   // discount metadata (not persisted to form)
   _itemdiscount?: number;
   _itemcategoryid?: number | null;
@@ -285,7 +295,7 @@ function calcWtUnitPrice(
   return Math.round((goldRate + premium + labour) * 100) / 100;
 }
 
-const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => {
+const computeLine = (item: SalesInvoiceItemForm | ToolItem, mode: SalesInvoiceFormMode) => {
   const qtyRaw = toNum(item.itemquantity);
   const qty = mode === "CREDIT_INVOICE" ? -Math.abs(qtyRaw) : qtyRaw;
   const unit = toNum(item.unitprice);
@@ -293,7 +303,14 @@ const computeLine = (item: SalesInvoiceItemForm, mode: SalesInvoiceFormMode) => 
 
   const gross = qty * unit;
   const discountAmt = gross * (disc / 100);
-  const net = gross - discountAmt;
+  // Ext. Price back-solves Tag Price from a target total, then rounds that Tag Price
+  // to 3 decimals — re-multiplying it back out doesn't always land exactly on the
+  // number that was typed. When the line total was last set via Ext. Price directly,
+  // trust that typed number as authoritative instead of recomputing it from the
+  // (necessarily rounded) Tag Price, so the actual saved total matches what was entered.
+  const net = Number.isFinite(item.extpriceoverride as number)
+    ? (item.extpriceoverride as number)
+    : gross - discountAmt;
   const unitAfterDiscount = Math.round(unit * (1 - disc / 100) * 100) / 100;
 
   return {
@@ -641,6 +658,14 @@ const SalesInvoiceForm = ({
   const [fetchedInvoiceId, setFetchedInvoiceId] = useState<number | undefined>(undefined);
   const [fetchedBalanceDue, setFetchedBalanceDue] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // Ext. Price fields (grid row + add-item tool row) show a value that's reverse-solved
+  // and rounded back through Tag Price on every keystroke — if the round-trip doesn't
+  // reproduce exactly what was typed (any qty/disc% combo that doesn't divide evenly),
+  // the displayed value snaps to something else after each keystroke and typing breaks.
+  // These buffers hold the raw text while a field is focused so it always shows what
+  // was actually typed; the reverse-calc only commits (and the buffer clears) on blur.
+  const [extPriceEditBuffer, setExtPriceEditBuffer] = useState<Record<string, string>>({});
+  const [toolExtPriceEdit, setToolExtPriceEdit] = useState<string | null>(null);
   const [emailModalDocNumber, setEmailModalDocNumber] = useState<number | null>(null);
   const [emailModalNavigateBack, setEmailModalNavigateBack] = useState(false);
   const [toolItem, setToolItem] = useState<ToolItem>(() => ({
@@ -1432,6 +1457,7 @@ const SalesInvoiceForm = ({
   }, [activeHolds, isNewDoc]);
 
   const resetToolItem = () => {
+    setToolExtPriceEdit(null);
     setToolItem({
       itemid: undefined,
       itemcode: undefined,
@@ -1644,6 +1670,9 @@ const SalesInvoiceForm = ({
             discountpercent: resolved.discountpercent,
             discountsource: resolved.discountsource,
             discountpromotionid: resolved.discountpromotionid,
+            // The combined qty invalidates any Ext. Price override either row had —
+            // it was only ever solved against that row's own (now-stale) quantity.
+            extpriceoverride: undefined,
             availableqty: toolItem.availableqty,
             trackinventory: toolItem.trackinventory,
           });
@@ -1652,6 +1681,7 @@ const SalesInvoiceForm = ({
             ...existing,
             itemquantity: combinedQty,
             itempcs: combinedPcs,
+            extpriceoverride: undefined,
             availableqty: toolItem.availableqty,
             trackinventory: toolItem.trackinventory,
           });
@@ -1744,6 +1774,10 @@ const SalesInvoiceForm = ({
       discountpercent: resolvedDiscountPct,
       discountsource: resolvedSource,
       discountpromotionid: resolvedPromotionId,
+      // Only trust the Ext. Price override if the discount % it was solved against
+      // didn't just get silently changed by bulk/promo resolution above — otherwise
+      // it's stale and the line total needs to come from qty × Tag Price × disc again.
+      extpriceoverride: resolvedDiscountPct === toNum(toolItem.discountpercent) ? toolItem.extpriceoverride : undefined,
       availableqty: toolItem.availableqty,
       trackinventory: toolItem.trackinventory,
     };
@@ -1772,6 +1806,19 @@ const SalesInvoiceForm = ({
   // update() — update() unmounts and remounts the whole row on every call, which kicks
   // focus out of the input after a single keystroke. setValue mutates in place and
   // stays reactive because each row reads its values via watch(`items.${index}`).
+  // Clears a row's remembered Ext. Price text/override once something else (qty, Tag
+  // Price, disc%) changes the math underneath it — both are only valid for the inputs
+  // they were solved against.
+  const clearExtPriceOverride = (index: number) => {
+    setValue(`items.${index}.extpriceoverride`, undefined, { shouldDirty: true });
+    setExtPriceEditBuffer((prev) => {
+      if (!(index in prev)) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
   const updateInlineItemQuantity = (index: number, item: any, rawValue: string) => {
     const abs = Math.abs(toNum(rawValue));
     const maxQty = item?.maxqty;
@@ -1781,6 +1828,7 @@ const SalesInvoiceForm = ({
     }
     const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
     setValue(`items.${index}.itemquantity`, normalized, { shouldDirty: true });
+    clearExtPriceOverride(index);
     const isWtItem = (item?.itemunit ?? "").trim().toLowerCase() === "wt";
     if (isWtItem) {
       const rateField = getRateField(item?.itemmetal, metalTypeList);
@@ -1796,12 +1844,14 @@ const SalesInvoiceForm = ({
   const updateInlineUnitPrice = (index: number, item: any, rawValue: string) => {
     const clamped = Math.round(Math.max(0, toNum(rawValue)) * 1000) / 1000;
     setValue(`items.${index}.unitprice`, clamped, { shouldDirty: true });
+    clearExtPriceOverride(index);
   };
 
   const updateInlineDiscountPercent = (index: number, item: any, rawValue: string) => {
     const clamped = Math.round(Math.min(100, Math.max(0, toNum(rawValue))) * 1000) / 1000;
     setValue(`items.${index}.discountpercent`, clamped, { shouldDirty: true });
     setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+    clearExtPriceOverride(index);
   };
 
   // Reverse calc: holds qty and disc% fixed, back-solves Tag Price so the line's net
@@ -1815,6 +1865,9 @@ const SalesInvoiceForm = ({
     if (!Number.isFinite(newUnitPrice)) return;
     setValue(`items.${index}.unitprice`, Math.max(0, newUnitPrice), { shouldDirty: true });
     setValue(`items.${index}.discountsource`, "manual", { shouldDirty: true });
+    // Trust the typed total exactly rather than whatever the rounded Tag Price above
+    // multiplies back out to — see the comment on computeLine's net calculation.
+    setValue(`items.${index}.extpriceoverride`, extPrice, { shouldDirty: true });
   };
 
   // Line items are priced/validated against the warehouse they were added under
@@ -3174,8 +3227,24 @@ const SalesInvoiceForm = ({
                               type="number"
                               step="0.01"
                               className="form-control form-control-sm text-end"
-                              value={Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0}
-                              onChange={(e) => updateInlineExtPrice(index, item, e.target.value)}
+                              value={
+                                extPriceEditBuffer[index] !== undefined
+                                  ? extPriceEditBuffer[index]
+                                  : Number.isFinite(line.net) ? Number(line.net.toFixed(2)) : 0
+                              }
+                              onChange={(e) => setExtPriceEditBuffer((prev) => ({ ...prev, [index]: e.target.value }))}
+                              onBlur={(e) => {
+                                // Commits both the reverse-solved Tag Price AND an
+                                // extpriceoverride holding the typed total exactly —
+                                // so the recomputed line.net below matches what was
+                                // typed and this buffer can safely clear.
+                                updateInlineExtPrice(index, item, e.target.value);
+                                setExtPriceEditBuffer((prev) => {
+                                  const next = { ...prev };
+                                  delete next[index];
+                                  return next;
+                                });
+                              }}
                               onKeyDown={handleEnterAsTab}
                             />
                           )}
@@ -3197,6 +3266,7 @@ const SalesInvoiceForm = ({
                                   itemquantity: toNum(item?.itemquantity),
                                   unitprice: toNum(item?.unitprice),
                                   discountpercent: toNum(item?.discountpercent),
+                                  extpriceoverride: (item as any)?.extpriceoverride,
                                   availableqty: (item as any)?.availableqty,
                                   trackinventory: (item as any)?.trackinventory,
                                 });
@@ -3207,7 +3277,7 @@ const SalesInvoiceForm = ({
                             <button
                               type="button"
                               className="btn btn-sm btn-outline-danger"
-                              onClick={() => remove(index)}
+                              onClick={() => { remove(index); setExtPriceEditBuffer({}); }}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -3350,14 +3420,15 @@ const SalesInvoiceForm = ({
                       onChange={(e) => {
                         const abs = Math.abs(toNum(e.target.value));
                         const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
+                        setToolExtPriceEdit(null);
                         setToolItem((prev) => {
                           if ((prev.itemunit ?? "").trim().toLowerCase() === "wt") {
                             const rateField = getRateField(prev.itemmetal, metalTypeList);
                             const goldRate = currentRates && rateField ? ((currentRates as any)[rateField] ?? 0) : 0;
                             const newUnitPrice = calcWtUnitPrice(prev.itemmetal, currentRates as any, prev.itempremium ?? 0, prev.broakerage ?? 0, metalTypeList);
-                            return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage };
+                            return { ...prev, itemquantity: normalized, unitprice: newUnitPrice, goldprice_used: goldRate, premium_used: prev.itempremium, labour_used: prev.broakerage, extpriceoverride: undefined };
                           }
-                          return { ...prev, itemquantity: normalized };
+                          return { ...prev, itemquantity: normalized, extpriceoverride: undefined };
                         });
                       }}
                       onKeyDown={handleEnterAsTab}
@@ -3384,7 +3455,7 @@ const SalesInvoiceForm = ({
                     min={0}
                     className={`form-control text-end${toolItem.itemid != null && !toolItem.unitprice ? " border-danger" : ""}`}
                     value={toNum(toolItem.unitprice)}
-                    onChange={(e) => setToolItem((prev) => ({ ...prev, unitprice: Math.round(Math.max(0, toNum(e.target.value)) * 1000) / 1000 }))}
+                    onChange={(e) => { setToolExtPriceEdit(null); setToolItem((prev) => ({ ...prev, unitprice: Math.round(Math.max(0, toNum(e.target.value)) * 1000) / 1000, extpriceoverride: undefined })); }}
                     onKeyDown={handleEnterAsTab}
                   />
                   {toolItem.itemid != null && !toolItem.unitprice && (
@@ -3401,7 +3472,7 @@ const SalesInvoiceForm = ({
                     max={100}
                     className="form-control text-end"
                     value={toNum(toolItem.discountpercent)}
-                    onChange={(e) => setToolItem((prev) => ({ ...prev, discountpercent: Math.round(Math.min(100, Math.max(0, toNum(e.target.value))) * 1000) / 1000 }))}
+                    onChange={(e) => { setToolExtPriceEdit(null); setToolItem((prev) => ({ ...prev, discountpercent: Math.round(Math.min(100, Math.max(0, toNum(e.target.value))) * 1000) / 1000, extpriceoverride: undefined })); }}
                     onKeyDown={handleEnterAsTab}
                   />
                 </div>
@@ -3413,21 +3484,29 @@ const SalesInvoiceForm = ({
                     step="0.01"
                     className="form-control text-end"
                     value={(() => {
-                      const net = computeLine({ itemquantity: toolItem.itemquantity, unitprice: toolItem.unitprice, discountpercent: toolItem.discountpercent }, mode).net;
+                      if (toolExtPriceEdit !== null) return toolExtPriceEdit;
+                      const net = computeLine(toolItem, mode).net;
                       return Number.isFinite(net) ? Number(net.toFixed(2)) : 0;
                     })()}
-                    onChange={(e) => {
+                    onChange={(e) => setToolExtPriceEdit(e.target.value)}
+                    onBlur={(e) => {
                       // Reverse calc: holds qty and disc% fixed, back-solves Tag Price
                       // so the line's net total matches what was typed — same rule as
                       // the grid's Ext. Price reverse calc (no-ops on qty=0 or disc%=100,
-                      // both of which would divide by zero).
+                      // both of which would divide by zero). Also records the typed
+                      // total as extpriceoverride — Tag Price gets rounded to 3
+                      // decimals, so re-multiplying it back out can land a cent off
+                      // (e.g. 3000 -> 3000.01); the override keeps the actual saved
+                      // total exactly as typed instead. Cleared once qty/Tag Price/
+                      // disc% change above.
                       const qty = toNum(toolItem.itemquantity);
                       const disc = toNum(toolItem.discountpercent);
+                      setToolExtPriceEdit(null);
                       if (Math.abs(qty) <= 0 || disc >= 100) return;
                       const extPrice = toNum(e.target.value);
                       const newUnitPrice = Math.round(((extPrice / qty) / (1 - disc / 100)) * 1000) / 1000;
                       if (!Number.isFinite(newUnitPrice)) return;
-                      setToolItem((prev) => ({ ...prev, unitprice: Math.max(0, newUnitPrice) }));
+                      setToolItem((prev) => ({ ...prev, unitprice: Math.max(0, newUnitPrice), extpriceoverride: extPrice }));
                     }}
                     onKeyDown={handleEnterAsTab}
                   />
