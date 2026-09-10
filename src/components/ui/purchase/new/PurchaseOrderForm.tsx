@@ -1028,9 +1028,10 @@ const PurchaseOrderForm = ({
       return;
     }
 
-    // A return with no PO selected isn't tied to any existing purchase order — handled by
-    // a separate mutation (createSupplierReturn) that only adjusts stock/cost, since
-    // returnPurchaseOrder requires an existing PO to modify.
+    // A return with no PO selected isn't tied to an existing purchase order — handled by
+    // a separate mutation (createSupplierReturn), which creates a standalone Return PO
+    // (pomode = 2) plus the stock/cost changes, since returnPurchaseOrder can only modify
+    // an already-existing PO.
     const isStandaloneReturn =
       isReturnOrder && !(Number.isFinite(returnOrderPoNumber) && returnOrderPoNumber > 0);
 
@@ -1044,6 +1045,7 @@ const PurchaseOrderForm = ({
               warehouseid: warehouseIdNumber,
               returndate: selectedDate.format("YYYY-MM-DD"),
               remarks: formData.poremarks || undefined,
+              rmano: formData.rmano || undefined,
               items: formData.items.map((item) => ({
                 itemid: Number(item.itemid),
                 itemcode: item.itemcode != null ? String(item.itemcode) : undefined,
@@ -1055,7 +1057,11 @@ const PurchaseOrderForm = ({
         });
         const successData = response.data?.createSupplierReturn;
         if (successData?.success) {
-          dispatch(showNotification({ message: successData.message, type: NOTIFICATION_TYPES.SUCCESS }));
+          const newPo = successData?.data?.ponumber;
+          dispatch(showNotification({
+            message: newPo ? `Return PO #${newPo} created` : successData.message,
+            type: NOTIFICATION_TYPES.SUCCESS,
+          }));
           router.back();
         } else if (successData?.error) {
           dispatch(showNotification({ message: successData.error, type: NOTIFICATION_TYPES.ERROR }));
