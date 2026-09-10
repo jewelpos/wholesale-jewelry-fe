@@ -453,6 +453,7 @@ export const GET_PRODUCT_LIST_QUERY = gql`
         itemweight
         itemweighttext
         itemmetal
+        itemtagprice
       }
     }
   }

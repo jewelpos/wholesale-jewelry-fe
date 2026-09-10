@@ -24,9 +24,15 @@ const SAMPLE_DATA: LabelData = {
   itemcode: "RG-1234",
   itemdescription: "14K Yellow Gold Diamond Ring",
   itembarcodeid: "1234567890",
-  itemsellprice: "$1,250.00",
+  itemsellprice: "1250.00",
   codedprice: "ACBDEF",
   categoryname: "Rings",
+  itemtagprice: "1500.00",
+  itemlength: "18 in",
+  itemsize: "7",
+  itemcolor: "Yellow",
+  itemmetal: "14K Gold",
+  itemweighttext: "3.2 g",
 };
 
 const DEFAULT_FORM = {
@@ -56,12 +62,18 @@ const DEFAULT_FORM = {
 type FormState = typeof DEFAULT_FORM;
 
 const DEFAULT_FIELD_CONFIGS: FieldPrintConfig[] = [
-  { key: "itembarcodeid",   label: "Barcode",     side: "front", enabled: true,  order: 1, fontSize: 10, bold: false },
-  { key: "itemcode",        label: "Item Code",   side: "front", enabled: true,  order: 2, fontSize: 10, bold: true  },
-  { key: "codedprice",      label: "Coded Price", side: "front", enabled: false, order: 3, fontSize: 10, bold: true  },
-  { key: "itemdescription", label: "Description", side: "back",  enabled: true,  order: 4, fontSize: 10, bold: false },
-  { key: "itemsellprice",   label: "Tag Price",   side: "back",  enabled: true,  order: 5, fontSize: 11, bold: true  },
-  { key: "categoryname",    label: "Category",    side: "back",  enabled: false, order: 6, fontSize: 9,  bold: false },
+  { key: "itembarcodeid",   label: "Barcode",       side: "front", enabled: true,  order: 1,  fontSize: 10, bold: false },
+  { key: "itemcode",        label: "Item Code",     side: "front", enabled: true,  order: 2,  fontSize: 10, bold: true  },
+  { key: "codedprice",      label: "Coded Price",   side: "front", enabled: false, order: 3,  fontSize: 10, bold: true  },
+  { key: "itemdescription", label: "Description",   side: "back",  enabled: true,  order: 4,  fontSize: 10, bold: false },
+  { key: "itemsellprice",   label: "Sell Price",    side: "back",  enabled: true,  order: 5,  fontSize: 11, bold: true  },
+  { key: "categoryname",    label: "Category",      side: "back",  enabled: false, order: 6,  fontSize: 9,  bold: false },
+  { key: "itemtagprice",    label: "Tag Price",     side: "back",  enabled: false, order: 7,  fontSize: 11, bold: true  },
+  { key: "itemmetal",       label: "Metal Type",    side: "back",  enabled: false, order: 8,  fontSize: 9,  bold: false },
+  { key: "itemweighttext",  label: "Weight",        side: "back",  enabled: false, order: 9,  fontSize: 9,  bold: false },
+  { key: "itemsize",        label: "Size",          side: "back",  enabled: false, order: 10, fontSize: 9,  bold: false },
+  { key: "itemlength",      label: "Length",        side: "back",  enabled: false, order: 11, fontSize: 9,  bold: false },
+  { key: "itemcolor",       label: "Color",         side: "back",  enabled: false, order: 12, fontSize: 9,  bold: false },
 ];
 
 function normSide(v: unknown, def: "front" | "back"): "front" | "back" {
@@ -105,7 +117,13 @@ function initFieldConfigs(label: LabelTemplate): FieldPrintConfig[] {
       const parsed: FieldPrintConfig[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.fields) ? raw.fields : raw);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed.some(c => c.enabled)) {
         // Normalize sides: empty string from old DB saves becomes proper default
-        return parsed.map(c => ({ ...c, side: normSide(c.side, c.key === "itemdescription" || c.key === "itemsellprice" || c.key === "categoryname" ? "back" : "front") }));
+        const backByDefault = new Set(["itemdescription", "itemsellprice", "categoryname", "itemtagprice", "itemmetal", "itemweighttext", "itemsize", "itemlength", "itemcolor"]);
+        const merged = [...parsed];
+        // Ensure any newly-added field the saved config predates is still offered
+        for (const def of DEFAULT_FIELD_CONFIGS) {
+          if (!merged.some(c => c.key === def.key)) merged.push({ ...def });
+        }
+        return merged.map(c => ({ ...c, side: normSide(c.side, backByDefault.has(c.key) ? "back" : "front") }));
       }
     } catch {}
   }

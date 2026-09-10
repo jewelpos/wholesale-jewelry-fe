@@ -96,6 +96,7 @@ export type ProductListType = {
   itemcolor?: string;
   itemweight?: number;
   itemweighttext?: string;
+  itemtagprice?: number;
 };
 
 export type ProductListTypeResponseType = {

@@ -39,6 +39,8 @@ const isOn = (v: unknown): boolean => v === "1" || v === "\x01" || v === 1 || v 
 const DEFAULT_SIDES: Record<string, "front" | "back"> = {
   itembarcodeid: "front", itemcode: "front", codedprice: "front",
   itemdescription: "back", itemsellprice: "back", categoryname: "back",
+  itemtagprice: "back", itemmetal: "back", itemweighttext: "back",
+  itemsize: "back", itemlength: "back", itemcolor: "back",
 };
 function normalizeSide(key: string, side: unknown): "front" | "back" {
   if (side === "front" || side === "back") return side;
@@ -99,7 +101,7 @@ const FIELD_DEFAULTS = [
 ] as const;
 
 const PREVIEW_BLOCK_A: (keyof LabelData)[] = ["itembarcodeid", "codedprice"];
-const PREVIEW_BLOCK_B: (keyof LabelData)[] = ["itemcode", "itemdescription", "itemsellprice", "categoryname"];
+const PREVIEW_BLOCK_B: (keyof LabelData)[] = ["itemcode", "itemdescription", "itemsellprice", "categoryname", "itemtagprice", "itemmetal", "itemweighttext", "itemsize", "itemlength", "itemcolor"];
 
 interface InlinePreviewProps {
   template: LabelTemplate;
@@ -174,7 +176,7 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
         );
       }
 
-      const display = cfg.key === "itemsellprice" && value
+      const display = (cfg.key === "itemsellprice" || cfg.key === "itemtagprice") && value
         ? formatCurrency(value)
         : (value || "—");
 
@@ -309,6 +311,12 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     itemsellprice: product.itemsellprice != null ? String(product.itemsellprice) : "",
     codedprice: "",
     categoryname: (product.categoryname && product.categoryname !== "0") ? product.categoryname : "",
+    itemtagprice: product.itemtagprice != null ? String(product.itemtagprice) : "",
+    itemmetal: product.itemmetal ?? "",
+    itemweighttext: product.itemweighttext ?? "",
+    itemsize: product.itemsize ?? "",
+    itemlength: product.itemlength ?? "",
+    itemcolor: product.itemcolor ?? "",
   });
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const [printQueued, setPrintQueued] = useState(false);
@@ -352,33 +360,32 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     [templates, selectedLabelId]
   );
 
-  // Initialize fieldConfigs: localStorage (for order/size) merged with template (for enabled state).
-  // Template's enabled state always wins so that enabling a field in the template form
-  // immediately takes effect here without requiring a manual "Reset".
+  // Initialize fieldConfigs from the SELECTED template. The template is the source of truth
+  // for which fields exist and their enabled/side state, so changing the template selection
+  // (or editing the template) always overrides the stale preset. localStorage only carries
+  // the cosmetic layout tweaks made in this modal's layout panel: order / fontSize / bold.
   useEffect(() => {
     if (!selectedTemplate) return;
     const storageKey = `label_cfg_${parsedStoreId}_${selectedTemplate.labelid}`;
     const templateConfigs = buildFieldConfigs(selectedTemplate);
+    let cosmeticByKey: Map<string, FieldPrintConfig> | null = null;
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as FieldPrintConfig[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          let merged = normalizeConfigs(parsed);
-          if (selectedTemplate.labletype !== "rattail") {
-            merged = merged.map(c => ({ ...c, side: "front" as const }));
-          }
-          // Template's enabled state is the source of truth; localStorage supplies order/fontSize/bold
-          merged = merged.map(c => {
-            const tplCfg = templateConfigs.find(t => t.key === c.key);
-            return tplCfg ? { ...c, enabled: tplCfg.enabled } : c;
-          });
-          setFieldConfigs(merged);
-          return;
+          cosmeticByKey = new Map(normalizeConfigs(parsed).map(c => [c.key, c]));
         }
       }
     } catch { /* fall through */ }
-    setFieldConfigs(templateConfigs);
+    if (cosmeticByKey) {
+      setFieldConfigs(templateConfigs.map(t => {
+        const c = cosmeticByKey!.get(t.key);
+        return c ? { ...t, order: c.order, fontSize: c.fontSize, bold: c.bold } : t;
+      }));
+    } else {
+      setFieldConfigs(templateConfigs);
+    }
   }, [selectedTemplate, parsedStoreId]);
 
   // Auto-save fieldConfigs to localStorage whenever they change
@@ -479,6 +486,12 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
         itemsellprice: price != null ? String(price) : "",
         codedprice: `${prefix}${rawCoded}${suffix}`,
         categoryname: (product.categoryname && product.categoryname !== "0") ? product.categoryname : "",
+        itemtagprice: product.itemtagprice != null ? String(product.itemtagprice) : "",
+        itemmetal: product.itemmetal ?? "",
+        itemweighttext: product.itemweighttext ?? "",
+        itemsize: product.itemsize ?? "",
+        itemlength: product.itemlength ?? "",
+        itemcolor: product.itemcolor ?? "",
       });
     } finally {
       setAutoFillLoading(false);
@@ -626,11 +639,17 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
 
   const EDITABLE_FIELDS: { key: keyof LabelData; label: string }[] = [
     { key: "itemdescription", label: "Description" },
-    { key: "itemsellprice",   label: "Tag Price"   },
+    { key: "itemsellprice",   label: "Sell Price"  },
+    { key: "itemtagprice",    label: "Tag Price"   },
     { key: "codedprice",      label: "Coded Price" },
     { key: "itemcode",        label: "Item Code"   },
     { key: "itembarcodeid",   label: "Barcode ID"  },
     { key: "categoryname",    label: "Category"    },
+    { key: "itemmetal",       label: "Metal Type"  },
+    { key: "itemweighttext",  label: "Weight"      },
+    { key: "itemsize",        label: "Size"        },
+    { key: "itemlength",      label: "Length"      },
+    { key: "itemcolor",       label: "Color"       },
   ];
 
   const isRattail = selectedTemplate?.labletype === "rattail";
@@ -854,7 +873,14 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                       Label Fields
                     </div>
                     <div className="d-flex flex-column gap-2">
-                      {EDITABLE_FIELDS.map(({ key, label }) => (
+                      {/* Only fields actually enabled on the selected template — no point
+                          editing a value that won't be printed. */}
+                      {EDITABLE_FIELDS
+                        .filter(({ key }) =>
+                          fieldConfigs.length === 0 ||
+                          fieldConfigs.some((c) => c.key === key && c.enabled)
+                        )
+                        .map(({ key, label }) => (
                         <div key={key} className="row align-items-center g-0">
                           <div className="col-5">
                             <label style={{ fontSize: 12, color: "#64748b", marginBottom: 0 }}>{label}</label>

@@ -29,6 +29,12 @@ export function buildZpl(
     itemsellprice:    data.itemsellprice ? `$${parseFloat(data.itemsellprice).toFixed(2)}` : "",
     codedprice:       data.codedprice       ?? "",
     categoryname:     data.categoryname     ?? "",
+    itemtagprice:     data.itemtagprice ? `$${parseFloat(data.itemtagprice).toFixed(2)}` : "",
+    itemlength:       data.itemlength       ?? "",
+    itemsize:         data.itemsize         ?? "",
+    itemcolor:        data.itemcolor        ?? "",
+    itemmetal:        data.itemmetal        ?? "",
+    itemweighttext:   data.itemweighttext   ?? "",
   };
 
   const renderFace = (fields: FieldPrintConfig[], yBase: number, topOffset = 0): string => {

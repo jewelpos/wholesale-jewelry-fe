@@ -9,6 +9,12 @@ export interface LabelData {
   itemsellprice: string;
   codedprice: string;
   categoryname: string;
+  itemtagprice?: string;
+  itemlength?: string;
+  itemsize?: string;
+  itemcolor?: string;
+  itemmetal?: string;
+  itemweighttext?: string;
 }
 
 export interface LabelTemplate {
@@ -232,6 +238,27 @@ const LabelFace: React.FC<FaceProps> = ({
             {data.categoryname}
           </div>
         );
+
+      case "itemtagprice":
+        return (
+          <div key="tagprice" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
+            {data.itemtagprice ? formatCurrency(data.itemtagprice) : ""}
+          </div>
+        );
+
+      case "itemlength":
+      case "itemsize":
+      case "itemcolor":
+      case "itemmetal":
+      case "itemweighttext": {
+        const txt = data[f.key];
+        if (!txt) return null;
+        return (
+          <div key={f.key} style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...pill }}>
+            {txt}
+          </div>
+        );
+      }
 
       default:
         return null;
