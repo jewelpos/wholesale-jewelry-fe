@@ -15,6 +15,7 @@ import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { GET_CUSTOMER_PAYMENT_LIST_QUERY } from "@/lib/graphql/query/customer";
+import { GET_PAYMENT_MODE_LIST_QUERY } from "@/lib/graphql/query/paymentMode";
 import { CustomerPaymentListType } from "@/types/customer";
 import "ag-grid-enterprise";
 import { appliedPaymentsColumnDefs } from "./ColumnDef";
@@ -70,22 +71,11 @@ function getDateRange(pill: DatePill): { startDate: string; endDate: string } | 
 }
 
 // ── Payment mode pills ─────────────────────────────────────────────────────────
-type ModePill = "all" | "Check" | "Cash" | "Charge" | "CashChk" | "MnyOrd" | "CrdInv" | "WireTrn" | "ReDep" | "NSF" | "Void" | "WriteOff";
-
-const MODE_PILLS: { key: ModePill; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "Check", label: "Check" },
-  { key: "Cash", label: "Cash" },
-  { key: "Charge", label: "Charge" },
-  { key: "CashChk", label: "CashChk" },
-  { key: "MnyOrd", label: "MnyOrd" },
-  { key: "CrdInv", label: "CrdInv" },
-  { key: "WireTrn", label: "WireTrn" },
-  { key: "ReDep", label: "ReDep" },
-  { key: "NSF", label: "NSF" },
-  { key: "Void", label: "Void" },
-  { key: "WriteOff", label: "WriteOff" },
-];
+// Sourced from the paymentmode master table (see MODE_PILLS below) instead of a
+// hardcoded list — a store can rename/add/retire payment modes, and the pills
+// must reflect whatever's actually configured, not a snapshot from whenever
+// this list was last hardcoded.
+type ModePill = string;
 
 const AppliedPaymentsComponent = () => {
   const router = useRouter();
@@ -112,6 +102,21 @@ const AppliedPaymentsComponent = () => {
   const [modePill, setModePill] = useState<ModePill>("all");
   const [datePill, setDatePill] = useState<DatePill>("week");
   const [selectedPayment, setSelectedPayment] = useState<CustomerPaymentListType | null>(null);
+
+  // includeAll: true — a mode a store has since retired/renamed must still show up
+  // here so historical payments recorded under it stay filterable.
+  const { data: paymentModeData } = useQuery(GET_PAYMENT_MODE_LIST_QUERY, {
+    variables: { storeid: parsedStoreId, includeAll: true },
+    skip: !parsedStoreId,
+  });
+  const MODE_PILLS = useMemo(() => {
+    const modes: { paymode: string; paymodedescription?: string | null }[] =
+      paymentModeData?.getPaymentExpenseModes ?? [];
+    return [
+      { key: "all", label: "All" },
+      ...modes.map((m) => ({ key: m.paymode, label: m.paymodedescription || m.paymode })),
+    ];
+  }, [paymentModeData]);
 
   useEffect(() => {
     if (parsedOutletId) setSelectedOutlet(parsedOutletId);
