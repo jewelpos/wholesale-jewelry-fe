@@ -1133,8 +1133,9 @@ const ReceivePaymentModal = ({
                         isLoading={checksLoading}
                         options={onHandChecks.map((c: any) => ({
                           value: c.customercheckdetailid,
-                          label: `#${c.checkno}`,
+                          label: c.chkinvoiceno ? `#${c.checkno} · Inv #${c.chkinvoiceno}` : `#${c.checkno}`,
                           checkno: c.checkno,
+                          chkinvoiceno: c.chkinvoiceno ?? null,
                           checkamount: Number(c.checkamount ?? 0),
                           checkpostingdate: c.checkpostingdate,
                           customercheckdetailid: c.customercheckdetailid,
@@ -1149,7 +1150,15 @@ const ReceivePaymentModal = ({
                         value={customercheckdetailid
                           ? onHandChecks
                               .filter((c: any) => c.customercheckdetailid === customercheckdetailid)
-                              .map((c: any) => ({ value: c.customercheckdetailid, label: `#${c.checkno}` }))[0] ?? null
+                              .map((c: any) => ({
+                                value: c.customercheckdetailid,
+                                label: `#${c.checkno}`,
+                                checkno: c.checkno,
+                                chkinvoiceno: c.chkinvoiceno ?? null,
+                                checkamount: Number(c.checkamount ?? 0),
+                                checkpostingdate: c.checkpostingdate,
+                                customercheckdetailid: c.customercheckdetailid,
+                              }))[0] ?? null
                           : null}
                         onChange={(opt: any) => {
                           if (!opt) {
@@ -1165,6 +1174,9 @@ const ReceivePaymentModal = ({
                         formatOptionLabel={(opt: any) => (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
                             <span style={{ fontWeight: 600, color: "#1e40af" }}>#{opt.checkno}</span>
+                            <span style={{ color: "#475569", fontSize: 11 }}>
+                              {opt.chkinvoiceno ? `Inv #${opt.chkinvoiceno}` : "No inv"}
+                            </span>
                             <span style={{ fontWeight: 700, color: "#166534", margin: "0 12px" }}>
                               ${Number(opt.checkamount ?? 0).toFixed(2)}
                             </span>
