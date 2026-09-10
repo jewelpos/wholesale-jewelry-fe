@@ -1,4 +1,5 @@
 import type { LabelData, LabelTemplate, FieldPrintConfig } from "./LabelCanvas";
+import { wrapDefault } from "./LabelCanvas";
 
 const DPI = 203; // GX430T standard
 
@@ -44,8 +45,9 @@ export function buildZpl(
 
     for (const f of [...fields].sort((a, b) => a.order - b.order)) {
       if (!f.enabled) continue;
-      const val = values[f.key];
+      let val = values[f.key];
       if (!val || y >= maxY) continue;
+      if (f.uppercase) val = val.toUpperCase();
 
       const dotH = Math.max(14, Math.round(f.fontSize * DPI / 96));
 
@@ -65,12 +67,17 @@ export function buildZpl(
       } else {
         const style = f.bold ? "B" : "N";
         const safe  = val.replace(/[\^~]/g, "");
-        if (isCenter) {
-          zpl += `^FO${leftD + 5},${y}^FB${textBlockW},1,,C,0^A0${style},${dotH},${dotH}^FD${safe}^FS\n`;
-        } else {
-          zpl += `^FO${xBase},${y}^A0${style},${dotH},${dotH}^FD${safe}^FS\n`;
-        }
-        y += dotH + 3;
+        const wrap  = f.wrap ?? wrapDefault(f.key);
+        const blockW = isCenter ? textBlockW : Math.max(40, faceW - (xBase - leftD) - 4);
+        const maxLines = wrap ? 4 : 1;
+        // rough line estimate: ~0.55·dotH per glyph at font 0 in ZPL
+        const estLines = wrap
+          ? Math.min(maxLines, Math.max(1, Math.ceil((safe.length * dotH * 0.55) / blockW)))
+          : 1;
+        const justify = isCenter ? "C" : "L";
+        const foX = isCenter ? leftD + 5 : xBase;
+        zpl += `^FO${foX},${y}^FB${blockW},${maxLines},0,${justify},0^A0${style},${dotH},${dotH}^FD${safe}^FS\n`;
+        y += dotH * estLines + 3;
       }
     }
     return zpl;

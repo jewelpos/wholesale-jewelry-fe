@@ -8,7 +8,7 @@ import {
   CREATE_INVENTORY_TAG_LABEL_MUTATION,
   UPDATE_INVENTORY_TAG_LABEL_MUTATION,
 } from "@/lib/graphql/mutations/label";
-import LabelCanvas, { LabelTemplate, LabelData, FieldPrintConfig } from "./LabelCanvas";
+import LabelCanvas, { LabelTemplate, LabelData, FieldPrintConfig, wrapDefault } from "./LabelCanvas";
 import api from "@/lib/axios";
 
 const isOn = (v: unknown): boolean => v === "1" || v === "\x01" || v === 1 || v === true;
@@ -22,7 +22,7 @@ interface Props {
 
 const SAMPLE_DATA: LabelData = {
   itemcode: "RG-1234",
-  itemdescription: "14K Yellow Gold Diamond Ring",
+  itemdescription: "14K Yellow Gold Diamond Ring with Pave Halo and Milgrain Band",
   itembarcodeid: "1234567890",
   itemsellprice: "1250.00",
   codedprice: "ACBDEF",
@@ -62,23 +62,56 @@ const DEFAULT_FORM = {
 type FormState = typeof DEFAULT_FORM;
 
 const DEFAULT_FIELD_CONFIGS: FieldPrintConfig[] = [
-  { key: "itembarcodeid",   label: "Barcode",       side: "front", enabled: true,  order: 1,  fontSize: 10, bold: false },
-  { key: "itemcode",        label: "Item Code",     side: "front", enabled: true,  order: 2,  fontSize: 10, bold: true  },
-  { key: "codedprice",      label: "Coded Price",   side: "front", enabled: false, order: 3,  fontSize: 10, bold: true  },
-  { key: "itemdescription", label: "Description",   side: "back",  enabled: true,  order: 4,  fontSize: 10, bold: false },
-  { key: "itemsellprice",   label: "Sell Price",    side: "back",  enabled: true,  order: 5,  fontSize: 11, bold: true  },
-  { key: "categoryname",    label: "Category",      side: "back",  enabled: false, order: 6,  fontSize: 9,  bold: false },
-  { key: "itemtagprice",    label: "Tag Price",     side: "back",  enabled: false, order: 7,  fontSize: 11, bold: true  },
-  { key: "itemmetal",       label: "Metal Type",    side: "back",  enabled: false, order: 8,  fontSize: 9,  bold: false },
-  { key: "itemweighttext",  label: "Weight",        side: "back",  enabled: false, order: 9,  fontSize: 9,  bold: false },
-  { key: "itemsize",        label: "Size",          side: "back",  enabled: false, order: 10, fontSize: 9,  bold: false },
-  { key: "itemlength",      label: "Length",        side: "back",  enabled: false, order: 11, fontSize: 9,  bold: false },
-  { key: "itemcolor",       label: "Color",         side: "back",  enabled: false, order: 12, fontSize: 9,  bold: false },
+  { key: "itembarcodeid",   label: "Barcode",       side: "front", enabled: true,  order: 1,  fontSize: 10, bold: false, uppercase: false, wrap: false },
+  { key: "itemcode",        label: "Item Code",     side: "front", enabled: true,  order: 2,  fontSize: 10, bold: true,  uppercase: false, wrap: false },
+  { key: "codedprice",      label: "Coded Price",   side: "front", enabled: false, order: 3,  fontSize: 10, bold: true,  uppercase: false, wrap: false },
+  { key: "itemdescription", label: "Description",   side: "back",  enabled: true,  order: 4,  fontSize: 10, bold: false, uppercase: false, wrap: true  },
+  { key: "itemsellprice",   label: "Sell Price",    side: "back",  enabled: true,  order: 5,  fontSize: 11, bold: true,  uppercase: false, wrap: false },
+  { key: "categoryname",    label: "Category",      side: "back",  enabled: false, order: 6,  fontSize: 9,  bold: false, uppercase: false, wrap: false },
+  { key: "itemtagprice",    label: "Tag Price",     side: "back",  enabled: false, order: 7,  fontSize: 11, bold: true,  uppercase: false, wrap: false },
+  { key: "itemmetal",       label: "Metal Type",    side: "back",  enabled: false, order: 8,  fontSize: 9,  bold: false, uppercase: false, wrap: false },
+  { key: "itemweighttext",  label: "Weight",        side: "back",  enabled: false, order: 9,  fontSize: 9,  bold: false, uppercase: false, wrap: false },
+  { key: "itemsize",        label: "Size",          side: "back",  enabled: false, order: 10, fontSize: 9,  bold: false, uppercase: false, wrap: false },
+  { key: "itemlength",      label: "Length",        side: "back",  enabled: false, order: 11, fontSize: 9,  bold: false, uppercase: false, wrap: false },
+  { key: "itemcolor",       label: "Color",         side: "back",  enabled: false, order: 12, fontSize: 9,  bold: false, uppercase: false, wrap: false },
 ];
 
 function normSide(v: unknown, def: "front" | "back"): "front" | "back" {
   return v === "front" || v === "back" ? v : def;
 }
+
+// Number box that holds raw text while focused (so multi-digit entry works) and
+// clamps to [min, max] on blur / Enter, instead of re-clamping every keystroke.
+const NumInput: React.FC<{
+  value: number;
+  disabled?: boolean;
+  min: number;
+  max: number;
+  onCommit: (v: number) => void;
+}> = ({ value, disabled, min, max, onCommit }) => {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    if (!Number.isFinite(n) || n <= 0) { setDraft(String(value)); return; }
+    onCommit(Math.max(min, Math.min(max, n)));
+  };
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={1}
+      className="form-control form-control-sm p-0 text-center"
+      style={{ fontSize: 11, height: 24 }}
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+    />
+  );
+};
 
 function extractContentAlign(label: LabelTemplate): "left" | "center" {
   if (!label.fieldconfigs) return "left";
@@ -123,18 +156,23 @@ function initFieldConfigs(label: LabelTemplate): FieldPrintConfig[] {
         for (const def of DEFAULT_FIELD_CONFIGS) {
           if (!merged.some(c => c.key === def.key)) merged.push({ ...def });
         }
-        return merged.map(c => ({ ...c, side: normSide(c.side, backByDefault.has(c.key) ? "back" : "front") }));
+        return merged.map(c => ({
+          ...c,
+          side: normSide(c.side, backByDefault.has(c.key) ? "back" : "front"),
+          uppercase: !!c.uppercase,
+          wrap: c.wrap ?? wrapDefault(c.key),
+        }));
       }
     } catch {}
   }
   // Derive from legacy show/side fields for existing labels without fieldconfigs
   const result: FieldPrintConfig[] = [
-    { key: "itembarcodeid",   label: "Barcode",     side: normSide(label.barcodeside,     "front"), enabled: isOn(label.showbarcode),     order: 1, fontSize: 10, bold: false },
-    { key: "itemcode",        label: "Item Code",   side: normSide(label.itemcodeside,    "front"), enabled: isOn(label.showitemcode),    order: 2, fontSize: 10, bold: true  },
-    { key: "codedprice",      label: "Coded Price", side: normSide(label.codedpriceside,  "front"), enabled: isOn(label.showcodedprice),  order: 3, fontSize: 10, bold: true  },
-    { key: "itemdescription", label: "Description", side: normSide(label.descriptionside, "back"),  enabled: isOn(label.showdescription), order: 4, fontSize: 10, bold: false },
-    { key: "itemsellprice",   label: "Tag Price",   side: normSide(label.sellpriceside,   "back"),  enabled: isOn(label.showsellprice),   order: 5, fontSize: 11, bold: true  },
-    { key: "categoryname",    label: "Category",    side: normSide(label.categoryside,    "back"),  enabled: isOn(label.showcategory),    order: 6, fontSize: 9,  bold: false },
+    { key: "itembarcodeid",   label: "Barcode",     side: normSide(label.barcodeside,     "front"), enabled: isOn(label.showbarcode),     order: 1, fontSize: 10, bold: false, uppercase: false, wrap: false },
+    { key: "itemcode",        label: "Item Code",   side: normSide(label.itemcodeside,    "front"), enabled: isOn(label.showitemcode),    order: 2, fontSize: 10, bold: true,  uppercase: false, wrap: false },
+    { key: "codedprice",      label: "Coded Price", side: normSide(label.codedpriceside,  "front"), enabled: isOn(label.showcodedprice),  order: 3, fontSize: 10, bold: true,  uppercase: false, wrap: false },
+    { key: "itemdescription", label: "Description", side: normSide(label.descriptionside, "back"),  enabled: isOn(label.showdescription), order: 4, fontSize: 10, bold: false, uppercase: false, wrap: true  },
+    { key: "itemsellprice",   label: "Tag Price",   side: normSide(label.sellpriceside,   "back"),  enabled: isOn(label.showsellprice),   order: 5, fontSize: 11, bold: true,  uppercase: false, wrap: false },
+    { key: "categoryname",    label: "Category",    side: normSide(label.categoryside,    "back"),  enabled: isOn(label.showcategory),    order: 6, fontSize: 9,  bold: false, uppercase: false, wrap: false },
   ];
   // All-disabled means the DB is in a corrupt state from a previous bug — recover with standard defaults
   if (!result.some(c => c.enabled)) return DEFAULT_FIELD_CONFIGS;
@@ -526,6 +564,8 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                       <div style={{ flex: "0 0 48px", textAlign: "center" }}>Size</div>
                       <div style={{ flex: "0 0 40px", textAlign: "center" }}>Order</div>
                       <div style={{ flex: "0 0 32px", textAlign: "center" }}>Bold</div>
+                      <div style={{ flex: "0 0 34px", textAlign: "center" }} title="UPPERCASE">AA</div>
+                      <div style={{ flex: "0 0 34px", textAlign: "center" }} title="Wrap onto multiple lines">Wrap</div>
                     </div>
 
                     {fieldConfigs.map((cfg, i) => (
@@ -562,20 +602,16 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                         </>}
                         {/* Font size */}
                         <div style={{ flex: "0 0 48px" }}>
-                          <input type="number" min={7} max={20} step={1}
-                            className="form-control form-control-sm p-0 text-center"
-                            style={{ fontSize: 11, height: 24 }}
+                          <NumInput min={6} max={60}
                             value={cfg.fontSize}
                             disabled={!cfg.enabled}
-                            onChange={(e) => updateFieldConfig(i, { fontSize: Number(e.target.value) || cfg.fontSize })} />
+                            onCommit={(v) => updateFieldConfig(i, { fontSize: v })} />
                         </div>
                         {/* Order */}
                         <div style={{ flex: "0 0 40px" }}>
-                          <input type="number" min={1} max={10} step={1}
-                            className="form-control form-control-sm p-0 text-center"
-                            style={{ fontSize: 11, height: 24 }}
+                          <NumInput min={1} max={20}
                             value={cfg.order}
-                            onChange={(e) => updateFieldConfig(i, { order: Number(e.target.value) || cfg.order })} />
+                            onCommit={(v) => updateFieldConfig(i, { order: v })} />
                         </div>
                         {/* Bold */}
                         <div style={{ flex: "0 0 32px", display: "flex", justifyContent: "center" }}>
@@ -583,6 +619,20 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                             checked={cfg.bold}
                             disabled={!cfg.enabled}
                             onChange={() => updateFieldConfig(i, { bold: !cfg.bold })} />
+                        </div>
+                        {/* Uppercase */}
+                        <div style={{ flex: "0 0 34px", display: "flex", justifyContent: "center" }}>
+                          <input type="checkbox" className="form-check-input"
+                            checked={!!cfg.uppercase}
+                            disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
+                            onChange={() => updateFieldConfig(i, { uppercase: !cfg.uppercase })} />
+                        </div>
+                        {/* Wrap */}
+                        <div style={{ flex: "0 0 34px", display: "flex", justifyContent: "center" }}>
+                          <input type="checkbox" className="form-check-input"
+                            checked={cfg.wrap ?? wrapDefault(cfg.key)}
+                            disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
+                            onChange={() => updateFieldConfig(i, { wrap: !(cfg.wrap ?? wrapDefault(cfg.key)) })} />
                         </div>
                       </div>
                     ))}

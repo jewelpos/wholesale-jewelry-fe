@@ -65,7 +65,16 @@ export interface FieldPrintConfig {
   order: number;
   fontSize: number;
   bold: boolean;
+  /** Render this field's text in UPPERCASE. Undefined = false. */
+  uppercase?: boolean;
+  /** Let this field's text wrap onto multiple lines instead of a single clipped line.
+   * Undefined defaults to true for itemdescription (its long-standing behaviour), false
+   * for every other field. */
+  wrap?: boolean;
 }
+
+/** itemdescription has always wrapped; every other field defaults to single-line. */
+export const wrapDefault = (key: string): boolean => key === "itemdescription";
 
 const DPI = 96;
 // Handle all truthy forms MySQL/GraphQL can return for TINYINT: string "1", binary \x01, number 1, boolean true
@@ -117,7 +126,12 @@ interface ActiveField {
   key: keyof LabelData;
   fontSize: number;
   bold: boolean;
+  uppercase: boolean;
+  wrap: boolean;
 }
+
+const cased = (txt: string, f: { uppercase: boolean }) =>
+  f.uppercase && txt ? txt.toUpperCase() : txt;
 
 interface FaceProps {
   template: LabelTemplate;
@@ -156,25 +170,29 @@ const LabelFace: React.FC<FaceProps> = ({
           key: c.key,
           fontSize: Math.max(6, Math.round(c.fontSize * scale)),
           bold: c.bold,
+          uppercase: !!c.uppercase,
+          wrap: c.wrap ?? wrapDefault(c.key),
         }));
     }
     // Template-flag fallback
     const bfs = Math.max(9, Math.round(heightPx * 0.12));
+    const mk = (key: keyof LabelData, fontSize: number, bold: boolean): ActiveField =>
+      ({ key, fontSize, bold, uppercase: false, wrap: wrapDefault(key) });
     const fields: ActiveField[] = [];
-    if (isOn(template.showbarcode)     && onSide(template.barcodeside,     "front")) fields.push({ key: "itembarcodeid",   fontSize: bfs,     bold: false });
-    if (isOn(template.showitemcode)    && onSide(template.itemcodeside,    "front")) fields.push({ key: "itemcode",         fontSize: bfs,     bold: true  });
-    if (isOn(template.showcodedprice)  && onSide(template.codedpriceside,  "front")) fields.push({ key: "codedprice",       fontSize: bfs + 1, bold: true  });
-    if (isOn(template.showdescription) && onSide(template.descriptionside, "back"))  fields.push({ key: "itemdescription",  fontSize: bfs,     bold: false });
-    if (isOn(template.showsellprice)   && onSide(template.sellpriceside,   "back"))  fields.push({ key: "itemsellprice",    fontSize: bfs + 1, bold: true  });
-    if (isOn(template.showcategory)    && onSide(template.categoryside,    "back"))  fields.push({ key: "categoryname",     fontSize: bfs - 1, bold: false });
+    if (isOn(template.showbarcode)     && onSide(template.barcodeside,     "front")) fields.push(mk("itembarcodeid",   bfs,     false));
+    if (isOn(template.showitemcode)    && onSide(template.itemcodeside,    "front")) fields.push(mk("itemcode",         bfs,     true ));
+    if (isOn(template.showcodedprice)  && onSide(template.codedpriceside,  "front")) fields.push(mk("codedprice",       bfs + 1, true ));
+    if (isOn(template.showdescription) && onSide(template.descriptionside, "back"))  fields.push(mk("itemdescription",  bfs,     false));
+    if (isOn(template.showsellprice)   && onSide(template.sellpriceside,   "back"))  fields.push(mk("itemsellprice",    bfs + 1, true ));
+    if (isOn(template.showcategory)    && onSide(template.categoryside,    "back"))  fields.push(mk("categoryname",     bfs - 1, false));
     // All show* flags are "0" (corrupted DB state from old bug) — fall back to per-face defaults
     if (fields.length === 0) {
       if (face === "front") {
-        fields.push({ key: "itembarcodeid", fontSize: bfs,     bold: false });
-        fields.push({ key: "itemcode",      fontSize: bfs,     bold: true  });
+        fields.push(mk("itembarcodeid", bfs, false));
+        fields.push(mk("itemcode",      bfs, true ));
       } else {
-        fields.push({ key: "itemdescription", fontSize: bfs,     bold: false });
-        fields.push({ key: "itemsellprice",   fontSize: bfs + 1, bold: true  });
+        fields.push(mk("itemdescription", bfs,     false));
+        fields.push(mk("itemsellprice",   bfs + 1, true ));
       }
     }
     return fields;
@@ -186,6 +204,11 @@ const LabelFace: React.FC<FaceProps> = ({
     const pill: React.CSSProperties = hasImage
       ? { background: "rgba(255,255,255,0.85)", padding: "1px 5px", borderRadius: 3 }
       : {};
+    // wrap on  -> text flows onto multiple lines, clipped only at the face edge
+    // wrap off -> single line, ellipsis when it overruns the face width
+    const flow: React.CSSProperties = f.wrap
+      ? { whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden" }
+      : { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 
     switch (f.key) {
       case "itembarcodeid":
@@ -194,54 +217,55 @@ const LabelFace: React.FC<FaceProps> = ({
 
       case "itemcode":
         return (
-          <div key="code" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "0.5px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
-            {data.itemcode}
+          <div key="code" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "0.5px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...flow, ...pill }}>
+            {cased(data.itemcode, f)}
           </div>
         );
 
       case "codedprice":
         if (!data.codedprice) return null;
         return (
-          <div key="coded" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "1px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
-            {data.codedprice}
+          <div key="coded" style={{ fontSize: fs, fontWeight: fw, letterSpacing: "1px", lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...flow, ...pill }}>
+            {cased(data.codedprice, f)}
           </div>
         );
 
       case "itemdescription": {
         // Chrome's print renderer ignores display:-webkit-box, causing 0-height and invisible text.
-        // In print mode use plain block + maxHeight; keep webkit clamp for the on-screen thumbnail.
-        const clampStyle: React.CSSProperties = printMode
-          ? { display: "block", maxHeight: `${Math.round(fs * 1.3 * 2)}px` }
-          : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" };
+        // wrap on: allow the text to run tall (clipped at the face edge). wrap off: single line, ellipsis.
+        const clampStyle: React.CSSProperties = !f.wrap
+          ? {}
+          : printMode
+            ? { display: "block", maxHeight: `${Math.round(fs * 1.3 * 4)}px` }
+            : { display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" };
         return (
           <div key="desc" style={{
             fontSize: fs, fontWeight: fw, textAlign: isCenter ? "center" : "left", lineHeight: 1.3,
-            overflow: "hidden", width: "100%", color: "#111",
-            wordBreak: "break-word",
-            ...clampStyle, ...pill,
+            width: "100%", color: "#111",
+            ...flow, ...clampStyle, ...pill,
           }}>
-            {data.itemdescription}
+            {cased(data.itemdescription, f)}
           </div>
         );
       }
 
       case "itemsellprice":
         return (
-          <div key="sell" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
+          <div key="sell" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...flow, ...pill }}>
             {data.itemsellprice ? formatCurrency(data.itemsellprice) : ""}
           </div>
         );
 
       case "categoryname":
         return (
-          <div key="cat" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...pill }}>
-            {data.categoryname}
+          <div key="cat" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...flow, ...pill }}>
+            {cased(data.categoryname, f)}
           </div>
         );
 
       case "itemtagprice":
         return (
-          <div key="tagprice" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...pill }}>
+          <div key="tagprice" style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#111", ...flow, ...pill }}>
             {data.itemtagprice ? formatCurrency(data.itemtagprice) : ""}
           </div>
         );
@@ -254,8 +278,8 @@ const LabelFace: React.FC<FaceProps> = ({
         const txt = data[f.key];
         if (!txt) return null;
         return (
-          <div key={f.key} style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...pill }}>
-            {txt}
+          <div key={f.key} style={{ fontSize: fs, fontWeight: fw, lineHeight: 1, textAlign: isCenter ? "center" : "left", width: "100%", color: "#444", ...flow, ...pill }}>
+            {cased(txt, f)}
           </div>
         );
       }

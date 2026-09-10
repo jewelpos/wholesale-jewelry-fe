@@ -10,7 +10,7 @@ import {
   GET_PRODUCT_SETTINGS_INFO_QUERY,
 } from "@/lib/graphql/query/products";
 import { ProductListType } from "@/types/product";
-import LabelCanvas, { LabelData, LabelTemplate, FieldPrintConfig } from "./LabelCanvas";
+import LabelCanvas, { LabelData, LabelTemplate, FieldPrintConfig, wrapDefault } from "./LabelCanvas";
 import { buildZpl } from "./zplGenerator";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 
@@ -47,7 +47,13 @@ function normalizeSide(key: string, side: unknown): "front" | "back" {
   return DEFAULT_SIDES[key] ?? "front";
 }
 function normalizeConfigs(configs: FieldPrintConfig[]): FieldPrintConfig[] {
-  return configs.map(c => ({ ...c, side: normalizeSide(c.key, c.side), fontSize: Math.max(6, c.fontSize) }));
+  return configs.map(c => ({
+    ...c,
+    side: normalizeSide(c.key, c.side),
+    fontSize: Math.max(6, c.fontSize),
+    uppercase: !!c.uppercase,
+    wrap: c.wrap ?? wrapDefault(c.key),
+  }));
 }
 
 // Compute display fieldConfigs for any template — used for thumbnails and the init useEffect.
@@ -77,6 +83,8 @@ function buildFieldConfigs(template: LabelTemplate): FieldPrintConfig[] {
     order: isRattailTemplate ? d.order : i + 1,
     fontSize: d.fontSize,
     bold: d.bold,
+    uppercase: false,
+    wrap: wrapDefault(d.key),
   }));
   if (built.some(c => c.enabled)) return built;
   const STANDARD: (keyof LabelData)[] = ["itembarcodeid", "itemcode", "codedprice", "itemdescription", "itemsellprice"];
@@ -88,6 +96,8 @@ function buildFieldConfigs(template: LabelTemplate): FieldPrintConfig[] {
     order: isRattailTemplate ? d.order : i + 1,
     fontSize: d.fontSize,
     bold: d.bold,
+    uppercase: false,
+    wrap: wrapDefault(d.key),
   }));
 }
 
@@ -99,6 +109,47 @@ const FIELD_DEFAULTS = [
   { key: "itemsellprice",   label: "Tag Price",    defaultSide: "back"  as const, order: 2, fontSize: 11, bold: true,  showKey: "showsellprice",   sideKey: "sellpriceside"   },
   { key: "categoryname",    label: "Category",     defaultSide: "back"  as const, order: 3, fontSize: 8,  bold: false, showKey: "showcategory",    sideKey: "categoryside"    },
 ] as const;
+
+const toggleBtnStyle = (on: boolean, clickable: boolean): React.CSSProperties => ({
+  fontWeight: 700, fontSize: 11, padding: "1px 6px",
+  border: `1px solid ${on ? "#6366f1" : "#e2e8f0"}`,
+  borderRadius: 4,
+  background: on ? "#eef2ff" : "#fff",
+  color: on ? "#6366f1" : "#94a3b8",
+  cursor: clickable ? "pointer" : "default",
+});
+
+// Font-size box: hold the raw text while focused so multi-digit entry works, clamp on
+// blur / Enter. (The old input re-clamped on every keystroke against min 6 / max, so
+// typing "1" then "2" went 6 -> "62" -> clamped, which is where the stuck value came from.)
+const FontSizeInput: React.FC<{
+  value: number;
+  disabled?: boolean;
+  min?: number;
+  max?: number;
+  onCommit: (v: number) => void;
+}> = ({ value, disabled, min = 6, max = 60, onCommit }) => {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    if (!Number.isFinite(n) || n <= 0) { setDraft(String(value)); return; }
+    onCommit(Math.max(min, Math.min(max, n)));
+  };
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={draft}
+      disabled={disabled}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      style={{ width: 44, fontSize: 11, textAlign: "center", padding: "1px 2px", border: "1px solid #e2e8f0", borderRadius: 4 }}
+    />
+  );
+};
 
 const PREVIEW_BLOCK_A: (keyof LabelData)[] = ["itembarcodeid", "codedprice"];
 const PREVIEW_BLOCK_B: (keyof LabelData)[] = ["itemcode", "itemdescription", "itemsellprice", "categoryname", "itemtagprice", "itemmetal", "itemweighttext", "itemsize", "itemlength", "itemcolor"];
@@ -176,16 +227,20 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
         );
       }
 
-      const display = (cfg.key === "itemsellprice" || cfg.key === "itemtagprice") && value
+      const wrap = cfg.wrap ?? wrapDefault(cfg.key);
+      let display = (cfg.key === "itemsellprice" || cfg.key === "itemtagprice") && value
         ? formatCurrency(value)
         : (value || "—");
+      if (cfg.uppercase && display && display !== "—") display = display.toUpperCase();
 
       return (
         <div key={cfg.key} style={{
           fontSize: fs, fontWeight: cfg.bold ? 700 : 400,
           textAlign: isCenter ? "center" : "left", color: "#111",
           width: "100%", overflow: "hidden",
-          whiteSpace: "nowrap", textOverflow: "ellipsis",
+          whiteSpace: wrap ? "normal" : "nowrap",
+          wordBreak: wrap ? "break-word" : "normal",
+          textOverflow: wrap ? "clip" : "ellipsis",
           lineHeight: 1.2, position: "relative", ...bg,
         }}>
           {display}
@@ -363,7 +418,8 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   // Initialize fieldConfigs from the SELECTED template. The template is the source of truth
   // for which fields exist and their enabled/side state, so changing the template selection
   // (or editing the template) always overrides the stale preset. localStorage only carries
-  // the cosmetic layout tweaks made in this modal's layout panel: order / fontSize / bold.
+  // the cosmetic layout tweaks made in this modal's layout panel: order / fontSize / bold /
+  // uppercase / wrap.
   useEffect(() => {
     if (!selectedTemplate) return;
     const storageKey = `label_cfg_${parsedStoreId}_${selectedTemplate.labelid}`;
@@ -381,7 +437,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
     if (cosmeticByKey) {
       setFieldConfigs(templateConfigs.map(t => {
         const c = cosmeticByKey!.get(t.key);
-        return c ? { ...t, order: c.order, fontSize: c.fontSize, bold: c.bold } : t;
+        return c ? { ...t, order: c.order, fontSize: c.fontSize, bold: c.bold, uppercase: c.uppercase, wrap: c.wrap } : t;
       }));
     } else {
       setFieldConfigs(templateConfigs);
@@ -706,13 +762,10 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
             {cfg.label}
           </td>
           <td style={{ padding: "2px 4px" }}>
-            <input
-              type="number"
-              min={6} max={24}
+            <FontSizeInput
               value={cfg.fontSize}
               disabled={!cfg.enabled}
-              onChange={e => updateField(cfg.key, { fontSize: Math.max(6, Math.min(24, Number(e.target.value))) })}
-              style={{ width: 44, fontSize: 11, textAlign: "center", padding: "1px 2px", border: "1px solid #e2e8f0", borderRadius: 4 }}
+              onCommit={v => updateField(cfg.key, { fontSize: v })}
             />
           </td>
           <td style={{ padding: "2px 4px", textAlign: "center" }}>
@@ -720,16 +773,26 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
               type="button"
               disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
               onClick={() => updateField(cfg.key, { bold: !cfg.bold })}
-              style={{
-                fontWeight: 700, fontSize: 11,
-                padding: "1px 6px",
-                border: `1px solid ${cfg.bold && cfg.enabled ? "#6366f1" : "#e2e8f0"}`,
-                borderRadius: 4,
-                background: cfg.bold && cfg.enabled ? "#eef2ff" : "#fff",
-                color: cfg.bold && cfg.enabled ? "#6366f1" : "#94a3b8",
-                cursor: cfg.enabled && cfg.key !== "itembarcodeid" ? "pointer" : "default",
-              }}
+              style={toggleBtnStyle(!!cfg.bold && cfg.enabled, cfg.enabled && cfg.key !== "itembarcodeid")}
             >B</button>
+          </td>
+          <td style={{ padding: "2px 4px", textAlign: "center" }}>
+            <button
+              type="button"
+              title="UPPERCASE"
+              disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
+              onClick={() => updateField(cfg.key, { uppercase: !cfg.uppercase })}
+              style={toggleBtnStyle(!!cfg.uppercase && cfg.enabled, cfg.enabled && cfg.key !== "itembarcodeid")}
+            >AA</button>
+          </td>
+          <td style={{ padding: "2px 4px", textAlign: "center" }}>
+            <button
+              type="button"
+              title="Wrap onto multiple lines"
+              disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
+              onClick={() => updateField(cfg.key, { wrap: !(cfg.wrap ?? wrapDefault(cfg.key)) })}
+              style={toggleBtnStyle((cfg.wrap ?? wrapDefault(cfg.key)) && cfg.enabled, cfg.enabled && cfg.key !== "itembarcodeid")}
+            >↵</button>
           </td>
           {isRattail && (
             <td style={{ padding: "2px 4px", textAlign: "center" }}>
@@ -949,6 +1012,8 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                                 <th style={{ padding: "4px 6px", color: "#94a3b8", fontWeight: 600 }}>Field</th>
                                 <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 48 }}>Size</th>
                                 <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }}>Bold</th>
+                                <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }} title="UPPERCASE">AA</th>
+                                <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }} title="Wrap onto multiple lines">Wrap</th>
                                 {isRattail && <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }}>Side</th>}
                               </tr>
                             </thead>
@@ -956,13 +1021,13 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                               {isRattail ? (
                                 <>
                                   <tr>
-                                    <td colSpan={6} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#6366f1", background: "#eef2ff", letterSpacing: "0.5px" }}>
+                                    <td colSpan={8} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#6366f1", background: "#eef2ff", letterSpacing: "0.5px" }}>
                                       FRONT
                                     </td>
                                   </tr>
                                   {renderLayoutRows(frontFields)}
                                   <tr>
-                                    <td colSpan={6} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#0891b2", background: "#ecfeff", letterSpacing: "0.5px" }}>
+                                    <td colSpan={8} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#0891b2", background: "#ecfeff", letterSpacing: "0.5px" }}>
                                       BACK
                                     </td>
                                   </tr>
