@@ -54,6 +54,7 @@ export const GET_STORE = gql`
       defaultprintlayout
       sumbycategory
       sumbymetaltype
+      showmetalrateoninvoice
       currencycode
       routeprefix
       outlets {

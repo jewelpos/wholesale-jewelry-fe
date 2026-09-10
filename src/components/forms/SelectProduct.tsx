@@ -28,6 +28,7 @@ const SelectProduct = ({
   onNotFound,
   clearKey,
   scanValue,
+  onScanBusyChange,
   ...field
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) => {
@@ -45,6 +46,9 @@ const SelectProduct = ({
     if (clearKey !== undefined) {
       setSelectedOption(null);
       setInputText("");
+      if (selectRef.current?.inputRef) {
+        selectRef.current.inputRef.value = "";
+      }
       setTimeout(() => selectRef.current?.focus(), 50);
     }
   }, [clearKey]);
@@ -128,10 +132,25 @@ const SelectProduct = ({
   // in order, so the duplicate-detection each scan relies on always sees an
   // up-to-date item list.
   const scanQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // How many scans are currently enqueued-or-in-flight. The very last scan in a
+  // burst can still be mid-flight (discount lookup, form update) for a moment
+  // after the physical scan happened — if the user saves the invoice in that
+  // window, it saves one item short. onScanBusyChange lets the parent block Save
+  // until this drains back to zero.
+  const pendingScanCountRef = useRef(0);
+  const onScanBusyChangeRef = useRef(onScanBusyChange);
+  useEffect(() => { onScanBusyChangeRef.current = onScanBusyChange; }, [onScanBusyChange]);
+
   const enqueueScan = useCallback((query: string) => {
+    if (pendingScanCountRef.current === 0) onScanBusyChangeRef.current?.(true);
+    pendingScanCountRef.current += 1;
     scanQueueRef.current = scanQueueRef.current
       .then(() => searchImmediateRef.current(query))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        pendingScanCountRef.current -= 1;
+        if (pendingScanCountRef.current === 0) onScanBusyChangeRef.current?.(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -205,6 +224,16 @@ const SelectProduct = ({
           // Barcode scan: numeric input — clear immediately and queue the search so
           // rapid-fire scans (a "store and release" scanner) process one at a time.
           if (/^\d+$/.test(query) && query.length >= 2) {
+            // A hardware "store and release" scanner fires its next scan's keystrokes
+            // within milliseconds — faster than React can commit setInputText("") to
+            // the DOM. If the underlying <input> still physically holds the previous
+            // scan's digits when the next one starts typing, the two concatenate into
+            // one garbled string that matches nothing (e.g. "110798110798"). Clearing
+            // the real DOM node directly, synchronously, right here — not just the
+            // React state — closes that window regardless of React's render timing.
+            if (selectRef.current?.inputRef) {
+              selectRef.current.inputRef.value = "";
+            }
             setInputText("");
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
             enqueueScan(query);

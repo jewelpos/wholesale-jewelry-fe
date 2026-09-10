@@ -20,14 +20,16 @@ import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 import DocumentEmailModal from "@/components/ui/sales/DocumentEmailModal";
 import RowActionsWrapper, { RowActionItem } from "@/components/ui/grid/RowActionsWrapper";
 
-type PrintTemplate = 'compact' | 'thumbnail' | 'barcode' | 'packing_slip' | 'memo_invoice';
+type PrintTemplate = 'compact' | 'thumbnail' | 'barcode' | 'packing_slip' | 'memo_invoice' | 'barcode_below' | 'barcode_replace';
 
 const TEMPLATE_LABELS: Record<PrintTemplate, string> = {
-  compact:      'Standard',
-  thumbnail:    'With Photos',
-  barcode:      'With Barcodes',
-  packing_slip: 'Packing Slip',
-  memo_invoice: 'Memo Invoice',
+  compact:         'Standard',
+  thumbnail:       'With Photos',
+  barcode:         'With Barcodes',
+  packing_slip:    'Packing Slip',
+  memo_invoice:    'Memo Invoice',
+  barcode_below:   'Item Code + Barcode ID',
+  barcode_replace: 'Barcode ID Only',
 };
 
 interface SalesActionsProps {

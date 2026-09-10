@@ -9,7 +9,7 @@ import api from "@/lib/axios";
 import useStores from "@/hooks/useStores";
 import PdfPreviewModal from "@/components/ui/common/PdfPreviewModal";
 
-type DefaultTemplate = "compact" | "thumbnail" | "barcode" | "memo_invoice";
+type DefaultTemplate = "compact" | "thumbnail" | "barcode" | "memo_invoice" | "barcode_below" | "barcode_replace";
 type Template = DefaultTemplate | "packing_slip";
 
 interface LayoutOption {
@@ -101,6 +101,65 @@ const BarcodeMockup = () => (
   </div>
 );
 
+const BarcodeBelowMockup = () => (
+  <div style={{ border: "1px solid #e0e3ec", borderRadius: 4, overflow: "hidden", fontSize: 0 }}>
+    <NavBar />
+    <div style={{ background: "#fff", padding: "4px 6px 6px" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ width: 60, height: 5, background: "#283660", borderRadius: 1, marginBottom: 2 }} />
+          <div style={{ width: 40, height: 4, background: "#c8cad6", borderRadius: 1 }} />
+        </div>
+        <div style={{ width: 44, border: "1px solid #e0e3ec", borderRadius: 2, padding: "2px 3px" }}>
+          <div style={{ height: 3, background: "#d0d3dc", marginBottom: 2, borderRadius: 1 }} />
+          <div style={{ height: 3, background: "#d0d3dc", borderRadius: 1 }} />
+        </div>
+      </div>
+      <HeaderRow />
+      {[0, 1, 2].map(i => (
+        <div key={i} style={{ display: "flex", gap: 3, padding: "2px 0", background: i % 2 === 1 ? "#f4f5fc" : undefined }}>
+          <div style={{ width: 10 }}>
+            <div style={{ width: 10, height: 4, background: "#d0d3dc", borderRadius: 1, marginBottom: 1 }} />
+            <div style={{ width: 10, height: 3, background: "#e6e8ee", borderRadius: 1 }} />
+          </div>
+          <div style={{ flex: 1, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+          <div style={{ width: 16, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+          <div style={{ width: 16, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+        </div>
+      ))}
+      <div style={{ height: 4, background: "#f0f0f0", marginTop: 3, borderRadius: 1 }} />
+    </div>
+  </div>
+);
+
+const BarcodeReplaceMockup = () => (
+  <div style={{ border: "1px solid #e0e3ec", borderRadius: 4, overflow: "hidden", fontSize: 0 }}>
+    <NavBar />
+    <div style={{ background: "#fff", padding: "4px 6px 6px" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ width: 60, height: 5, background: "#283660", borderRadius: 1, marginBottom: 2 }} />
+          <div style={{ width: 40, height: 4, background: "#c8cad6", borderRadius: 1 }} />
+        </div>
+        <div style={{ width: 44, border: "1px solid #e0e3ec", borderRadius: 2, padding: "2px 3px" }}>
+          <div style={{ height: 3, background: "#d0d3dc", marginBottom: 2, borderRadius: 1 }} />
+          <div style={{ height: 3, background: "#d0d3dc", borderRadius: 1 }} />
+        </div>
+      </div>
+      <HeaderRow />
+      {[0, 1, 2].map(i => (
+        <div key={i} style={{ display: "flex", gap: 3, padding: "2px 0", background: i % 2 === 1 ? "#f4f5fc" : undefined }}>
+          <div style={{ width: 10, height: 5, background: "#334", borderRadius: 1 }} />
+          <div style={{ flex: 1, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+          <div style={{ width: 16, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+          <div style={{ width: 16, height: 5, background: "#dde0e8", borderRadius: 1 }} />
+        </div>
+      ))}
+      <div style={{ height: 4, background: "#f0f0f0", marginTop: 3, borderRadius: 1 }} />
+    </div>
+  </div>
+);
+
 const PackingMockup = () => (
   <div style={{ border: "1px solid #e0e3ec", borderRadius: 4, overflow: "hidden" }}>
     <NavBar />
@@ -142,6 +201,18 @@ const LAYOUTS: LayoutOption[] = [
     mockup: <BarcodeMockup />,
   },
   {
+    id: "barcode_below",
+    title: "Item Code + Barcode ID",
+    bullets: ["Barcode ID printed under item code", "Wider Description column fits more text", "Same 7-column layout as Standard"],
+    mockup: <BarcodeBelowMockup />,
+  },
+  {
+    id: "barcode_replace",
+    title: "Barcode ID Only",
+    bullets: ["Barcode ID replaces item code entirely", "Wider Description column fits more text", "Same 7-column layout as Standard"],
+    mockup: <BarcodeReplaceMockup />,
+  },
+  {
     id: "packing_slip",
     title: "Packing Slip",
     bullets: ["No prices — for packing & shipping", "4-column: #, code, description, qty", "Signature line at the bottom"],
@@ -169,6 +240,7 @@ const InvoiceLayoutSelector: React.FC = () => {
   });
   const [sumByCategory, setSumByCategory] = useState<boolean>(!!storeData?.sumbycategory);
   const [sumByMetalType, setSumByMetalType] = useState<boolean>(!!storeData?.sumbymetaltype);
+  const [showMetalRate, setShowMetalRate] = useState<boolean>(!!storeData?.showmetalrateoninvoice);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState<Template | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -200,6 +272,7 @@ const InvoiceLayoutSelector: React.FC = () => {
         layout: selected,
         sumbycategory: sumByCategory,
         sumbymetaltype: sumByMetalType,
+        showmetalrateoninvoice: showMetalRate,
       });
       await refetchCurrentStore();
       dispatch(showNotification({ message: "Default layout saved", type: NOTIFICATION_TYPES.SUCCESS }));
@@ -302,6 +375,14 @@ const InvoiceLayoutSelector: React.FC = () => {
               onChange={(e) => setSumByMetalType(e.target.checked)}
             />
             Show totals by metal type (replaces the flat weight total for Wt items)
+          </label>
+          <label className="d-flex align-items-center gap-2" style={{ fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showMetalRate}
+              onChange={(e) => setShowMetalRate(e.target.checked)}
+            />
+            Show Gold Spot / Silver price on Invoice (rate on the day the invoice was created — not today&apos;s rate on reprint)
           </label>
         </div>
       </div>

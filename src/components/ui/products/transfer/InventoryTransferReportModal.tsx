@@ -323,7 +323,7 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Req Qty</th>
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Xfer Qty</th>
                     <th style={{ padding: "6px 6px", textAlign: "right" }}>Recv Qty</th>
-                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Tag Price</th>
+                    <th style={{ padding: "6px 6px", textAlign: "right" }}>Sell Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,7 +354,7 @@ const InventoryTransferReportModal: React.FC<Props> = ({ onClose, initialTransfe
                 {rows.length > 0 && (
                   <tfoot>
                     <tr style={{ borderTop: "2px solid #0f172a", fontWeight: 700 }}>
-                      <td colSpan={11} style={{ padding: "8px" }}>Total Tag Value</td>
+                      <td colSpan={11} style={{ padding: "8px" }}>Total Sell Value</td>
                       <td style={{ padding: "8px", textAlign: "right" }}>{totalTagValue.toFixed(2)}</td>
                     </tr>
                   </tfoot>

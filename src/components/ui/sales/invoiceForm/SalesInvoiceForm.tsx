@@ -568,6 +568,31 @@ const SalesInvoiceForm = ({
   const [deleteHoldMutation] = useMutation(DELETE_INVOICE_HOLD_MUTATION);
 
   const [productClearKey, setProductClearKey] = useState(0);
+  // A rapid barcode-scan burst that runs past available stock re-triggers the
+  // "insufficient stock" toast on every single over-limit scan — e.g. scanning the
+  // same item 8 times past the limit fires 8 near-identical toasts in under a
+  // second. Redux dispatch + re-render for each one adds up to real main-thread
+  // work during exactly the burst that most needs to stay fast, and only the
+  // first warning actually tells the user anything new. Tracked per itemid so it
+  // resets the moment a fresh line is started for that item (see dupIndex < 0
+  // below) rather than suppressing the warning forever.
+  const insufficientWarnedRef = useRef<Set<number>>(new Set());
+  // Authoritative running quantity per itemid for the current scan burst, updated
+  // synchronously the instant each scan is processed — deliberately NOT re-derived
+  // from getValues("items")/react-hook-form's field-array state on every scan. The
+  // scan queue already serializes calls, but the merge branch's own async work
+  // (discount lookup, even cache-hit-fast) still means each call's "what's the
+  // current qty" read and its "write the incremented qty" step are two separate
+  // ticks — enough of a gap, at hardware-scanner speed with dozens of scans back to
+  // back, to occasionally read a not-yet-settled value and undercount. This ref is
+  // always in sync because WE set it, synchronously, the moment we decide the new
+  // quantity — it never has to be re-read back out of react-hook-form to be trusted.
+  const scannedQtyByItemIdRef = useRef<Map<number, number>>(new Map());
+  // True while a scanned barcode is still mid-flight through the add/merge chain —
+  // blocks Save so a fast-scanning cashier can't save an invoice one item short of
+  // what they actually scanned (the last scan can still be resolving for a moment
+  // after the physical scan happens).
+  const [scanBusy, setScanBusy] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [barcodeScanValue, setBarcodeScanValue] = useState<string | undefined>(undefined);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; filename: string } | null>(null);
@@ -1484,8 +1509,15 @@ const SalesInvoiceForm = ({
     const trackinventory = selected.trackinventory != null ? toNum(selected.trackinventory) : 1;
     const tracked = mode !== "CREDIT_INVOICE" && trackinventory !== 0;
 
+    // A fresh append (dupIndex < 0) starts a new line for this item, so it should
+    // always get to warn once even if the same itemid warned before on a line
+    // that's since been removed.
+    if (dupIndex < 0) insufficientWarnedRef.current.delete(itemid);
+
     const warnIfShort = (newQty: number) => {
       if (tracked && Math.abs(newQty) > availableqty) {
+        if (insufficientWarnedRef.current.has(itemid)) return;
+        insufficientWarnedRef.current.add(itemid);
         dispatch(
           showNotification({
             message: `${selected.itemcode || "Item"}: only ${availableqty} in stock (added ${Math.abs(newQty)})`,
@@ -1501,8 +1533,10 @@ const SalesInvoiceForm = ({
 
     if (dupIndex >= 0) {
       const existing = currentItems[dupIndex];
-      const existingQty = Number(existing.itemquantity || 0);
+      const existingQty = scannedQtyByItemIdRef.current.get(itemid) ?? Number(existing.itemquantity || 0);
       const newQty = mode === "CREDIT_INVOICE" ? existingQty - 1 : existingQty + 1;
+      // Set synchronously, before any await below — see ref declaration comment.
+      scannedQtyByItemIdRef.current.set(itemid, newQty);
       // Re-evaluate discount if not manually set
       if (!existing.discountsource || existing.discountsource !== 'manual') {
         const bulkTiers = await getBulkTiers(itemid);
@@ -1540,6 +1574,7 @@ const SalesInvoiceForm = ({
         warehouseid: getValues('warehouseid'),
       });
       const initQty = mode === "CREDIT_INVOICE" ? -1 : 1;
+      scannedQtyByItemIdRef.current.set(itemid, initQty);
       append({
         itemid,
         itemcode: selected.itemcode,
@@ -1828,6 +1863,10 @@ const SalesInvoiceForm = ({
     }
     const normalized = mode === "CREDIT_INVOICE" ? -(Math.round(abs * 1000) / 1000) : Math.round(abs * 1000) / 1000;
     setValue(`items.${index}.itemquantity`, normalized, { shouldDirty: true });
+    // Keep the scan-burst running-quantity tracker in sync with manual edits too,
+    // so a later scan of this same item increments from the edited value, not a
+    // stale scanned count from before the manual edit.
+    if (item?.itemid != null) scannedQtyByItemIdRef.current.set(Number(item.itemid), normalized);
     clearExtPriceOverride(index);
     const isWtItem = (item?.itemunit ?? "").trim().toLowerCase() === "wt";
     if (isWtItem) {
@@ -3316,6 +3355,7 @@ const SalesInvoiceForm = ({
                     }
                     clearKey={productClearKey}
                     scanValue={barcodeScanValue}
+                    onScanBusyChange={setScanBusy}
                     disableField={!!salesordernoFromSO || memoRestrictsItems}
                     onChange={(val: number | undefined) => setToolItem((prev) => ({ ...prev, itemid: val }))}
                     onChangeAdditional={(selected: ItemDetails) => {
@@ -3744,7 +3784,12 @@ const SalesInvoiceForm = ({
             </div>
           )}
         >
-          <ButtonLoader loading={saving} btnText="Save" loadingText="Saving ..." />
+          <ButtonLoader
+            loading={saving}
+            btnText={scanBusy ? "Processing scanned item…" : "Save"}
+            loadingText="Saving ..."
+            disabled={scanBusy}
+          />
         </ActionFooter>
       )}
     </form>

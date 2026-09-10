@@ -37,6 +37,7 @@ export type Store = {
   defaultprintlayout?: string;
   sumbycategory?: boolean;
   sumbymetaltype?: boolean;
+  showmetalrateoninvoice?: boolean;
   currencycode?: string;
   routeprefix?: string;
   outlets?: {

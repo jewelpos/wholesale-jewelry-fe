@@ -41,6 +41,11 @@ type InventoryTransferFormType = {
 };
 
 type TransferRow = {
+  // Rows are keyed for UI purposes (selection/edit/delete) by rowId, never itemid —
+  // the SAME item legitimately appears as multiple independent rows when it's a Wt
+  // (weight) item, since each physical piece has a different weight. Matching by
+  // itemid instead would edit/delete every row sharing that item at once.
+  rowId: string;
   itemid: number;
   itemcode: string;
   itemdescription: string;
@@ -48,6 +53,9 @@ type TransferRow = {
   transferquantity: number;
   itemunit?: string;
 };
+
+let transferRowIdSeq = 0;
+const nextTransferRowId = () => `row-${Date.now()}-${++transferRowIdSeq}`;
 
 const InventoryTransferForm = () => {
   const router = useRouter();
@@ -87,6 +95,8 @@ const InventoryTransferForm = () => {
   }));
 
   const [rows, setRows] = useState<TransferRow[]>([]);
+  const itemsScrollRef = useRef<HTMLDivElement>(null);
+  const prevRowCountRef = useRef(rows.length);
 
   const { products, loading: productsLoading, fetchProductsWithStockByStoreAndWarehouseId } =
     useProducts();
@@ -221,10 +231,32 @@ const InventoryTransferForm = () => {
   });
 
   const transferType = watch("transferType");
+
+  // Direct transfer: newest scanned/added item shows at the top instead of the
+  // bottom — items table row identity (key/edit/delete) is keyed by rowId, not
+  // index, so reversing display order here is purely cosmetic.
+  const displayRows = useMemo(
+    () => (transferType === "DIRECT" ? [...rows].reverse() : rows),
+    [rows, transferType]
+  );
+
   const fromOutletId = watch("fromOutletId");
   const toOutletId = watch("toOutletId");
   const fromWarehouseId = watch("fromWarehouseId");
   const toWarehouseId = watch("toWarehouseId");
+
+  // Same pattern as the Invoice/PO forms: scroll the items panel to reveal a newly
+  // added row instead of leaving it out of view. Direct transfer shows newest-first
+  // (see displayRows above), so the new row appears at the top there instead of
+  // the bottom everywhere else.
+  useEffect(() => {
+    if (rows.length > prevRowCountRef.current) {
+      const el = itemsScrollRef.current;
+      const top = transferType === "DIRECT" ? 0 : el?.scrollHeight;
+      if (el) requestAnimationFrame(() => el.scrollTo({ top, behavior: "smooth" }));
+    }
+    prevRowCountRef.current = rows.length;
+  }, [rows.length, transferType]);
 
   const prevInternalFromWarehouseIdRef = useRef<number | undefined>(undefined);
 
@@ -498,6 +530,7 @@ const InventoryTransferForm = () => {
     setRows((prev) => [
       ...prev,
       {
+        rowId: nextTransferRowId(),
         itemid: Number(toolItem.itemid),
         itemcode,
         itemdescription: description,
@@ -509,8 +542,8 @@ const InventoryTransferForm = () => {
     resetToolItem();
   };
 
-  const deleteRow = (itemid: number) => {
-    setRows((prev) => prev.filter((r) => r.itemid !== itemid));
+  const deleteRow = (rowId: string) => {
+    setRows((prev) => prev.filter((r) => r.rowId !== rowId));
   };
 
   const resetDirectToolItem = () => {
@@ -548,6 +581,7 @@ const InventoryTransferForm = () => {
         return [
           ...prev,
           {
+            rowId: nextTransferRowId(),
             itemid: Number(selected.itemid),
             itemcode: selected.itemcode ?? "",
             itemdescription: selected.itemdescription ?? "",
@@ -601,6 +635,7 @@ const InventoryTransferForm = () => {
       return [
         ...prev,
         {
+          rowId: nextTransferRowId(),
           itemid: directToolItem.itemid!,
           itemcode: directToolItem.itemcode ?? "",
           itemdescription: directToolItem.itemdescription ?? "",
@@ -645,6 +680,7 @@ const InventoryTransferForm = () => {
         }
 
         mapped.push({
+          rowId: nextTransferRowId(),
           itemid: resolved.itemid,
           itemcode: code,
           itemdescription: it.itemdescription || resolved.itemdescription,
@@ -1343,7 +1379,7 @@ const InventoryTransferForm = () => {
           )}
 
           {/* Items table */}
-          <div style={{ maxHeight: 440, overflowY: "auto" }}>
+          <div ref={itemsScrollRef} style={{ maxHeight: 440, overflowY: "auto" }}>
             <table className="table datanew mb-0" style={{ fontSize: 12 }}>
               <thead className="sticky-top bg-white" style={{ zIndex: 1 }}>
                 <tr>
@@ -1363,8 +1399,8 @@ const InventoryTransferForm = () => {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((r, index) => (
-                    <tr key={r.itemid} className="align-middle">
+                  displayRows.map((r, index) => (
+                    <tr key={r.rowId} className="align-middle">
                       <td className="text-muted">{index + 1}</td>
                       <td className="text-nowrap fw-semibold">{r.itemcode}</td>
                       <td className="text-muted">{r.itemdescription}</td>
@@ -1389,7 +1425,7 @@ const InventoryTransferForm = () => {
                             }
                             setRows((prev) =>
                               prev.map((x) =>
-                                x.itemid === r.itemid ? { ...x, transferquantity: normalized } : x
+                                x.rowId === r.rowId ? { ...x, transferquantity: normalized } : x
                               )
                             );
                           }}
@@ -1399,7 +1435,7 @@ const InventoryTransferForm = () => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-danger"
-                          onClick={() => deleteRow(r.itemid)}
+                          onClick={() => deleteRow(r.rowId)}
                         >
                           <Trash2 size={14} />
                         </button>
