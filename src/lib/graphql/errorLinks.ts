@@ -5,29 +5,81 @@ import { Observable } from "@apollo/client";
 // Resets on page reload (which the Resume button triggers).
 let sessionExpiredFlag = false;
 
-// Singleton refresh: all concurrent 401 handlers share one request so the
-// refresh token is never used twice (rotation would invalidate the first caller's result).
+// Singleton refresh (same-tab): all concurrent 401 handlers in THIS tab share one
+// in-flight request so the refresh token is never used twice from here alone.
 let inflightRefresh: Promise<boolean> | null = null;
 
+// Cross-tab coordination — the same-tab singleton above doesn't help when the SAME
+// session is open in two tabs/windows (common: invoice in one tab, inventory in
+// another). The backend rotates the refresh token on every use, so two independent
+// tabs each running their own 55-min proactive timer (see SessionExpiredModal) can
+// still land on /api/auth/refresh close together, race over the same single-use
+// token, and force-log-out an otherwise still-active user — the exact bug the
+// same-tab singleton was built for, just one level up. Web Locks give every tab in
+// the origin a real mutual-exclusion primitive for free (auto-queues waiters,
+// auto-releases if a tab crashes/closes, no manual TTL/staleness bookkeeping needed).
+const CROSS_TAB_LOCK_NAME = "jewelpos-auth-refresh";
+// Shared across tabs via localStorage: when did a refresh last actually complete? A
+// tab that was queued behind another tab's lock uses this to recognize "someone else
+// just rotated the token for me" and skip doing a second, redundant, wasteful (and
+// itself rotation-racy) refresh of its own.
+const LAST_REFRESH_KEY = "jewelpos_last_token_refresh";
+const MIN_REFRESH_INTERVAL_MS = 5000;
+
+// Exported for SessionExpiredModal's visibility-change catch-up check — background
+// tabs get their setInterval timers throttled by the browser, so a tab can come back
+// into focus well past its next scheduled proactive refresh. Reading this shared,
+// cross-tab timestamp lets it decide "is a refresh actually overdue right now?"
+// instead of waiting for its own possibly-delayed timer to eventually fire.
+export function getLastTokenRefreshAt(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    return Number(window.localStorage.getItem(LAST_REFRESH_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function setLastTokenRefreshAt(ts: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_REFRESH_KEY, String(ts));
+  } catch { /* storage unavailable (private mode, quota) — cross-tab skip just won't trigger */ }
+}
+
+async function doRefreshFetch(): Promise<boolean> {
+  const ok = await fetch("/api/auth/refresh", { method: "POST" }).then(r => r.ok);
+  if (!ok) throw new Error("");
+  setLastTokenRefreshAt(Date.now());
+  return true;
+}
+
 // Exported so every refresh trigger in the app (a 401 here, the idle modal's proactive
-// timer, its "Continue Working" button) shares this one in-flight promise. The backend
-// rotates the refresh token on every use — invalidating it as soon as it's redeemed —
-// so two independent, uncoordinated refresh calls landing close together can race: both
-// can pass validation, but only one write wins in the DB, and if the other's Set-Cookie
-// lands second the browser ends up holding a token that no longer matches the DB. The
-// next refresh then genuinely fails and force-logs-out an otherwise still-active user.
+// timer, its "Continue Working" button, the axios interceptor) shares this one path.
 export async function refreshToken(): Promise<boolean> {
   if (!inflightRefresh) {
-    inflightRefresh = fetch("/api/auth/refresh", { method: "POST" })
-      .then(r => {
-        if (r.ok) return true;
-        throw new Error("");
-      })
-      .finally(() => {
-        setTimeout(() => { inflightRefresh = null; }, 1000);
-      });
+    inflightRefresh = runCoordinatedRefresh().finally(() => {
+      setTimeout(() => { inflightRefresh = null; }, 1000);
+    });
   }
   return inflightRefresh;
+}
+
+async function runCoordinatedRefresh(): Promise<boolean> {
+  // No Web Locks support (very old browser) — fall back to the previous same-tab-only
+  // behavior rather than failing outright.
+  if (typeof navigator === "undefined" || !("locks" in navigator)) {
+    return doRefreshFetch();
+  }
+  return navigator.locks.request(CROSS_TAB_LOCK_NAME, async () => {
+    // We now hold the cross-tab lock. If another tab held it moments ago and already
+    // completed a refresh while we were queued, don't rotate the token again — just
+    // report success; our own cookies were updated by that other tab's response.
+    if (Date.now() - getLastTokenRefreshAt() < MIN_REFRESH_INTERVAL_MS) {
+      return true;
+    }
+    return doRefreshFetch();
+  });
 }
 
 // Called when the refresh token is itself expired — can't silently recover.

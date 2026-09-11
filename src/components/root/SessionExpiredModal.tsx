@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { logoutAndRedirect, refreshToken } from "@/lib/graphql/errorLinks";
+import { getLastTokenRefreshAt, logoutAndRedirect, refreshToken, setLastTokenRefreshAt } from "@/lib/graphql/errorLinks";
 import { Clock, LogIn, LogOut, RefreshCw } from "react-feather";
 
 // How long a user can sit idle before the "are you still there?" prompt appears.
@@ -10,6 +10,11 @@ const IDLE_WARN_MS    = IDLE_WARN_MINS * 60 * 1000;
 const IDLE_WARN_LABEL = IDLE_WARN_MINS % 60 === 0 ? `${IDLE_WARN_MINS / 60} hours` : `${IDLE_WARN_MINS} minutes`;
 const IDLE_CHECK_MS  = 60 * 1000;
 const COUNTDOWN_SECS = 10 * 60;
+// The access-token cookie lives 60 min and the proactive timer below renews it every
+// 55 — but browsers throttle setInterval in background tabs, so a tab can resurface
+// well past its next scheduled tick. 50 min gives a safety margin under the 60-min
+// cookie lifetime for this catch-up check.
+const CATCH_UP_REFRESH_MS = 50 * 60 * 1000;
 
 type Reason     = "idle" | "expired";
 type ModalState = "prompt" | "resuming" | "resume-failed" | "logging-out";
@@ -43,6 +48,32 @@ export default function SessionExpiredModal() {
       refreshToken().catch(() => {/* silent */});
     }, 55 * 60 * 1000);
     return () => clearInterval(id);
+  }, [visible]);
+
+  // ── Catch-up refresh on tab focus ──────────────────────────────────────────
+  // Browsers throttle setInterval in background tabs, so the 55-min timer above can
+  // fire late if this tab was backgrounded — by the time it does, the 60-min access
+  // cookie may have already expired. Checking on visibilitychange means a tab that
+  // resurfaces catches up immediately instead of waiting out its own delayed timer
+  // (and, if another tab already refreshed in the meantime, getLastTokenRefreshAt —
+  // shared via localStorage — means this is usually a no-op).
+  useEffect(() => {
+    // Baseline so a freshly loaded/reloaded tab has a real timestamp to compare
+    // against instead of treating "never refreshed yet" as infinitely overdue.
+    if (getLastTokenRefreshAt() === 0) setLastTokenRefreshAt(Date.now());
+
+    const checkCatchUp = () => {
+      if (document.visibilityState !== "visible" || visible) return;
+      if (Date.now() - getLastTokenRefreshAt() >= CATCH_UP_REFRESH_MS) {
+        refreshToken().catch(() => {/* silent — the normal 401 fallback still applies */});
+      }
+    };
+    document.addEventListener("visibilitychange", checkCatchUp);
+    window.addEventListener("focus", checkCatchUp);
+    return () => {
+      document.removeEventListener("visibilitychange", checkCatchUp);
+      window.removeEventListener("focus", checkCatchUp);
+    };
   }, [visible]);
 
   // ── Idle check every 60 s ─────────────────────────────────────────────────
