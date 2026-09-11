@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { logoutAndRedirect, refreshToken } from "@/lib/graphql/errorLinks";
 import { Clock, LogIn, LogOut, RefreshCw } from "react-feather";
 
-const IDLE_WARN_MS   = 45 * 60 * 1000;
+// How long a user can sit idle before the "are you still there?" prompt appears.
+const IDLE_WARN_MINS  = 4 * 60;
+const IDLE_WARN_MS    = IDLE_WARN_MINS * 60 * 1000;
+const IDLE_WARN_LABEL = IDLE_WARN_MINS % 60 === 0 ? `${IDLE_WARN_MINS / 60} hours` : `${IDLE_WARN_MINS} minutes`;
 const IDLE_CHECK_MS  = 60 * 1000;
 const COUNTDOWN_SECS = 10 * 60;
 
@@ -165,7 +168,7 @@ export default function SessionExpiredModal() {
             {state !== "resume-failed" ? (
               <p className="mb-0 text-muted" style={{ fontSize: 13 }}>
                 {reason === "idle"
-                  ? "You've been inactive for 45 minutes. Click Continue Working to stay logged in, or log out if you're done."
+                  ? `You've been inactive for ${IDLE_WARN_LABEL}. Click Continue Working to stay logged in, or log out if you're done.`
                   : "Your session has expired. Please log in again to continue."}
               </p>
             ) : (
