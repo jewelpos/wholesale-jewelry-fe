@@ -69,12 +69,13 @@ const ActivityTimeline = ({ data }: Props) => {
               const key = resolveKey(item.transaction_type, item.activity_category);
               const cfg = TYPE_CONFIG[key];
               const isPositive = (item.quantity ?? 0) > 0;
-              // transation_date arrives as a STRING of epoch milliseconds (backend sends
-              // String(date.getTime()) to dodge a GraphQL String/Date serialization bug —
-              // see executeAndReturnData's dateFields comment). dayjs parses a numeric
-              // string differently from a numeric value, so this must be Number()'d first
-              // or it silently resolves to a bogus historical date.
-              const date = dayjs(Number(item.transation_date)).format("MMM DD, YYYY");
+              // transation_date is a plain zone-less "YYYY-MM-DDTHH:mm:ss" string (see
+              // backend getProductActivityChart) — read at face value regardless of the
+              // viewer's timezone. It used to be an epoch-ms string, which converted the
+              // stored UTC instant into the viewer's own local time and rolled it back a
+              // calendar day for anyone behind UTC — same bug class as
+              // project_date_serialization_bug_sweep.
+              const date = dayjs(item.transation_date).format("MMM DD, YYYY");
 
               return (
                 <div key={i} style={{ position: "relative", marginBottom: 10 }}>
