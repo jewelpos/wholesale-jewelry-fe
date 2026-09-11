@@ -97,9 +97,18 @@ export function useAutoHoldOnLeave({
   const dispatch = useAppDispatch();
   // Lazy one-time init (the function only runs on the first render; React guarantees
   // the returned state value's identity is stable across re-renders thereafter,
-  // exactly like a ref would be) — scoped by doctype so INVOICE and MEMO sessions in
-  // the same tab never share one "current hold" pointer.
-  const [currentHoldIdRef] = useState(() => makePersistedHoldIdRef(`invoiceHold:currentId:${doctype}`));
+  // exactly like a ref would be) — scoped by store + outlet + doctype so INVOICE and
+  // MEMO sessions never share one "current hold" pointer, AND (critically) so switching
+  // outlets in the same tab can never pick up a hold id left behind by a different
+  // outlet's session. Before this, the key was doctype-only: leaving an unsaved invoice
+  // in Outlet 2 (auto-holding it there), then switching to Outlet 1 and leaving/holding
+  // again, reused Outlet 2's holdid for the save — and saveInvoiceHold's UPDATE path
+  // doesn't check outletid, so it silently overwrote Outlet 2's hold with Outlet 1's
+  // content while it stayed filed under Outlet 2. Storeid is included too since a
+  // tenant's outlet ids aren't guaranteed unique across a future multi-store session.
+  const [currentHoldIdRef] = useState(() =>
+    makePersistedHoldIdRef(`invoiceHold:currentId:${storeid}:${outletid}:${doctype}`)
+  );
   // Once the document this form was building has actually been saved for real, there is
   // nothing left to protect — flip this (before any reset()/navigation, which may happen
   // much later through a payment/print/email flow with the form still "dirty" the whole

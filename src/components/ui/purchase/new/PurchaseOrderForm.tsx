@@ -1057,6 +1057,18 @@ const PurchaseOrderForm = ({
         });
         const successData = response.data?.createSupplierReturn;
         if (successData?.success) {
+          // Same cleanup as the main create/edit/return-from-PO path below — this branch
+          // has its own early return, so without this the hold this return was resumed
+          // from (or auto-held while working on it) never got discarded even though the
+          // Return PO was created successfully.
+          suppressAutoHoldRef.current = true;
+          if (currentHoldIdRef.current != null) {
+            const holdIdToClear = currentHoldIdRef.current;
+            currentHoldIdRef.current = null;
+            deleteHoldMutation({ variables: { holdid: holdIdToClear, storeid: parsedStoreId } })
+              .then(() => refetchHolds())
+              .catch(() => {});
+          }
           const newPo = successData?.data?.ponumber;
           dispatch(showNotification({
             message: newPo ? `Return PO #${newPo} created` : successData.message,
