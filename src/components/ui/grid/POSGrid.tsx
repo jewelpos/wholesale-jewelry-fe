@@ -114,9 +114,16 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           .then(({ data }) => {
             const raw = data?.getGridColumnState;
             if (!raw) return;
-            const state = JSON.parse(raw);
+            const rawState = JSON.parse(raw);
             const api = internalRef.current?.api ?? params.api;
             if (!api) return;
+            // Strip sort/sortIndex here too — same reason as the columnDefs-change restore
+            // effect below: applying a saved sort via the API fires the grid's own
+            // sort-changed handling (an SSRM refetch), which was fighting with this very
+            // restore and snapping order/visibility/width right back to default the
+            // moment the sort "changed". This restore's job is order/visibility/width
+            // only; sort is left to whatever the grid/datasource's own default is.
+            const state = rawState.map(({ sort, sortIndex, ...rest }: any) => rest);
             isRestoringRef.current = true;
             api.applyColumnState({ state, applyOrder: true });
             savedColStateRef.current = state;
