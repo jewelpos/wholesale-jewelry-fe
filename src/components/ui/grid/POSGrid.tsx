@@ -87,6 +87,15 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     const [saveGridColumnState] = useMutation(SAVE_GRID_COLUMN_STATE_MUTATION);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // A pending debounced save left running past unmount would read internalRef.current
+    // (possibly a torn-down grid instance) and persist whatever that yields — clear it
+    // on unmount instead of letting it fire into the void.
+    useEffect(() => {
+      return () => {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      };
+    }, []);
+
     const persistColumnState = useCallback(() => {
       if (!gridKey || !parsedStoreId || isRestoringRef.current) return;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -103,39 +112,66 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gridKey, parsedStoreId]);
 
-    // Load the saved layout once the grid is ready
+    // Load the saved layout once the grid is ready. AG Grid only ever calls onGridReady
+    // ONCE per grid instance — it never fires again on a later re-render — so if
+    // parsedStoreId (a route param) hasn't resolved yet at that exact instant, bailing
+    // out here with no retry means the restore is silently skipped for the rest of this
+    // page view: the grid falls back to its default layout, and the next column the
+    // user touches gets saved as a "change" from that default, overwriting the real
+    // saved layout. Pages that fetch more before mounting their grid (extra summary/
+    // settings queries) shift exactly when the grid becomes ready relative to when the
+    // param resolves, which is why this showed up on some grids/pages and not others.
+    // gridIsReadyRef + the retry effect below give it a second chance once the param
+    // does resolve, instead of only the one shot at onGridReady time.
     const loadedGridKeyRef = useRef<string | null>(null);
+    const gridIsReadyRef = useRef(false);
+    const gridReadyParamsRef = useRef<any>(null);
+
+    const restoreColumnState = useCallback(() => {
+      if (!gridKey || !parsedStoreId || loadedGridKeyRef.current === gridKey) return;
+      loadedGridKeyRef.current = gridKey;
+      fetchGridColumnState({ variables: { storeid: parsedStoreId, gridkey: gridKey } })
+        .then(({ data }) => {
+          const raw = data?.getGridColumnState;
+          if (!raw) return;
+          const rawState = JSON.parse(raw);
+          const api = internalRef.current?.api ?? gridReadyParamsRef.current?.api;
+          if (!api) return;
+          // Strip sort/sortIndex here too — same reason as the columnDefs-change restore
+          // effect below: applying a saved sort via the API fires the grid's own
+          // sort-changed handling (an SSRM refetch), which was fighting with this very
+          // restore and snapping order/visibility/width right back to default the
+          // moment the sort "changed". This restore's job is order/visibility/width
+          // only; sort is left to whatever the grid/datasource's own default is.
+          const state = rawState.map(({ sort, sortIndex, ...rest }: any) => rest);
+          isRestoringRef.current = true;
+          api.applyColumnState({ state, applyOrder: true });
+          savedColStateRef.current = state;
+          setTimeout(() => { isRestoringRef.current = false; }, 0);
+        })
+        .catch(() => {
+          // Non-critical — grid just falls back to the default layout
+        });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gridKey, parsedStoreId]);
+
     const handleGridReady = useCallback(
       (params: any) => {
         onGridReady?.(params);
-        if (!gridKey || !parsedStoreId || loadedGridKeyRef.current === gridKey) return;
-        loadedGridKeyRef.current = gridKey;
-        fetchGridColumnState({ variables: { storeid: parsedStoreId, gridkey: gridKey } })
-          .then(({ data }) => {
-            const raw = data?.getGridColumnState;
-            if (!raw) return;
-            const rawState = JSON.parse(raw);
-            const api = internalRef.current?.api ?? params.api;
-            if (!api) return;
-            // Strip sort/sortIndex here too — same reason as the columnDefs-change restore
-            // effect below: applying a saved sort via the API fires the grid's own
-            // sort-changed handling (an SSRM refetch), which was fighting with this very
-            // restore and snapping order/visibility/width right back to default the
-            // moment the sort "changed". This restore's job is order/visibility/width
-            // only; sort is left to whatever the grid/datasource's own default is.
-            const state = rawState.map(({ sort, sortIndex, ...rest }: any) => rest);
-            isRestoringRef.current = true;
-            api.applyColumnState({ state, applyOrder: true });
-            savedColStateRef.current = state;
-            setTimeout(() => { isRestoringRef.current = false; }, 0);
-          })
-          .catch(() => {
-            // Non-critical — grid just falls back to the default layout
-          });
+        gridIsReadyRef.current = true;
+        gridReadyParamsRef.current = params;
+        restoreColumnState();
       },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [gridKey, parsedStoreId, onGridReady]
+      [onGridReady, restoreColumnState]
     );
+
+    // Retry once parsedStoreId (or gridKey) becomes available/changes after the grid
+    // was already ready — restoreColumnState's own loadedGridKeyRef guard makes this a
+    // no-op if the restore already happened, so this only ever does real work for the
+    // "wasn't ready yet at onGridReady time" case above.
+    useEffect(() => {
+      if (gridIsReadyRef.current) restoreColumnState();
+    }, [restoreColumnState]);
 
     // Save column state whenever the user toggles column visibility
     const handleColumnVisible = useCallback(
