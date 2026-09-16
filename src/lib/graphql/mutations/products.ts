@@ -182,3 +182,31 @@ export const RECEIVE_INVENTORY_TRANSFER_MUTATION = gql`
     }
   }
 `;
+
+// System Tools > Update Product Sub/Category (menu 86)
+export const BULK_REPLACE_PRODUCT_CATEGORY_MUTATION = gql`
+  mutation BulkReplaceProductCategory($storeid: Int!, $oldcategoryid: Int!, $newcategoryid: Int!) {
+    bulkReplaceProductCategory(storeid: $storeid, oldcategoryid: $oldcategoryid, newcategoryid: $newcategoryid) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const BULK_REPLACE_PRODUCT_SUBCATEGORY_MUTATION = gql`
+  mutation BulkReplaceProductSubcategory($storeid: Int!, $categoryid: Int!, $oldsubcategoryid: Int!, $newsubcategoryid: Int!) {
+    bulkReplaceProductSubcategory(
+      storeid: $storeid
+      categoryid: $categoryid
+      oldsubcategoryid: $oldsubcategoryid
+      newsubcategoryid: $newsubcategoryid
+    ) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;

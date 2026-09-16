@@ -256,6 +256,19 @@ export const CHECK_ITEM_CODE_EXISTS_QUERY = gql`
   }
 `;
 
+// System Tools > Update Product Sub/Category (menu 86)
+export const GET_PRODUCT_COUNT_BY_CATEGORY_QUERY = gql`
+  query GetProductCountByCategory($storeid: Int!, $categoryid: Int!) {
+    getProductCountByCategory(storeid: $storeid, categoryid: $categoryid)
+  }
+`;
+
+export const GET_PRODUCT_COUNT_BY_CATEGORY_SUBCATEGORY_QUERY = gql`
+  query GetProductCountByCategorySubcategory($storeid: Int!, $categoryid: Int!, $subcategoryid: Int!) {
+    getProductCountByCategorySubcategory(storeid: $storeid, categoryid: $categoryid, subcategoryid: $subcategoryid)
+  }
+`;
+
 export const GET_PRODUCT_BY_ITEMCODE_QUERY = gql`
   query GetProductByItemCode($itemcode: String!, $storeid: Int!) {
     getProductByItemCode(itemcode: $itemcode, storeid: $storeid) {
