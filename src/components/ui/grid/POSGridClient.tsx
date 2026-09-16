@@ -1,13 +1,13 @@
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import React, { forwardRef, useCallback, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useLazyQuery, useMutation } from "@apollo/client";
-import { Check, Save } from "react-feather";
 import CustomLoadingOverlay from "./CustomLoadingOverlay";
 import CustomNoRowsOverlay from "./CustomNoRowsOverlay";
 import useAutoSizeAggrid from "@/hooks/useAutoSizeAggrid";
 import { GET_GRID_COLUMN_STATE_QUERY } from "@/lib/graphql/query/gridPreferences";
 import { SAVE_GRID_COLUMN_STATE_MUTATION } from "@/lib/graphql/mutations/gridPreferences";
+import GridLayoutToolPanel from "./GridLayoutToolPanel";
 
 interface POSGridClientProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,26 +95,50 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gridKey, parsedStoreId]);
 
-    // Explicit "Save layout" button — see POSGrid.tsx for the full rationale.
-    const [justSaved, setJustSaved] = useState(false);
-    const [manualSaving, setManualSaving] = useState(false);
-    const handleManualSave = useCallback(() => {
+    // Shared by the automatic restore-on-ready below and the manual "Reset to My
+    // Saved Layout" sidebar button (see GridLayoutToolPanel.tsx / POSGrid.tsx for the
+    // full rationale) — fetches the DB row and applies it to the grid. Doesn't touch
+    // loadedGridKeyRef/restorePendingRef itself; callers decide the guard behavior.
+    const fetchAndApplySavedState = useCallback(
+      (paramsApi?: any): Promise<void> => {
+        if (!gridKey || !parsedStoreId) return Promise.resolve();
+        return fetchGridColumnState({ variables: { storeid: parsedStoreId, gridkey: gridKey } })
+          .then(({ data }) => {
+            const raw = data?.getGridColumnState;
+            if (!raw) return;
+            const state = JSON.parse(raw);
+            const api = internalRef.current?.api ?? paramsApi;
+            if (!api) return;
+            isRestoringRef.current = true;
+            api.applyColumnState({ state, applyOrder: true });
+            setTimeout(() => { isRestoringRef.current = false; }, 0);
+          })
+          .catch(() => {
+            // Non-critical — grid just falls back to whatever it currently shows
+          });
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [gridKey, parsedStoreId]
+    );
+
+    // Manual "Reset to My Saved Layout" — sidebar Layout tab. Unlike the auto-restore
+    // in handleGridReady, this is repeatable (no loadedGridKeyRef guard) since it's an
+    // explicit, on-demand user action, not the one-shot on-ready restore.
+    const handleManualReset = useCallback(() => {
+      return fetchAndApplySavedState();
+    }, [fetchAndApplySavedState]);
+
+    // Manual "Save Current Layout" — sidebar Layout tab. Bypasses the 800ms debounce
+    // and saves immediately; still respects isRestoringRef/restorePendingRef so it
+    // can't capture/persist a layout the grid hasn't actually finished settling into.
+    const handleManualSave = useCallback(async () => {
       const api = internalRef.current?.api;
       if (!gridKey || !parsedStoreId || !api || isRestoringRef.current || restorePendingRef.current) return;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       const state = api.getColumnState();
-      setManualSaving(true);
-      saveGridColumnState({
+      await saveGridColumnState({
         variables: { storeid: parsedStoreId, gridkey: gridKey, columnstate: JSON.stringify(state) },
-      })
-        .then(() => {
-          setJustSaved(true);
-          setTimeout(() => setJustSaved(false), 1800);
-        })
-        .catch(() => {
-          // Non-critical — user can just try again
-        })
-        .finally(() => setManualSaving(false));
+      });
     }, [gridKey, parsedStoreId, saveGridColumnState]);
 
     const handleGridReady = useCallback(
@@ -125,29 +149,54 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
         if (gridKey && parsedStoreId && loadedGridKeyRef.current !== gridKey) {
           loadedGridKeyRef.current = gridKey;
           restorePendingRef.current = true;
-          fetchGridColumnState({ variables: { storeid: parsedStoreId, gridkey: gridKey } })
-            .then(({ data }) => {
-              const raw = data?.getGridColumnState;
-              if (!raw) return;
-              const state = JSON.parse(raw);
-              const api = internalRef.current?.api ?? params.api;
-              if (!api) return;
-              isRestoringRef.current = true;
-              api.applyColumnState({ state, applyOrder: true });
-              setTimeout(() => { isRestoringRef.current = false; }, 0);
-            })
-            .catch(() => {
-              // Non-critical — grid just falls back to the default layout
-            })
-            .finally(() => {
-              restorePendingRef.current = false;
-            });
+          fetchAndApplySavedState(params.api).finally(() => {
+            restorePendingRef.current = false;
+          });
         }
         onGridReady?.(params);
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [gridKey, parsedStoreId, onGridReady]
+      [gridKey, parsedStoreId, onGridReady, fetchAndApplySavedState]
     );
+
+    // Third sidebar tab, added only when this grid persists layout (gridKey set) —
+    // see GridLayoutToolPanel.tsx for why this location was chosen over a button
+    // above/inside the grid.
+    const sideBarToolPanels = useMemo(() => {
+      const panels: any[] = [
+        {
+          id: "columns",
+          labelDefault: "Columns",
+          labelKey: "columns",
+          iconKey: "columns",
+          toolPanel: "agColumnsToolPanel",
+          toolPanelParams: {
+            suppressRowGroups: true,
+            suppressValues: true,
+            suppressPivots: true, // show Pivot section
+            suppressPivotMode: true,
+          },
+        },
+        {
+          id: "filters",
+          labelDefault: "Filters",
+          labelKey: "filters",
+          iconKey: "filter",
+          toolPanel: "agFiltersToolPanel",
+        },
+      ];
+      if (gridKey) {
+        panels.push({
+          id: "layout",
+          labelDefault: "Layout",
+          labelKey: "layout",
+          iconKey: "save",
+          toolPanel: GridLayoutToolPanel,
+          toolPanelParams: { onSave: handleManualSave, onReset: handleManualReset },
+        });
+      }
+      return panels;
+    }, [gridKey, handleManualSave, handleManualReset]);
 
     const handleColumnVisible = useCallback(
       (e: any) => {
@@ -176,29 +225,12 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
 
     return (
       <div
+        className="ag-theme-quartz custom-theme"
         style={{
           height: fillHeight ? "100%" : domLayout === "autoHeight" ? "auto" : `calc(100vh - ${height})`,
           width: "100%",
-          display: "flex",
-          flexDirection: "column",
         }}
       >
-        {gridKey && (
-          <div className="d-flex justify-content-end mb-1" style={{ flex: "none" }}>
-            <button
-              type="button"
-              className="btn btn-sm btn-light d-flex align-items-center gap-1 py-0 px-2"
-              style={{ fontSize: 12, lineHeight: "22px", border: "1px solid #dee2e6" }}
-              onClick={handleManualSave}
-              disabled={manualSaving}
-              title="Save this grid's column order, widths and visibility for your account"
-            >
-              {justSaved ? <Check size={12} className="text-success" /> : <Save size={12} />}
-              {justSaved ? "Saved" : manualSaving ? "Saving…" : "Save Layout"}
-            </button>
-          </div>
-        )}
-        <div className="ag-theme-quartz custom-theme" style={{ flex: "1 1 auto", minHeight: 0, width: "100%" }}>
         <AgGridReact
           ref={combinedRef}
           columnDefs={columnDefs}
@@ -210,6 +242,9 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           }}
           gridOptions={{
             suppressServerSideFullWidthLoadingRow: true,
+            icons: {
+              save: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+            },
             ...gridOptions,
           }}
           rowHeight={28}
@@ -225,29 +260,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           loadingOverlayComponent={CustomLoadingOverlay}
           noRowsOverlayComponent={CustomNoRowsOverlay}
           sideBar={{
-            toolPanels: [
-              {
-                id: "columns",
-                labelDefault: "Columns",
-                labelKey: "columns",
-                iconKey: "columns",
-                toolPanel: "agColumnsToolPanel",
-
-                toolPanelParams: {
-                  suppressRowGroups: true,
-                  suppressValues: true,
-                  suppressPivots: true, // show Pivot section
-                  suppressPivotMode: true,
-                },
-              },
-              {
-                id: "filters",
-                labelDefault: "Filters",
-                labelKey: "filters",
-                iconKey: "filter",
-                toolPanel: "agFiltersToolPanel",
-              },
-            ],
+            toolPanels: sideBarToolPanels,
             defaultToolPanel: "", // optional: open with Filters
           }}
           groupDisplayType="singleColumn"
@@ -259,7 +272,6 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           onColumnResized={handleColumnResized}
           {...props}
         />
-        </div>
       </div>
     );
   }
