@@ -1,8 +1,9 @@
-import { ColDef, ICellRendererParams } from "ag-grid-community";
+import { ColDef, ICellRendererParams, ValueFormatterParams } from "ag-grid-community";
 import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../products/list/columnDef";
 import { PurchaseOrder } from "@/types/purchase";
 import StatusPillRenderer from "@/components/ui/grid/StatusPillRenderer";
+import { toProperCase } from "@/lib/utils/textFormat";
 
 const formatDate = (params: ICellRendererParams) => {
   if (!params.value) return "";
@@ -22,6 +23,10 @@ export const purchaseOrderColumnDefs: ColDef<PurchaseOrder>[] = [
     headerName: "Supplier",
     field: "suppliername",
     filter: "agTextColumnFilter",
+    // Supplier names are stored however they were originally entered (ALL CAPS, mixed
+    // case, etc.) — normalize to Proper Case for display only, filter/sort/export still
+    // work against the raw stored value.
+    valueFormatter: (params: ValueFormatterParams) => toProperCase(params.value),
     flex: 2,
   },
   {

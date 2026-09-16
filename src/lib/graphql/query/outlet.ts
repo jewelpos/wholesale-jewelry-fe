@@ -27,3 +27,21 @@ export const GET_OUTLETS_QUERY = gql`
     }
   }
 `;
+
+// Presence indicator (top bar) — who's currently logged in, grouped by outlet. See
+// getActiveUsersByOutlet in store.service.ts for what "active" means here (reuses the
+// existing session table, not a new real-time heartbeat).
+export const GET_ACTIVE_USERS_BY_OUTLET_QUERY = gql`
+  query GetActiveUsersByOutlet($storeid: Int!) {
+    getActiveUsersByOutlet(storeid: $storeid) {
+      outletid
+      outletname
+      users {
+        userid
+        userfullname
+        initials
+        lastactivity
+      }
+    }
+  }
+`;

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Settings, User, ChevronsLeft, LogOut, Clipboard } from "react-feather";
 import StoreDropdown from "./StoreDropdown";
+import ActiveUsersIndicator from "./ActiveUsersIndicator";
 import { useParams } from "next/navigation";
 import type { Menus } from "@/types/permissions";
 
@@ -386,6 +387,7 @@ const Header = ({ onLogout, storeLoading }: Props) => {
             </div> */}
           </li>
           <StoreDropdown storeLoading={storeLoading} />
+          <ActiveUsersIndicator />
 
           {/* Flag */}
           {/* <li className="nav-item dropdown has-arrow flag-nav nav-item-box">
