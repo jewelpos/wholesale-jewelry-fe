@@ -40,6 +40,11 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
   const isEditable = status !== 4;
   const isReceivable = status === 2 || status === 3;
   const isClosed = status === 4;
+  // Matches the backend's deletePurchaseOrder guard (2026-09-16) — it already rejects
+  // deleting a PO with any received quantity (would need to reverse the stock/average-
+  // cost effects receiving already applied), so the action is hidden here too instead
+  // of letting the user click Delete only to get an error back.
+  const canDelete = status === 1 || status === 2;
 
   const handlePrint = async () => {
     setPrinting(true);
@@ -103,9 +108,14 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
       : { key: 'receive', label: 'Receive Order', icon: <Inbox size={14} />, disabled: true, disabledReason: isClosed ? "PO already fully received" : "PO must be Sent or Partial to receive" },
     { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: handlePrint, disabled: printing },
     { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
-    !isClosed
+    canDelete
       ? { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
-      : { key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, disabledReason: "Closed PO cannot be deleted", dangerous: true },
+      : {
+          key: 'delete', label: 'Delete', icon: <Trash2 size={14} />, disabled: true, dangerous: true,
+          disabledReason: isClosed
+            ? "Closed PO cannot be deleted"
+            : "Partially received PO cannot be deleted",
+        },
   ];
 
   return (
@@ -140,12 +150,18 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
             <Inbox size={14} />
           </span>
         )}
-        {!isClosed ? (
+        {canDelete ? (
           <Link className="confirm-text p-1" href="#" onClick={handleDelete} scroll={false} title="Delete">
             <Trash2 className="feather-trash-2" size={14} />
           </Link>
         ) : (
-          <span className="p-1" title="Closed PO cannot be deleted" style={dimmed}><Trash2 size={14} /></span>
+          <span
+            className="p-1"
+            title={isClosed ? "Closed PO cannot be deleted" : "Partially received PO cannot be deleted"}
+            style={dimmed}
+          >
+            <Trash2 size={14} />
+          </span>
         )}
       </RowActionsWrapper>
 
