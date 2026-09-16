@@ -9,6 +9,8 @@ import PageHeader from "@/components/ui/PageHeader";
 import ActionFooter from "@/components/ui/ActionFooter";
 import OutletsFilter from "@/components/ui/grid/OutletsFilter";
 import useOutlets from "@/hooks/useOutlets";
+import { Printer } from "react-feather";
+import DayEndReportPrintModal from "./DayEndReportPrintModal";
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
@@ -34,6 +36,7 @@ const DayEndReportComponent = () => {
   const storeid = parseInt(storeIdParam as string, 10);
   const [date, setDate] = useState(today());
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Overview tab — defaults to the outlet already in the URL (OutletsFilter's own
   // autoSelectCurrentOutlet behavior), same as this page always has, but the user can
@@ -101,9 +104,25 @@ const DayEndReportComponent = () => {
                 onChange={(e) => setDate(e.target.value)}
                 style={{ width: 150 }}
               />
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                onClick={() => setShowPrintModal(true)}
+              >
+                <Printer size={14} />
+                Print
+              </button>
             </div>
           }
         />
+
+        {showPrintModal && (
+          <DayEndReportPrintModal
+            storeid={storeid}
+            defaultDate={date}
+            onClose={() => setShowPrintModal(false)}
+          />
+        )}
 
         {/* Tabs */}
         <ul className="nav nav-tabs mb-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
