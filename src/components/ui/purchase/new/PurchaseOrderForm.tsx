@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Edit2, PlusCircle, Trash2, X } from "react-feather";
+import { Check, Edit2, Lock, PlusCircle, Trash2, X } from "react-feather";
 import { DatePicker } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -415,6 +415,13 @@ const PurchaseOrderForm = ({
   }, [watchedPoDiscount]);
 
   const watchedItems = watch("items");
+  // Blocks file import once ANY line has been received — requested 2026-09-16. Import
+  // replaces/adds line items wholesale, which doesn't mix safely with a partially-received
+  // PO's locked, already-received lines (see isLineReceived in the item grid below).
+  const hasAnyReceivedLine = useMemo(
+    () => (watchedItems || []).some((it: any) => toNum(it?.itemqtyreceived) > 0),
+    [watchedItems]
+  );
   const watchedTaxPct = watch("posales");
   const watchedFreight = watch("pofreight");
   const watchedDutyPaid = watch("podutypaid");
@@ -1818,8 +1825,12 @@ const PurchaseOrderForm = ({
                       <th>Description</th>
                       <th className="text-nowrap">Unit</th>
                       <th className="text-end text-nowrap">{disableField ? "Order Qty" : "Qty"}</th>
-                      {disableField && <th className="text-end text-nowrap">Recv Qty</th>}
-                      {disableField && <th className="text-end text-nowrap">Backorder</th>}
+                      {/* Received/Backorder reference columns — shown whenever viewing or
+                          editing an existing PO (not just full read-only view), so a
+                          partially-received PO's edit screen shows what's already been
+                          received per line, not just for pure view mode. Requested 2026-09-15. */}
+                      {(disableField || isEdit) && <th className="text-end text-nowrap">Recv Qty</th>}
+                      {(disableField || isEdit) && <th className="text-end text-nowrap">Backorder</th>}
                       <th className="text-end text-nowrap">Unit Price</th>
                       <th className="text-end text-nowrap">Disc %</th>
                       <th className="text-end text-nowrap">Ext. Price</th>
@@ -1831,7 +1842,7 @@ const PurchaseOrderForm = ({
                   <tbody>
                     {itemFields.length === 0 ? (
                       <tr>
-                        <td colSpan={disableField ? 12 : 11} className="text-center text-muted py-5 fst-italic">
+                        <td colSpan={10 + ((disableField || isEdit) ? 2 : 0) + (!disableField ? 1 : 0)} className="text-center text-muted py-5 fst-italic">
                           No items yet — use the form above to add line items
                         </td>
                       </tr>
@@ -1845,6 +1856,17 @@ const PurchaseOrderForm = ({
                         const qty = toNum(rowItem.qtyordered);
                         const recvQty = toNum(rowItem.itemqtyreceived);
                         const backorder = toNum(rowItem.itemqtybackorder);
+                        // A line with any received quantity locks item/cost/discount (matches
+                        // the backend's authoritative check in editPurchaseOrder) — requested
+                        // 2026-09-15/16. Ordered Qty stays editable while backorder > 0
+                        // (raising/lowering what's still pending is normal), never below what's
+                        // already received (see the qty input's min attribute and the backend's
+                        // separate floor check) — but once backorder hits 0 (fully received),
+                        // Qty locks too, since there's nothing left to adjust.
+                        const isLineReceived = recvQty > 0;
+                        const isFullyReceived = isLineReceived && backorder <= 0;
+                        const rowReadOnly = disableField || isLineReceived;
+                        const qtyReadOnly = disableField || isFullyReceived;
                         const unitPrice = toNum(rowItem.orderunitcost);
                         const discountPct = toNum(rowItem.orddiscount);
                         const savedExtPrice = Number(rowItem.ordextendedprice as unknown as number);
@@ -1879,12 +1901,14 @@ const PurchaseOrderForm = ({
                             <td>{description}</td>
                             <td className="text-nowrap text-muted small">{rowItem.itemunit}</td>
                             <td className="text-end" style={{ minWidth: 90 }}>
-                              {disableField ? (
+                              {qtyReadOnly ? (
                                 formatQty(qty)
                               ) : (
                                 <input
                                   type="number"
                                   step="0.001"
+                                  min={isLineReceived ? recvQty : undefined}
+                                  title={isLineReceived ? `Cannot be less than the ${formatQty(recvQty)} already received` : undefined}
                                   className="form-control form-control-sm text-end"
                                   value={qty}
                                   onChange={(e) => updateInlinePOQty(index, e.target.value)}
@@ -1892,10 +1916,10 @@ const PurchaseOrderForm = ({
                                 />
                               )}
                             </td>
-                            {disableField && <td className="text-end">{formatQty(recvQty)}</td>}
-                            {disableField && <td className="text-end">{formatQty(backorder)}</td>}
+                            {(disableField || isEdit) && <td className="text-end">{formatQty(recvQty)}</td>}
+                            {(disableField || isEdit) && <td className="text-end">{formatQty(backorder)}</td>}
                             <td className="text-end" style={{ minWidth: 100 }}>
-                              {disableField ? (
+                              {rowReadOnly ? (
                                 unitPrice
                               ) : (
                                 <input
@@ -1910,7 +1934,7 @@ const PurchaseOrderForm = ({
                               )}
                             </td>
                             <td className="text-end" style={{ minWidth: 90 }}>
-                              {disableField ? (
+                              {rowReadOnly ? (
                                 discountPct
                               ) : (
                                 <input
@@ -1926,7 +1950,7 @@ const PurchaseOrderForm = ({
                               )}
                             </td>
                             <td className="text-end" style={{ minWidth: 100 }}>
-                              {disableField ? (
+                              {rowReadOnly ? (
                                 Number.isFinite(extPrice) ? extPrice.toFixed(2) : ""
                               ) : (
                                 <input
@@ -1947,37 +1971,48 @@ const PurchaseOrderForm = ({
                             </td>
                             {!disableField && (
                               <td className="text-center">
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-primary me-1"
-                                  onClick={() => {
-                                    setEditingIndex(index);
-                                    setToolItem({
-                                      itemid:
-                                        (getValues(`items.${index}.itemid`) as unknown as number) ??
-                                        undefined,
-                                      itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
-                                      itemdescription: String(getValues(`items.${index}.itemdescription`) || ""),
-                                      itemunit: getValues(`items.${index}.itemunit`) || "",
-                                      qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
-                                      orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
-                                      orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
-                                      ordextendedprice: (() => {
-                                        const v = Number(getValues(`items.${index}.ordextendedprice`));
-                                        return Number.isFinite(v) ? v : undefined;
-                                      })(),
-                                    });
-                                  }}
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleRemoveItemRow(index)}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {isLineReceived ? (
+                                  <span
+                                    className="text-muted d-inline-flex align-items-center gap-1"
+                                    title="Already received — this line can no longer be edited or removed"
+                                  >
+                                    <Lock size={14} />
+                                  </span>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-primary me-1"
+                                      onClick={() => {
+                                        setEditingIndex(index);
+                                        setToolItem({
+                                          itemid:
+                                            (getValues(`items.${index}.itemid`) as unknown as number) ??
+                                            undefined,
+                                          itemcode: String(getValues(`items.${index}.itemcode`) || "") || undefined,
+                                          itemdescription: String(getValues(`items.${index}.itemdescription`) || ""),
+                                          itemunit: getValues(`items.${index}.itemunit`) || "",
+                                          qtyordered: Number(getValues(`items.${index}.qtyordered`) || 0),
+                                          orderunitcost: Number(getValues(`items.${index}.orderunitcost`) || 0),
+                                          orddiscount: Number(getValues(`items.${index}.orddiscount`) || 0),
+                                          ordextendedprice: (() => {
+                                            const v = Number(getValues(`items.${index}.ordextendedprice`));
+                                            return Number.isFinite(v) ? v : undefined;
+                                          })(),
+                                        });
+                                      }}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-danger"
+                                      onClick={() => handleRemoveItemRow(index)}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </>
+                                )}
                               </td>
                             )}
                           </tr>
@@ -1995,7 +2030,7 @@ const PurchaseOrderForm = ({
                     <div className="text-uppercase fw-semibold text-muted" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
                       {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
                     </div>
-                    {editingIndex == null && (
+                    {editingIndex == null && !hasAnyReceivedLine && (
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-primary"
@@ -2003,6 +2038,14 @@ const PurchaseOrderForm = ({
                       >
                         Import from File
                       </button>
+                    )}
+                    {editingIndex == null && hasAnyReceivedLine && (
+                      <span
+                        className="text-muted small d-inline-flex align-items-center gap-1"
+                        title="File import is disabled once this PO has any received quantity"
+                      >
+                        <Lock size={12} /> Import disabled — PO partially received
+                      </span>
                     )}
                   </div>
                   <div className="row g-2 align-items-end">

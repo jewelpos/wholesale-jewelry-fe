@@ -32,7 +32,12 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
   const [showEmail, setShowEmail] = useState(false);
 
   const status = data.postatus ?? 0;
-  const isOpen = status === 1;
+  // Matches the backend's editableStatuses in editPurchaseOrder (2026-09-15) — a PO
+  // stays editable through Open, Sent, and Partially Received; only fully Closed (4)
+  // locks it. Was Open-only before, which disabled Edit for a PO the backend already
+  // allowed editing on (it still protects any already-received line's quantity from
+  // being reduced or removed, regardless of this frontend gate).
+  const isEditable = status !== 4;
   const isReceivable = status === 2 || status === 3;
   const isClosed = status === 4;
 
@@ -90,9 +95,9 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
 
   const items: RowActionItem[] = [
     { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/purchases/${data.ponumber}/view` },
-    isOpen
+    isEditable
       ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: `${basePath}/purchases/${data.ponumber}/edit` }
-      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: isClosed ? "Closed PO cannot be edited" : "Only open POs can be edited" },
+      : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: "Closed PO cannot be edited" },
     isReceivable
       ? { key: 'receive', label: 'Receive Order', icon: <Inbox size={14} />, href: `${basePath}/purchases/receiveorder_items?ponumber=${data.ponumber}` }
       : { key: 'receive', label: 'Receive Order', icon: <Inbox size={14} />, disabled: true, disabledReason: isClosed ? "PO already fully received" : "PO must be Sent or Partial to receive" },
@@ -117,12 +122,12 @@ const PurchaseOrderActions: React.FC<PurchaseOrderActionsProps> = ({ data, onDel
         <Link className="p-1" href={`${basePath}/purchases/${data.ponumber}/view`} scroll={false} title="View">
           <Eye className="feather-eye" size={14} />
         </Link>
-        {isOpen ? (
+        {isEditable ? (
           <Link className="p-1" href={`${basePath}/purchases/${data.ponumber}/edit`} scroll={false} title="Edit">
             <Edit className="feather-edit" size={14} />
           </Link>
         ) : (
-          <span className="p-1" title={isClosed ? "Closed PO cannot be edited" : "Only open POs can be edited"} style={dimmed}>
+          <span className="p-1" title="Closed PO cannot be edited" style={dimmed}>
             <Edit size={14} />
           </span>
         )}
