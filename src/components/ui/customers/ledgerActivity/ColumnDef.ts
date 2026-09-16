@@ -46,21 +46,21 @@ export const ledgerActivityColumnDefs: ColDef<CustomerLedgerReportType>[] = [
   {
     headerName: "Debit",
     field: "ledamountdebit",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
     minWidth: 120,
   },
   {
     headerName: "Credit",
     field: "ledamountcredit",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
     minWidth: 120,
   },
   {
     headerName: "Running Balance",
     field: "running_balance",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     cellStyle: (params) =>
       params.value < 0 ? { color: "#dc3545", fontWeight: 600 } : null,
     filter: "agNumberColumnFilter",

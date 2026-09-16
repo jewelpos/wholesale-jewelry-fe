@@ -23,7 +23,7 @@ export const customerChequeSummaryColumnDefs: ColDef<CustomerChequeSummaryListTy
     headerName: "Total",
     field: "yearly_total",
     filter: "agTextColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   },
   {
     headerName: "Total Checks",

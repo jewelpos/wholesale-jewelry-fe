@@ -31,7 +31,7 @@ export const getExpenseListColumnDefs = (
   {
     headerName: "Amount",
     field: "expenseamount",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   },
   {

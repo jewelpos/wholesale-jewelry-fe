@@ -32,7 +32,7 @@ export const appliedPaymentsColumnDefs: ColDef<CustomerPaymentListType>[] = [
   {
     headerName: "Paid Amount",
     field: "amountpaid",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   },
   {

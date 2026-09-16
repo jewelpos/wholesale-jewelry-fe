@@ -18,97 +18,97 @@ export const supplierMonthlyPurchaseColumnDefs: ColDef<SupplierPurchaseSummary>[
   {
     headerName: "Total Purchases",
     field: "total_purchases",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Total Purchase Amount",
     field: "total_purchase_amount",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Total Amount Paid",
     field: "total_amount_paid",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Total Balance Due",
     field: "total_balance_due",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Jan",
     field: "jan",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Feb",
     field: "feb",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Mar",
     field: "mar",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Apr",
     field: "apr",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "May",
     field: "may",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Jun",
     field: "jun",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Jul",
     field: "jul",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Aug",
     field: "aug",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Sep",
     field: "sep",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Oct",
     field: "oct",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Nov",
     field: "nov",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {
     headerName: "Dec",
     field: "dec",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   }, // (V)
   {

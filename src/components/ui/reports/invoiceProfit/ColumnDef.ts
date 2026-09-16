@@ -21,19 +21,19 @@ export const invoiceProfitColumnDefs: ColDef<InvoiceSummary>[] = [
     headerName: "Subtotal",
     field: "subtotal",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Total Cost",
     field: "totalcost",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Profit",
     field: "profit",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Profit %",
@@ -49,63 +49,63 @@ export const invoiceProfitColumnDefs: ColDef<InvoiceSummary>[] = [
     headerName: "Total Amount",
     field: "totalamount",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Discount Amount",
     field: "discountamount",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Sales Tax",
     field: "salestax",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Shipping",
     field: "shipping",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Net Amount",
     field: "netamount",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Amount Received",
     field: "amountreceived",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Balance Due",
     field: "balancedue",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Taxable Sale",
     field: "taxablesale",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   {
     headerName: "Non-taxable Sale",
     field: "nontaxablesale",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     hide: true,
   },
   { headerName: "Status", field: "statusname", filter: "agTextColumnFilter", hide: true, cellRenderer: StatusPillRenderer },
@@ -132,37 +132,37 @@ export const invoiceProfitItemsColumnDefs: ColDef<InvoiceItem>[] = [
     headerName: "Unit Price",
     field: "unitprice",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Extended Price",
     field: "extendedprice",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Allocated Order Discount",
     field: "orderdiscount",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   },
   {
     headerName: "Item Cost",
     field: "itemcost",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Total Cost",
     field: "totalcost",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Profit",
     field: "profit",
     filter: "agNumberColumnFilter",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
   }, // (V)
   {
     headerName: "Profit %",

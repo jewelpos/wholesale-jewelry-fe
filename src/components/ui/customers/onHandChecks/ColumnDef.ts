@@ -13,7 +13,7 @@ export const onHandsColumnDefs: ColDef<CustomerChequeListType>[] = [
   {
     headerName: "Check amount",
     field: "checkamount",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   },
   {

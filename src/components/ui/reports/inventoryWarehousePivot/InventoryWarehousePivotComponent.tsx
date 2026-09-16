@@ -112,7 +112,7 @@ const InventoryWarehousePivotComponent = () => {
       {
         headerName: "Total Cost",
         field: "totalcostvalue",
-        cellRenderer: currencyFormattedCellRenderer,
+        cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
         filter: "agNumberColumnFilter",
         minWidth: 140,
         pinned: "right",

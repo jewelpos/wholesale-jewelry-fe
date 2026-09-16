@@ -34,7 +34,7 @@ export const purchaseOrderColumnDefs: ColDef<PurchaseOrder>[] = [
   {
     headerName: "Total",
     field: "pototal",
-    cellRenderer: currencyFormattedCellRenderer,
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
     width: 120,
   },
