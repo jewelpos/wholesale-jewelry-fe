@@ -10,6 +10,13 @@ import { GET_GRID_COLUMN_STATE_QUERY } from "@/lib/graphql/query/gridPreferences
 import { SAVE_GRID_COLUMN_STATE_MUTATION } from "@/lib/graphql/mutations/gridPreferences";
 import GridLayoutToolPanel from "./GridLayoutToolPanel";
 
+// Stable reference for callers that don't pass their own defaultColDef — an inline
+// `{ filter: true }` default *parameter* value is a NEW object every render (JS
+// re-evaluates default parameters on every call), which defeated the
+// effectiveDefaultColDef useMemo below on literally every render. See
+// columnDefsSignature/defaultColDefSignature further down for the full story.
+const DEFAULT_COL_DEF = { filter: true };
+
 interface POSGridProps extends AgGridReactProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columnDefs: any[]; // Replace `any[]` with the actual type of columnDefs if available
@@ -38,7 +45,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       columnDefs,
       gridOptions,
       onGridReady,
-      defaultColDef = { filter: true },
+      defaultColDef = DEFAULT_COL_DEF,
       rowSelection,
       domLayout = "normal",
       heightOffset = 300,
@@ -56,7 +63,13 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
     const effectiveDefaultColDef = useMemo(() => ({
       sortable: true,
       enableRowGroup: true,
-      minWidth: 200,
+      // Was 200 — a blanket floor with no matching maxWidth, so every column could be
+      // dragged wider freely but never shrunk below 200px regardless of how narrow its
+      // content actually needed to be (reported 2026-09-15: "can increase but not
+      // decrease", across every grid). 60 still stops a column from being dragged down
+      // to unreadable/zero width, without getting in the way of an otherwise-legitimate
+      // resize. A column can still set its own larger minWidth in its own ColumnDef.
+      minWidth: 60,
       ...defaultColDef,
       floatingFilter: defaultColDef?.floatingFilter ?? showFilters,
     }), [defaultColDef, showFilters]);
@@ -283,6 +296,36 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       [persistColumnState]
     );
 
+    // Root cause of "checking a column-visibility box in the sidebar immediately
+    // unchecks itself" (2026-09-15, universal across every grid): this effect's
+    // dependency array used the raw columnDefs/effectiveDefaultColDef REFERENCES.
+    // Many caller pages rebuild their columnDefs array (and/or pass an inline
+    // defaultColDef object) fresh on every render — plus DEFAULT_COL_DEF above fixes
+    // only the case where a caller passes nothing at all — so this effect could refire
+    // on essentially every render of POSGrid, for any reason, from any ancestor.
+    // Reapplying savedColStateRef.current is normally a same-state no-op, but it made
+    // this effect fire again moments after the user's own checkbox click updates the
+    // live grid (before that click's own persistColumnState/savedColStateRef update had
+    // fully settled through a render), visibly snapping the box back. Comparing
+    // *content* instead of reference means this only actually reruns when columns are
+    // structurally added/removed/reordered/re-hidden by the CALLER, which is what the
+    // original 2026-08-11 fix (see project_grid_column_persistence memory) needed it for
+    // — not on every incidental re-render.
+    const columnDefsSignature = useMemo(() => {
+      try {
+        return JSON.stringify((columnDefs ?? []).map((c: any) => ({ field: c.field, colId: c.colId, hide: c.hide })));
+      } catch {
+        return String((columnDefs ?? []).length);
+      }
+    }, [columnDefs]);
+    const defaultColDefSignature = useMemo(() => {
+      try {
+        return JSON.stringify(effectiveDefaultColDef, (_key, val) => (typeof val === "function" ? undefined : val));
+      } catch {
+        return "";
+      }
+    }, [effectiveDefaultColDef]);
+
     // After columnDefs or defaultColDef changes, restore saved user column visibility.
     // AG Grid re-applies defaults on prop changes which can reset user-set hide state.
     useEffect(() => {
@@ -308,7 +351,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       });
       return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [columnDefs, effectiveDefaultColDef]);
+    }, [columnDefsSignature, defaultColDefSignature]);
 
     // Third sidebar tab, added only when this grid persists layout (gridKey set) —
     // see GridLayoutToolPanel.tsx for why this location was chosen over a button
@@ -350,6 +393,19 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
       return panels;
     }, [gridKey, handleManualSave, handleManualReset]);
 
+    // The sideBar prop itself must also be memoized, not just the toolPanels array —
+    // AG Grid's React wrapper diffs this prop by reference on every render, and a new
+    // object reference (even if deeply identical) makes it call setGridOption('sideBar',
+    // ...) internally, which reinitializes/collapses the whole side bar. An inline
+    // object literal here (the original code, before this fix) meant ANY unrelated
+    // re-render of this component while the panel was open would instantly close it —
+    // reported 2026-09-15 as "click the side panel, it immediately closes back, can't
+    // check a column checkbox or use Save Layout."
+    const sideBarConfig = useMemo(() => ({
+      toolPanels: sideBarToolPanels,
+      defaultToolPanel: "", // optional: open with Filters
+    }), [sideBarToolPanels]);
+
     return (
       <div
         className="ag-theme-quartz custom-theme"
@@ -382,10 +438,7 @@ const POSGrid = forwardRef<AgGridReact, POSGridProps>(
           paginationPageSize={20}
           loadingOverlayComponent={CustomLoadingOverlay}
           noRowsOverlayComponent={CustomNoRowsOverlay}
-          sideBar={{
-            toolPanels: sideBarToolPanels,
-            defaultToolPanel: "", // optional: open with Filters
-          }}
+          sideBar={sideBarConfig}
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
           onColumnVisible={handleColumnVisible}

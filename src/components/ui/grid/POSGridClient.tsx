@@ -198,6 +198,15 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
       return panels;
     }, [gridKey, handleManualSave, handleManualReset]);
 
+    // The sideBar prop itself must also be memoized, not just the toolPanels array —
+    // see POSGrid.tsx's identical sideBarConfig for the full explanation (AG Grid's
+    // React wrapper reinitializes/collapses the whole side bar whenever this prop's
+    // object reference changes, which an inline literal guarantees on every render).
+    const sideBarConfig = useMemo(() => ({
+      toolPanels: sideBarToolPanels,
+      defaultToolPanel: "", // optional: open with Filters
+    }), [sideBarToolPanels]);
+
     const handleColumnVisible = useCallback(
       (e: any) => {
         if (!isRestoringRef.current && !restorePendingRef.current) persistColumnState();
@@ -237,7 +246,10 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           defaultColDef={{
             sortable: true,
             enableRowGroup: true,
-            minWidth: 200,
+            // Was 200 — see POSGrid.tsx's identical fix for why: a blanket floor with
+            // no matching maxWidth blocked shrinking any column below it while growing
+            // stayed unrestricted ("can increase but not decrease", 2026-09-15).
+            minWidth: 60,
             ...defaultColDef,
           }}
           gridOptions={{
@@ -259,10 +271,7 @@ const POSGridClient = forwardRef<AgGridReact, POSGridClientProps>(
           paginationPageSize={20}
           loadingOverlayComponent={CustomLoadingOverlay}
           noRowsOverlayComponent={CustomNoRowsOverlay}
-          sideBar={{
-            toolPanels: sideBarToolPanels,
-            defaultToolPanel: "", // optional: open with Filters
-          }}
+          sideBar={sideBarConfig}
           groupDisplayType="singleColumn"
           maxBlocksInCache={100}
           loading={loading}
