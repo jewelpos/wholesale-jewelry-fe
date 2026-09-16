@@ -188,6 +188,7 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
       memonumber
       customerid
       warehouseid
+      saledate
       termsid
       invshippingmethod
       discountpercent
@@ -248,6 +249,7 @@ export const GET_MEMO_DETAIL_QUERY = gql`
       memonumber
       customerid
       warehouseid
+      saledate
       termsid
       invshippingmethod
       discountpercent

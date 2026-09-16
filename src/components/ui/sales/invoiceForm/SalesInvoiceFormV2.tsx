@@ -662,7 +662,12 @@ const SalesInvoiceFormV2 = ({
       storeid: parsedStoreId,
       customerid: doc.customerid ? Number(doc.customerid) : undefined,
       warehouseid: doc.warehouseid ?? undefined,
-      saledate: dayjs(),
+      // Was hardcoded to dayjs() (today) — silently replaced the invoice's real date
+      // with today's the moment the edit form loaded, well before Save was even
+      // clicked. Must preserve the document's own saledate on edit; only a brand-new
+      // invoice (the reset() calls above for SO/memo-to-invoice conversion) should
+      // default to today.
+      saledate: doc.saledate ? dayjs(doc.saledate) : dayjs(),
       termsid: doc.termsid ?? undefined,
       invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
       discountpercent: toNum(doc.discountpercent),
@@ -710,7 +715,9 @@ const SalesInvoiceFormV2 = ({
       storeid: parsedStoreId,
       customerid: doc.customerid ? Number(doc.customerid) : undefined,
       warehouseid: doc.warehouseid ?? undefined,
-      saledate: dayjs(),
+      // Same fix as the invoice-edit effect above — was hardcoded to dayjs() (today),
+      // silently replacing the memo's real date the moment the edit form loaded.
+      saledate: doc.saledate ? dayjs(doc.saledate) : dayjs(),
       termsid: doc.termsid ?? undefined,
       invshippingmethod: doc.invshippingmethod ? Number(doc.invshippingmethod) : undefined,
       discountpercent: toNum(doc.discountpercent),
