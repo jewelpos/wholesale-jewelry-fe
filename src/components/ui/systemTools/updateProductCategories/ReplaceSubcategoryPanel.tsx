@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
 import { RefreshCw } from "react-feather";
@@ -22,10 +22,14 @@ type SubcategoryRow = { subcategoryid: number; subcategoryname: string; category
 const NO_FILTER_ARGS = { page: 1, perpage: 1000, filters: [], sortModel: [], rowGroupCols: [], groupKeys: [] };
 
 /**
- * Category and subcategory have no hard link — the same subcategoryid can legitimately
- * exist under more than one category — so this tool always requires picking the
- * Category FIRST, and both subcategory dropdowns are scoped to that one category only.
- * A subcategory reassignment never crosses into a different category.
+ * Category and subcategory are picked independently here — a subcategory's own
+ * itemsubcategory.categoryid doesn't have to equal the category picked below, since
+ * products can carry an itemcategoryid/subcategoryid combination that was never a
+ * formally-linked pair (that's the "no hard link" the user has pointed out). So Category,
+ * Current Subcategory and New Subcategory are three separate, unfiltered dropdowns; the
+ * actual bulk update only touches products where itemcategoryid AND subcategoryid both
+ * equal exactly what was picked — i.e. it replaces only where category and subcategory
+ * both match.
  */
 const ReplaceSubcategoryPanel = () => {
   const dispatch = useAppDispatch();
@@ -43,35 +47,26 @@ const ReplaceSubcategoryPanel = () => {
     skip: !parsedOutletId,
   });
   const categories: CategoryRow[] = useMemo(() => categoryData?.getItemCategoryList?.data ?? [], [categoryData]);
+  const categoryNameById = useMemo(() => new Map(categories.map((c) => [c.categoryid, c.categoryname])), [categories]);
 
   const { data: subcategoryData, loading: subcategoriesLoading } = useQuery(GET_ITEM_SUB_CATEGORY_LIST_QUERY, {
     variables: { outletid: parsedOutletId, ...NO_FILTER_ARGS },
     skip: !parsedOutletId,
   });
   const allSubcategories: SubcategoryRow[] = useMemo(() => subcategoryData?.getItemSubCategoryList?.data ?? [], [subcategoryData]);
-  const subcategoriesForCategory = useMemo(
-    () => allSubcategories.filter((s) => s.categoryid === categoryId),
-    [allSubcategories, categoryId]
-  );
-
-  // Changing the category invalidates any subcategory picked under the previous one.
-  useEffect(() => {
-    setOldSubcategoryId("");
-    setNewSubcategoryId("");
-  }, [categoryId]);
 
   const { data: countData, loading: countLoading } = useQuery(GET_PRODUCT_COUNT_BY_CATEGORY_SUBCATEGORY_QUERY, {
     variables: { storeid: parsedStoreId, categoryid: Number(categoryId), subcategoryid: Number(oldSubcategoryId) },
     skip: !parsedStoreId || !categoryId || !oldSubcategoryId,
     fetchPolicy: "network-only",
   });
-  const affectedCount: number | null = oldSubcategoryId ? (countData?.getProductCountByCategorySubcategory ?? null) : null;
+  const affectedCount: number | null = (categoryId && oldSubcategoryId) ? (countData?.getProductCountByCategorySubcategory ?? null) : null;
 
   const [bulkReplaceSubcategory] = useMutation(BULK_REPLACE_PRODUCT_SUBCATEGORY_MUTATION);
 
-  const categoryName = categories.find((c) => c.categoryid === categoryId)?.categoryname ?? "";
-  const oldSubName = subcategoriesForCategory.find((s) => s.subcategoryid === oldSubcategoryId)?.subcategoryname ?? "";
-  const newSubName = subcategoriesForCategory.find((s) => s.subcategoryid === newSubcategoryId)?.subcategoryname ?? "";
+  const categoryName = categoryNameById.get(categoryId as number) ?? "";
+  const oldSubName = allSubcategories.find((s) => s.subcategoryid === oldSubcategoryId)?.subcategoryname ?? "";
+  const newSubName = allSubcategories.find((s) => s.subcategoryid === newSubcategoryId)?.subcategoryname ?? "";
   const canSubmit = !!categoryId && !!oldSubcategoryId && !!newSubcategoryId && oldSubcategoryId !== newSubcategoryId;
 
   const handleSubmit = async () => {
@@ -116,8 +111,9 @@ const ReplaceSubcategoryPanel = () => {
       <div className="card-body">
         <h6 className="mb-1" style={{ fontWeight: 700, color: "#1e293b", fontSize: 14 }}>Replace Subcategory</h6>
         <p className="text-muted mb-3" style={{ fontSize: 12 }}>
-          Pick a category first — the subcategory lists below only show subcategories that belong to it, and the
-          update never moves a product into a different category.
+          Category and the two subcategory pickers below are independent — none of them filters the others. The
+          update only touches products where both the selected category AND the selected current subcategory
+          match exactly.
         </p>
 
         <div className="row g-3">
@@ -143,12 +139,14 @@ const ReplaceSubcategoryPanel = () => {
             <select
               className="form-select form-select-sm"
               value={oldSubcategoryId}
-              disabled={!categoryId || subcategoriesLoading}
+              disabled={subcategoriesLoading}
               onChange={(e) => setOldSubcategoryId(e.target.value ? Number(e.target.value) : "")}
             >
-              <option value="">{categoryId ? "Select subcategory..." : "Select a category first"}</option>
-              {subcategoriesForCategory.map((s) => (
-                <option key={s.subcategoryid} value={s.subcategoryid}>{s.subcategoryname}</option>
+              <option value="">Select subcategory...</option>
+              {allSubcategories.map((s) => (
+                <option key={s.subcategoryid} value={s.subcategoryid}>
+                  {s.subcategoryname} ({categoryNameById.get(s.categoryid) ?? "Unknown category"})
+                </option>
               ))}
             </select>
           </div>
@@ -157,18 +155,20 @@ const ReplaceSubcategoryPanel = () => {
             <select
               className="form-select form-select-sm"
               value={newSubcategoryId}
-              disabled={!categoryId || subcategoriesLoading}
+              disabled={subcategoriesLoading}
               onChange={(e) => setNewSubcategoryId(e.target.value ? Number(e.target.value) : "")}
             >
-              <option value="">{categoryId ? "Select subcategory..." : "Select a category first"}</option>
-              {subcategoriesForCategory.filter((s) => s.subcategoryid !== oldSubcategoryId).map((s) => (
-                <option key={s.subcategoryid} value={s.subcategoryid}>{s.subcategoryname}</option>
+              <option value="">Select subcategory...</option>
+              {allSubcategories.filter((s) => s.subcategoryid !== oldSubcategoryId).map((s) => (
+                <option key={s.subcategoryid} value={s.subcategoryid}>
+                  {s.subcategoryname} ({categoryNameById.get(s.categoryid) ?? "Unknown category"})
+                </option>
               ))}
             </select>
           </div>
         </div>
 
-        {!!oldSubcategoryId && (
+        {!!categoryId && !!oldSubcategoryId && (
           <div className="mt-3 p-2" style={{ background: "#f8fafc", borderRadius: 6, fontSize: 12.5, color: "#475569" }}>
             {countLoading ? "Checking affected products..." : (
               <>
