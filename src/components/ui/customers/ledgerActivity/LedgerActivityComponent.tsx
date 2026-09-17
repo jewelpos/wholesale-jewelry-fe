@@ -2,13 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { useLazyQuery } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import { GridReadyEvent } from "ag-grid-community";
+import { Phone, MapPin, Mail } from "lucide-react";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { useAppDispatch } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
-import { GET_CUSTOMER_BALANCE_REPORT_QUERY, GET_CUSTOMER_LEDGER_REPORT_QUERY } from "@/lib/graphql/query/customer";
+import { GET_CUSTOMER_BALANCE_REPORT_QUERY, GET_CUSTOMER_LEDGER_REPORT_QUERY, GET_CUSTOMER_QUERY } from "@/lib/graphql/query/customer";
 import LedgerPrintModal from "./LedgerPrintModal";
 import { CustomerLedgerReportType } from "@/types/customer";
 import "ag-grid-enterprise";
@@ -85,6 +86,21 @@ const LedgerActivityComponent = () => {
   const [activityPill, setActivityPill] = useState<ActivityPill>("all");
 
   const { isAdmin, isCollapsed, toggle } = useSummaryPanel("ledger-activity");
+
+  // Customer name/address/phone shown once a customer is picked — cache-first since
+  // this same customer record is very likely already cached by SelectCustomer's search.
+  const { data: customerData } = useQuery(GET_CUSTOMER_QUERY, {
+    variables: { storeid: parsedStoreId, customerid: customerid as number },
+    skip: !customerid,
+    fetchPolicy: "cache-first",
+  });
+  const selectedCustomer = customerid ? customerData?.getCustomer : null;
+  const customerContactName = [selectedCustomer?.custfname, selectedCustomer?.custlname]
+    .filter((s) => s && String(s).trim().length > 0)
+    .join(" ");
+  const customerAddress = [selectedCustomer?.custadd1, selectedCustomer?.custcity, selectedCustomer?.custstate, selectedCustomer?.custzip, selectedCustomer?.custcountry]
+    .filter((s) => s && String(s).trim().length > 0)
+    .join(", ");
 
   useEffect(() => {
     if (!customerid) { setViewBalance(0); return; }
@@ -298,6 +314,41 @@ const LedgerActivityComponent = () => {
               </div>
             )}
           </div>
+
+          {/* Selected customer's name, full address, and phone */}
+          {customerid && selectedCustomer && (
+            <div
+              className="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 border rounded"
+              style={{ background: "var(--surface-muted, #f8f9fa)", fontSize: 12.5 }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                {selectedCustomer.custcompanyname || customerContactName || `Customer #${customerid}`}
+              </div>
+              {customerContactName && selectedCustomer.custcompanyname && (
+                <span className="text-muted">{customerContactName}</span>
+              )}
+              {customerAddress && (
+                <span className="d-inline-flex align-items-center gap-1 text-muted">
+                  <MapPin size={13} />{customerAddress}
+                </span>
+              )}
+              {selectedCustomer.custphone1 && (
+                <span className="d-inline-flex align-items-center gap-1 text-muted">
+                  <Phone size={13} />{selectedCustomer.custphone1}
+                </span>
+              )}
+              {selectedCustomer.custcell && selectedCustomer.custcell !== selectedCustomer.custphone1 && (
+                <span className="d-inline-flex align-items-center gap-1 text-muted">
+                  <Phone size={13} />{selectedCustomer.custcell} <span>(cell)</span>
+                </span>
+              )}
+              {selectedCustomer.custemailadd && (
+                <span className="d-inline-flex align-items-center gap-1 text-muted">
+                  <Mail size={13} />{selectedCustomer.custemailadd}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Balance reconciliation cards */}
           {customerid && (
