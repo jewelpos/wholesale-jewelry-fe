@@ -169,6 +169,8 @@ export type CustomersListType = {
   amountpaid?: number;
   creditapplied?: number;
   opencredit: number;
+  noofchecks?: number;
+  totalcheckamount?: number;
   mobile: string;
   custregistrationdate: string;
   custemailadd: string;

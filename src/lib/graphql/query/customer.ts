@@ -299,6 +299,8 @@ export const GET_CUSTOMER_LIST_QUERY = gql`
         amountpaid
         creditapplied
         opencredit
+        noofchecks
+        totalcheckamount
         mobile
         custregistrationdate
         custemailadd

@@ -61,6 +61,18 @@ export const customersListColumnDefs: ColDef<CustomersListType>[] = [
     filter: "agNumberColumnFilter",
   },
   {
+    headerName: "No. of Checks",
+    field: "noofchecks",
+    headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "Total Check Amount",
+    field: "totalcheckamount",
+    cellRenderer: currencyFormattedCellRenderer, headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
+    filter: "agNumberColumnFilter",
+  },
+  {
     headerName: "Warehouse name",
     field: "warehousename",
     filter: "agTextColumnFilter",
