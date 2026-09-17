@@ -161,7 +161,7 @@ interface InlinePreviewProps {
   isRattail: boolean;
 }
 
-const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number; center?: boolean; rattail?: boolean }> = ({ text, maxW, numFontSize, center, rattail }) => {
+const BarcodePreview: React.FC<{ text: string; belowText?: string; maxW: number; numFontSize: number; center?: boolean; rattail?: boolean }> = ({ text, belowText, maxW, numFontSize, center, rattail }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!ref.current || !text) return;
@@ -182,7 +182,7 @@ const BarcodePreview: React.FC<{ text: string; maxW: number; numFontSize: number
   return (
     <div style={{ marginLeft: center ? 0 : -5, textAlign: center ? "center" : "left" }}>
       <canvas ref={ref} style={{ maxWidth: maxW * (rattail ? 0.80 : 0.75), width: rattail ? "80%" : "75%", display: "block", margin: center ? "0 auto" : undefined }} />
-      <div style={{ fontSize: numFontSize, color: "#111", marginTop: 0, lineHeight: 1, letterSpacing: "0.5px" }}>{text}</div>
+      <div style={{ fontSize: numFontSize, color: "#111", marginTop: 0, lineHeight: 1, letterSpacing: "0.5px" }}>{belowText ?? text}</div>
     </div>
   );
 };
@@ -210,8 +210,12 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
 
   const renderFace = (face: "front" | "back", faceLabel?: string, faceMt?: number) => {
     const topPad = faceMt !== undefined ? faceMt : mt;
+    const barcodeCfg = fieldConfigs.find(c => c.key === "itembarcodeid");
+    const itemCodeCfg = fieldConfigs.find(c => c.key === "itemcode");
+    const combining = !!barcodeCfg?.enabled && !!barcodeCfg?.combineItemCode && !!itemCodeCfg?.enabled;
     const sorted = fieldConfigs
       .filter(c => c.enabled && (!isRattail || c.side === face || (face === "front" && c.side !== "back")))
+      .filter(c => !(combining && c.key === "itemcode"))
       .sort((a, b) => a.order - b.order);
     const renderItem = (cfg: FieldPrintConfig) => {
       const value = fields[cfg.key];
@@ -220,9 +224,10 @@ const InlinePreview: React.FC<InlinePreviewProps> = ({ template, fields, fieldCo
       const bg: React.CSSProperties = hasImage ? { background: "rgba(255,255,255,0.85)", padding: "1px 4px", borderRadius: 2 } : {};
 
       if (cfg.key === "itembarcodeid" && value) {
+        const belowText = combining && fields.itemcode ? `${value}/${fields.itemcode}` : undefined;
         return (
           <div key={cfg.key} style={{ position: "relative", width: "100%", textAlign: isCenter ? "center" : "left", ...bg }}>
-            <BarcodePreview text={value} maxW={contentW} numFontSize={fs} center={isCenter} rattail={isRattail} />
+            <BarcodePreview text={value} belowText={belowText} maxW={contentW} numFontSize={fs} center={isCenter} rattail={isRattail} />
           </div>
         );
       }
@@ -709,6 +714,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
   ];
 
   const isRattail = selectedTemplate?.labletype === "rattail";
+  const itemCodeEnabled = !!fieldConfigs.find(c => c.key === "itemcode")?.enabled;
 
   const frontFields = fieldConfigs
     .filter(c => c.side === "front")
@@ -793,6 +799,17 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
               onClick={() => updateField(cfg.key, { wrap: !(cfg.wrap ?? wrapDefault(cfg.key)) })}
               style={toggleBtnStyle((cfg.wrap ?? wrapDefault(cfg.key)) && cfg.enabled, cfg.enabled && cfg.key !== "itembarcodeid")}
             >↵</button>
+          </td>
+          <td style={{ padding: "2px 4px", textAlign: "center" }}>
+            {cfg.key === "itembarcodeid" && (
+              <button
+                type="button"
+                title={!itemCodeEnabled ? "Enable Item Code to use this" : "Print Item Code after the barcode number, separated by /"}
+                disabled={!cfg.enabled || !itemCodeEnabled}
+                onClick={() => updateField(cfg.key, { combineItemCode: !cfg.combineItemCode })}
+                style={toggleBtnStyle(!!cfg.combineItemCode && cfg.enabled && itemCodeEnabled, cfg.enabled && itemCodeEnabled)}
+              >/</button>
+            )}
           </td>
           {isRattail && (
             <td style={{ padding: "2px 4px", textAlign: "center" }}>
@@ -1014,6 +1031,7 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                                 <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }}>Bold</th>
                                 <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }} title="UPPERCASE">AA</th>
                                 <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }} title="Wrap onto multiple lines">Wrap</th>
+                                <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }} title="Print Item Code after the barcode number, separated by / — barcode field only">/</th>
                                 {isRattail && <th style={{ padding: "4px 4px", color: "#94a3b8", fontWeight: 600, textAlign: "center", width: 36 }}>Side</th>}
                               </tr>
                             </thead>
@@ -1021,13 +1039,13 @@ const PrintLabelsModal: React.FC<Props> = ({ product, onClose }) => {
                               {isRattail ? (
                                 <>
                                   <tr>
-                                    <td colSpan={8} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#6366f1", background: "#eef2ff", letterSpacing: "0.5px" }}>
+                                    <td colSpan={9} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#6366f1", background: "#eef2ff", letterSpacing: "0.5px" }}>
                                       FRONT
                                     </td>
                                   </tr>
                                   {renderLayoutRows(frontFields)}
                                   <tr>
-                                    <td colSpan={8} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#0891b2", background: "#ecfeff", letterSpacing: "0.5px" }}>
+                                    <td colSpan={9} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#0891b2", background: "#ecfeff", letterSpacing: "0.5px" }}>
                                       BACK
                                     </td>
                                   </tr>

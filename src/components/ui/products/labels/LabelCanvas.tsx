@@ -71,6 +71,12 @@ export interface FieldPrintConfig {
    * Undefined defaults to true for itemdescription (its long-standing behaviour), false
    * for every other field. */
   wrap?: boolean;
+  /** Only meaningful on the itembarcodeid field's own config entry: print the barcode's
+   * human-readable number and the Item Code on the same line, separated by "/", instead
+   * of as two separate lines. The Item Code field is then skipped as its own separate
+   * line (its content already appears in the combined one). Undefined/false = unchanged,
+   * separate-lines behaviour. */
+  combineItemCode?: boolean;
 }
 
 /** itemdescription has always wrapped; every other field defaults to single-line. */
@@ -87,8 +93,12 @@ function formatCurrency(v: string): string {
   return "$" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
 }
 
-// Renders barcode as <img> (via off-screen canvas → dataURL) so it prints reliably
-const BarcodeImage: React.FC<{ text: string; maxHeight: number; fontSize?: number; maxWidthPx?: number; center?: boolean; rattail?: boolean }> = ({ text, maxHeight, fontSize = 8, maxWidthPx, center, rattail }) => {
+// Renders barcode as <img> (via off-screen canvas → dataURL) so it prints reliably.
+// `text` is always just the barcode value (that's what gets encoded into the symbol);
+// `belowText` is what's actually printed on the human-readable line underneath — lets
+// the combine-with-item-code option show "110798/2ESQ8MR" there while the barcode
+// symbol itself still only ever encodes the plain barcode number.
+const BarcodeImage: React.FC<{ text: string; belowText?: string; maxHeight: number; fontSize?: number; maxWidthPx?: number; center?: boolean; rattail?: boolean }> = ({ text, belowText, maxHeight, fontSize = 8, maxWidthPx, center, rattail }) => {
   const [src, setSrc] = useState("");
   useEffect(() => {
     if (!text) { setSrc(""); return; }
@@ -115,9 +125,9 @@ const BarcodeImage: React.FC<{ text: string; maxHeight: number; fontSize?: numbe
     ...(center ? { margin: "0 auto" } : {}),
   };
   return (
-    <div style={{ marginLeft: center ? 0 : -3, textAlign: center ? "center" : "left" }}>
+    <div style={{ marginLeft: center ? 0 : -3, textAlign: center ? "center" : "left", flexShrink: 0 }}>
       <img src={src} alt="" style={imgStyle} />
-      <div style={{ fontSize, color: "#111", lineHeight: 1, letterSpacing: "0.5px" }}>{text}</div>
+      <div style={{ fontSize, color: "#111", lineHeight: 1, letterSpacing: "0.5px" }}>{belowText ?? text}</div>
     </div>
   );
 };
@@ -128,6 +138,8 @@ interface ActiveField {
   bold: boolean;
   uppercase: boolean;
   wrap: boolean;
+  /** itembarcodeid only: also print the Item Code on the barcode's human-readable line. */
+  combineItemCode?: boolean;
 }
 
 const cased = (txt: string, f: { uppercase: boolean }) =>
@@ -163,8 +175,15 @@ const LabelFace: React.FC<FaceProps> = ({
     if (fieldConfigs && fieldConfigs.length > 0) {
       // Config-driven: scale fontSize to the rendered label height
       const scale = heightPx / ((template.labelheight || 1) * DPI);
+      const barcodeCfg = fieldConfigs.find(c => c.key === "itembarcodeid");
+      const itemCodeCfg = fieldConfigs.find(c => c.key === "itemcode");
+      // Combine-with-item-code only takes effect once both the barcode and Item Code are
+      // actually enabled — the Item Code field is then dropped from its own separate
+      // line here, since its value gets folded into the barcode's line instead.
+      const combining = !!barcodeCfg?.enabled && !!barcodeCfg?.combineItemCode && !!itemCodeCfg?.enabled;
       return fieldConfigs
         .filter(c => c.enabled && (!isRattail || c.side === face || (face === "front" && c.side !== "back")))
+        .filter(c => !(combining && c.key === "itemcode"))
         .sort((a, b) => a.order - b.order)
         .map(c => ({
           key: c.key,
@@ -172,6 +191,7 @@ const LabelFace: React.FC<FaceProps> = ({
           bold: c.bold,
           uppercase: !!c.uppercase,
           wrap: c.wrap ?? wrapDefault(c.key),
+          combineItemCode: c.key === "itembarcodeid" && combining,
         }));
     }
     // Template-flag fallback
@@ -206,14 +226,24 @@ const LabelFace: React.FC<FaceProps> = ({
       : {};
     // wrap on  -> text flows onto multiple lines, clipped only at the face edge
     // wrap off -> single line, ellipsis when it overruns the face width
+    // flexShrink:0 matters as much as the wrap/overflow choice here: per the flexbox
+    // spec, a flex item's automatic min-size resolves to 0 (not its content size) once
+    // it has overflow other than visible — so without this, the parent's flex column
+    // is free to squash each field's box arbitrarily small whenever the sum of fields
+    // doesn't fit the label's fixed height, cropping/overlapping text instead of the
+    // parent's own overflow:hidden cleanly clipping whatever doesn't fit at the bottom.
     const flow: React.CSSProperties = f.wrap
-      ? { whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden" }
-      : { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+      ? { whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden", flexShrink: 0 }
+      : { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0 };
 
     switch (f.key) {
-      case "itembarcodeid":
+      case "itembarcodeid": {
         if (!data.itembarcodeid) return null;
-        return <BarcodeImage key="barcode" text={data.itembarcodeid} maxHeight={isRattail ? Math.round(Math.min(heightPx * 0.3, 28) * 1.15) : Math.min(heightPx * 0.3, 28)} fontSize={fs} maxWidthPx={Math.round(widthPx * (isRattail ? 0.80 : 0.75))} center={isCenter} rattail={isRattail} />;
+        const belowText = f.combineItemCode && data.itemcode
+          ? `${data.itembarcodeid}/${data.itemcode}`
+          : undefined;
+        return <BarcodeImage key="barcode" text={data.itembarcodeid} belowText={belowText} maxHeight={isRattail ? Math.round(Math.min(heightPx * 0.3, 28) * 1.15) : Math.min(heightPx * 0.3, 28)} fontSize={fs} maxWidthPx={Math.round(widthPx * (isRattail ? 0.80 : 0.75))} center={isCenter} rattail={isRattail} />;
+      }
 
       case "itemcode":
         return (
@@ -296,7 +326,12 @@ const LabelFace: React.FC<FaceProps> = ({
   });
 
   const sharedContentStyle: React.CSSProperties = {
-    paddingLeft: isCenter ? 4 : ml,
+    // Left Margin previously did nothing for a centered template — it was hardcoded to a
+    // fixed 4px inset regardless of the field's value, which is why increasing it had no
+    // visible effect until it accidentally crossed into tail-label territory (see
+    // isTailLabel above). Centered content now gets the same nudge as left-aligned
+    // content does, plus a small baseline inset so it isn't flush against the edge at 0.
+    paddingLeft: (isCenter ? 4 : 0) + ml,
     paddingTop: mt,
     paddingRight: 4,
     paddingBottom: 4,
@@ -432,7 +467,14 @@ const LabelCanvas: React.FC<Props> = ({ template, data, scale = 1, showFaceLabel
   const mlRaw = Math.round(parseFloat(template.leftmargin || "0") * DPI * scale);
   const mtRaw = Math.round(parseFloat(template.topmargin  || "0") * DPI * scale);
 
-  const isTailLabel = mlRaw >= widthPx;
+  // Tail-label mode (blank roll backing before a narrower printable flag) only makes
+  // sense for rattail-style tags — a plain rectangular label's sticker is the full
+  // printable width, so a large leftmargin there means "shift content right", not
+  // "there's a wider tail to the left". Without the isRattail guard, any rectangular
+  // template whose margin happened to reach its own width got misread as a tail label —
+  // doubling the page width and shifting everything by the full margin instead of the
+  // small, continuous nudge the field was actually being used for.
+  const isTailLabel = isRattail && mlRaw >= widthPx;
   // Print + tail: a wrapper div supplies marginLeft so content lands in the printable area.
   // The wrapper is outside .label-item, so it is NOT zeroed by `margin:0 !important` in print CSS.
   // Print + non-tail: small leftmargin is a valid inset within the printable area.

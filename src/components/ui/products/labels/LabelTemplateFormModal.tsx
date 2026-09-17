@@ -62,7 +62,7 @@ const DEFAULT_FORM = {
 type FormState = typeof DEFAULT_FORM;
 
 const DEFAULT_FIELD_CONFIGS: FieldPrintConfig[] = [
-  { key: "itembarcodeid",   label: "Barcode",       side: "front", enabled: true,  order: 1,  fontSize: 10, bold: false, uppercase: false, wrap: false },
+  { key: "itembarcodeid",   label: "Barcode",       side: "front", enabled: true,  order: 1,  fontSize: 10, bold: false, uppercase: false, wrap: false, combineItemCode: false },
   { key: "itemcode",        label: "Item Code",     side: "front", enabled: true,  order: 2,  fontSize: 10, bold: true,  uppercase: false, wrap: false },
   { key: "codedprice",      label: "Coded Price",   side: "front", enabled: false, order: 3,  fontSize: 10, bold: true,  uppercase: false, wrap: false },
   { key: "itemdescription", label: "Description",   side: "back",  enabled: true,  order: 4,  fontSize: 10, bold: false, uppercase: false, wrap: true  },
@@ -323,6 +323,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
   };
 
   const isRattail = form.labletype === "rattail";
+  const itemCodeEnabled = !!fieldConfigs.find(c => c.key === "itemcode")?.enabled;
 
   const section = (title: string, children: React.ReactNode) => (
     <div className="mb-3">
@@ -566,6 +567,7 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                       <div style={{ flex: "0 0 32px", textAlign: "center" }}>Bold</div>
                       <div style={{ flex: "0 0 34px", textAlign: "center" }} title="UPPERCASE">AA</div>
                       <div style={{ flex: "0 0 34px", textAlign: "center" }} title="Wrap onto multiple lines">Wrap</div>
+                      <div style={{ flex: "0 0 50px", textAlign: "center" }} title="Print the Item Code right after the barcode number, separated by / — barcode field only">W/Code</div>
                     </div>
 
                     {fieldConfigs.map((cfg, i) => (
@@ -633,6 +635,16 @@ const LabelTemplateFormModal: React.FC<Props> = ({ storeid, editLabel, onClose, 
                             checked={cfg.wrap ?? wrapDefault(cfg.key)}
                             disabled={!cfg.enabled || cfg.key === "itembarcodeid"}
                             onChange={() => updateFieldConfig(i, { wrap: !(cfg.wrap ?? wrapDefault(cfg.key)) })} />
+                        </div>
+                        {/* Combine with Item Code — barcode row only */}
+                        <div style={{ flex: "0 0 50px", display: "flex", justifyContent: "center" }}>
+                          {cfg.key === "itembarcodeid" && (
+                            <input type="checkbox" className="form-check-input"
+                              checked={!!cfg.combineItemCode}
+                              disabled={!cfg.enabled || !itemCodeEnabled}
+                              title={!itemCodeEnabled ? "Enable Item Code to use this" : "Print Item Code after the barcode number, separated by /"}
+                              onChange={() => updateFieldConfig(i, { combineItemCode: !cfg.combineItemCode })} />
+                          )}
                         </div>
                       </div>
                     ))}
