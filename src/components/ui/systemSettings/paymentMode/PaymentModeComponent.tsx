@@ -41,6 +41,13 @@ const PaymentModeComponent = () => {
   }, []);
 
   const handleDelete = useCallback(async (row: PaymentModeRow) => {
+    if (row.issystem) {
+      dispatch(showNotification({
+        message: `"${row.paymode}" is a system payment mode required by the application and cannot be deleted.`,
+        type: NOTIFICATION_TYPES.ERROR,
+      }));
+      return;
+    }
     const result = await showConfirmationDialog({
       title: "Delete Payment Mode?",
       text: `"${row.paymode}" will be permanently removed.`,
@@ -73,7 +80,25 @@ const PaymentModeComponent = () => {
       sort: "asc",
       cellStyle: { textAlign: "center", fontWeight: 600, color: "#64748b" },
     },
-    { headerName: "Payment Mode", field: "paymode", flex: 2, minWidth: 140 },
+    {
+      headerName: "Payment Mode",
+      field: "paymode",
+      flex: 2,
+      minWidth: 140,
+      cellRenderer: (params: ICellRendererParams<PaymentModeRow>) => (
+        <span>
+          {params.value}
+          {params.data?.issystem && (
+            <span
+              title="System payment mode — required by the application, cannot be edited or deleted"
+              style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "1px 6px" }}
+            >
+              🔒 System
+            </span>
+          )}
+        </span>
+      ),
+    },
     { headerName: "Description", field: "paymodedescription", flex: 3, minWidth: 180 },
     {
       headerName: "Status",
@@ -113,7 +138,13 @@ const PaymentModeComponent = () => {
               <a className="me-2 p-2" href="#" onClick={(e) => { e.preventDefault(); handleEdit(params.data!); }}>
                 <Edit className="feather-edit" size={14} />
               </a>
-              <a className="confirm-text p-2" href="#" onClick={(e) => { e.preventDefault(); handleDelete(params.data!); }}>
+              <a
+                className="confirm-text p-2"
+                href="#"
+                onClick={(e) => { e.preventDefault(); handleDelete(params.data!); }}
+                style={params.data.issystem ? { opacity: 0.35, cursor: "not-allowed" } : undefined}
+                title={params.data.issystem ? "System payment mode — cannot be deleted" : undefined}
+              >
                 <Trash2 className="feather-trash-2" size={14} />
               </a>
             </div>

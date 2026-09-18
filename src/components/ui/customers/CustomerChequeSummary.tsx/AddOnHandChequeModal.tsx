@@ -1,6 +1,7 @@
 "use client";
 
 import SelectCustomer from "@/components/forms/SelectCustomer";
+import CustomerOpenInvoicesPanel from "./CustomerOpenInvoicesPanel";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import {
   ADD_NEW_CHECK_ON_HAND_MUTATION,
@@ -93,6 +94,7 @@ const AddOnHandChequeModal = ({
     register,
     trigger,
     setValue,
+    watch,
     formState: { errors },
     getValues,
     setError,
@@ -125,16 +127,22 @@ const AddOnHandChequeModal = ({
     const entry = getValues(`entries.${index}`);
     const allEntries = getValues("entries");
 
+    // Same check # + same customer is only a true duplicate when it's also tagged to
+    // the same invoice (or both left blank) — a big check covering several invoices is
+    // deliberately entered as one row per invoice, all sharing the same physical check #.
     const isDuplicate = allEntries.some(
       (e, i) =>
         i !== index &&
         e.customerid === entry.customerid &&
-        e.checkno === entry.checkno
+        e.checkno === entry.checkno &&
+        (e.chkinvoiceno || "") === (entry.chkinvoiceno || "")
     );
     if (isDuplicate) {
       setError(`entries.${index}.checkno`, {
         type: "manual",
-        message: "Duplicate check# for same customer",
+        message: entry.chkinvoiceno
+          ? "This check # is already entered for this invoice"
+          : "Duplicate check# for same customer — tag each row to a different invoice to split it",
       });
       return;
     }
@@ -242,12 +250,23 @@ const AddOnHandChequeModal = ({
     borderBottom: "1px solid #f1f3f5",
   };
 
+  // The row currently being worked on — whichever one is in edit mode, else the last
+  // row (a freshly-added blank one is the one someone's about to fill in). Drives the
+  // static "Open Invoices" reference panel, since only one customer's list can be shown
+  // at a time regardless of how many rows exist.
+  const activeIndex = editIndex ?? fields.length - 1;
+  const activeCustomerId = watch(`entries.${activeIndex}.customerid`);
+
+  const handlePickInvoice = (invoiceNumber: string) => {
+    setValue(`entries.${activeIndex}.chkinvoiceno`, invoiceNumber, { shouldValidate: true });
+  };
+
   return createPortal(
     <div
       className="modal fade show"
       style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
     >
-      <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style={{ maxWidth: 1180 }}>
         <div className="modal-content">
           {/* Header */}
           <div className="modal-header py-3" style={{ borderBottom: "1px solid #e9ecef" }}>
@@ -264,9 +283,13 @@ const AddOnHandChequeModal = ({
             />
           </div>
 
-          {/* Body — wrapped in a <form> (no submit handler/button; it's here purely so
-              handleEnterAsTab's closest("form") lookup can find the row's fields) */}
-          <div className="modal-body p-0" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          {/* Body — left: the entries table, wrapped in a <form> (no submit handler/
+              button; it's here purely so handleEnterAsTab's closest("form") lookup can
+              find the row's fields). Right: a static reference panel, part of the form
+              layout (not a popover/dropdown), listing the active row's customer's open
+              invoices/balances so staff can look them up before typing an Invoice #. */}
+          <div className="modal-body p-0 d-flex" style={{ maxHeight: "65vh" }}>
+            <div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
             <form onSubmit={(e) => e.preventDefault()}>
             <table className="table table-borderless mb-0" style={{ minWidth: 860 }}>
               <thead>
@@ -437,7 +460,10 @@ const AddOnHandChequeModal = ({
                         )}
                       </td>
 
-                      {/* Invoice # */}
+                      {/* Invoice # — stays a plain optional text field, typed manually.
+                          The full reference list of this customer's open invoices lives
+                          in the static panel on the right, not a dropdown here (which
+                          gets unusably long for a customer with many invoices). */}
                       <td style={tdStyle}>
                         <input
                           disabled={!isEditable}
@@ -496,6 +522,33 @@ const AddOnHandChequeModal = ({
               </tbody>
             </table>
             </form>
+            </div>
+
+            {/* Static reference panel — always part of the layout, not a toggle/popover.
+                Shows the active row's customer; a customer with many invoices scrolls
+                inside this fixed-width column instead of blowing up a dropdown. */}
+            <div
+              style={{
+                width: 300,
+                flexShrink: 0,
+                borderLeft: "1px solid #e9ecef",
+                padding: 12,
+                overflowY: "auto",
+                background: "#fbfcfd",
+              }}
+            >
+              {activeCustomerId ? (
+                <CustomerOpenInvoicesPanel
+                  storeId={parsedStoreId}
+                  customerId={activeCustomerId}
+                  onPick={handlePickInvoice}
+                />
+              ) : (
+                <div style={{ fontSize: 12, color: "#94a3b8", padding: "8px 4px" }}>
+                  Select a customer to see their open invoices here.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer */}

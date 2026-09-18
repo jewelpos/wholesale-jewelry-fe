@@ -1956,6 +1956,67 @@ const SalesInvoiceForm = ({
     });
   };
 
+  // A customer's own "home" warehouse (customers.warehouseid) doesn't restrict which
+  // invoices/memos can reference them — it's just where they're normally billed from,
+  // and can easily differ from whatever outlet the person creating this document is
+  // currently working in. Prompt once per customer pick (new documents only) so that
+  // choice is explicit rather than silently defaulting to the current outlet:
+  //   - if the current user has access to the customer's warehouse, offer to switch;
+  //   - if not, just say so and continue on the current warehouse (nothing to choose).
+  const promptedCustomerIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isNewDoc) return;
+    const cust = customerData?.getCustomer;
+    if (!cust) return;
+    const custId = Number(customerId);
+    if (promptedCustomerIdRef.current === custId) return;
+    const custWarehouseId = Number(cust.warehouseid);
+    const currentWarehouseId = Number(getValues("warehouseid"));
+    if (!custWarehouseId || custWarehouseId === currentWarehouseId) return;
+    promptedCustomerIdRef.current = custId;
+
+    const docLabel = documentType === "MEMO" ? "memo" : "invoice";
+    const custWarehouseName = cust.warehousename || `Warehouse ${custWarehouseId}`;
+    const currentWarehouseName = currentWarehouse?.warehousename || "your current warehouse";
+    const hasAccess = accessibleSystemWarehouses.some((w) => Number(w.warehouseid) === custWarehouseId);
+
+    if (hasAccess) {
+      MySwal.fire({
+        title: "Customer's warehouse is different",
+        html: `<strong>${cust.custcompanyname || "This customer"}</strong> belongs to <strong>${custWarehouseName}</strong>, not ${currentWarehouseName}.<br/>Create this ${docLabel} from the customer's warehouse instead?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Yes, switch warehouse",
+        cancelButtonText: `No, use ${currentWarehouseName}`,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleWarehouseChange(custWarehouseId, () => setValue("warehouseid", custWarehouseId));
+        }
+      });
+    } else {
+      dispatch(
+        showNotification({
+          message: `${cust.custcompanyname || "This customer"} belongs to ${custWarehouseName}, which you don't have access to — this ${docLabel} will be created from ${currentWarehouseName} instead.`,
+          type: NOTIFICATION_TYPES.INFO,
+        })
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId, customerData, isNewDoc, documentType, accessibleSystemWarehouses, currentWarehouse]);
+
+  // Persistent indicator (not just the one-time prompt above) — stays visible next to
+  // the Warehouse field for as long as it's actually true, however the current
+  // warehouse got chosen (switched via the prompt, picked manually, or just never
+  // matched the customer's to begin with).
+  const selectedWarehouseId = watch("warehouseid");
+  const customerHomeWarehouseId = Number(customerData?.getCustomer?.warehouseid);
+  const warehouseDiffersFromCustomer =
+    isNewDoc &&
+    !!customerId &&
+    Number.isFinite(customerHomeWarehouseId) &&
+    customerHomeWarehouseId > 0 &&
+    Number(selectedWarehouseId) !== customerHomeWarehouseId;
+
   const handleCollectPayment = async () => {
     try {
       await createPayment({
@@ -2704,7 +2765,30 @@ const SalesInvoiceForm = ({
             <div className="vr align-self-stretch" />
 
             <div>
-              <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>Warehouse</div>
+              <div className="text-uppercase fw-semibold text-muted mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
+                Warehouse
+                {warehouseDiffersFromCustomer && (
+                  <span
+                    className="ms-1"
+                    title={`Different from ${customerData?.getCustomer?.custcompanyname || "this customer"}'s own warehouse (${customerData?.getCustomer?.warehousename || `Warehouse ${customerHomeWarehouseId}`})`}
+                    style={{
+                      display: "inline-block",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: "0.02em",
+                      textTransform: "none",
+                      color: "#92400e",
+                      background: "#fef3c7",
+                      border: "1px solid #fde68a",
+                      borderRadius: 10,
+                      padding: "1px 6px",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    ⚠ Not customer&apos;s warehouse
+                  </span>
+                )}
+              </div>
               {hasMultiOutletAccess ? (
                 <Controller
                   name="warehouseid"

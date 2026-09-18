@@ -358,6 +358,7 @@ export const GET_CUSTOMER_QUERY = gql`
       custlname
       custphone2
       warehouseid
+      warehousename
       custdiscount
       custcreditlimit
       balancedue

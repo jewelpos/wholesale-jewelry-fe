@@ -10,6 +10,7 @@ export const GET_PAYMENT_MODE_LIST_QUERY = gql`
       createddate
       displayorder
       status
+      issystem
     }
   }
 `;

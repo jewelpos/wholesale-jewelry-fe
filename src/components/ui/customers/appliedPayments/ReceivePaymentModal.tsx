@@ -28,6 +28,7 @@ type ARDoc = {
   amountreceived: number;
   balancedue: number;
   warehouseid: number;
+  warehousename?: string | null;
   salemodeid: number;
   isCreditInvoice?: boolean;
 };
@@ -221,6 +222,7 @@ const OpenItemsTable = ({
             <th style={thStyle}>Age</th>
             <th style={thStyle}>#</th>
             <th style={thStyle}>Date</th>
+            <th style={thStyle}>Warehouse</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Total</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Balance</th>
             {!readOnly && <th style={{ ...thStyle, textAlign: "right", width: 80 }}>Apply</th>}
@@ -233,7 +235,7 @@ const OpenItemsTable = ({
             const applyAmt = selected.get(doc.invoicenumber) ?? 0;
             const isExpanded = expandedInvoice === doc.invoicenumber;
             const aging = agingByInvoice.get(doc.invoicenumber);
-            const colSpan = (readOnly ? 0 : 1) + 5 + (readOnly ? 0 : 1);
+            const colSpan = (readOnly ? 0 : 1) + 6 + (readOnly ? 0 : 1);
             return (
               <React.Fragment key={doc.invoicenumber}>
                 <tr
@@ -278,6 +280,7 @@ const OpenItemsTable = ({
                     </button>
                   </td>
                   <td style={tdStyle}>{dayjs(doc.saledate).format("MMM D, YY")}</td>
+                  <td style={tdStyle}>{doc.warehousename ?? "—"}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>{fmt(Math.abs(doc.totalamount))}</td>
                   <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(Math.abs(doc.balancedue))}</td>
                   {!readOnly && (
@@ -367,6 +370,9 @@ const CreditRow = ({
     <div style={{ flex: 1, minWidth: 0 }}>
       <span style={{ fontWeight: 600, color: "#166534" }}>#{doc.invoicenumber}</span>
       <span style={{ color: "#64748b", marginLeft: 4 }}>{label}</span>
+      {doc.warehousename && (
+        <span style={{ color: "#94a3b8", marginLeft: 4, fontSize: 10 }}>· {doc.warehousename}</span>
+      )}
     </div>
     <span style={{ color: "#16a34a", fontWeight: 600, minWidth: 56, textAlign: "right" }}>
       {fmt(Math.abs(doc.balancedue))}
@@ -482,7 +488,13 @@ const ReceivePaymentModal = ({
     variables: { storeid: storeId, customerid: customerId },
     skip: !storeId || !customerId,
   });
-  const warehouseId: number = customerData?.getCustomer?.warehouseid ?? 0;
+  // Display only — a customer's own "home" warehouse used to also be what restricted
+  // which of their invoices this screen could even see (see fetchBalanceDue below), which
+  // silently hid every invoice from any OTHER outlet the customer was ever served at.
+  // Payment collection is deliberately global across warehouses now; this is shown in the
+  // header purely so it's clear which warehouse is "theirs" vs. where a given invoice
+  // actually lives.
+  const customerWarehouseName: string | undefined = customerData?.getCustomer?.warehousename;
 
   const [fetchBalanceDue, { data: balanceData, loading: balanceLoading }] = useLazyQuery(
     GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY
@@ -493,12 +505,13 @@ const ReceivePaymentModal = ({
   const [fetchInvoiceAging, { data: agingData }] = useLazyQuery(GET_CUSTOMER_INVOICE_AGING_QUERY);
 
   useEffect(() => {
-    if (!customerId || !warehouseId) return;
+    if (!customerId) return;
+    // No outletid/warehouseid: fetch this customer's open invoices across every
+    // warehouse/outlet they have activity in, not just wherever they happen to be
+    // "assigned" — a customer can be, and pay, at any outlet.
     fetchBalanceDue({
       variables: {
         storeid: storeId,
-        outletid: outletId,
-        warehouseid: warehouseId,
         customerid: customerId,
         isCredit: false,
       },
@@ -509,7 +522,7 @@ const ReceivePaymentModal = ({
     fetchInvoiceAging({
       variables: { storeid: storeId, customerid: customerId },
     });
-  }, [customerId, warehouseId, storeId, outletId, fetchBalanceDue, fetchCreditSummary, fetchInvoiceAging]);
+  }, [customerId, storeId, outletId, fetchBalanceDue, fetchCreditSummary, fetchInvoiceAging]);
 
   const agingByInvoice = useMemo(() => {
     const rows = (agingData?.getCustomerInvoiceAging ?? []) as InvoiceAgingRow[];
@@ -689,7 +702,6 @@ const ReceivePaymentModal = ({
 
   const canSave =
     customerId > 0 &&
-    warehouseId > 0 &&
     (selectedInvoices.size > 0 || selectedMemos.size > 0) &&
     (invCreditsTotal > 0 || memoCreditsTotal > 0 || cashAmount > 0) &&
     !paymentModeMissing &&
@@ -792,7 +804,9 @@ const ReceivePaymentModal = ({
               storeid: storeId,
               customerid: customerId,
               outletid: outletId,
-              warehouseid: warehouseId,
+              // Not sent — the backend resolves the payment's warehouse from outletid
+              // (the outlet actually collecting it) when omitted, same as everywhere
+              // else this session moved away from a customer's static "home" warehouse.
               postingdate: postingDate,
               paymentmodeid: paymentModeid,
               amount: cashAmount,
@@ -962,6 +976,11 @@ const ReceivePaymentModal = ({
                         {selectedCustOption.last_sale_date && (
                           <span style={{ fontSize: 11, color: "#475569" }}>
                             Last sale: <strong>{dayjs(selectedCustOption.last_sale_date).format("MMM D, YYYY")}</strong>
+                          </span>
+                        )}
+                        {customerWarehouseName && (
+                          <span style={{ fontSize: 11, color: "#475569" }} title="This customer's own assigned warehouse — invoices below can be from any warehouse, shown per-row">
+                            Home warehouse: <strong>{customerWarehouseName}</strong>
                           </span>
                         )}
                       </div>

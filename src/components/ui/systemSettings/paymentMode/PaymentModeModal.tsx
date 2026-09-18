@@ -19,6 +19,7 @@ export interface PaymentModeRow {
   createddate: string;
   displayorder: number;
   status: string;
+  issystem?: boolean | null;
 }
 
 interface FormValues {
@@ -98,6 +99,8 @@ const PaymentModeModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Pr
 
   if (!isOpen) return null;
 
+  const isLocked = !!editData?.issystem;
+
   return (
     <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
       <div className="modal-dialog modal-dialog-centered">
@@ -106,6 +109,14 @@ const PaymentModeModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Pr
             <h5 className="modal-title">{editData ? "Edit Payment Mode" : "Add Payment Mode"}</h5>
             <button type="button" className="btn-close" onClick={onClose} />
           </div>
+          {isLocked ? (
+            <div className="modal-body">
+              <div className="alert alert-warning mb-0" style={{ fontSize: 13 }}>
+                <strong>&quot;{editData?.paymode}&quot;</strong> is a system payment mode the application relies on
+                internally and cannot be renamed, deactivated, or deleted.
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="modal-body">
               <div className="mb-3">
@@ -157,6 +168,14 @@ const PaymentModeModal = ({ isOpen, onClose, onSuccess, editData, outletId }: Pr
               </button>
             </div>
           </form>
+          )}
+          {isLocked && (
+            <div className="modal-footer">
+              <button type="button" className="btn btn-cancel" onClick={onClose}>
+                <X size={14} className="me-1" />Close
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
