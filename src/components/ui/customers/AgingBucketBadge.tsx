@@ -16,6 +16,8 @@ export type InvoiceAgingRow = {
   installmentsdue: number;
   totalinstallments: number;
   currentamountdue: number;
+  onhand_noofchecks?: number;
+  onhand_totalcheckamount?: number;
 };
 
 // Same bucket boundaries as vw_customer_balance_aging_report (0-30/31-60/61-90/91-120/120+),

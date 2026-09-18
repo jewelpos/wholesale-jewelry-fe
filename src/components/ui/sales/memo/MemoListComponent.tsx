@@ -67,7 +67,7 @@ function getDateRange(preset: DatePreset): { startdate: string; enddate: string 
   return { startdate: fmt(new Date(today.getFullYear(), 0, 1)), enddate: end };
 }
 
-const memoColumnDefs: ColDef<MemoSummary>[] = [
+const getMemoColumnDefs = (onDeleted: () => void): ColDef<MemoSummary>[] => [
   { headerName: "Memo #",   field: "memonumber",  filter: "agNumberColumnFilter" },
   {
     headerName: "Customer",
@@ -115,7 +115,7 @@ const memoColumnDefs: ColDef<MemoSummary>[] = [
     headerName: "Actions",
     cellRenderer: (params: ICellRendererParams<MemoSummary>) => {
       if (params.node.rowPinned || !params.data) return null;
-      return <MemoActions data={params.data} />;
+      return <MemoActions data={params.data} onDeleted={onDeleted} />;
     },
     pinned: "right",
     width: typeof window !== "undefined" && window.innerWidth < 992 ? 52 : 130,
@@ -214,6 +214,11 @@ const MemoListComponent = () => {
   }, []);
 
   const datasource = useRef({ getRows }).current;
+
+  const handleMemoDeleted = useCallback(() => {
+    gridRef.current?.api?.refreshServerSide({ purge: true });
+  }, []);
+  const memoColumnDefs = useMemo(() => getMemoColumnDefs(handleMemoDeleted), [handleMemoDeleted]);
 
   const handleGridReady = useCallback((params: GridReadyEvent<MemoSummary>) => {
     setGridReady(true);

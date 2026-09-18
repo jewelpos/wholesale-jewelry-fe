@@ -38,7 +38,7 @@ const BalanceComponent = () => {
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
   const parsedOutletId = parseInt(outletIdParam as string, 10);
-  const [viewingCustomer, setViewingCustomer] = useState<{ customerid: number; companyname: string } | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<{ customerid: number; companyname: string; onhandNoOfChecks?: number; onhandTotalCheckAmount?: number } | null>(null);
 
   const [getCustomerBalanceReport] = useLazyQuery(GET_CUSTOMER_BALANCE_REPORT_QUERY, { fetchPolicy: "network-only" });
   const dispatch = useAppDispatch();
@@ -94,7 +94,9 @@ const BalanceComponent = () => {
   ];
 
   const columnDefs = useMemo(
-    () => getBalanceReportColumnDefs((customerid, companyname) => setViewingCustomer({ customerid, companyname })),
+    () => getBalanceReportColumnDefs((customerid, companyname, onhandNoOfChecks, onhandTotalCheckAmount) =>
+      setViewingCustomer({ customerid, companyname, onhandNoOfChecks, onhandTotalCheckAmount })
+    ),
     []
   );
 
@@ -236,6 +238,8 @@ const BalanceComponent = () => {
         storeid={parsedStoreId}
         customerid={viewingCustomer?.customerid ?? null}
         companyname={viewingCustomer?.companyname ?? ""}
+        onhandNoOfChecks={viewingCustomer?.onhandNoOfChecks}
+        onhandTotalCheckAmount={viewingCustomer?.onhandTotalCheckAmount}
         onClose={() => setViewingCustomer(null)}
       />
     </div>

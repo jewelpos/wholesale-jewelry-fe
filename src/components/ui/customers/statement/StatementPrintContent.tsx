@@ -35,6 +35,12 @@ interface Props {
   type: StatementType;
   customer: StatementCustomer;
   openInvoices: InvoiceBalanceDue[];
+  // Open (unapplied) credit invoices — negative balancedue, fetched separately
+  // (isCredit=true) since getCustomerBalanceDueInvoices only ever returns one sign or
+  // the other. Listed in the same table as additional rows so a credit shown in the
+  // Open Credits aging box can actually be traced back to an invoice #, not just a
+  // number with nothing behind it.
+  creditInvoices: InvoiceBalanceDue[];
   ledgerRows: CustomerLedgerReportType[];
   openingBalance: number;
   payments: CustomerPaymentListType[];
@@ -125,7 +131,7 @@ const CitationFooter = ({ legend }: { legend: string[] }) =>
   ) : null;
 
 const StatementPrintContent = ({
-  type, customer, openInvoices, ledgerRows, openingBalance,
+  type, customer, openInvoices, creditInvoices, ledgerRows, openingBalance,
   payments, fromDate, toDate, showAging, showSummaryCard, storeName, agingData,
   primaryOutletId, includeClosed,
 }: Props) => {
@@ -147,10 +153,27 @@ const StatementPrintContent = ({
   // the same way it nets out real payments (both createCustomerPayment and
   // createCustomerCreditApply decrement the same balancedue field) — without a visible
   // Credit Applied figure, that reduction looked unexplained.
-  const totalOutstanding = openInvoices.reduce((s, inv) => s + inv.balancedue, 0);
-  const totalInvoiceAmount = openInvoices.reduce((s, inv) => s + Number(inv.totalamount ?? 0), 0);
-  const totalInvoicePaid = openInvoices.reduce((s, inv) => s + Number(inv.amountreceived ?? 0), 0);
-  const totalCreditApplied = openInvoices.reduce((s, inv) => s + Number(inv.creditamountapplied ?? 0), 0);
+  // includeClosed drops getCustomerBalanceDueInvoices' own balancedue filter server-side
+  // for BOTH the isCredit=false and isCredit=true calls, so each one comes back with the
+  // exact same full set (positive + negative + zero balance) — merging them in that mode
+  // would duplicate every single row. Only merge the two separately-filtered fetches when
+  // includeClosed is off; openInvoices alone is already everything otherwise.
+  const allInvoiceRows = includeClosed
+    ? openInvoices
+    : [...openInvoices, ...creditInvoices].sort(
+        (a, b) => ageInDays(b.saledate) - ageInDays(a.saledate) || a.invoicenumber - b.invoicenumber,
+      );
+  const positiveRows = allInvoiceRows.filter(inv => Number(inv.balancedue) >= 0);
+  const creditRows = allInvoiceRows.filter(inv => Number(inv.balancedue) < 0);
+  const totalOutstanding = positiveRows.reduce((s, inv) => s + Number(inv.balancedue ?? 0), 0);
+  const totalInvoiceAmount = positiveRows.reduce((s, inv) => s + Number(inv.totalamount ?? 0), 0);
+  const totalInvoicePaid = positiveRows.reduce((s, inv) => s + Number(inv.amountreceived ?? 0), 0);
+  const totalCreditApplied = positiveRows.reduce((s, inv) => s + Number(inv.creditamountapplied ?? 0), 0);
+  // Computed from whichever rows actually carry a negative balance, rather than
+  // customer.opencredit (a separate, differently-scoped mv_customer_list aggregate), so
+  // this statement has one single, consistent source for its own numbers.
+  const openCredit = creditRows.reduce((s, inv) => s + Number(inv.balancedue ?? 0), 0);
+  const netBalanceDue = totalOutstanding + openCredit;
 
   // Use DB view aging when available (accurate), fall back to client-side calc
   const aging = agingData
@@ -236,11 +259,11 @@ const StatementPrintContent = ({
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ color: "#64748b" }}>Credit Available:</span>
-              <strong style={{ color: "#16a34a" }}>{fmt(customer.opencredit)}</strong>
+              <strong style={{ color: "#16a34a" }}>{fmt(openCredit)}</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0", paddingTop: 6, marginTop: 2 }}>
               <span style={{ color: "#64748b" }}>Balance Due:</span>
-              <strong style={{ color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</strong>
+              <strong style={{ color: netBalanceDue > 0 ? "#dc2626" : "#16a34a" }}>{fmt(netBalanceDue)}</strong>
             </div>
           </>}
           {type === "history" && <>
@@ -276,15 +299,16 @@ const StatementPrintContent = ({
           <div style={{ background: "#f1f5f9", borderBottom: "1px solid #e2e8f0", padding: "6px 14px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#64748b", letterSpacing: "0.06em" }}>
             Aging Summary
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)" }}>
             {([
               { label: "Current (0–30d)", value: aging.d0_30, warn: false },
               { label: "31–60 days", value: aging.d31_60, warn: aging.d31_60 > 0 },
               { label: "61–90 days", value: aging.d61_90, warn: aging.d61_90 > 0 },
               { label: "90+ days", value: aging.d90plus, warn: aging.d90plus > 0, danger: true },
-              { label: "Total Outstanding", value: totalOutstanding, warn: false, bold: true },
+              { label: "Open Credits", value: openCredit, warn: false },
+              { label: "Total Outstanding", value: netBalanceDue, warn: false, bold: true },
             ] as { label: string; value: number; warn: boolean; danger?: boolean; bold?: boolean }[]).map((b, i) => (
-              <div key={i} style={{ padding: "10px 12px", borderRight: i < 4 ? "1px solid #e2e8f0" : undefined, textAlign: "center" }}>
+              <div key={i} style={{ padding: "10px 12px", borderRight: i < 5 ? "1px solid #e2e8f0" : undefined, textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4 }}>{b.label}</div>
                 <div style={{ fontSize: 15, fontWeight: b.bold ? 800 : 700, color: b.value === 0 ? "#94a3b8" : b.danger ? "#dc2626" : b.warn ? "#d97706" : "#16a34a" }}>
                   {fmt(b.value)}
@@ -295,10 +319,10 @@ const StatementPrintContent = ({
         </div>
       )}
 
-      {/* ── Open Invoices Table ── */}
+      {/* ── Open Invoices Table (includes open credit invoices, negative balance) ── */}
       {type === "open" && (() => {
         const { markerOf, legend } = buildOutletMarkers(
-          openInvoices, inv => inv.outletid, inv => inv.warehousename, primaryOutletId,
+          allInvoiceRows, inv => inv.outletid, inv => inv.warehousename, primaryOutletId,
         );
         return (
           <>
@@ -312,14 +336,15 @@ const StatementPrintContent = ({
                 ))}</tr>
               </thead>
               <tbody>
-                {openInvoices.length === 0 ? (
+                {allInvoiceRows.length === 0 ? (
                   <tr><td colSpan={includeClosed ? 8 : 7} style={{ ...TD, textAlign: "center", color: "#94a3b8", padding: 20 }}>
                     {includeClosed ? "No invoices found." : "No open invoices found."}
                   </td></tr>
-                ) : openInvoices.map((inv, i) => {
+                ) : allInvoiceRows.map((inv, i) => {
                   const age = ageInDays(inv.saledate);
                   const ageColor = age > 90 ? "#dc2626" : age > 60 ? "#ea580c" : age > 30 ? "#d97706" : "#16a34a";
-                  const isClosed = Number(inv.balancedue) <= 0;
+                  const isCredit = Number(inv.balancedue) < 0;
+                  const isClosed = !isCredit && Number(inv.balancedue) <= 0;
                   return (
                     <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
                       <td style={TD}>{inv.invoicenumber}<OutletMark marker={markerOf(inv.outletid)} /></td>
@@ -327,16 +352,16 @@ const StatementPrintContent = ({
                       <td style={TDR}>{fmt(inv.totalamount)}</td>
                       <td style={TDR}>{fmt(inv.amountreceived)}</td>
                       <td style={{ ...TDR, color: "#166534" }}>{fmt(inv.creditamountapplied)}</td>
-                      <td style={{ ...TDR, fontWeight: 700, color: "#dc2626" }}>{fmt(inv.balancedue)}</td>
+                      <td style={{ ...TDR, fontWeight: 700, color: isCredit ? "#16a34a" : "#dc2626" }}>{fmt(inv.balancedue)}</td>
                       <td style={{ ...TDR, color: ageColor, fontWeight: 600 }}>{age}d</td>
                       {includeClosed && (
                         <td style={TD}>
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
-                            color: isClosed ? "#166534" : "#92400e",
-                            background: isClosed ? "#dcfce7" : "#fef3c7",
+                            color: isCredit ? "#1e40af" : isClosed ? "#166534" : "#92400e",
+                            background: isCredit ? "#dbeafe" : isClosed ? "#dcfce7" : "#fef3c7",
                           }}>
-                            {isClosed ? "Closed" : "Open"}
+                            {isCredit ? "Credit" : isClosed ? "Closed" : "Open"}
                           </span>
                         </td>
                       )}
@@ -344,11 +369,11 @@ const StatementPrintContent = ({
                   );
                 })}
               </tbody>
-              {openInvoices.length > 0 && (
+              {allInvoiceRows.length > 0 && (
                 <tfoot>
                   <tr style={{ background: "#f1f5f9", fontWeight: 700, borderTop: "2px solid #94a3b8" }}>
-                    <td style={TD} colSpan={5}>TOTAL ({openInvoices.length} invoice{openInvoices.length !== 1 ? "s" : ""})</td>
-                    <td style={{ ...TDR, fontWeight: 800, color: totalOutstanding > 0 ? "#dc2626" : "#16a34a" }}>{fmt(totalOutstanding)}</td>
+                    <td style={TD} colSpan={5}>TOTAL ({allInvoiceRows.length} invoice{allInvoiceRows.length !== 1 ? "s" : ""})</td>
+                    <td style={{ ...TDR, fontWeight: 800, color: netBalanceDue > 0 ? "#dc2626" : "#16a34a" }}>{fmt(netBalanceDue)}</td>
                     <td style={TD} />
                     {includeClosed && <td style={TD} />}
                   </tr>

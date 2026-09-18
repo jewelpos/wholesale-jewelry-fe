@@ -10,12 +10,18 @@ interface Props {
   storeid: number;
   customerid: number | null;
   companyname: string;
+  // Customer-wide on-hand/held check totals — sourced from the Balance List row
+  // (vw_customer_balance_report), NOT recomputed by summing this drawer's per-invoice
+  // rows: not every held check is linked to an invoice (chkinvoiceno can be blank), so
+  // summing the per-invoice column below would silently miss unlinked ones.
+  onhandNoOfChecks?: number;
+  onhandTotalCheckAmount?: number;
   onClose: () => void;
 }
 
 const fmt = (n: number) => `$${Math.abs(n).toFixed(2)}`;
 
-const CustomerBalanceInvoiceDrawer = ({ storeid, customerid, companyname, onClose }: Props) => {
+const CustomerBalanceInvoiceDrawer = ({ storeid, customerid, companyname, onhandNoOfChecks, onhandTotalCheckAmount, onClose }: Props) => {
   const [fetchAging, { data, loading }] = useLazyQuery(GET_CUSTOMER_INVOICE_AGING_QUERY, {
     fetchPolicy: "network-only",
   });
@@ -90,9 +96,19 @@ const CustomerBalanceInvoiceDrawer = ({ storeid, customerid, companyname, onClos
                   ✕
                 </button>
               </div>
-              <div style={{ marginTop: 8, fontSize: 13 }}>
-                <span style={{ color: "#64748b" }}>Total balance due: </span>
-                <span style={{ fontWeight: 700, color: totalBalance > 0 ? "#dc2626" : "#1e293b" }}>{fmt(totalBalance)}</span>
+              <div style={{ marginTop: 8, fontSize: 13, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span>
+                  <span style={{ color: "#64748b" }}>Total balance due: </span>
+                  <span style={{ fontWeight: 700, color: totalBalance > 0 ? "#dc2626" : "#1e293b" }}>{fmt(totalBalance)}</span>
+                </span>
+                {!!onhandNoOfChecks && (
+                  <span title="On-hand/held checks for this customer — includes checks not linked to any invoice">
+                    <span style={{ color: "#64748b" }}>On-hand checks: </span>
+                    <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                      {onhandNoOfChecks} ({fmt(onhandTotalCheckAmount ?? 0)})
+                    </span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -117,6 +133,7 @@ const CustomerBalanceInvoiceDrawer = ({ storeid, customerid, companyname, onClos
                       <th style={{ ...thStyle, textAlign: "right" }}>Amount Paid</th>
                       <th style={{ ...thStyle, textAlign: "right" }}>Balance</th>
                       <th style={thStyle}>Terms</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>On-Hand Checks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -134,6 +151,9 @@ const CustomerBalanceInvoiceDrawer = ({ storeid, customerid, companyname, onClos
                         <td style={{ ...tdStyle, textAlign: "right" }}>{fmt(r.amountreceived)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{fmt(r.balancedue)}</td>
                         <td style={tdStyle}>{r.termsname ?? "—"}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>
+                          {r.onhand_noofchecks ? `${r.onhand_noofchecks} (${fmt(r.onhand_totalcheckamount ?? 0)})` : "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -1081,6 +1081,13 @@ const SalesInvoiceForm = ({
         discountpercent: toNum(it.discountpercent),
         discountsource: it.discountsource ?? null,
         discountpromotionid: it.discountpromotionid ?? null,
+        // Needed so the items table below can lock a memo-linked line (isLockedMemoLine)
+        // — without this the field is always undefined on load and every line looks
+        // like an ordinary catalog line, silently allowing qty/price edits on lines that
+        // are actually drawn from a memo.
+        createfrommemo: toNum(it.createfrommemo),
+        returnfrommemo: toNum(it.returnfrommemo),
+        oldmemoitemseqno: it.oldmemoitemseqno ?? null,
       })),
       salesreps: (doc.salesreps ?? []).map((r: any) => ({ userid: Number(r.userid), split_percent: Number(r.split_percent) })),
     });
@@ -1090,6 +1097,14 @@ const SalesInvoiceForm = ({
   const viewedFromMemoNumber = viewInvoiceQueryData?.getInvoiceByNumber?.frommemonumber
     ? Number(viewInvoiceQueryData.getInvoiceByNumber.frommemonumber)
     : null;
+
+  // Editing (not viewing, not creating) an invoice that was originally created from a
+  // memo: locks the memo reference field and blocks free-form item entry from the full
+  // product catalog, the same way the create-from-memo flow already does — only the
+  // memo's own remaining items should ever end up on this invoice, and its link back to
+  // the memo (the reference field) shouldn't be editable away by hand.
+  const isEditingMemoDerivedInvoice =
+    documentType === "INVOICE" && !!invoiceId && !readOnly && !!viewedFromMemoNumber;
 
   // Pre-populate form when viewing/editing an existing memo
   useEffect(() => {
@@ -2914,7 +2929,13 @@ const SalesInvoiceForm = ({
                 <div className="row g-2">
                   <div className="col-6">
                     <label className="form-label small text-muted mb-1">{salesordernoFromSO ? "SO #" : (creditFromMemo || effectiveMemoNumber || viewedFromMemoNumber) ? "Memo #" : "Customer PO#"}</label>
-                    <input type="text" className="form-control form-control-sm" {...register("invoicereference")} />
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      disabled={isEditingMemoDerivedInvoice}
+                      title={isEditingMemoDerivedInvoice ? "This invoice's source memo can't be changed" : undefined}
+                      {...register("invoicereference")}
+                    />
                   </div>
                   <div className="col-6">
                     <label className="form-label small text-muted mb-1">Ordered By</label>
@@ -3167,6 +3188,17 @@ const SalesInvoiceForm = ({
                   itemFields.map((field, index) => {
                     const item = watch(`items.${index}`);
                     const line = computeLine(item, mode);
+                    // A line drawn from a memo (createfrommemo=1) must never have its
+                    // qty/pcs changed or be removed on edit — see editInvoice on the
+                    // backend: a memo item can be drawn on by two independently-edited
+                    // documents at once (e.g. a regular invoice AND a separate
+                    // credit-return invoice from the same memo), so there's no safe way
+                    // to reconcile a delta back to the memo without risking drift. This
+                    // is per-LINE, not per-invoice — an invoice created from a memo can
+                    // still have ordinary catalog lines added alongside memo lines, and
+                    // those stay fully editable.
+                    const isLockedMemoLine = Number((item as any)?.createfrommemo ?? 0) === 1;
+                    const lineReadOnly = readOnly || isLockedMemoLine;
                     return (
                       <tr key={field.id} className={`align-middle${editingIndex === index ? " table-warning" : ""}`}>
                         <td>{index + 1}</td>
@@ -3193,7 +3225,7 @@ const SalesInvoiceForm = ({
                         {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsreturn))}</td>}
                         {isMemoView && allowPcsEntry && <td className="text-end">{formatQty(toNum(item?.memopcsremain))}</td>}
                         <td className="text-end" style={{ minWidth: 90 }}>
-                          {readOnly ? (
+                          {lineReadOnly ? (
                             formatQty(line.qty)
                           ) : (
                             <input
@@ -3210,7 +3242,7 @@ const SalesInvoiceForm = ({
                         {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyreturn))}</td>}
                         {isMemoView && <td className="text-end">{formatQty(toNum(item?.memoqtyremain))}</td>}
                         <td className="text-end" style={{ minWidth: 100 }}>
-                          {readOnly ? (
+                          {lineReadOnly ? (
                             <>
                               <span className={line.unit === 0 ? "text-danger fw-bold" : ""}>{formatMoney(line.unit)}</span>
                               {line.unit === 0 && (
@@ -3235,7 +3267,7 @@ const SalesInvoiceForm = ({
                           )}
                         </td>
                         <td className="text-end" style={{ minWidth: 90 }}>
-                          {readOnly ? (
+                          {lineReadOnly ? (
                             <>
                               <div>{line.disc}</div>
                               {item?.discountsource && item.discountsource !== 'item' && toNum(item?.discountpercent) > 0 && (
@@ -3266,7 +3298,7 @@ const SalesInvoiceForm = ({
                         </td>
                         {showUnitPriceCol && <td className="text-end">{formatMoney(line.unitAfterDiscount)}</td>}
                         <td className="text-end" style={{ minWidth: 100 }}>
-                          {readOnly ? (
+                          {lineReadOnly ? (
                             formatMoney(line.net)
                           ) : (
                             <input
@@ -3297,36 +3329,44 @@ const SalesInvoiceForm = ({
                         </td>
                         {!readOnly && (
                           <td className="text-center">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-primary me-1"
-                              onClick={() => {
-                                setEditingIndex(index);
-                                setToolItem({
-                                  itemid: item?.itemid,
-                                  itemcode: item?.itemcode,
-                                  itemdescription: item?.itemdescription,
-                                  itemtaxable: item?.itemtaxable,
-                                  itemunit: item?.itemunit,
-                                  itempcs: toNum(item?.itempcs),
-                                  itemquantity: toNum(item?.itemquantity),
-                                  unitprice: toNum(item?.unitprice),
-                                  discountpercent: toNum(item?.discountpercent),
-                                  extpriceoverride: (item as any)?.extpriceoverride,
-                                  availableqty: (item as any)?.availableqty,
-                                  trackinventory: (item as any)?.trackinventory,
-                                });
-                              }}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => { remove(index); setExtPriceEditBuffer({}); }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {isLockedMemoLine ? (
+                              <span className="text-muted" style={{ fontSize: 11 }} title="Items from a memo can't be changed or removed — void this invoice and recreate it from the memo instead">
+                                Locked
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary me-1"
+                                  onClick={() => {
+                                    setEditingIndex(index);
+                                    setToolItem({
+                                      itemid: item?.itemid,
+                                      itemcode: item?.itemcode,
+                                      itemdescription: item?.itemdescription,
+                                      itemtaxable: item?.itemtaxable,
+                                      itemunit: item?.itemunit,
+                                      itempcs: toNum(item?.itempcs),
+                                      itemquantity: toNum(item?.itemquantity),
+                                      unitprice: toNum(item?.unitprice),
+                                      discountpercent: toNum(item?.discountpercent),
+                                      extpriceoverride: (item as any)?.extpriceoverride,
+                                      availableqty: (item as any)?.availableqty,
+                                      trackinventory: (item as any)?.trackinventory,
+                                    });
+                                  }}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => { remove(index); setExtPriceEditBuffer({}); }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </td>
                         )}
                       </tr>
@@ -3338,7 +3378,11 @@ const SalesInvoiceForm = ({
           </div>
 
           {/* ADD / EDIT LINE ROW */}
-          {((!salesordernoFromSO && !memoRestrictsItems) || editingIndex != null) && (
+          {/* isEditingMemoDerivedInvoice blocks brand-new (non-memo) line additions here
+              — editingIndex != null still applies (editing an existing NON-memo line via
+              its Edit2 button, which stays available; memo-linked lines never expose
+              that button at all — see isLockedMemoLine above). */}
+          {((!salesordernoFromSO && !memoRestrictsItems && !isEditingMemoDerivedInvoice) || editingIndex != null) && (
             <div className="border-top pt-3 mt-1">
               <div className="text-uppercase fw-semibold text-muted mb-2" style={{ fontSize: "0.68rem", letterSpacing: "0.07em" }}>
                 {editingIndex != null ? `Editing Line ${editingIndex + 1}` : "+ Add Line Item"}
@@ -3418,6 +3462,7 @@ const SalesInvoiceForm = ({
                     className="btn btn-outline-secondary d-lg-none"
                     style={{ flexShrink: 0, padding: "6px 10px" }}
                     title="Scan barcode"
+                    disabled={!!salesordernoFromSO || memoRestrictsItems}
                     onClick={() => setShowBarcodeScanner(true)}
                   >
                     <Camera size={18} />

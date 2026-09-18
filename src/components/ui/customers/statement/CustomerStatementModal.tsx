@@ -98,6 +98,9 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
   const [fetchOpenInvoices, { data: openInvoicesData, loading: loadingOpen }] =
     useLazyQuery(GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, { fetchPolicy: "network-only" });
 
+  const [fetchCreditInvoices, { data: creditInvoicesData, loading: loadingCredit }] =
+    useLazyQuery(GET_CUSTOMER_BALANCE_DUE_INVOICES_QUERY, { fetchPolicy: "network-only" });
+
   const [fetchLedger, { data: ledgerData, loading: loadingLedger }] =
     useLazyQuery(GET_CUSTOMER_LEDGER_REPORT_QUERY, { fetchPolicy: "network-only" });
 
@@ -123,6 +126,26 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
           includeClosed,
         },
       });
+      // Open (unapplied) credit invoices — negative balance, a separate fetch since
+      // isCredit flips which sign of balancedue comes back. Shown as additional rows in
+      // the same table and netted into Balance Due, instead of just an untraceable
+      // summary number. Skipped when includeClosed is on: that flag drops
+      // getCustomerBalanceDueInvoices' own balancedue filter for BOTH calls, so this
+      // fetch would come back with the exact same full set fetchOpenInvoices just got
+      // (isCredit stops mattering once the filter is dropped) — merging them would
+      // duplicate every row. openInvoices alone already has everything in that mode.
+      if (!includeClosed) {
+        fetchCreditInvoices({
+          variables: {
+            storeid: parsedStoreId,
+            customerid: customerIdNum,
+            outletid: selectedOutlet ?? null,
+            warehouseid: null,
+            isCredit: true,
+            includeClosed,
+          },
+        });
+      }
       fetchAging({
         variables: {
           outletid: parsedOutletId,
@@ -191,6 +214,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
 
   // ── Derived data ──
   const openInvoices: InvoiceBalanceDue[] = openInvoicesData?.getCustomerBalanceDueInvoices ?? [];
+  const creditInvoices: InvoiceBalanceDue[] = creditInvoicesData?.getCustomerBalanceDueInvoices ?? [];
   const ledgerRows: CustomerLedgerReportType[] = ledgerData?.getCustomerLedgerReport?.data ?? [];
   const openingBalance: number = ledgerData?.getCustomerLedgerReport?.openingBalance ?? 0;
   const payments: CustomerPaymentListType[] = paymentsData?.getCustomerPaymentList?.data ?? [];
@@ -210,7 +234,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
       }), { ...agingRows[0], total_sale: 0, due_0_30: 0, due_31_60: 0, due_61_90: 0, due_91_120: 0, due_120_plus: 0, total_due: 0 })
     : null;
 
-  const isLoading = loadingOpen || loadingLedger || loadingPayments;
+  const isLoading = loadingOpen || loadingCredit || loadingLedger || loadingPayments;
 
   const statementCustomer: StatementCustomer = {
     customerid: customer.customerid,
@@ -457,6 +481,7 @@ const CustomerStatementModal: React.FC<Props> = ({ customer, onClose }) => {
                   type={type}
                   customer={statementCustomer}
                   openInvoices={openInvoices}
+                  creditInvoices={creditInvoices}
                   ledgerRows={ledgerRows}
                   openingBalance={openingBalance}
                   payments={payments}

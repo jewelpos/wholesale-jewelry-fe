@@ -5,18 +5,18 @@ import dayjs from "dayjs";
 import { currencyFormattedCellRenderer } from "../../products/list/columnDef";
 
 export const getBalanceReportColumnDefs = (
-  onViewInvoices: (customerid: number, companyname: string) => void
+  onViewInvoices: (customerid: number, companyname: string, onhandNoOfChecks?: number, onhandTotalCheckAmount?: number) => void
 ): ColDef<CustomerBalanceReportType>[] => [
   {
     headerName: "Customer",
     colId: "customerid, companyname",
     cellRenderer: (params: ICellRendererParams<CustomerBalanceReportType>) => {
       if (!params.data) return "";
-      const { customerid, companyname } = params.data;
+      const { customerid, companyname, onhand_noofchecks, onhand_totalcheckamount } = params.data;
       return (
         <button
           type="button"
-          onClick={() => onViewInvoices(Number(customerid), companyname ?? "")}
+          onClick={() => onViewInvoices(Number(customerid), companyname ?? "", onhand_noofchecks, onhand_totalcheckamount)}
           title="View invoices with balance due"
           style={{
             background: "none",
@@ -66,6 +66,19 @@ export const getBalanceReportColumnDefs = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cellStyle: (params: any) =>
       params.value > 0 ? { color: "#dc3545", fontWeight: 600 } : null,
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "On-Hand Checks",
+    field: "onhand_noofchecks",
+    headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
+    filter: "agNumberColumnFilter",
+  },
+  {
+    headerName: "On-Hand Check Amount",
+    field: "onhand_totalcheckamount",
+    cellRenderer: currencyFormattedCellRenderer,
+    headerClass: "ag-right-aligned-header", cellClass: "ag-right-aligned-cell",
     filter: "agNumberColumnFilter",
   },
   {

@@ -174,6 +174,8 @@ export const GET_CUSTOMER_BALANCE_REPORT_QUERY = gql`
         amount_received
         credit_applied
         total_due
+        onhand_noofchecks
+        onhand_totalcheckamount
         warehouseid
         outletid
       }
@@ -478,6 +480,8 @@ export const GET_CUSTOMER_INVOICE_AGING_QUERY = gql`
       installmentsdue
       totalinstallments
       currentamountdue
+      onhand_noofchecks
+      onhand_totalcheckamount
     }
   }
 `;

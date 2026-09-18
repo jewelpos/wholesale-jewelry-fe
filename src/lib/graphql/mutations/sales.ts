@@ -76,6 +76,17 @@ export const EDIT_MEMO_MUTATION = gql`
   }
 `;
 
+export const DELETE_MEMO_MUTATION = gql`
+  mutation DeleteMemo($input: DeleteMemoInput!) {
+    deleteMemo(deleteMemoInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
 export const CREATE_MEMO_MUTATION = gql`
   mutation CreateMemo($input: CreateMemoInput!) {
     createMemo(createMemoInput: $input) {
@@ -143,6 +154,17 @@ export const DELETE_SALES_ORDER_MUTATION = gql`
 export const CANCEL_INVOICE_MUTATION = gql`
   mutation CancelInvoice($input: CancelInvoiceInput!) {
     cancelInvoice(cancelInvoiceInput: $input) {
+      success
+      message
+      error
+      data
+    }
+  }
+`;
+
+export const UPDATE_INVOICE_STATUS_MUTATION = gql`
+  mutation UpdateInvoiceStatus($input: UpdateInvoiceStatusInput!) {
+    updateInvoiceStatus(updateInvoiceStatusInput: $input) {
       success
       message
       error

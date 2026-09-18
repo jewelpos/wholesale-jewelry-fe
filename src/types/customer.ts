@@ -102,6 +102,8 @@ export type CustomerBalanceReportType = {
   amount_received: number;
   credit_applied: number;
   total_due: number;
+  onhand_noofchecks?: number;
+  onhand_totalcheckamount?: number;
   warehouseid: number;
   outletid: number;
 };

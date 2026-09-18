@@ -53,6 +53,8 @@ export const GET_SALES_INVOICE_LIST_QUERY = gql`
         statusname
         custcrediapplied
         creditamountapplied
+        frommemonumber
+        linkedmemocreditapplied
       }
     }
   }
@@ -233,6 +235,9 @@ export const GET_INVOICE_BY_NUMBER_QUERY = gql`
         discountpercent
         discountsource
         discountpromotionid
+        createfrommemo
+        returnfrommemo
+        oldmemoitemseqno
       }
       salesreps {
         userid

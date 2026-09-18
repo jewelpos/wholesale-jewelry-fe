@@ -31,6 +31,8 @@ export type SalesInvoiceListType = {
   custcrediapplied: number | null;
   creditamountapplied: number | null;
   checkreceived: number | null;
+  frommemonumber: number | null;
+  linkedmemocreditapplied: boolean | null;
 };
 
 export type SalesInvoiceListResponseType = {

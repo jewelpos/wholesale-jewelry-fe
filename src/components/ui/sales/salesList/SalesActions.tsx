@@ -3,14 +3,14 @@
 import React, { useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useMutation } from "@apollo/client";
-import { CANCEL_INVOICE_MUTATION } from "@/lib/graphql/mutations/sales";
+import { CANCEL_INVOICE_MUTATION, UPDATE_INVOICE_STATUS_MUTATION } from "@/lib/graphql/mutations/sales";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hook";
 import { showNotification } from "@/lib/store/slice/notificationSlice";
 import { NOTIFICATION_TYPES } from "@/lib/config/constants";
 import { handleTryCatch } from "@/lib/utils/errorFormatter";
 import { SalesInvoiceListType } from "@/types/sales";
 import Link from "next/link";
-import { Edit, Eye, MessageCircle, Printer, Mail, Trash2, ChevronDown, Package } from "react-feather";
+import { Edit, Eye, MessageCircle, Printer, Mail, Trash2, ChevronDown, Package, Truck } from "react-feather";
 import showConfirmationDialog from "@/lib/utils/confirmationDialog";
 import useDefaultRoute from "@/hooks/useDefaultRoute";
 import { useParams } from "next/navigation";
@@ -32,6 +32,18 @@ const TEMPLATE_LABELS: Record<PrintTemplate, string> = {
   barcode_replace: 'Barcode ID Only',
 };
 
+// Fulfillment statuses a regular invoice can be manually moved through — see
+// updateInvoiceStatus on the backend. Ready(2), Cancelled(9), Returned(10), and every
+// Memo-only status are never offered here.
+const MANUAL_STATUS_LABELS: Record<number, string> = {
+  3: "Processing",
+  4: "Ready to Ship",
+  5: "Shipped",
+  6: "Partially Shipped",
+  7: "Picked up",
+  8: "Completed",
+};
+
 interface SalesActionsProps {
   data: SalesInvoiceListType;
   node: IRowNode<SalesInvoiceListType>;
@@ -41,6 +53,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const dispatch = useAppDispatch();
   const storeData = useAppSelector((state) => state.store.data);
   const [cancelInvoice] = useMutation(CANCEL_INVOICE_MUTATION);
+  const [updateInvoiceStatus] = useMutation(UPDATE_INVOICE_STATUS_MUTATION);
   const { basePath } = useDefaultRoute();
   const { storeId: storeIdParam, outletId: outletIdParam } = useParams();
   const parsedStoreId = parseInt(storeIdParam as string, 10);
@@ -53,6 +66,11 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const [templateMenuPos, setTemplateMenuPos] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const chevronRef = useRef<HTMLButtonElement>(null);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [statusMenuPos, setStatusMenuPos] = useState({ top: 0, left: 0 });
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+  const statusChevronRef = useRef<HTMLButtonElement>(null);
 
   const toggleTemplateMenu = () => {
     if (!showTemplateMenu && chevronRef.current) {
@@ -60,6 +78,14 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
       setTemplateMenuPos({ top: r.bottom + window.scrollY + 2, left: r.left + window.scrollX });
     }
     setShowTemplateMenu((v) => !v);
+  };
+
+  const toggleStatusMenu = () => {
+    if (!showStatusMenu && statusChevronRef.current) {
+      const r = statusChevronRef.current.getBoundingClientRect();
+      setStatusMenuPos({ top: r.bottom + window.scrollY + 2, left: r.left + window.scrollX });
+    }
+    setShowStatusMenu((v) => !v);
   };
 
   const defaultTemplate = (storeData?.defaultprintlayout || 'compact') as PrintTemplate;
@@ -130,23 +156,61 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     }
   };
 
+  const handleChangeStatus = async (invoicestatusid: number, statusname: string) => {
+    setShowStatusMenu(false);
+    setStatusUpdating(true);
+    const result = await handleTryCatch(async () => {
+      const { data: responseData } = await updateInvoiceStatus({
+        variables: { input: { storeid: parsedStoreId, invoicenumber: data.invoicenumber, invoicestatusid } },
+      });
+      if (responseData?.updateInvoiceStatus?.success) {
+        node.setData({ ...data, statusname });
+        dispatch(showNotification({ message: responseData.updateInvoiceStatus.message, type: NOTIFICATION_TYPES.SUCCESS }));
+      }
+      return true;
+    });
+    setStatusUpdating(false);
+    if (result.error) {
+      dispatch(showNotification({ message: result.error, type: NOTIFICATION_TYPES.ERROR }));
+    }
+  };
+
   const isCreditInvoiceNotApplied = Number(data.salemodeid) === 5 && Number(data.custcrediapplied) === 0;
   const hasPaymentReceived = Number(data.amountreceived) > 0;
   const hasCreditApplied = Number(data.custcrediapplied) === 1 || Number(data.creditamountapplied) > 0;
+  // Shipped/Picked up invoices are still editable as long as nothing's actually been
+  // collected against them yet (no payment, no credit applied — both already gated
+  // above) and there's still a real balance due. The invoice's own status is never
+  // touched to make this true — it stays Shipped/Picked up either way.
+  const hasBalanceDue = Number(data.balancedue) > 0;
+  const isMemoDerived = !!data.frommemonumber;
   const canEdit =
     !hasPaymentReceived &&
     !hasCreditApplied &&
-    (isCreditInvoiceNotApplied || data.statusname === "Ready");
+    (isCreditInvoiceNotApplied ||
+      data.statusname === "Ready" ||
+      ((data.statusname === "Shipped" || data.statusname === "Picked up") && hasBalanceDue));
+  // linkedmemocreditapplied: this invoice's own custcrediapplied/creditamountapplied say
+  // nothing about it — it's the hidden shadow return-memo createInvoiceFromMemo creates
+  // alongside a regular invoice-from-memo conversion (refcreditmemocreated) that has its
+  // own, separate applied flag. cancelInvoice blocks cancellation once that shadow credit
+  // has been spent elsewhere; mirrored here so Cancel is disabled with a clear reason
+  // instead of failing only after the click.
   const canCancel =
     !isCreditInvoiceNotApplied &&
     Number(data.balancedue) !== 0 &&
     Number(data.amountreceived) === 0 &&
     Number(data.creditamountapplied) === 0 &&
     !data.custcrediapplied &&
+    !data.linkedmemocreditapplied &&
     data.statusname !== "Shipped" &&
     data.statusname !== "Picked up" &&
     data.statusname !== "Cancelled";
   const canSendSMS = data.statusname !== "Cancelled";
+  // Matches updateInvoiceStatus's own backend gate exactly: only a regular invoice
+  // (salemodeid=2 — not Void/Memo/Credit Memo/standalone Credit Invoice) that's never
+  // been voided can have its fulfillment status changed this way.
+  const canChangeStatus = Number(data.salemodeid) === 2 && !data.voiddate;
   // The generic edit page can't tell a credit invoice from a regular one on its own
   // (same route for both) — it relies on this query param to load SalesInvoiceForm
   // in the right mode. Without it, edits silently ran as a regular invoice: new
@@ -158,10 +222,14 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     if (hasPaymentReceived) editReason = "Cannot edit: payment already received";
     else if (hasCreditApplied) editReason = "Cannot edit: credit already applied";
     else if (data.statusname === "Cancelled") editReason = "Cannot edit: invoice is cancelled";
-    else if (data.statusname === "Shipped") editReason = "Cannot edit: invoice has been shipped";
-    else if (data.statusname === "Picked up") editReason = "Cannot edit: invoice has been picked up";
+    else if ((data.statusname === "Shipped" || data.statusname === "Picked up") && !hasBalanceDue) editReason = "Cannot edit: invoice is fully paid";
     else editReason = "Cannot edit in current status";
   }
+  // Edit itself is still allowed on a memo-derived invoice (header fields, non-memo
+  // lines) — only its memo-linked lines are locked once inside the form, and no new
+  // lines can be added at all (see isEditingMemoDerivedInvoice in SalesInvoiceForm). This
+  // is just a heads-up shown on the still-enabled icon, not a block reason.
+  const editTitle = canEdit && isMemoDerived ? "Invoice created from memo — limited edit" : "Edit";
 
   let cancelReason = "";
   if (!canCancel) {
@@ -169,6 +237,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
     else if (data.statusname === "Cancelled") cancelReason = "Invoice is already cancelled";
     else if (hasPaymentReceived) cancelReason = "Cannot cancel: payment already received";
     else if (hasCreditApplied) cancelReason = "Cannot cancel: credit has been applied";
+    else if (data.linkedmemocreditapplied) cancelReason = "Cannot cancel: its associated memo credit has already been applied";
     else if (Number(data.balancedue) === 0) cancelReason = "Cannot cancel: balance is zero";
     else if (data.statusname === "Shipped") cancelReason = "Cannot cancel: invoice has been shipped";
     else if (data.statusname === "Picked up") cancelReason = "Cannot cancel: invoice has been picked up";
@@ -181,12 +250,21 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
   const items: RowActionItem[] = [
     { key: 'view', label: 'View', icon: <Eye size={14} />, href: `${basePath}/sales/${data.invoicenumber}/view` },
     canEdit
-      ? { key: 'edit', label: 'Edit', icon: <Edit size={14} />, href: editHref }
+      ? { key: 'edit', label: isMemoDerived ? 'Edit (limited — from memo)' : 'Edit', icon: <Edit size={14} />, href: editHref }
       : { key: 'edit', label: 'Edit', icon: <Edit size={14} />, disabled: true, disabledReason: editReason },
     { key: 'print', label: 'Print', icon: <Printer size={14} />, onClick: () => handlePrint(defaultTemplate), disabled: printing },
     { key: 'packing-slip', label: 'Packing Slip', icon: <Package size={14} />, onClick: () => handlePrint('packing_slip'), disabled: printing },
     { key: 'email', label: 'Email', icon: <Mail size={14} />, onClick: () => setShowEmail(true) },
     ...(canSendSMS ? [{ key: 'sms', label: 'Share SMS', icon: <MessageCircle size={14} />, onClick: handleSendSMS, disabled: smsSending }] : []),
+    ...(canChangeStatus
+      ? Object.entries(MANUAL_STATUS_LABELS).map(([id, label]) => ({
+          key: `status-${id}`,
+          label: `Set: ${label}`,
+          icon: <Truck size={14} />,
+          onClick: () => handleChangeStatus(Number(id), label),
+          disabled: statusUpdating,
+        }))
+      : []),
     canCancel
       ? { key: 'cancel', label: 'Cancel Invoice', icon: <Trash2 size={14} />, onClick: handleDelete, dangerous: true }
       : { key: 'cancel', label: 'Cancel Invoice', icon: <Trash2 size={14} />, disabled: true, disabledReason: cancelReason, dangerous: true },
@@ -204,6 +282,37 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
         ) : (
           <span className="p-1" title="Cannot share link: invoice is cancelled" style={dimmed}>
             <MessageCircle size={14} style={{ opacity: 0.35 }} />
+          </span>
+        )}
+
+        {/* Change Status split-button */}
+        {canChangeStatus ? (
+          <div ref={statusMenuRef} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <button type="button" className="p-1 btn btn-link" style={{ ...iconBtn, color: "#0d6efd" }}
+              onClick={toggleStatusMenu} disabled={statusUpdating} title="Change Status">
+              <Truck size={14} />
+            </button>
+            <button ref={statusChevronRef} type="button" className="p-0 btn btn-link" style={{ ...iconBtn, color: "#0d6efd", minWidth: 0, paddingLeft: 1 }}
+              onClick={toggleStatusMenu} disabled={statusUpdating} title="Change Status">
+              <ChevronDown size={10} />
+            </button>
+            {showStatusMenu && typeof document !== "undefined" && ReactDOM.createPortal(
+              <div style={{ position: "absolute", top: statusMenuPos.top, left: statusMenuPos.left, zIndex: 9999, background: "#fff", border: "1px solid #dee2e6", borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,.12)", minWidth: 160, padding: "4px 0" }}
+                onMouseLeave={() => setShowStatusMenu(false)}>
+                {Object.entries(MANUAL_STATUS_LABELS).map(([id, label]) => (
+                  <button key={id} type="button" className="dropdown-item"
+                    style={{ fontSize: 12, padding: "4px 12px", fontWeight: data.statusname === label ? 600 : undefined }}
+                    onClick={() => handleChangeStatus(Number(id), label)}>
+                    {label}{data.statusname === label ? " ✓" : ""}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )}
+          </div>
+        ) : (
+          <span className="p-1" title="Only a regular, non-cancelled invoice can have its status changed" style={dimmed}>
+            <Truck size={14} style={{ opacity: 0.35 }} />
           </span>
         )}
 
@@ -258,7 +367,7 @@ const SalesActions: React.FC<SalesActionsProps> = ({ data, node }) => {
 
         {/* Edit */}
         {canEdit ? (
-          <Link className="p-1" href={editHref} scroll={false} title="Edit">
+          <Link className="p-1" href={editHref} scroll={false} title={editTitle}>
             <Edit size={14} />
           </Link>
         ) : (
